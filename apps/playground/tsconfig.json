@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "types": ["node", "vite/client", "react", "react-dom"],
+    "paths": {
+      "@tellplot/editor": ["../../packages/editor/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

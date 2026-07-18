@@ -1,0 +1,134 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T104-A001"
+task_id: "T104"
+feature_id: "001-waterfall-editor-foundation"
+mode: "direct_execute_with_independent_review"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  data_model: ".ai-platform/specs/001-waterfall-editor-foundation/data-model.md"
+  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  approval: "T103 Accepted; user authorized Codex to review and accept T102-T104 on 2026-07-15."
+
+work_unit:
+  title: "实现瀑布投影"
+  goal: "把 SourceData 与 ViewSpec 确定性投影为真实 G2 adapter 使用的可见 waterfall data，并校验 subtotal/end 财务锚点。"
+  requirement_mapping:
+    - "WF-US-001"
+    - "WF-US-003"
+    - "WF-FR-006"
+    - "WF-NFR-001"
+  dependencies:
+    - "T102 Accepted"
+    - "T103 Accepted"
+  blocks:
+    - "T105"
+    - "T106"
+    - "T107"
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "T103 provides Accepted immutable source/view/session/command/history contracts and invariant validation."
+  architectural_boundary:
+    - "projectWaterfall is one package-internal pure projection path used by G2, export and outline value lookup."
+    - "Outline combines ViewSpec with projection so expanded group headers remain structural rather than chart data."
+    - "Projection returns ValidationResult and never returns partial data on structural, anchor or safe-number failure."
+    - "No React, G2, DOM, formatting, interaction or export implementation belongs to T104."
+  public_runtime_surface:
+    - "Unchanged from T103; projectWaterfall remains internal."
+
+locked_contract:
+  result: "WaterfallProjectionResult wraps a readonly WaterfallDatum array in ValidationResult; structural errors reuse canonical validators."
+  ordering: "start, segment root nodes, segment subtotal if present, final segment nodes, end; order equals output index."
+  groups: "Expanded emits children only in childIds order; collapsed emits one group datum but feeds the same children into the main accumulator."
+  anchors: "subtotal and end are absolute declared cumulative values; successful subtotal resets the accumulator to the declared value."
+  numeric: "Neumaier compensated summation; anchor equality permits at most 8 ULP; no business or currency tolerance."
+  safe_range: "Non-finite or abs(current/group total) above Number.MAX_SAFE_INTEGER returns INVALID_SOURCE_DATA/UNSAFE_AMOUNT."
+  zero: "Zero contribution kind is positive; only amount < 0 is negative."
+  locks: "Anchors locked; contribution locked when pinned; collapsed group locked when any child is pinned."
+  privacy: "Anchor and numeric errors expose path, anchor enum, source index and operation only; never amount or label."
+
+execution_constraints:
+  adapter: "Codex direct TDD execution; independent sub-agent review is read-only."
+  allowed_files:
+    - "packages/editor/src/waterfall/waterfallTypes.ts"
+    - "packages/editor/src/waterfall/projectWaterfall.ts"
+    - "packages/editor/src/waterfall/formatWaterfall.ts"
+    - "packages/editor/src/index.ts"
+    - "packages/editor/tests/waterfall/projectWaterfall.test.ts"
+    - "packages/editor/tests/waterfall/anchors.test.ts"
+    - "packages/editor/tests/waterfall/groups.test.ts"
+    - "packages/editor/tests/waterfall/determinism.test.ts"
+  forbidden_changes:
+    - "No React, G2, DOM, command, session, persistence, export or interaction implementation."
+    - "No arbitrary epsilon, currency rounding, partial projection or duplicated waterfall arithmetic."
+    - "No new dependency, public runtime export, push, PR, merge or publish."
+  conflicts:
+    - "Do not execute T105 concurrently because it consumes the projection contract."
+
+tdd_plan:
+  red:
+    - "Add start/positive/negative/zero/end and anchors-only projection tests."
+    - "Add subtotal, consecutive/empty segment, anchor mismatch, ULP and cancellation tests."
+    - "Add collapsed/expanded group ordering, aggregation, lock and sourceIds alias tests."
+    - "Add deterministic replay, JSON/plain data, immutability and hostile invalid-input tests."
+  green:
+    - "Implement projection types, segment indexing and a single forward projection pass."
+    - "Implement compensated accumulator, 8-ULP anchor comparator and safe-number errors."
+  refactor:
+    - "Share anchor datum, contribution datum and group feeding helpers without creating a generic chart grammar."
+    - "Run full domain/waterfall coverage, package build and dependency/privacy scans."
+
+validation_loop:
+  commands:
+    - "pnpm test:unit -- packages/editor/tests/waterfall"
+    - "pnpm test:coverage"
+    - "pnpm typecheck"
+    - "pnpm lint"
+    - "pnpm format:check"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T104"
+  expected_signals:
+    - "All commands exit 0 after GREEN."
+    - "Domain and waterfall statement, branch, function and line coverage each meet their configured 95% gates."
+    - "Collapsed and expanded paths finish at the same compensated cumulative value."
+    - "Invalid anchors and unsafe accumulation return privacy-safe failures without partial projection."
+  retry_budget: 2
+  failure_policy: "Fix only T104 projection contract failures; stop if SourceData/ViewSpec semantics must materially change."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T104"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+  required_content:
+    - "RED/GREEN results and projection fixture outputs."
+    - "ULP/cancellation, subtotal/end mismatch and collapsed/expanded parity evidence."
+    - "Coverage, privacy checks, changed files, diff summary and residual risk."
+
+review_contract:
+  spec_compliance:
+    - "Every datum field, segment/anchor rule, group mode and error contract has a direct test."
+    - "projectWaterfall remains internal and only approved T104 source/test files change outside governance/evidence."
+  engineering_quality:
+    - "One forward pure projection pass, no duplicated arithmetic and no input/output aliasing."
+    - "Numerics use compensated summation and explicit ULP comparison, not rounding heuristics."
+  qa_acceptance:
+    - "Positive, negative, zero, subtotal, end, expanded/collapsed and deterministic fixtures pass."
+    - "No Critical/High/Medium independent review finding remains."
+
+handoff:
+  on_success: "Attach evidence, complete independent review, mark T104 Accepted under delegated authority, then execute T105 and request user visual acceptance."
+  on_failure: "Keep T104 Running and document bounded retry; do not advance T105."
+  remote_actions: "None authorized."
+
+stop_conditions:
+  - "Projection requires mutating SourceData/ViewSpec or using a second arithmetic path."
+  - "Anchor correctness requires business currency assumptions absent from SourceData."
+  - "A failure can only be hidden by increasing tolerance beyond the locked 8 ULP boundary."

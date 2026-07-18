@@ -1,0 +1,10 @@
+.ai-platform/
+AGENTS.md
+README.md
+LICENSE
+coverage/
+dist/
+node_modules/
+playwright-report/
+pnpm-lock.yaml
+test-results/

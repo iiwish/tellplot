@@ -1,0 +1,68 @@
+{
+  "name": "tellplot-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TellPlot financial narrative chart editor workspace",
+  "license": "MIT",
+  "homepage": "https://tellplot.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iiwish/tellplot.git"
+  },
+  "type": "module",
+  "packageManager": "pnpm@11.1.3",
+  "engines": {
+    "node": ">=22.13.0",
+    "pnpm": ">=11.1.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @tellplot/playground dev",
+    "build": "pnpm -r --if-present run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test:unit": "vitest run --maxWorkers=4",
+    "test:coverage": "vitest run --coverage --maxWorkers=4",
+    "test:package": "pnpm --filter @tellplot/editor run test:package",
+    "test:react-matrix": "node packages/editor/tests/react-matrix/run-react-matrix.mjs",
+    "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
+    "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
+    "test:a11y": "playwright test e2e/accessibility.spec.ts",
+    "test:performance": "playwright test e2e/performance.spec.ts --project=chromium-performance"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@axe-core/playwright": "4.12.1",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.61.1",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "10.7.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.7.0",
+    "jsdom": "29.1.1",
+    "prettier": "3.9.5",
+    "publint": "0.3.21",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.64.0",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "all",
+    "printWidth": 100,
+    "arrowParens": "avoid",
+    "endOfLine": "lf"
+  }
+}

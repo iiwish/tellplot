@@ -1,0 +1,460 @@
+# T107 compatibility refresh patch
+# Generated from the accepted T107 baseline plus focused adapter hunks.
+
+diff --git a/e2e/export.spec.ts b/e2e/export.spec.ts
+index 95a2fc8..f48d444 100644
+--- a/e2e/export.spec.ts
++++ b/e2e/export.spec.ts
+@@ -82,6 +82,58 @@ test('invalid ViewSpec import reports code and path without changing the current
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', before ?? '0');
+ });
+ 
++test('SVG export renders imported highlight and muted emphasis through the shared chart spec', async ({
++  page,
++}) => {
++  await page.emulateMedia({ reducedMotion: 'reduce' });
++  await openEditor(page);
++  const jsonDownload = await chooseExport(page, 'ViewSpec JSON');
++  const exported = JSON.parse((await readDownload(jsonDownload)).toString('utf8')) as Record<
++    string,
++    unknown
++  >;
++  const emphasized = JSON.stringify({
++    ...exported,
++    emphasis: {
++      'sales-volume': 'highlight',
++      'price-impact': 'muted',
++    },
++  });
++  await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
++    name: 'emphasized-view.json',
++    mimeType: 'application/json',
++    buffer: Buffer.from(emphasized),
++  });
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('VIEW_IMPORTED');
++  await page.evaluate(
++    () =>
++      new Promise<void>(resolve =>
++        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
++      ),
++  );
++
++  const svgDownload = await chooseExport(page, 'SVG 图像');
++  const svg = (await readDownload(svgDownload)).toString('utf8');
++  const elementStyles = await page.evaluate(text => {
++    const parsed = new DOMParser().parseFromString(text, 'image/svg+xml');
++    return [...parsed.querySelectorAll('path.element')].map(element => ({
++      fillOpacity: element.getAttribute('fill-opacity'),
++      stroke: element.getAttribute('stroke'),
++      strokeWidth: element.getAttribute('stroke-width'),
++    }));
++  }, svg);
++  expect(elementStyles).toContainEqual({
++    fillOpacity: null,
++    stroke: 'rgba(24,33,29,1)',
++    strokeWidth: '3',
++  });
++  expect(elementStyles).toContainEqual({
++    fillOpacity: '0.28',
++    stroke: 'rgba(255,255,255,1)',
++    strokeWidth: '1',
++  });
++});
++
+ test('PNG export is a nonempty double-density image and revokes its object URL', async ({
+   page,
+ }) => {
+@@ -165,3 +217,60 @@ test('SVG export reflects collapsed state and contains no executable or source m
+   expect(svg.indexOf('增长驱动')).toBeLessThan(svg.indexOf('期末净利润'));
+   await expect(page.locator('body > div[aria-hidden="true"][style*="-10000px"]')).toHaveCount(0);
+ });
++
++test('nested JSON preserves the recursive view and SVG exports only its visible projection', async ({
++  page,
++}) => {
++  await openEditor(page);
++  await page.getByRole('treeitem', { name: /销量增长/ }).click();
++  await page
++    .getByRole('treeitem', { name: /价格提升/ })
++    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
++  await page.getByRole('button', { name: '创建分组' }).click();
++  await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
++  await page.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
++  await page.getByRole('button', { name: '创建分组' }).click();
++  await page.getByRole('button', { name: '折叠 经营桥' }).click();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '3');
++
++  const jsonDownload = await chooseExport(page, 'ViewSpec JSON');
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('JSON_EXPORTED');
++  const json = (await readDownload(jsonDownload)).toString('utf8');
++  const exported = JSON.parse(json) as {
++    readonly revision: number;
++    readonly rootOrder: readonly string[];
++    readonly groups: Readonly<
++      Record<string, { readonly id: string; readonly label: string; readonly childIds: string[] }>
++    >;
++    readonly collapsedGroupIds: readonly string[];
++  };
++  const inner = Object.values(exported.groups).find(group => group.label === '增长驱动');
++  const outer = Object.values(exported.groups).find(group => group.label === '经营桥');
++  expect(inner).toBeDefined();
++  expect(outer).toBeDefined();
++  expect(inner?.childIds).toEqual(['sales-volume', 'price-impact']);
++  expect(outer?.childIds).toEqual([inner?.id, 'product-mix']);
++  expect(exported.rootOrder).toContain(outer?.id);
++  expect(exported.rootOrder).not.toContain(inner?.id);
++  expect(exported.collapsedGroupIds).toEqual([outer?.id]);
++  expect(exported.revision).toBe(3);
++  expect(json).not.toMatch(/"(?:amount|sourceRef|metadata)"|ledger:/u);
++  expect(json).not.toContain('销量增长');
++  expect(json).not.toContain('价格提升');
++
++  const svgDownload = await chooseExport(page, 'SVG 图像');
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('SVG_EXPORTED');
++  const svg = (await readDownload(svgDownload)).toString('utf8');
++  expect(svg).toContain('经营桥');
++  expect(svg).not.toContain('增长驱动');
++  expect(svg).not.toContain('销量增长');
++  expect(svg).not.toContain('价格提升');
++  expect(svg).not.toContain('产品结构');
++  expect(svg).not.toMatch(
++    /sales-volume|price-impact|product-mix|<script|foreignObject|javascript:|sourceRef|metadata|ledger:/iu,
++  );
++  expect(svg.indexOf('期初营业利润')).toBeLessThan(svg.indexOf('经营桥'));
++  expect(svg.indexOf('经营桥')).toBeLessThan(svg.indexOf('经营利润小计'));
++  await expect(page.locator('body > div[aria-hidden="true"][style*="-10000px"]')).toHaveCount(0);
++});
+diff --git a/packages/editor/src/export/svgExport.ts b/packages/editor/src/export/svgExport.ts
+index ccd42b1..2f09c0d 100644
+--- a/packages/editor/src/export/svgExport.ts
++++ b/packages/editor/src/export/svgExport.ts
+@@ -1,5 +1,7 @@
+ import type { Chart as G2Chart } from '@antv/g2';
+ 
++import type { ViewNodeId } from '../domain/ids';
++import type { Emphasis } from '../domain/model';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+ import type { EditorLocale } from '../components/formatAmount';
+ import { createWaterfallChartSpec } from './waterfallChartSpec';
+@@ -21,6 +23,7 @@ interface SvgChartExportRequest {
+   readonly height: number;
+   readonly background: string | undefined;
+   readonly suggestedFilename: string;
++  readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+ }
+ 
+ const REMOVED_ELEMENTS = 'script, foreignObject, iframe, object, embed, image, use';
+@@ -142,6 +145,7 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
+         currency: request.currency,
+         reducedMotion: true,
+         showValueLabels: true,
++        emphasis: request.emphasis,
+       }),
+     );
+     await chart.render();
+diff --git a/packages/editor/src/export/waterfallChartSpec.ts b/packages/editor/src/export/waterfallChartSpec.ts
+index d35ded9..e9b9d8f 100644
+--- a/packages/editor/src/export/waterfallChartSpec.ts
++++ b/packages/editor/src/export/waterfallChartSpec.ts
+@@ -1,5 +1,7 @@
+ import type { G2Spec } from '@antv/g2';
+ 
++import type { ViewNodeId } from '../domain/ids';
++import type { Emphasis } from '../domain/model';
+ import type {
+   WaterfallDatum,
+   WaterfallDatumKind,
+@@ -24,6 +26,7 @@ interface WaterfallChartSpecOptions {
+   readonly currency: string | undefined;
+   readonly reducedMotion: boolean;
+   readonly showValueLabels: boolean;
++  readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+ }
+ 
+ export function formatWaterfallDatumAmount(
+@@ -43,10 +46,14 @@ export function createWaterfallChartSpec({
+   currency,
+   reducedMotion,
+   showValueLabels,
++  emphasis,
+ }: WaterfallChartSpecOptions): G2Spec {
+   const labelById = new Map(projection.map(datum => [datum.nodeId, datum.label]));
+   const denseCanvas = projection.length > DENSE_CANVAS_THRESHOLD;
+   const barInset = denseCanvas ? 0.5 : 3;
++  const baseFillOpacity = denseCanvas ? 1 : 0.96;
++  const baseLineWidth = denseCanvas ? 0 : 1;
++  const baseStroke = denseCanvas ? 'transparent' : '#FFFFFF';
+ 
+   return {
+     type: 'view',
+@@ -100,11 +107,18 @@ export function createWaterfallChartSpec({
+             ]
+           : [],
+         style: {
+-          fillOpacity: denseCanvas ? 1 : 0.96,
++          fillOpacity: (datum: WaterfallDatum) =>
++            emphasis[datum.nodeId] === 'muted'
++              ? 0.28
++              : emphasis[datum.nodeId] === 'highlight'
++                ? 1
++                : baseFillOpacity,
+           insetLeft: barInset,
+           insetRight: barInset,
+-          lineWidth: denseCanvas ? 0 : 1,
+-          stroke: denseCanvas ? 'transparent' : '#FFFFFF',
++          lineWidth: (datum: WaterfallDatum) =>
++            emphasis[datum.nodeId] === 'highlight' ? 3 : baseLineWidth,
++          stroke: (datum: WaterfallDatum) =>
++            emphasis[datum.nodeId] === 'highlight' ? '#18211D' : baseStroke,
+         },
+         tooltip: false,
+         animate: reducedMotion
+diff --git a/packages/editor/tests/components/accessibility.test.tsx b/packages/editor/tests/components/accessibility.test.tsx
+index aec7e61..38a458c 100644
+--- a/packages/editor/tests/components/accessibility.test.tsx
++++ b/packages/editor/tests/components/accessibility.test.tsx
+@@ -8,6 +8,7 @@ import {
+   type FinancialChartEditorHandle,
+   type ViewSpec,
+ } from '../../src';
++import { commandSourceData } from '../fixtures/commandSourceData';
+ import { financialSourceData } from '../fixtures/financialSourceData';
+ 
+ const g2Mock = vi.hoisted(() => {
+@@ -46,6 +47,22 @@ function initialView(): ViewSpec {
+   return result.value;
+ }
+ 
++function nestedView(collapsedGroupIds: readonly string[]): ViewSpec {
++  const result = createInitialViewSpec(commandSourceData);
++  if (!result.ok) {
++    throw new Error('Expected a valid nested accessibility fixture');
++  }
++  return {
++    ...result.value,
++    rootOrder: ['outer', 'd', 'e'],
++    groups: {
++      inner: { id: 'inner', label: 'Inner', childIds: ['a', 'b'] },
++      outer: { id: 'outer', label: 'Outer', childIds: ['inner', 'c'] },
++    },
++    collapsedGroupIds,
++  };
++}
++
+ beforeEach(() => {
+   const context = {
+     fillStyle: '',
+@@ -136,6 +153,19 @@ describe('FinancialChartEditor public handle', () => {
+     expect(document.body.querySelector('[style*="-10000px"]')).toBeNull();
+   });
+ 
++  it('rejects export while a live reorder preview is active', async () => {
++    const ref = createRef<FinancialChartEditorHandle>();
++    render(<FinancialChartEditor ref={ref} sourceData={financialSourceData} />);
++    await waitFor(() => expect(ref.current).not.toBeNull());
++    const chartStage = screen.getByTestId('g2touch-chart-stage');
++    chartStage.setAttribute('data-interaction-state', 'dragging');
++
++    await expect(ref.current?.exportImage({ format: 'png' })).rejects.toMatchObject({
++      code: 'EXPORT_UNAVAILABLE',
++      path: '/export',
++    });
++  });
++
+   it('keeps an ordered text equivalent for every visible datum', async () => {
+     render(<FinancialChartEditor sourceData={financialSourceData} />);
+     const summary = await screen.findByRole('region', { name: '图表摘要' });
+@@ -179,4 +209,67 @@ describe('FinancialChartEditor public handle', () => {
+     expect(expanded.textContent).toContain('收入增长');
+     expect(expanded.textContent).toContain('成本压力');
+   });
++
++  it('summarizes the recursive visible projection without exposing hidden descendants', async () => {
++    const { rerender } = render(
++      <FinancialChartEditor sourceData={commandSourceData} viewSpec={nestedView(['inner'])} />,
++    );
++
++    const summary = await screen.findByRole('region', { name: '图表摘要' });
++    const visibleLabels = (): string[] =>
++      [...summary.querySelectorAll('li')].map(item => item.textContent?.split(',')[0] ?? '');
++
++    expect(summary.querySelector('p')?.textContent).toContain('共 7 个可见节点');
++    expect(visibleLabels()).toEqual([
++      'Opening',
++      'Inner',
++      'Gamma confidential',
++      'Subtotal',
++      'Delta confidential',
++      'Epsilon confidential',
++      'Ending',
++    ]);
++    expect(summary.querySelectorAll('li')[1]?.textContent).toContain('Inner, 分组');
++    expect(summary.textContent).not.toContain('Alpha confidential');
++    expect(summary.textContent).not.toContain('Beta confidential');
++    expect(summary.textContent).not.toContain('Outer');
++
++    rerender(
++      <FinancialChartEditor
++        sourceData={commandSourceData}
++        viewSpec={nestedView(['inner', 'outer'])}
++      />,
++    );
++    await waitFor(() =>
++      expect(summary.querySelector('p')?.textContent).toContain('共 6 个可见节点'),
++    );
++    expect(visibleLabels()).toEqual([
++      'Opening',
++      'Outer',
++      'Subtotal',
++      'Delta confidential',
++      'Epsilon confidential',
++      'Ending',
++    ]);
++    expect(summary.querySelectorAll('li')[1]?.textContent).toContain('Outer, 分组');
++    expect(summary.textContent).not.toContain('Inner');
++    expect(summary.textContent).not.toContain('Gamma confidential');
++
++    rerender(<FinancialChartEditor sourceData={commandSourceData} viewSpec={nestedView([])} />);
++    await waitFor(() =>
++      expect(summary.querySelector('p')?.textContent).toContain('共 8 个可见节点'),
++    );
++    expect(visibleLabels()).toEqual([
++      'Opening',
++      'Alpha confidential',
++      'Beta confidential',
++      'Gamma confidential',
++      'Subtotal',
++      'Delta confidential',
++      'Epsilon confidential',
++      'Ending',
++    ]);
++    expect(summary.textContent).not.toContain('Inner');
++    expect(summary.textContent).not.toContain('Outer');
++  });
+ });
+
+diff --git a/packages/editor/tests/export/chart-spec.test.ts b/packages/editor/tests/export/chart-spec.test.ts
+new file mode 100644
+index 0000000..2d1d0a0
+--- /dev/null
++++ b/packages/editor/tests/export/chart-spec.test.ts
+@@ -0,0 +1,67 @@
++import { describe, expect, it } from 'vitest';
++
++import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
++import { createWaterfallChartSpec } from '../../src/export/waterfallChartSpec';
++import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import type { WaterfallDatum } from '../../src/waterfall/waterfallTypes';
++import { financialSourceData } from '../fixtures/financialSourceData';
++
++function styleAccessor(
++  style: Readonly<Record<string, unknown>>,
++  key: string,
++): (datum: WaterfallDatum) => unknown {
++  const value = style[key];
++  if (typeof value !== 'function') {
++    throw new Error(`Expected ${key} to be a datum style accessor`);
++  }
++  return value as (datum: WaterfallDatum) => unknown;
++}
++
++describe('waterfall chart emphasis', () => {
++  it('uses the same highlight and muted styles for the screen and export chart spec', () => {
++    const view = createInitialViewSpec(financialSourceData);
++    if (!view.ok) {
++      throw new Error('Expected a valid emphasis fixture');
++    }
++    const projection = projectWaterfall(financialSourceData, view.value);
++    if (!projection.ok) {
++      throw new Error('Expected a valid emphasis projection');
++    }
++    const spec = createWaterfallChartSpec({
++      projection: projection.value,
++      locale: 'zh-CN',
++      currency: financialSourceData.currency,
++      reducedMotion: true,
++      showValueLabels: true,
++      emphasis: {
++        'revenue-growth': 'highlight',
++        'cost-pressure': 'muted',
++      },
++    });
++    const child = (spec as { readonly children?: readonly unknown[] }).children?.[0] as
++      { readonly style?: Readonly<Record<string, unknown>> } | undefined;
++    const style = child?.style;
++    if (style === undefined) {
++      throw new Error('Expected an interval style contract');
++    }
++    const fillOpacity = styleAccessor(style, 'fillOpacity');
++    const lineWidth = styleAccessor(style, 'lineWidth');
++    const stroke = styleAccessor(style, 'stroke');
++    const highlighted = projection.value.find(datum => datum.nodeId === 'revenue-growth');
++    const muted = projection.value.find(datum => datum.nodeId === 'cost-pressure');
++    const normal = projection.value.find(datum => datum.nodeId === 'tax-impact');
++    if (highlighted === undefined || muted === undefined || normal === undefined) {
++      throw new Error('Expected emphasis fixture data');
++    }
++
++    expect(fillOpacity(highlighted)).toBe(1);
++    expect(lineWidth(highlighted)).toBe(3);
++    expect(stroke(highlighted)).toBe('#18211D');
++    expect(fillOpacity(muted)).toBe(0.28);
++    expect(lineWidth(muted)).toBe(1);
++    expect(stroke(muted)).toBe('#FFFFFF');
++    expect(fillOpacity(normal)).toBe(0.96);
++    expect(lineWidth(normal)).toBe(1);
++    expect(stroke(normal)).toBe('#FFFFFF');
++  });
++});
+
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -318,9 +318,15 @@
+         throw exportError('EXPORT_UNAVAILABLE', '/export');
+       }
++      const stage = root.querySelector<HTMLElement>('[data-testid="g2touch-chart-stage"]');
+       const plot = root.querySelector<HTMLElement>('[data-testid="g2touch-chart"]');
+       const canvas = plot?.querySelector('canvas') ?? null;
+-      if (plot === null || canvas === null) {
++      if (
++        stage === null ||
++        plot === null ||
++        canvas === null ||
++        stage.getAttribute('data-interaction-state') === 'dragging'
++      ) {
+         throw exportError('EXPORT_UNAVAILABLE', '/export');
+       }
+@@ -341,6 +347,7 @@
+         background: normalized.background,
+         suggestedFilename: normalized.suggestedFilename,
++        emphasis: controller.viewSpec.emphasis,
+       });
+diff --git a/packages/editor/src/components/WaterfallCanvas.tsx b/packages/editor/src/components/WaterfallCanvas.tsx
+--- a/packages/editor/src/components/WaterfallCanvas.tsx
++++ b/packages/editor/src/components/WaterfallCanvas.tsx
+@@ -3,7 +3,7 @@
+ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+ 
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+-import type { ViewSpec } from '../domain/model';
++import type { Emphasis, ViewSpec } from '../domain/model';
+@@ -24,6 +24,7 @@
+ const MOBILE_VIEWPORT_QUERY = '(max-width: 759px)';
+ const MAX_CANVAS_VALUE_LABELS = 40;
+ const CHART_ERROR = { code: 'CHART_RENDER_ERROR', path: '/chart' } as const;
++const EMPTY_EMPHASIS: Readonly<Record<ViewNodeId, Emphasis>> = {};
+@@ -443,6 +444,7 @@
+     );
+   const shouldReduceMotion = reducedMotion ?? systemReducedMotion;
++  const emphasis = viewSpec?.emphasis ?? EMPTY_EMPHASIS;
+@@ -1283,6 +1285,7 @@
+         reducedMotion: shouldReduceMotion,
+         showValueLabels: !mobileViewport && projection.length <= MAX_CANVAS_VALUE_LABELS,
++        emphasis,
+       }),
+@@ -1312,5 +1315,5 @@
+-  }, [currency, locale, mobileViewport, projection, shouldReduceMotion]);
++  }, [currency, emphasis, locale, mobileViewport, projection, shouldReduceMotion]);
+

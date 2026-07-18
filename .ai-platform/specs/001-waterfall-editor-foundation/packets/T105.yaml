@@ -1,0 +1,178 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T105-A001"
+task_id: "T105"
+feature_id: "001-waterfall-editor-foundation"
+mode: "direct_execute_with_user_visual_acceptance"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  design_contract: ".ai-platform/specs/001-waterfall-editor-foundation/design-contract.md"
+  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  approval: "T104 Accepted; user requires T105 completion before the next acceptance request."
+
+work_unit:
+  title: "实现 React 工作台与真实 G2 渲染"
+  goal: "交付可嵌入的 FinancialChartEditor、controlled/uncontrolled controller、真实 G2 waterfall canvas 与真实财务 playground。"
+  requirement_mapping:
+    - "WF-US-001"
+    - "WF-US-005"
+    - "WF-FR-010"
+    - "WF-FR-014"
+    - "WF-NFR-004"
+    - "WF-NFR-005"
+  dependencies:
+    - "T101 Accepted"
+    - "T102 Accepted"
+    - "T104 Accepted"
+  blocks:
+    - "T106"
+    - "T107"
+    - "T108"
+
+codebase_context:
+  branch: "codex/reset"
+  surface: "Ambitious operational product surface using the Scientific Atlas / Command Center pattern."
+  current_state: "T104 provides one Accepted package-internal waterfall projection; playground is a minimal shell."
+  design_thesis: "A calm financial analysis workbench where the chart is the primary artifact, the outline is precise structure, and the inspector exposes only current context."
+  signature_move: "Chart, compact structure outline, and validation rail share one stable three-pane analytical plane rather than card-based dashboard composition."
+  architectural_boundary:
+    - "FinancialChartEditor owns React UI/session adaptation; WaterfallCanvas alone owns G2 lifecycle."
+    - "The chart consumes projectWaterfall output and never reimplements waterfall arithmetic."
+    - "T105 establishes a package-internal execute path for T106 but does not expose dispatch or implement reorder/group commands in visible UI."
+    - "Selection is local non-domain UI state; SourceData and ViewSpec remain immutable."
+
+locked_contract:
+  component_modes:
+    - "viewSpec is controlled; accepted internal execution emits callbacks but visible ViewSpec does not diverge until the host echoes props."
+    - "defaultViewSpec is uncontrolled initial state; accepted internal execution commits immediately through the same controller path."
+    - "Providing both viewSpec and defaultViewSpec yields a deterministic invalid-configuration state without creating G2."
+  callbacks:
+    - "Accepted command emits onCommand then onViewSpecChange; rejected command emits onCommandRejected only."
+    - "Selection emits onSelectionChange with nodeId and copied sourceIds."
+    - "Host callback exceptions are contained and log only callback identity, never values, labels, source refs or caller error text."
+  states:
+    - "Ready renders outline, real G2 canvas, inspector and text summary."
+    - "Empty means a valid anchors-only source; anchors remain visible with a compact empty contribution message."
+    - "Invalid data/config blocks G2 and renders privacy-safe issue code/path summary in the same workbench skeleton."
+    - "G2 render rejection becomes a contained chart-error state and stale async completion cannot update an unmounted component."
+  lifecycle:
+    - "Each valid projection owns one Chart instance; dependency change and unmount call destroy exactly once."
+    - "Canvas renderer is real in browser E2E; component tests mock only the external G2 boundary."
+  visual:
+    - "Desktop 1440x900 uses 280px / flexible chart / 300px; chart remains unframed and central."
+    - "At 1024px inspector is an on-demand drawer; below 760px outline and inspector are full-height sheets and chart remains visible."
+    - "Only exact design-contract tokens, 4-6px radii, stable 32/36px controls, no gradients, nested cards, hero or decorative imagery."
+    - "CSS owns 100-180ms state motion and disables nonessential transitions for reduced motion; no animation library is added."
+  public_surface:
+    - "Add FinancialChartEditor and its props/selection types; keep projectWaterfall and controller internal."
+    - "Add package CSS subpath; React, React DOM and G2 remain external peer dependencies."
+    - "Persistence and SVG/PNG implementation remain T107; visible export control is disabled in T105."
+
+execution_constraints:
+  adapter: "Codex direct TDD execution with delegated RED test authorship and independent review."
+  allowed_files:
+    - "package.json"
+    - "pnpm-lock.yaml"
+    - "vitest.config.ts"
+    - "packages/editor/package.json"
+    - "packages/editor/tsconfig.json"
+    - "packages/editor/tsup.config.ts"
+    - "packages/editor/src/components/**"
+    - "packages/editor/src/styles/**"
+    - "packages/editor/src/react/**"
+    - "packages/editor/src/index.ts"
+    - "packages/editor/tests/setup.ts"
+    - "packages/editor/tests/components/**"
+    - "packages/editor/tests/package/**"
+    - "apps/playground/package.json"
+    - "apps/playground/tsconfig.json"
+    - "apps/playground/vite.config.ts"
+    - "apps/playground/src/**"
+    - "apps/playground/index.html"
+    - "e2e/fixtures/**"
+    - "e2e/rendering.spec.ts"
+  dependencies:
+    - "lucide-react is the only production UI dependency added."
+    - "Testing Library dependencies may be added as exact root devDependencies."
+  forbidden_changes:
+    - "No drag/drop, reorder, grouping command controls, persistence, active export, routing, backend, network call or AI feature."
+    - "No second projection/arithmetic path, handwritten SVG chart, animation library, global editor store or exposed G2 instance."
+    - "No commit, push, PR, merge or publish."
+  conflicts:
+    - "Do not execute T106 concurrently because it owns visible command interactions on the same components."
+
+tdd_plan:
+  red:
+    - "Add controlled/uncontrolled controller tests including prop echo, accepted/rejected callbacks and callback containment."
+    - "Add ready/empty/invalid/G2-error state tests and exact destroy-on-change/unmount assertions."
+    - "Add real Chromium render, nonblank canvas pixel, desktop/compact/mobile layout and sheet reachability tests."
+    - "Update package runtime/type/CSS export consumers before public component implementation."
+  green:
+    - "Implement typed props, controller, stable shell components and a single G2 lifecycle adapter."
+    - "Implement scoped CSS tokens/responsive panels and a public-entry playground with a real financial fixture."
+  refactor:
+    - "Keep layout, outline, chart and inspector ownership separate; reuse one formatter and projection result."
+    - "Run screenshot review and correct overflow, canvas framing, palette, typography and compact/mobile hierarchy."
+
+validation_loop:
+  commands:
+    - "pnpm exec vitest run packages/editor/tests/components"
+    - "pnpm test:unit"
+    - "pnpm test:coverage"
+    - "pnpm typecheck"
+    - "pnpm lint"
+    - "pnpm format:check"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "pnpm exec playwright test e2e/rendering.spec.ts --project=chromium"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T105"
+  expected_signals:
+    - "All component, full unit, coverage, build, package and Chromium rendering commands exit 0 after GREEN."
+    - "A real canvas has stable dimensions and more than 500 non-background pixels."
+    - "1440x900, 1024x768 and 390x844 show no horizontal overflow, text/control overlap or blank chart."
+    - "Unmount and dependency replacement destroy every created Chart exactly once."
+  retry_budget: 3
+  failure_policy: "Fix only T105 component/render/lifecycle/visual failures; stop if projection or command semantics must materially change."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T105"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+    - "screenshots/desktop-ready.png"
+    - "screenshots/compact-ready.png"
+    - "screenshots/mobile-ready.png"
+    - "screenshots/invalid-data.png"
+  required_content:
+    - "RED/GREEN, public surface, controlled/uncontrolled and G2 cleanup evidence."
+    - "Real canvas pixel count and desktop/compact/mobile bounding-box evidence."
+    - "Visual QA rubric result, changed files, diff summary and residual risk."
+
+review_contract:
+  spec_compliance:
+    - "Component props, modes, callbacks, states, G2 lifecycle and package/CSS exports have direct tests."
+    - "Visible UI does not implement T106/T107 behavior or expose internal controller/G2/projection APIs."
+  engineering_quality:
+    - "Strict types, no any/ignore, scoped cleanup, no input mutation and no financial-value logging."
+    - "React/G2 remain external; CSS has component scope and reduced-motion/mobile paths."
+  visual_quality:
+    - "Primary chart artifact is unmistakable in three seconds and no card-grid/marketing composition appears."
+    - "Design review scores at least 1.7 average with no zero in core dimensions."
+  qa_acceptance:
+    - "No Critical/High/Medium independent review finding remains."
+    - "T105 ends Needs_Review and waits for user visual acceptance before T106."
+
+handoff:
+  on_success: "Attach evidence, mark T105 Needs_Review, keep a local dev server running, show URL/screenshots and request user visual acceptance."
+  on_failure: "Keep T105 Running with explicit blocker; do not advance T106."
+  remote_actions: "None authorized."
+
+stop_conditions:
+  - "Real G2 cannot render the accepted projection without duplicating arithmetic."
+  - "Controlled mode requires a public dispatch escape hatch or hidden source mutation."
+  - "Responsive layout can only pass by removing required chart visibility or unreachable panels."

@@ -1,0 +1,4526 @@
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md
+--- /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md	2026-07-16 11:57:54
++++ /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md	2026-07-18 22:29:23
+@@ -1,18 +1,18 @@
+-# g2touch 产品设计 SSOT
++# TellPlot 产品设计 SSOT
+ 
+ ## Metadata
+ 
+-- Version: 0.3.0
++- Version: 0.4.0
+ - Status: Confirmed
+ - Source: 真实财务分析与 PPT 汇报工作流；已上线的瀑布图可拖拽组件实践；2026-07-15 产品讨论
+-- Last updated: 2026-07-16
+-- Approval: 用户于 2026-07-16 明确批准按递归分组树与图表直接编排方向推进
++- Last updated: 2026-07-18
++- Approval: 用户于 2026-07-18 明确批准 `TellPlot` 品牌名与独立仓库迁移方案
+ 
+ ## Product Positioning
+ 
+-g2touch 是面向财务分析与汇报场景的可编辑叙事图表能力。产品帮助用户在不改写原始财务数据的前提下，通过直接操作、结构大纲和确定性命令调整图表的叙事顺序、层级、分组与表达重点，并生成适合演示文稿使用的结果。
++TellPlot 是面向财务分析与汇报场景的可编辑叙事图表能力。产品帮助用户在不改写原始财务数据的前提下，通过直接操作、结构大纲和确定性命令调整图表的叙事顺序、层级、分组与表达重点，并生成适合演示文稿使用的结果。
+ 
+-当前项目名 `g2touch` 为工作名称。产品不以“通用 G2 交互中间件”为定位，也不以替代 BI、数据准备平台或 PowerPoint 为目标。
++产品品牌、代码仓库和包命名空间统一使用 `TellPlot` / `tellplot` / `@tellplot`。产品不以“通用 G2 交互中间件”为定位，也不以替代 BI、数据准备平台或 PowerPoint 为目标。
+ 
+ ## Delivery Form
+ 
+@@ -325,7 +325,7 @@
+ 
+ ### CD-004 产品名称
+ 
+-第一阶段继续使用 `g2touch` 作为工作名称。名称不影响组件 API、数据 schema 或交付验收，品牌命名可在公开发布前单独决策。
++产品品牌使用 `TellPlot`，代码仓库使用 `tellplot`，npm scope 使用 `@tellplot`。公共包、持久化 schema、DOM scope、日志前缀和导出默认文件名使用一致的品牌命名空间。
+ 
+ ### CD-005 递归分组与画布直接操作
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md
+--- /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md	2026-07-18 11:46:40
++++ /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md	2026-07-18 22:29:23
+@@ -1,15 +1,15 @@
+-# g2touch 交付状态报告
++# TellPlot 交付状态报告
+ 
+ ## Metadata
+ 
+-- Version: 0.2.0
++- Version: 0.3.0
+ - Status: Not_Released
+ - Last updated: 2026-07-18
+-- Branch: `codex/reset`
++- Branch: `main`
+ 
+ ## Current State
+ 
+-瀑布图基础切片的实现、本地 release validation、final evidence 与独立复审已完成。T101-T108 与 T106-CR001 已全部验收，形成可发布候选；当前没有执行 publish、部署或其他远程交付动作。
++瀑布图基础切片的实现、本地 release validation、final evidence 与独立复审已完成。T101-T108 与 T106-CR001 已全部验收，形成可发布候选。T109 正在把该候选迁入独立 TellPlot 仓库；npm publish 与正式版本发布不在本次迁移范围。
+ 
+ ## Release Scope
+ 
+@@ -33,8 +33,8 @@
+ 
+ ## Known Blockers
+ 
+-- GitHub-hosted Ubuntu workflow 尚未远程执行；当前未获授权执行 push、PR 或远程 CI。Actions 使用 major tags，完整 commit SHA pinning 属于后续 supply-chain hardening。
++- GitHub-hosted Ubuntu workflow 将在 T109 首次推送后执行。Actions 使用 major tags，完整 commit SHA pinning 属于后续 supply-chain hardening。
+ 
+ ## Release Decision
+ 
+-结论：本地 release candidate 已具备。实际发布前仍应在 GitHub-hosted runner 执行同一 CI，且发布、push、PR、merge 或 publish 必须获得单独授权。
++结论：本地 release candidate 已具备。T109 负责建立新远端并验证 GitHub-hosted CI；npm publish 与正式版本发布必须获得单独授权。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md
+--- /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md	2026-07-18 11:46:40
++++ /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md	2026-07-18 22:31:35
+@@ -1,11 +1,11 @@
+-# g2touch 任务图
++# TellPlot 任务图
+ 
+ ## Metadata
+ 
+-- Version: 0.4.0
++- Version: 0.5.0
+ - Status: Execution_In_Progress
+ - Last updated: 2026-07-18
+-- Scope: 产品与技术方案已确认；瀑布图基础切片按 T101-T108 任务图执行
++- Scope: 瀑布图基础切片已验收；TellPlot 品牌与独立仓库迁移按 T109 执行
+ 
+ ## T001 - 确认产品设计与项目章程
+ 
+@@ -63,6 +63,27 @@
+ | T107 - 持久化、导出与可访问性闭环 | Accepted | 用户于 2026-07-16 明确验收 |
+ | T108 - 集成、包质量与视觉验收 | Accepted | 用户于 2026-07-18 明确验收；全量验证、final patch/validator 与全部独立 review 已通过 |
+ 
++## T109 - TellPlot 品牌与独立仓库迁移
++
++- Status: In_Progress
++- Priority: P0
++- Dependencies: T108
++- Blocks: 首次远程 CI、仓库保护与公开发布准备
++- Story / Requirement: CD-004、TDR-011
++- Parallel: 否
++- Conflicts with: 归档、改名或删除旧 GitHub 仓库；npm publish；修改产品行为
++- Goal: 将已验收的发布候选迁入独立 TellPlot Git 根目录，统一品牌与公共命名空间，并以可验证的干净历史推送到新私有仓库。
++- Allowed files: TellPlot 新仓库全部文件；新建 `iiwish/tellplot` GitHub 仓库及其设置
++- Forbidden targets: `iiwish/g2touch` 的仓库名称、归档状态、分支和内容
++- Test targets: 品牌残留、格式、lint、类型、单元/coverage、构建、包消费、React/浏览器兼容、E2E、可访问性、性能、artifact validator、远程 CI
++- Deliverables: 独立 TellPlot 仓库、规范 `main` 根提交、通过的本地与远程验证、迁移 evidence
++- Acceptance criteria: 当前源码与规范不含旧品牌标识；`@tellplot/editor` 可构建和消费；GitHub CI 通过；旧远端保持不变。
++- Definition of Done: 新仓库可从干净 clone 安装和验证，`main` 已推送并受保护，旧仓库处理仍处于单独后续闸门。
++- Validation commands: `pnpm install --frozen-lockfile`；`pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:browser-previous`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；brand residue audit；artifact validator；GitHub Actions
++- TDD plan: RED：先证明当前命名残留扫描会发现旧品牌；GREEN：完成包、公共标识、文档和配置的最小一致迁移；REFACTOR：统一公开 namespace 并保持历史 evidence patch 不变。迁移不改变产品行为。
++- Packet path: `.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml`
++- Evidence required: 源/目标清单、旧历史镜像校验、品牌扫描、本地验证、GitHub CI、仓库设置与旧远端不变证明。
++
+ ## Next Gate
+ 
+-T101-T108 与 T106-CR001 已全部验收，瀑布图基础切片任务图执行完成。发布、publish、远程 CI、push、PR 或 merge 均属于单独授权的后续动作。
++T109 完成后进入旧仓库归档决策。npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md
+--- /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md	2026-07-16 17:13:10
++++ /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md	2026-07-18 22:29:23
+@@ -1,15 +1,15 @@
+-# g2touch 技术决策记录
++# TellPlot 技术决策记录
+ 
+ ## Metadata
+ 
+-- Version: 0.3.0
++- Version: 0.4.0
+ - Status: Confirmed
+-- Last updated: 2026-07-16
+-- Approval: 用户于 2026-07-16 明确批准递归分组模型与 T106-CR001 优化范围
++- Last updated: 2026-07-18
++- Approval: 用户于 2026-07-18 明确批准 TellPlot 品牌与独立仓库迁移方案
+ 
+ ## Decision Context
+ 
+-g2touch 需要在财务正确性、直接操作体验和可嵌入性之间取得平衡。当前技术方向只覆盖已经确认的产品约束，不创建工程脚手架，不承诺未经原型验证的公共 API。
++TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取得平衡。当前技术方向只覆盖已经确认的产品约束，不承诺未经原型验证的公共 API。
+ 
+ ## TDR-001 图表渲染引擎
+ 
+@@ -94,6 +94,15 @@
+ - Rationale: 该状态机避免点击选择、柱子拖动和空白框选争夺 pointer，并保持一次用户意图对应一次撤销。
+ - Chart boundary: 图表只执行同父级重排与分组；排序使用 pointer down 时的 G2 scene 水平边界快照和拖动柱宽，忽略 Y 轴高度；精确跨层级移动由结构大纲完成。
+ - Motion: G2 负责柱子重投影，DOM overlay 负责真实图标按钮和命名对话框；不引入额外动画库。
++
++## TDR-011 品牌与仓库身份
++
++- Status: Confirmed
++- Decision: 产品使用 `TellPlot` 品牌，规范代码仓库为 `iiwish/tellplot`，包命名空间为 `@tellplot`。仓库使用独立根历史，初始提交承载已经验收的瀑布图基础切片与对应 SSOT/evidence。
++- Rationale: 产品定位是财务叙事图表编辑能力，不应让渲染引擎或单一交互方式进入长期品牌与公共 API。独立根历史让新仓库只保留当前架构和可验证资产。
++- Public identity: React 包为 `@tellplot/editor`；DOM scope 使用 `[data-tellplot]`；CSS 使用 `.tp-` / `--tp-` 前缀；运行时错误类型使用 `TellPlot*`；环境变量使用 `TELLPLOT_*`。
++- Historical boundary: `.ai-platform/evidence/**` 中的既有 patch 是不可变验收记录，可以保留交付时使用的旧标识；当前源码、配置和规范文档不得继续暴露旧命名空间。
++- Consequences: 首次远程提交前必须完成全量品牌残留扫描、包消费测试、浏览器矩阵和干净安装验证。
+ 
+ ## Approval Gate
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md
+--- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md	2026-07-18 22:47:06
+@@ -0,0 +1,31 @@
++# T109 Brand Audit
++
++## RED Baseline
++
++- Lowercase `g2touch`: 176 matches outside patch evidence
++- PascalCase `G2Touch`: 8 matches outside patch evidence
++- Uppercase `G2TOUCH`: 13 matches outside patch evidence
++- CSS/public prefix `gt-`: 434 matches outside patch evidence
++
++The baseline covered package names, imports, DOM attributes, test IDs, CSS classes/variables, environment variables, error names, visible UI text and canonical documentation.
++
++## GREEN Result
++
++- Product brand: `TellPlot`
++- Repository/workspace namespace: `tellplot`
++- Package scope: `@tellplot`
++- DOM scope: `[data-tellplot]`
++- CSS namespace: `.tp-` / `--tp-`
++- Runtime type prefix: `TellPlot*`
++- Environment namespace: `TELLPLOT_*`
++
++Application, package, test, repository and canonical product/feature scans return no legacy namespace matches. No filename contains the legacy project name.
++
++## Intentional Allowlist
++
++Legacy text is allowed only in:
++
++- immutable `.ai-platform/evidence/**` delivery records created before T109;
++- the T109 forbidden-remote statements that prevent writes to the predecessor repository.
++
++The common credential signature scan also returned no matches. `gitleaks` is not installed locally, so repository-native pattern scanning and GitHub security facilities provide the available migration checks.
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/diff.patch /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/diff.patch
+--- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/diff.patch	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/diff.patch	2026-07-18 22:47:42
+@@ -0,0 +1,182 @@
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md
++--- /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md	2026-07-16 11:57:54
+++++ /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md	2026-07-18 22:29:23
++@@ -1,18 +1,18 @@
++-# g2touch 产品设计 SSOT
+++# TellPlot 产品设计 SSOT
++ 
++ ## Metadata
++ 
++-- Version: 0.3.0
+++- Version: 0.4.0
++ - Status: Confirmed
++ - Source: 真实财务分析与 PPT 汇报工作流；已上线的瀑布图可拖拽组件实践；2026-07-15 产品讨论
++-- Last updated: 2026-07-16
++-- Approval: 用户于 2026-07-16 明确批准按递归分组树与图表直接编排方向推进
+++- Last updated: 2026-07-18
+++- Approval: 用户于 2026-07-18 明确批准 `TellPlot` 品牌名与独立仓库迁移方案
++ 
++ ## Product Positioning
++ 
++-g2touch 是面向财务分析与汇报场景的可编辑叙事图表能力。产品帮助用户在不改写原始财务数据的前提下，通过直接操作、结构大纲和确定性命令调整图表的叙事顺序、层级、分组与表达重点，并生成适合演示文稿使用的结果。
+++TellPlot 是面向财务分析与汇报场景的可编辑叙事图表能力。产品帮助用户在不改写原始财务数据的前提下，通过直接操作、结构大纲和确定性命令调整图表的叙事顺序、层级、分组与表达重点，并生成适合演示文稿使用的结果。
++ 
++-当前项目名 `g2touch` 为工作名称。产品不以“通用 G2 交互中间件”为定位，也不以替代 BI、数据准备平台或 PowerPoint 为目标。
+++产品品牌、代码仓库和包命名空间统一使用 `TellPlot` / `tellplot` / `@tellplot`。产品不以“通用 G2 交互中间件”为定位，也不以替代 BI、数据准备平台或 PowerPoint 为目标。
++ 
++ ## Delivery Form
++ 
++@@ -325,7 +325,7 @@
++ 
++ ### CD-004 产品名称
++ 
++-第一阶段继续使用 `g2touch` 作为工作名称。名称不影响组件 API、数据 schema 或交付验收，品牌命名可在公开发布前单独决策。
+++产品品牌使用 `TellPlot`，代码仓库使用 `tellplot`，npm scope 使用 `@tellplot`。公共包、持久化 schema、DOM scope、日志前缀和导出默认文件名使用一致的品牌命名空间。
++ 
++ ### CD-005 递归分组与画布直接操作
++ 
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md
++--- /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md	2026-07-18 11:46:40
+++++ /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md	2026-07-18 22:29:23
++@@ -1,15 +1,15 @@
++-# g2touch 交付状态报告
+++# TellPlot 交付状态报告
++ 
++ ## Metadata
++ 
++-- Version: 0.2.0
+++- Version: 0.3.0
++ - Status: Not_Released
++ - Last updated: 2026-07-18
++-- Branch: `codex/reset`
+++- Branch: `main`
++ 
++ ## Current State
++ 
++-瀑布图基础切片的实现、本地 release validation、final evidence 与独立复审已完成。T101-T108 与 T106-CR001 已全部验收，形成可发布候选；当前没有执行 publish、部署或其他远程交付动作。
+++瀑布图基础切片的实现、本地 release validation、final evidence 与独立复审已完成。T101-T108 与 T106-CR001 已全部验收，形成可发布候选。T109 正在把该候选迁入独立 TellPlot 仓库；npm publish 与正式版本发布不在本次迁移范围。
++ 
++ ## Release Scope
++ 
++@@ -33,8 +33,8 @@
++ 
++ ## Known Blockers
++ 
++-- GitHub-hosted Ubuntu workflow 尚未远程执行；当前未获授权执行 push、PR 或远程 CI。Actions 使用 major tags，完整 commit SHA pinning 属于后续 supply-chain hardening。
+++- GitHub-hosted Ubuntu workflow 将在 T109 首次推送后执行。Actions 使用 major tags，完整 commit SHA pinning 属于后续 supply-chain hardening。
++ 
++ ## Release Decision
++ 
++-结论：本地 release candidate 已具备。实际发布前仍应在 GitHub-hosted runner 执行同一 CI，且发布、push、PR、merge 或 publish 必须获得单独授权。
+++结论：本地 release candidate 已具备。T109 负责建立新远端并验证 GitHub-hosted CI；npm publish 与正式版本发布必须获得单独授权。
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md
++--- /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md	2026-07-18 11:46:40
+++++ /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md	2026-07-18 22:31:35
++@@ -1,11 +1,11 @@
++-# g2touch 任务图
+++# TellPlot 任务图
++ 
++ ## Metadata
++ 
++-- Version: 0.4.0
+++- Version: 0.5.0
++ - Status: Execution_In_Progress
++ - Last updated: 2026-07-18
++-- Scope: 产品与技术方案已确认；瀑布图基础切片按 T101-T108 任务图执行
+++- Scope: 瀑布图基础切片已验收；TellPlot 品牌与独立仓库迁移按 T109 执行
++ 
++ ## T001 - 确认产品设计与项目章程
++ 
++@@ -63,6 +63,27 @@
++ | T107 - 持久化、导出与可访问性闭环 | Accepted | 用户于 2026-07-16 明确验收 |
++ | T108 - 集成、包质量与视觉验收 | Accepted | 用户于 2026-07-18 明确验收；全量验证、final patch/validator 与全部独立 review 已通过 |
++ 
+++## T109 - TellPlot 品牌与独立仓库迁移
+++
+++- Status: In_Progress
+++- Priority: P0
+++- Dependencies: T108
+++- Blocks: 首次远程 CI、仓库保护与公开发布准备
+++- Story / Requirement: CD-004、TDR-011
+++- Parallel: 否
+++- Conflicts with: 归档、改名或删除旧 GitHub 仓库；npm publish；修改产品行为
+++- Goal: 将已验收的发布候选迁入独立 TellPlot Git 根目录，统一品牌与公共命名空间，并以可验证的干净历史推送到新私有仓库。
+++- Allowed files: TellPlot 新仓库全部文件；新建 `iiwish/tellplot` GitHub 仓库及其设置
+++- Forbidden targets: `iiwish/g2touch` 的仓库名称、归档状态、分支和内容
+++- Test targets: 品牌残留、格式、lint、类型、单元/coverage、构建、包消费、React/浏览器兼容、E2E、可访问性、性能、artifact validator、远程 CI
+++- Deliverables: 独立 TellPlot 仓库、规范 `main` 根提交、通过的本地与远程验证、迁移 evidence
+++- Acceptance criteria: 当前源码与规范不含旧品牌标识；`@tellplot/editor` 可构建和消费；GitHub CI 通过；旧远端保持不变。
+++- Definition of Done: 新仓库可从干净 clone 安装和验证，`main` 已推送并受保护，旧仓库处理仍处于单独后续闸门。
+++- Validation commands: `pnpm install --frozen-lockfile`；`pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:browser-previous`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；brand residue audit；artifact validator；GitHub Actions
+++- TDD plan: RED：先证明当前命名残留扫描会发现旧品牌；GREEN：完成包、公共标识、文档和配置的最小一致迁移；REFACTOR：统一公开 namespace 并保持历史 evidence patch 不变。迁移不改变产品行为。
+++- Packet path: `.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml`
+++- Evidence required: 源/目标清单、旧历史镜像校验、品牌扫描、本地验证、GitHub CI、仓库设置与旧远端不变证明。
+++
++ ## Next Gate
++ 
++-T101-T108 与 T106-CR001 已全部验收，瀑布图基础切片任务图执行完成。发布、publish、远程 CI、push、PR 或 merge 均属于单独授权的后续动作。
+++T109 完成后进入旧仓库归档决策。npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md
++--- /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md	2026-07-16 17:13:10
+++++ /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md	2026-07-18 22:29:23
++@@ -1,15 +1,15 @@
++-# g2touch 技术决策记录
+++# TellPlot 技术决策记录
++ 
++ ## Metadata
++ 
++-- Version: 0.3.0
+++- Version: 0.4.0
++ - Status: Confirmed
++-- Last updated: 2026-07-16
++-- Approval: 用户于 2026-07-16 明确批准递归分组模型与 T106-CR001 优化范围
+++- Last updated: 2026-07-18
+++- Approval: 用户于 2026-07-18 明确批准 TellPlot 品牌与独立仓库迁移方案
++ 
++ ## Decision Context
++ 
++-g2touch 需要在财务正确性、直接操作体验和可嵌入性之间取得平衡。当前技术方向只覆盖已经确认的产品约束，不创建工程脚手架，不承诺未经原型验证的公共 API。
+++TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取得平衡。当前技术方向只覆盖已经确认的产品约束，不承诺未经原型验证的公共 API。
++ 
++ ## TDR-001 图表渲染引擎
++ 
++@@ -94,6 +94,15 @@
++ - Rationale: 该状态机避免点击选择、柱子拖动和空白框选争夺 pointer，并保持一次用户意图对应一次撤销。
++ - Chart boundary: 图表只执行同父级重排与分组；排序使用 pointer down 时的 G2 scene 水平边界快照和拖动柱宽，忽略 Y 轴高度；精确跨层级移动由结构大纲完成。
++ - Motion: G2 负责柱子重投影，DOM overlay 负责真实图标按钮和命名对话框；不引入额外动画库。
+++
+++## TDR-011 品牌与仓库身份
+++
+++- Status: Confirmed
+++- Decision: 产品使用 `TellPlot` 品牌，规范代码仓库为 `iiwish/tellplot`，包命名空间为 `@tellplot`。仓库使用独立根历史，初始提交承载已经验收的瀑布图基础切片与对应 SSOT/evidence。
+++- Rationale: 产品定位是财务叙事图表编辑能力，不应让渲染引擎或单一交互方式进入长期品牌与公共 API。独立根历史让新仓库只保留当前架构和可验证资产。
+++- Public identity: React 包为 `@tellplot/editor`；DOM scope 使用 `[data-tellplot]`；CSS 使用 `.tp-` / `--tp-` 前缀；运行时错误类型使用 `TellPlot*`；环境变量使用 `TELLPLOT_*`。
+++- Historical boundary: `.ai-platform/evidence/**` 中的既有 patch 是不可变验收记录，可以保留交付时使用的旧标识；当前源码、配置和规范文档不得继续暴露旧命名空间。
+++- Consequences: 首次远程提交前必须完成全量品牌残留扫描、包消费测试、浏览器矩阵和干净安装验证。
++ 
++ ## Approval Gate
++ 
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md
++--- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md	1970-01-01 08:00:00
+++++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md	2026-07-18 22:47:06
++@@ -0,0 +1,31 @@
+++# T109 Brand Audit
+++
+++## RED Baseline
+++
+++- Lowercase `g2touch`: 176 matches outside patch evidence
+++- PascalCase `G2Touch`: 8 matches outside patch evidence
+++- Uppercase `G2TOUCH`: 13 matches outside patch evidence
+++- CSS/public prefix `gt-`: 434 matches outside patch evidence
+++
+++The baseline covered package names, imports, DOM attributes, test IDs, CSS classes/variables, environment variables, error names, visible UI text and canonical documentation.
+++
+++## GREEN Result
+++
+++- Product brand: `TellPlot`
+++- Repository/workspace namespace: `tellplot`
+++- Package scope: `@tellplot`
+++- DOM scope: `[data-tellplot]`
+++- CSS namespace: `.tp-` / `--tp-`
+++- Runtime type prefix: `TellPlot*`
+++- Environment namespdiff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/migration-inventory.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/migration-inventory.md
+--- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/migration-inventory.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/migration-inventory.md	2026-07-18 22:47:06
+@@ -0,0 +1,27 @@
++# T109 Migration Inventory
++
++## Source
++
++- Working tree: `/Users/iiwish/self/g2touch`
++- Source HEAD: `af3aec4f5d2b74453a56cb413777a1dd93b5daf6`
++- Remote main: `af3aec4f5d2b74453a56cb413777a1dd93b5daf6`
++- Remote dev: `59739ed6ba5695b8edf54c2989d19105295a1c6c`
++- Source status hash after migration reads: `25a493c80333d35db75eeb856ff0e05c56b285b573b1ce09d4c307748565c5fd`
++
++## Safety Copy
++
++- Bare mirror: `/Users/iiwish/self/g2touch-legacy.git`
++- `git fsck --full`: exit 0
++- Mirror heads match remote `main` and `dev`.
++
++## Target
++
++- Working tree: `/Users/iiwish/self/tellplot`
++- Git history: independent repository initialized with `main` and no inherited commits
++- Initial copy audit: `rsync -ani --delete` returned no differences after excluding `.git`, dependencies, build, coverage and browser-result directories
++- Existing T101-T108 evidence comparison: `diff -qr` returned no differences before T109 evidence was added
++- Repository input: 195 non-ignored files after migration artifacts; no file exceeds 5 MiB
++
++## Remote Boundary
++
++The old GitHub repository was only read through `ls-remote` and mirror clone. It was not renamed, archived, deleted, pushed or otherwise modified during T109.
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/summary.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/summary.md
+--- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/summary.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/summary.md	2026-07-18 22:47:06
+@@ -0,0 +1,18 @@
++# T109 Summary
++
++## Status
++
++In progress. Local file, namespace, package and regression migration is complete; the root commit, new GitHub remote, hosted CI, clean-clone verification and repository rules remain.
++
++## Completed
++
++- Protected the predecessor history in a verified bare mirror.
++- Copied the accepted working tree into an independent TellPlot Git root.
++- Migrated brand, packages, public DOM/CSS/runtime identifiers, engineering configuration and canonical SSOT.
++- Preserved T101-T108 historical evidence unchanged.
++- Passed frozen install, static quality, 314 tests with coverage, package consumers, React 18/19 runtime consumers, 144 previous-browser tests, 108 current-browser tests, 21 accessibility tests and isolated performance.
++
++## Residual Risk
++
++- The first current-browser matrix had one non-reproducing Chromium focus failure; the exact isolated scenario and a clean full matrix passed without changes. Remote CI remains the independent environment check.
++- GitHub Actions still uses major action tags; full SHA pinning remains a separately tracked supply-chain hardening item.
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/test-results.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/test-results.md
+--- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/test-results.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/test-results.md	2026-07-18 22:47:06
+@@ -0,0 +1,28 @@
++# T109 Test Results
++
++## Static And Package
++
++- `pnpm install --frozen-lockfile`: pass; 529-entry lockfile policy check passed
++- `pnpm format:check`: pass
++- `pnpm lint`: pass
++- `pnpm typecheck`: pass for editor and playground
++- `pnpm test:coverage`: 30 files, 314/314 tests; 90.56% statements, 84.41% branches, 93.55% functions, 90.65% lines
++- `pnpm build`: pass for `@tellplot/editor` and playground
++- `pnpm test:package`: publint, Are The Types Wrong, ESM, CJS and type consumer all pass
++- `pnpm test:react-matrix`: React 18.3.1 and 19.2.7 each paint 88,744 pixels and unmount cleanly from the packed `@tellplot/editor` tarball
++
++## Browser
++
++- `pnpm test:browser-previous` under Node 22.20.0: Playwright 1.60.0 matrix 108/108 and WebKit 18.4 previous-major matrix 36/36; total 144/144
++- First current-browser run: 107/108 passed; one Chromium focus assertion did not retain programmatic focus while the same scenario passed in Firefox, WebKit and previous-browser matrices
++- Isolated Chromium rerun of that exact scenario: 1/1 passed without code or assertion changes
++- Clean full current-browser rerun: Chromium, Firefox and WebKit 108/108 passed
++- `pnpm test:a11y`: 21/21 passed with no serious or critical axe violations
++- `pnpm test:performance`: 1/1 passed; 200-item visible-canvas p95 `67.79999995231628ms`, 30 samples, same-target React commit delta 0
++
++## Governance
++
++- Artifact validator: 0 errors, 0 warnings after completing the T109 task and packet fields
++- Brand and filename audits: pass with the documented historical/forbidden-remote allowlist
++- Remote CI: pending first push
++- Clean clone verification: pending first push
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/memory/constitution.md /Users/iiwish/self/tellplot/.ai-platform/memory/constitution.md
+--- /Users/iiwish/self/g2touch/.ai-platform/memory/constitution.md	2026-07-15 10:56:11
++++ /Users/iiwish/self/tellplot/.ai-platform/memory/constitution.md	2026-07-18 22:29:23
+@@ -1,15 +1,15 @@
+-# g2touch 项目章程
++# TellPlot 项目章程
+ 
+ ## Metadata
+ 
+-- Version: 0.2.0
++- Version: 0.3.0
+ - Status: Confirmed
+-- Last updated: 2026-07-15
+-- Approval: 用户于 2026-07-15 明确批准按本章程与产品方向推进
++- Last updated: 2026-07-18
++- Approval: 用户于 2026-07-18 明确批准 TellPlot 品牌与独立仓库迁移方案；原章程原则继续有效
+ 
+ ## Purpose
+ 
+-本章程定义 g2touch 在产品、架构、财务正确性、交互质量、AI 安全和交付治理上的不可协商原则。所有产品设计、技术决策、任务和实现必须符合本章程。
++本章程定义 TellPlot 在产品、架构、财务正确性、交互质量、AI 安全和交付治理上的不可协商原则。所有产品设计、技术决策、任务和实现必须符合本章程。
+ 
+ ## Principles
+ 
+@@ -77,8 +77,8 @@
+ 
+ ## Git And Review Policy
+ 
+-- `main` 保持可追溯的稳定历史。
+-- 产品重置和后续实现使用独立分支。
++- `main` 保持可追溯、可构建、受保护的稳定历史。
++- 后续实现使用短生命周期任务分支并通过验证后合入 `main`。
+ - 未经用户明确授权，不执行远程 push、PR、merge 或 publish。
+ - 产品 SSOT、技术决策和任务图分别经过用户明确批准。
+ - 实现完成后先进行 spec compliance review，再进行代码与行为 review。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md	2026-07-16 11:58:42
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md	2026-07-18 22:26:02
+@@ -4,7 +4,7 @@
+ 
+ - Version: 0.3.0
+ - Status: Confirmed
+-- Schema family: `g2touch.command.v1`
++- Schema family: `tellplot.command.v1`
+ 
+ ## Common Envelope
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md	2026-07-16 13:12:43
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md	2026-07-18 22:26:09
+@@ -1,10 +1,10 @@
+-# `@g2touch/editor` 公共 API 合同
++# `@tellplot/editor` 公共 API 合同
+ 
+ ## Metadata
+ 
+ - Version: 0.3.0
+ - Status: Confirmed
+-- Package: `@g2touch/editor`
++- Package: `@tellplot/editor`
+ 
+ ## Export Surface
+ 
+@@ -21,7 +21,7 @@
+ - `validateSourceData`
+ - `validateViewSpec`
+ - 公共 props、data、view、command、result、error 与 export 类型
+-- `@g2touch/editor/styles.css`
++- `@tellplot/editor/styles.css`
+ 
+ 不导出 G2 chart instance、内部 reducer、DOM components、dnd-kit adapter 或 projection cache。
+ `projectWaterfall` 是 package 内部的确定性 adapter input，不属于第一阶段公共 runtime surface；公共组件与导出模块复用同一实现。
+@@ -130,7 +130,7 @@
+ ## Styling Contract
+ 
+ - 包提供 `styles.css`，宿主显式 import。
+-- 所有 selector 使用 `.gt-` 前缀或 `[data-g2touch]` scope。
++- 所有 selector 使用 `.tp-` 前缀或 `[data-tellplot]` scope。
+ - CSS variables 可在组件 root 覆盖，未提供时使用 design contract 默认值。
+ - 不修改 `html`、`body`、通用 `button`、`input` 或全局 box-sizing。
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md	2026-07-16 17:53:21
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md	2026-07-18 22:26:09
+@@ -33,22 +33,22 @@
+ 
+ ## Color Tokens
+ 
+-- `--gt-bg: #F3F5F4`
+-- `--gt-surface: #FFFFFF`
+-- `--gt-surface-subtle: #EAEEEC`
+-- `--gt-text: #18211D`
+-- `--gt-text-muted: #5F6B65`
+-- `--gt-border: #D5DBD7`
+-- `--gt-border-strong: #AAB5AF`
+-- `--gt-accent: #126E57`
+-- `--gt-accent-hover: #0E5B48`
+-- `--gt-accent-soft: #DCEFE8`
+-- `--gt-positive: #168363`
+-- `--gt-negative: #D5524A`
+-- `--gt-total: #315C8C`
+-- `--gt-warning: #A46812`
+-- `--gt-danger: #B93832`
+-- `--gt-focus: #0D66D0`
++- `--tp-bg: #F3F5F4`
++- `--tp-surface: #FFFFFF`
++- `--tp-surface-subtle: #EAEEEC`
++- `--tp-text: #18211D`
++- `--tp-text-muted: #5F6B65`
++- `--tp-border: #D5DBD7`
++- `--tp-border-strong: #AAB5AF`
++- `--tp-accent: #126E57`
++- `--tp-accent-hover: #0E5B48`
++- `--tp-accent-soft: #DCEFE8`
++- `--tp-positive: #168363`
++- `--tp-negative: #D5524A`
++- `--tp-total: #315C8C`
++- `--tp-warning: #A46812`
++- `--tp-danger: #B93832`
++- `--tp-focus: #0D66D0`
+ 
+ 颜色只表达选择、金额方向、总额和错误，不用大面积单一色填充页面。正负颜色必须同时配合符号、标签或图例，不以颜色作为唯一信息。
+ 
+@@ -102,7 +102,7 @@
+ - 所有 icon button 有可访问名称和 tooltip。
+ - 大纲遵循 tree/treeitem 或经过验证的等价语义，层级、展开和选择状态可读。
+ - 键盘排序提供显式命令，不要求用户模拟 pointer drag。
+-- 焦点环使用 2px `--gt-focus` 加 2px offset。
++- 焦点环使用 2px `--tp-focus` 加 2px offset。
+ - 图表提供可读标题、摘要和当前顺序列表；Canvas 不是唯一信息源。
+ - hover-only group action 必须在 selection、focus-visible 和键盘大纲中提供等价路径。
+ - 触控目标最小 32px，关键主操作 36px。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml	2026-07-16 10:28:53
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml	2026-07-18 22:26:02
+@@ -107,7 +107,7 @@
+     - "e2e/accessibility.spec.ts"
+     - "e2e/performance.spec.ts"
+   dependency_changes:
+-    - "Add exact @dnd-kit/core 6.3.1 and @dnd-kit/sortable 10.0.0 runtime dependencies to @g2touch/editor."
++    - "Add exact @dnd-kit/core 6.3.1 and @dnd-kit/sortable 10.0.0 runtime dependencies to @tellplot/editor."
+     - "Add exact @axe-core/playwright 4.12.1 root devDependency for the approved accessibility gate."
+     - "Do not add Motion, Framer Motion, GSAP, a global store or another chart renderer."
+   allowed_scope_correction: "T106 component wiring requires FinancialChartEditor and editorMessages, existing G2 mocks require tests/setup, and the approved 200-item browser gate requires one deterministic playground fixture. The canonical allowed scope therefore uses components/**, tests/components/** and apps/playground/src/fixtures.ts without changing product behavior or public API."
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml	2026-07-18 11:46:18
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml	2026-07-18 22:26:02
+@@ -59,7 +59,7 @@
+   branch: "codex/reset"
+   current_state: "T101-T107 and T106-CR001 are Accepted. The intentionally dirty reset worktree contains the complete new workspace and evidence history. Current and compatibility Playwright browser binaries are available for the full matrices."
+   reusable_boundaries:
+-    - "Use the built and packed @g2touch/editor public exports and styles; do not import src internals in consumer fixtures."
++    - "Use the built and packed @tellplot/editor public exports and styles; do not import src internals in consumer fixtures."
+     - "Reuse the existing production-preview Playwright harness, responsive rendering assertions, accessibility scenarios and 200-item performance contract."
+     - "Treat SourceData, ViewSpec, deterministic commands, G2 rendering and T107 export semantics as accepted behavior."
+   forbidden_changes:
+@@ -127,7 +127,7 @@
+     - "DEF003-DEF007 focused REDs reproduced the absent annotation editor, missing screen/PNG/SVG annotation, five visual acceptance defects, export title/label/staleness defects, focus/selection defects, revision-only timing and leaked preview descendants."
+     - "DEF008 proved drag release and full-canvas hashing were invalid painted-update proxies. DEF009 reproduced combined-load p95 397.5ms. DEF010 reproduced isolated p95 348.6ms and a dense chart spec that still animated 202 marks. DEF011 proved the performance project inherited CI retries instead of failing on its first threshold breach."
+   green:
+-    - "Pack @g2touch/editor and install it into temporary React 18.3 and React 19.2 hosts with exact peer versions. In a real browser, prove the public component reaches ready state with painted G2 output and unmounts cleanly."
++    - "Pack @tellplot/editor and install it into temporary React 18.3 and React 19.2 hosts with exact peer versions. In a real browser, prove the public component reaches ready state with painted G2 output and unmounts cleanly."
+     - "Add CI that performs frozen install, static quality gates, coverage, build/package/matrix checks and Playwright browser validation with artifacts on failure."
+     - "Copy the complete root non-performance E2E tree into exact temporary Playwright hosts. Run 36 tests each on Playwright 1.60.0 Chromium 148, Firefox 150 and WebKit 26.4, plus Playwright 1.52.0 WebKit 18.4, for 144/144 without changing the workspace lockfile."
+     - "Run the accepted quickstart and all browser projects; capture desktop, compact and mobile final screenshots from the production build."
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/plan.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/plan.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/plan.md	2026-07-16 17:13:10
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/plan.md	2026-07-18 22:26:09
+@@ -10,7 +10,7 @@
+ 
+ ## Architecture Summary
+ 
+-项目采用 pnpm workspace，但只建设一个产品包 `@g2touch/editor`。领域模型、命令执行、瀑布投影、React 组件和 G2 adapter 在同一包内保持明确内部边界。`apps/playground` 只从公共入口消费组件，用于端到端与视觉验收。
++项目采用 pnpm workspace，但只建设一个产品包 `@tellplot/editor`。领域模型、命令执行、瀑布投影、React 组件和 G2 adapter 在同一包内保持明确内部边界。`apps/playground` 只从公共入口消费组件，用于端到端与视觉验收。
+ 
+ ```text
+ Host application
+@@ -100,7 +100,7 @@
+ - 非受控模式内部使用 reducer；受控模式把成功命令结果提交给 `onViewSpecChange`，下一次 props 同步前展示基于受控值的确定状态。
+ - 回调只返回结构化 metadata；默认不记录金额和标签。
+ - 错误边界仅捕获不可预期渲染错误；数据和命令错误走显式 result state。
+-- 组件样式使用 `gt-` 前缀和 CSS variables，避免污染宿主全局样式。
++- 组件样式使用 `tp-` 前缀和 CSS variables，避免污染宿主全局样式。
+ 
+ ## G2 Adapter
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/research.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/research.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/research.md	2026-07-15 11:20:10
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/research.md	2026-07-18 22:26:02
+@@ -65,7 +65,7 @@
+ 
+ ## Package Boundary Decision
+ 
+-不提前拆分 `@g2touch/core`。只有瀑布图和分类图都证明命令与 projection 边界稳定后，才考虑把纯领域能力作为单独包发布。当前 `packages/editor/src/domain` 通过禁止 React/G2 import 的 lint rule 保持逻辑边界。
++不提前拆分 `@tellplot/core`。只有瀑布图和分类图都证明命令与 projection 边界稳定后，才考虑把纯领域能力作为单独包发布。当前 `packages/editor/src/domain` 通过禁止 React/G2 import 的 lint rule 保持逻辑边界。
+ 
+ 公共包同时提供 ESM 与 CJS runtime。package exports 为 import 映射 ESM `.d.ts`，为 require 映射 CJS `.d.cts`，并使用 packed artifact 的 Are The Types Wrong 检查阻断 declaration/module format 错配。
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/analysis.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/analysis.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/analysis.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/analysis.md	2026-07-18 22:29:23
+@@ -0,0 +1,9 @@
++# T109 Cross-Artifact Analysis
++
++## Result
++
++- Critical: 0
++- High: 0
++- Medium: 0
++
++迁移与已确认产品定位、章程、TDR 和 T101-T108 验收结果一致。任务只改变品牌与仓库身份，不改变领域行为；旧 GitHub 仓库被列为 forbidden remote，避免迁移与归档混在同一不可逆步骤中。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md	2026-07-18 22:29:23
+@@ -0,0 +1,9 @@
++# T109 Requirements Checklist
++
++- [x] 用户明确批准 TellPlot 名称与迁移顺序。
++- [x] 目标目录由用户创建并确认用于迁移。
++- [x] 旧仓库处理与本任务隔离。
++- [x] 当前未提交工作树被识别为必须保护的输入。
++- [x] 包名、公共标识和验证范围明确。
++- [x] 本地与远程停止条件明确。
++- [x] 回退路径不依赖删除旧仓库。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml	2026-07-18 22:31:35
+@@ -0,0 +1,109 @@
++schema_version: "1.0"
++packet_id: "002-tellplot-repository-migration-T109-A001"
++task_id: "T109"
++feature_id: "002-tellplot-repository-migration"
++mode: "direct_execute"
++
++governance_inputs:
++  constitution: ".ai-platform/memory/constitution.md"
++  product_contract: ".ai-platform/docs/product-design.md"
++  tdr: ".ai-platform/docs/technology-decision-record.md"
++  spec: ".ai-platform/specs/002-tellplot-repository-migration/spec.md"
++  checklist: ".ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md"
++  plan: ".ai-platform/specs/002-tellplot-repository-migration/plan.md"
++  work_graph: ".ai-platform/specs/002-tellplot-repository-migration/tasks.md"
++  analysis: ".ai-platform/specs/002-tellplot-repository-migration/analysis.md"
++  approval: "User explicitly approved the TellPlot name and repository migration sequence on 2026-07-18."
++
++work_unit:
++  title: "完成 TellPlot 品牌与独立仓库迁移"
++  goal: "Preserve the accepted release candidate while establishing a clean TellPlot namespace, Git root and private GitHub repository."
++  requirement_mapping:
++    - "CD-004"
++    - "TDR-011"
++  dependencies:
++    - "T108 Accepted"
++  blocks:
++    - "remote release validation"
++  parallel: false
++
++codebase_context:
++  branch: "main"
++  current_state: "The accepted T101-T108 implementation was copied from the uncommitted reset worktree into an independent TellPlot Git root."
++  reusable_boundaries:
++    - "Preserve all accepted domain, interaction, export and package behavior."
++    - "Keep .ai-platform/evidence historical patch files byte-stable."
++  forbidden_changes:
++    - "Do not change product behavior, publish npm packages or deploy the website."
++    - "Do not rename, archive, delete or push to iiwish/g2touch."
++
++execution_constraints:
++  adapter: "Codex direct execution under the user-approved migration sequence."
++  allowed_files:
++    - "**/*"
++  allowed_remote:
++    - "github.com/iiwish/tellplot"
++  forbidden_remote:
++    - "github.com/iiwish/g2touch"
++  dependency_boundary: "Do not add runtime dependencies; keep the frozen lockfile dependency graph."
++  historical_boundary: "Legacy names are allowed only in immutable .ai-platform/evidence records and explicit forbidden-remote migration references."
++
++tdd_plan:
++  red:
++    - "Record legacy package, DOM, CSS, runtime and documentation namespace matches before migration."
++  green:
++    - "Replace current namespaces with TellPlot, @tellplot, data-tellplot, tp- and TELLPLOT equivalents."
++  refactor:
++    - "Rewrite README, AGENTS and SSOT as the latest canonical state without altering historical evidence patches."
++
++validation_loop:
++  commands:
++    - "pnpm install --frozen-lockfile"
++    - "pnpm format:check"
++    - "pnpm lint"
++    - "pnpm typecheck"
++    - "pnpm test:coverage"
++    - "pnpm build"
++    - "pnpm test:package"
++    - "pnpm test:react-matrix"
++    - "pnpm test:browser-previous"
++    - "pnpm test:e2e"
++    - "pnpm test:a11y"
++    - "pnpm test:performance"
++    - "git diff --check"
++    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 002-tellplot-repository-migration --task-id T109 --strict"
++  expected_signals:
++    - "No current source, package, selector, CSS or canonical documentation exposes the legacy namespace."
++    - "All accepted local quality gates pass under the @tellplot package identity."
++    - "GitHub Actions passes from the new private repository and the old remote heads remain unchanged."
++  retry_budget: 3
++  failure_policy: "Fix only migration defects. Stop for behavior changes, dependency additions, old-remote writes or unresolved validation failures."
++
++evidence_contract:
++  directory: ".ai-platform/evidence/T109"
++  required_files:
++    - "summary.md"
++    - "test-results.md"
++    - "migration-inventory.md"
++    - "brand-audit.md"
++  required_content:
++    - "Source and target inventory, mirror fsck, local validation, remote CI, repository settings and old-remote immutability proof."
++
++review_contract:
++  spec_compliance:
++    - "Confirm every migration requirement and forbidden boundary has direct evidence."
++  engineering_quality:
++    - "Review package metadata, public namespaces, CI reproducibility and clean-clone consumption."
++  qa_acceptance:
++    - "No unresolved Critical, High or Medium migration finding."
++
++stop_conditions:
++  - "Any source or target inventory mismatch."
++  - "Any unresolved current-code legacy namespace residue."
++  - "Any failed local or remote validation."
++  - "Any operation targeting the old GitHub repository."
++
++handoff:
++  task_status: "In_Progress"
++  next_gate: "Complete remote CI and repository protection, then request acceptance before any legacy-repository action."
++  remote_actions: "Creating and pushing iiwish/tellplot is authorized; npm publish and old-repository changes are not authorized."
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/plan.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/plan.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/plan.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/plan.md	2026-07-18 22:29:23
+@@ -0,0 +1,22 @@
++# TellPlot 品牌与仓库迁移 Plan
++
++## Metadata
++
++- Status: Confirmed
++- Last updated: 2026-07-18
++
++## Execution
++
++1. 验证空目标目录，镜像并校验旧远端 Git 历史。
++2. 复制当前工作树，排除 `.git` 与生成目录，初始化独立 `main`。
++3. 统一品牌、包、DOM、CSS、运行时、文档和工程配置。
++4. 运行残留审计、干净安装、本地全量质量门禁和 artifact validator。
++5. 创建诚实的根提交与新私有 GitHub 仓库，推送 `main`。
++6. 验证 GitHub Actions，通过后设置 `main` 仓库规则。
++7. 证明旧远端引用和提交未变化，将旧仓库处理留给下一审批闸门。
++
++## Rollback
++
++- 未推送前删除新目录即可回退，源工作树与旧远端不受影响。
++- 已推送后删除新远端即可回退；旧历史镜像位于本地 bare backup。
++- 任何验证失败都阻断提交、推送或仓库保护步骤。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/spec.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/spec.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/spec.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/spec.md	2026-07-18 22:29:23
+@@ -0,0 +1,28 @@
++# TellPlot 品牌与仓库迁移 Spec
++
++## Metadata
++
++- Feature ID: `002-tellplot-repository-migration`
++- Status: Confirmed
++- Last updated: 2026-07-18
++- Approval: 用户于 2026-07-18 明确批准迁移顺序并要求执行
++
++## Goal
++
++将已经验收的瀑布图发布候选迁入独立 TellPlot 仓库，统一产品、包、DOM、CSS、运行时和工程配置中的品牌命名空间，并用本地与远程证据证明迁移没有改变产品行为。
++
++## Requirements
++
++- 新仓库使用独立 Git 根历史与 `main` 默认分支。
++- 当前工作树中的 SSOT、源码、测试和 evidence 必须完整迁移。
++- 公共包使用 `@tellplot/editor`，参考应用使用 `@tellplot/playground`。
++- 当前源码与规范使用 `TellPlot`、`tellplot`、`@tellplot`、`[data-tellplot]`、`.tp-` 和 `TELLPLOT_*`。
++- `.ai-platform/evidence/**` 中的既有 patch 保持不可变，作为历史验收记录。
++- 迁移必须通过原有全量质量门禁和 GitHub-hosted CI。
++- `iiwish/g2touch` 在本任务中不得被改名、归档、删除或写入。
++
++## Non-Goals
++
++- 不修改财务领域模型、交互行为或视觉设计。
++- 不执行 npm publish、正式版本发布或网站部署。
++- 不处理旧 GitHub 仓库的最终归档或删除。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/tasks.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/tasks.md
+--- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/tasks.md	1970-01-01 08:00:00
++++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/tasks.md	2026-07-18 22:31:35
+@@ -0,0 +1,23 @@
++# TellPlot 品牌与仓库迁移任务
++
++## T109
++
++- Status: In_Progress
++- Priority: P0
++- Dependencies: T108 Accepted
++- Blocks: 首次远程 CI、仓库保护与公开发布准备
++- Story / Requirement: CD-004、TDR-011
++- Parallel: false
++- Conflicts with: 旧仓库归档/删除、npm publish、产品行为修改
++- Goal: 将已验收发布候选迁入独立 TellPlot 仓库并统一公共命名空间。
++- Allowed files: TellPlot 新仓库全部文件
++- Allowed remote: 新建并配置 `iiwish/tellplot`
++- Forbidden remote: `iiwish/g2touch`
++- Test targets: 品牌残留、静态质量、单元/coverage、package、React/browser matrix、E2E、a11y、performance、artifact validator、GitHub Actions
++- Deliverables: TellPlot 独立仓库、根提交、远程 CI、仓库保护和 T109 evidence
++- Acceptance criteria: 当前源码/规范无旧 namespace；全量验证与远程 CI 通过；旧远端引用不变。
++- Definition of Done: 品牌残留审计、本地全量验证、干净根提交、远程 CI、仓库保护和旧远端不变证明全部通过。
++- Validation commands: `pnpm install --frozen-lockfile`；`pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:browser-previous`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；artifact validator；GitHub Actions
++- TDD plan: RED brand audit；GREEN namespace migration；REFACTOR canonical documentation；不修改产品行为。
++- Packet path: `packets/T109.yaml`
++- Evidence required: inventory、mirror fsck、brand audit、local validation、remote CI、repository rules、old remote immutability proof。
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/AGENTS.md /Users/iiwish/self/tellplot/AGENTS.md
+--- /Users/iiwish/self/g2touch/AGENTS.md	2026-07-15 11:08:42
++++ /Users/iiwish/self/tellplot/AGENTS.md	2026-07-18 22:29:23
+@@ -1,15 +1,15 @@
+-# AGENTS.md - g2touch AI Agent Guide
++# AGENTS.md - TellPlot AI Agent Guide
+ 
+ ## 项目状态
+ 
+-- 当前阶段：瀑布图基础切片按 T101-T108 顺序执行，当前任务以 feature task graph 为准。
+-- 当前仓库不包含可执行源码。
++- 当前阶段：瀑布图基础切片 T101-T108 与 T106-CR001 已完成并通过用户验收；后续任务以项目任务图与对应 feature task graph 为准。
++- 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
+ - 产品 SSOT：`.ai-platform/docs/product-design.md`。
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+ - 技术决策：`.ai-platform/docs/technology-decision-record.md`。
+ - 当前任务图：`.ai-platform/docs/tasks.md`。
+ 
+-任何实现、技术选型、任务拆分开始前，必须先读取上述文档以及当前 feature 目录。技术决策和 feature task graph 未经用户明确批准并标记为 `Confirmed` 前，不得创建应用源码或包配置。
++任何实现、技术选型或任务拆分开始前，必须先读取上述文档以及当前 feature 目录。新增产品范围、架构决策和 feature task graph 未经用户明确批准并标记为 `Confirmed` 前不得执行。
+ 
+ ## 工作边界
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/LICENSE /Users/iiwish/self/tellplot/LICENSE
+--- /Users/iiwish/self/g2touch/LICENSE	2026-07-15 09:33:19
++++ /Users/iiwish/self/tellplot/LICENSE	2026-07-18 22:29:23
+@@ -1,6 +1,6 @@
+ MIT License
+ 
+-Copyright (c) 2026 g2touch team
++Copyright (c) 2026 TellPlot contributors
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/README.md /Users/iiwish/self/tellplot/README.md
+--- /Users/iiwish/self/g2touch/README.md	2026-07-15 11:03:03
++++ /Users/iiwish/self/tellplot/README.md	2026-07-18 22:29:23
+@@ -1,11 +1,29 @@
+-# g2touch
++# TellPlot
+ 
+-g2touch 是面向财务分析与汇报场景的可编辑叙事图表项目。产品通过直接操作、结构化大纲和 AI 命令共同帮助用户调整图表顺序、分组、折叠层级与表达重点，同时保持原始财务数据可追溯且不被编辑动作改写。
++TellPlot 是面向财务分析与汇报场景的可编辑叙事图表项目。产品通过直接操作、结构化大纲和确定性命令帮助用户调整图表顺序、分组、折叠层级与表达重点，同时保持原始财务数据可追溯且不被编辑动作改写。
+ 
+ ## 当前状态
+ 
+-产品设计已经确认，瀑布图基础切片处于技术方案评审阶段。仓库暂不包含应用源码或包配置；技术决策与任务图批准后进入 TDD 实现。
++产品设计、技术方案以及 T101-T108 任务图均已确认并完成验收。仓库包含可嵌入的 `@tellplot/editor` React 组件包、薄参考编辑器、完整测试分层和本地发布候选证据；npm publish 与正式版本发布尚未执行。
+ 
++## 本地开发
++
++```bash
++pnpm install --frozen-lockfile
++pnpm dev
++```
++
++参考编辑器默认由 Vite 启动。核心质量命令：
++
++```bash
++pnpm format:check
++pnpm lint
++pnpm typecheck
++pnpm test:coverage
++pnpm build
++pnpm test:package
++```
++
+ ## 当前文档
+ 
+ - [产品设计 SSOT](.ai-platform/docs/product-design.md)
+@@ -14,15 +32,13 @@
+ - [任务图](.ai-platform/docs/tasks.md)
+ - [交付状态报告](.ai-platform/docs/release-report.md)
+ 
+-## 第一阶段候选范围
++## 第一阶段范围
+ 
+ - 财务瀑布图。
+ - 分类条形图与分类柱状图。
+ - 拖拽排序、分组与取消分组、折叠与展开。
+ - 结构化大纲、撤销重做、保存视图、演示文稿友好导出。
+ - AI-ready 命令模型；AI 只能通过可预览的确定性命令修改图表视图。
+-
+-技术决策与当前 feature task graph 标记为 `Confirmed` 前不开始实现。
+ 
+ ## 当前里程碑
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/index.html /Users/iiwish/self/tellplot/apps/playground/index.html
+--- /Users/iiwish/self/g2touch/apps/playground/index.html	2026-07-15 13:39:42
++++ /Users/iiwish/self/tellplot/apps/playground/index.html	2026-07-18 22:29:23
+@@ -4,7 +4,7 @@
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <meta name="theme-color" content="#f3f5f4" />
+-    <title>g2touch | 经营利润桥接</title>
++    <title>TellPlot | 经营利润桥接</title>
+   </head>
+   <body>
+     <div id="root"></div>
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/package.json /Users/iiwish/self/tellplot/apps/playground/package.json
+--- /Users/iiwish/self/g2touch/apps/playground/package.json	2026-07-16 10:42:42
++++ /Users/iiwish/self/tellplot/apps/playground/package.json	2026-07-18 22:26:02
+@@ -1,5 +1,5 @@
+ {
+-  "name": "@g2touch/playground",
++  "name": "@tellplot/playground",
+   "version": "0.0.0",
+   "private": true,
+   "type": "module",
+@@ -10,7 +10,7 @@
+   },
+   "dependencies": {
+     "@antv/g2": "5.4.8",
+-    "@g2touch/editor": "workspace:*",
++    "@tellplot/editor": "workspace:*",
+     "lucide-react": "1.24.0",
+     "react": "19.2.7",
+     "react-dom": "19.2.7"
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/src/App.tsx /Users/iiwish/self/tellplot/apps/playground/src/App.tsx
+--- /Users/iiwish/self/g2touch/apps/playground/src/App.tsx	2026-07-16 11:03:22
++++ /Users/iiwish/self/tellplot/apps/playground/src/App.tsx	2026-07-18 22:29:23
+@@ -6,7 +6,7 @@
+   type ExportError,
+   type FinancialChartEditorHandle,
+   type ViewSpec,
+-} from '@g2touch/editor';
++} from '@tellplot/editor';
+ import { Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
+ import { useEffect, useMemo, useRef, useState } from 'react';
+ 
+@@ -182,7 +182,7 @@
+   };
+ 
+   return (
+-    <main className="playground" aria-label="g2touch 参考编辑器">
++    <main className="playground" aria-label="TellPlot 参考编辑器">
+       <header className="playground-filebar" aria-label="文件与导出">
+         <div className="playground-filebar__actions">
+           <button
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/src/fixtures.ts /Users/iiwish/self/tellplot/apps/playground/src/fixtures.ts
+--- /Users/iiwish/self/g2touch/apps/playground/src/fixtures.ts	2026-07-15 16:23:49
++++ /Users/iiwish/self/tellplot/apps/playground/src/fixtures.ts	2026-07-18 22:26:02
+@@ -1,4 +1,4 @@
+-import type { SourceData } from '@g2touch/editor';
++import type { SourceData } from '@tellplot/editor';
+ 
+ const financialFixture = {
+   schemaVersion: '1.0.0',
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/src/main.tsx /Users/iiwish/self/tellplot/apps/playground/src/main.tsx
+--- /Users/iiwish/self/g2touch/apps/playground/src/main.tsx	2026-07-15 13:39:42
++++ /Users/iiwish/self/tellplot/apps/playground/src/main.tsx	2026-07-18 22:26:02
+@@ -1,7 +1,7 @@
+ import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+ 
+-import '@g2touch/editor/styles.css';
++import '@tellplot/editor/styles.css';
+ 
+ import { App } from './App';
+ import './playground.css';
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/tsconfig.json /Users/iiwish/self/tellplot/apps/playground/tsconfig.json
+--- /Users/iiwish/self/g2touch/apps/playground/tsconfig.json	2026-07-15 13:57:10
++++ /Users/iiwish/self/tellplot/apps/playground/tsconfig.json	2026-07-18 22:26:02
+@@ -4,7 +4,7 @@
+     "skipLibCheck": true,
+     "types": ["node", "vite/client", "react", "react-dom"],
+     "paths": {
+-      "@g2touch/editor": ["../../packages/editor/src/index.ts"]
++      "@tellplot/editor": ["../../packages/editor/src/index.ts"]
+     }
+   },
+   "include": ["src", "vite.config.ts"]
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/vite.config.ts /Users/iiwish/self/tellplot/apps/playground/vite.config.ts
+--- /Users/iiwish/self/g2touch/apps/playground/vite.config.ts	2026-07-15 14:00:23
++++ /Users/iiwish/self/tellplot/apps/playground/vite.config.ts	2026-07-18 22:26:02
+@@ -7,13 +7,13 @@
+   resolve: {
+     alias: [
+       {
+-        find: '@g2touch/editor/styles.css',
++        find: '@tellplot/editor/styles.css',
+         replacement: fileURLToPath(
+           new URL('../../packages/editor/src/styles/editor.css', import.meta.url),
+         ),
+       },
+       {
+-        find: '@g2touch/editor',
++        find: '@tellplot/editor',
+         replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
+       },
+     ],
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/accessibility.spec.ts /Users/iiwish/self/tellplot/e2e/accessibility.spec.ts
+--- /Users/iiwish/self/g2touch/e2e/accessibility.spec.ts	2026-07-16 18:52:43
++++ /Users/iiwish/self/tellplot/e2e/accessibility.spec.ts	2026-07-18 22:26:09
+@@ -1,8 +1,8 @@
+ import AxeBuilder from '@axe-core/playwright';
+ import { expect, test, type Page } from '@playwright/test';
+ 
+-const EDITOR = '[data-g2touch="editor"]';
+-const COMMAND_FEEDBACK = '.gt-command-feedback';
++const EDITOR = '[data-tellplot="editor"]';
++const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+   process.platform === 'darwin' ? 'Meta' : 'Control';
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/export.spec.ts /Users/iiwish/self/tellplot/e2e/export.spec.ts
+--- /Users/iiwish/self/g2touch/e2e/export.spec.ts	2026-07-17 11:54:19
++++ /Users/iiwish/self/tellplot/e2e/export.spec.ts	2026-07-18 22:26:02
+@@ -2,7 +2,7 @@
+ 
+ import { expect, test, type Download, type Page } from '@playwright/test';
+ 
+-const EDITOR = '[data-g2touch="editor"]';
++const EDITOR = '[data-tellplot="editor"]';
+ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+   process.platform === 'darwin' ? 'Meta' : 'Control';
+ 
+@@ -10,7 +10,7 @@
+   await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+   await page.goto('/');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+-  await expect(page.getByTestId('g2touch-chart').locator('canvas').first()).toBeVisible();
++  await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
+ }
+ 
+ async function chooseExport(page: Page, name: 'SVG 图像' | 'PNG 图像' | 'ViewSpec JSON') {
+@@ -82,7 +82,7 @@
+ }) => {
+   await page.emulateMedia({ reducedMotion: 'reduce' });
+   await openEditor(page);
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   const canvasImage = (): Promise<string> =>
+     canvas.evaluate(element => {
+       if (!(element instanceof HTMLCanvasElement)) {
+@@ -174,16 +174,16 @@
+ }) => {
+   await page.addInitScript(() => {
+     const original = URL.revokeObjectURL.bind(URL);
+-    Object.defineProperty(window, '__g2touchRevokedUrls', { value: [], writable: false });
++    Object.defineProperty(window, '__tellplotRevokedUrls', { value: [], writable: false });
+     URL.revokeObjectURL = url => {
+-      (window as Window & { readonly __g2touchRevokedUrls: string[] }).__g2touchRevokedUrls.push(
++      (window as Window & { readonly __tellplotRevokedUrls: string[] }).__tellplotRevokedUrls.push(
+         url,
+       );
+       original(url);
+     };
+   });
+   await openEditor(page);
+-  const plotBox = await page.getByTestId('g2touch-chart').boundingBox();
++  const plotBox = await page.getByTestId('tellplot-chart').boundingBox();
+   expect(plotBox).not.toBeNull();
+   const download = await chooseExport(page, 'PNG 图像');
+   await expect(page.getByRole('status', { name: '文件状态' })).toContainText('PNG_EXPORTED');
+@@ -232,7 +232,7 @@
+     .poll(() =>
+       page.evaluate(
+         () =>
+-          (window as Window & { readonly __g2touchRevokedUrls: string[] }).__g2touchRevokedUrls
++          (window as Window & { readonly __tellplotRevokedUrls: string[] }).__tellplotRevokedUrls
+             .length,
+       ),
+     )
+@@ -259,7 +259,7 @@
+   const pngItem = page.getByRole('menuitem', { name: 'PNG 图像' });
+   await expect(pngItem).toBeVisible();
+   await page
+-    .getByTestId('g2touch-chart')
++    .getByTestId('tellplot-chart')
+     .locator('canvas')
+     .first()
+     .evaluate(element => {
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/interaction-cancel.spec.ts /Users/iiwish/self/tellplot/e2e/interaction-cancel.spec.ts
+--- /Users/iiwish/self/g2touch/e2e/interaction-cancel.spec.ts	2026-07-17 11:10:22
++++ /Users/iiwish/self/tellplot/e2e/interaction-cancel.spec.ts	2026-07-18 22:26:09
+@@ -1,7 +1,7 @@
+ import { expect, test, type Locator, type Page } from '@playwright/test';
+ 
+-const EDITOR = '[data-g2touch="editor"]';
+-const COMMAND_FEEDBACK = '.gt-command-feedback';
++const EDITOR = '[data-tellplot="editor"]';
++const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const EXPECTED_CHART_BAR_COUNT = 12;
+ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+   process.platform === 'darwin' ? 'Meta' : 'Control';
+@@ -200,7 +200,7 @@
+ }
+ 
+ async function startChartDrag(page: Page): Promise<ActiveChartDrag> {
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect.poll(() => chartBarPoints(canvas)).toHaveLength(12);
+   const points = await chartBarPoints(canvas);
+   const source = points[1];
+@@ -299,7 +299,7 @@
+   for (const anchor of anchors) {
+     await test.step(`${anchor.name} independently reports ITEM_LOCKED`, async () => {
+       await openEditor(page);
+-      const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++      const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+       await expect.poll(() => chartBarPoints(canvas)).toHaveLength(12);
+       const points = await chartBarPoints(canvas);
+       const fixedMark = points[anchor.index];
+@@ -376,7 +376,7 @@
+     steps: 8,
+   });
+   await expect(target).toHaveAttribute('data-drop-indicator', 'after');
+-  await expect(page.getByTestId('g2touch-chart')).toHaveAttribute('data-drop-indicator', 'after');
++  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
+   await page.mouse.up();
+ 
+   await expect(page.locator(COMMAND_FEEDBACK)).toContainText('INVALID_DROP_TARGET');
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/performance.spec.ts /Users/iiwish/self/tellplot/e2e/performance.spec.ts
+--- /Users/iiwish/self/g2touch/e2e/performance.spec.ts	2026-07-17 12:15:36
++++ /Users/iiwish/self/tellplot/e2e/performance.spec.ts	2026-07-18 22:26:02
+@@ -1,6 +1,6 @@
+ import { expect, test, type Locator, type Page } from '@playwright/test';
+ 
+-const EDITOR = '[data-g2touch="editor"]';
++const EDITOR = '[data-tellplot="editor"]';
+ const SAMPLE_COUNT = 30;
+ 
+ interface BarSlot {
+@@ -15,9 +15,9 @@
+ }
+ 
+ interface PerformanceWindow extends Window {
+-  __g2touchRootCommits?: number;
+-  __g2touchPointerMoves?: number;
+-  __g2touchPerf?: {
++  __tellplotRootCommits?: number;
++  __tellplotPointerMoves?: number;
++  __tellplotPerf?: {
+     samples: number[];
+     start: number | null;
+   };
+@@ -26,7 +26,7 @@
+ async function installReactCommitProbe(page: Page): Promise<void> {
+   await page.addInitScript(() => {
+     const performanceWindow = window as PerformanceWindow;
+-    performanceWindow.__g2touchRootCommits = 0;
++    performanceWindow.__tellplotRootCommits = 0;
+     let rendererId = 0;
+ 
+     const objectValue = (value: unknown): Record<string, unknown> | null =>
+@@ -79,8 +79,8 @@
+       },
+       onCommitFiberRoot(_id: number, root: unknown): void {
+         if (containsEditorFiber(root)) {
+-          performanceWindow.__g2touchRootCommits =
+-            (performanceWindow.__g2touchRootCommits ?? 0) + 1;
++          performanceWindow.__tellplotRootCommits =
++            (performanceWindow.__tellplotRootCommits ?? 0) + 1;
+         }
+       },
+       onCommitFiberUnmount(): void {
+@@ -254,7 +254,7 @@
+ async function installLatencyProbe(page: Page): Promise<void> {
+   await page.evaluate(() => {
+     const performanceWindow = window as PerformanceWindow;
+-    performanceWindow.__g2touchPerf = {
++    performanceWindow.__tellplotPerf = {
+       samples: [],
+       start: null,
+     };
+@@ -302,7 +302,7 @@
+         throw new Error('Performance target is not a canvas');
+       }
+       const context = element.getContext('2d');
+-      const metric = (window as PerformanceWindow).__g2touchPerf;
++      const metric = (window as PerformanceWindow).__tellplotPerf;
+       if (context === null || metric === undefined || metric.start === null) {
+         throw new Error('Visible performance probe is not initialized');
+       }
+@@ -373,7 +373,7 @@
+ 
+   const handles = page.locator('[data-node-kind="contribution"] button[aria-label^="拖动 "]');
+   await expect(handles).toHaveCount(200);
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect(canvas).toBeVisible();
+   await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
+   await expect.poll(() => barSlots(canvas)).toHaveLength(202);
+@@ -409,24 +409,24 @@
+   await page.mouse.move(first.x, firstY);
+   await page.mouse.down();
+   await page.mouse.move(stableAfterStartX, secondY, { steps: 8 });
+-  await expect(page.getByTestId('g2touch-chart')).toHaveAttribute('data-drop-indicator', 'after');
++  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
+   const overlay = page.getByTestId('chart-drag-overlay');
+   await expect(overlay).toBeVisible();
+   const transformBefore = await overlay.evaluate(element => getComputedStyle(element).transform);
+   await page.waitForTimeout(180);
+   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+   const commitsBefore = await page.evaluate(
+-    () => (window as PerformanceWindow).__g2touchRootCommits ?? -1,
++    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
+   );
+   expect(commitsBefore).toBeGreaterThan(0);
+   await page.evaluate(() => {
+     const performanceWindow = window as PerformanceWindow;
+-    performanceWindow.__g2touchPointerMoves = 0;
++    performanceWindow.__tellplotPointerMoves = 0;
+     document.addEventListener(
+       'pointermove',
+       () => {
+-        performanceWindow.__g2touchPointerMoves =
+-          (performanceWindow.__g2touchPointerMoves ?? 0) + 1;
++        performanceWindow.__tellplotPointerMoves =
++          (performanceWindow.__tellplotPointerMoves ?? 0) + 1;
+       },
+       { capture: true },
+     );
+@@ -435,11 +435,11 @@
+   await page.mouse.move(stableAfterEndX, secondY, { steps: 100 });
+   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+   const commitsAfter = await page.evaluate(
+-    () => (window as PerformanceWindow).__g2touchRootCommits ?? -1,
++    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
+   );
+   const transformAfter = await overlay.evaluate(element => getComputedStyle(element).transform);
+   const pointerMoves = await page.evaluate(
+-    () => (window as PerformanceWindow).__g2touchPointerMoves ?? 0,
++    () => (window as PerformanceWindow).__tellplotPointerMoves ?? 0,
+   );
+   expect(transformAfter).not.toBe(transformBefore);
+   expect(pointerMoves).toBeGreaterThanOrEqual(100);
+@@ -459,7 +459,7 @@
+     await keyboardMover.focus();
+     const previousSignature = await canvasPixelSignature(canvas, signatureRegion);
+     await page.evaluate(() => {
+-      const metric = (window as PerformanceWindow).__g2touchPerf;
++      const metric = (window as PerformanceWindow).__tellplotPerf;
+       if (metric !== undefined) {
+         metric.start = performance.now();
+       }
+@@ -472,13 +472,13 @@
+       : ['perf-001', 'perf-002', 'perf-003'];
+     expect(await rootContributionPrefix(page)).toEqual(expectedPrefix);
+     expect(
+-      await page.evaluate(() => (window as PerformanceWindow).__g2touchPerf?.samples.length ?? 0),
++      await page.evaluate(() => (window as PerformanceWindow).__tellplotPerf?.samples.length ?? 0),
+     ).toBe(nextRevision);
+     await page.waitForTimeout(180);
+   }
+ 
+   const samples = await page.evaluate(
+-    () => (window as PerformanceWindow).__g2touchPerf?.samples ?? [],
++    () => (window as PerformanceWindow).__tellplotPerf?.samples ?? [],
+   );
+   expect(samples).toHaveLength(SAMPLE_COUNT);
+   const sorted = [...samples].sort((left, right) => left - right);
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/quickstart.spec.ts /Users/iiwish/self/tellplot/e2e/quickstart.spec.ts
+--- /Users/iiwish/self/g2touch/e2e/quickstart.spec.ts	2026-07-17 10:55:12
++++ /Users/iiwish/self/tellplot/e2e/quickstart.spec.ts	2026-07-18 22:26:09
+@@ -2,8 +2,8 @@
+ 
+ import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
+ 
+-const EDITOR = '[data-g2touch="editor"]';
+-const COMMAND_FEEDBACK = '.gt-command-feedback';
++const EDITOR = '[data-tellplot="editor"]';
++const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const EXPECTED_CHART_BAR_COUNT = 12;
+ 
+ interface BarPoint {
+@@ -19,7 +19,7 @@
+   await page.setViewportSize({ width: 1440, height: 900 });
+   await page.goto('/');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+-  await expect(page.getByTestId('g2touch-chart').locator('canvas').first()).toBeVisible();
++  await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
+ }
+ 
+ async function chooseExport(
+@@ -198,14 +198,14 @@
+   readonly canvas: Locator;
+   readonly points: readonly BarPoint[];
+ }> {
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+   return { canvas, points: await waterfallBarPoints(canvas) };
+ }
+ 
+ async function groupBarContrastPixels(page: Page): Promise<number> {
+   return page
+-    .getByTestId('g2touch-chart')
++    .getByTestId('tellplot-chart')
+     .locator('canvas')
+     .first()
+     .evaluate(element => {
+@@ -285,7 +285,7 @@
+   await page.mouse.down();
+   await page.mouse.move(pointerX, pointerY, { steps: 8 });
+   await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
+-  await expect(page.getByTestId('g2touch-chart')).toHaveAttribute('data-drop-indicator', 'before');
++  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'before');
+   await expect(page.getByRole('treeitem', { name: new RegExp(targetLabel) })).toHaveAttribute(
+     'data-drop-indicator',
+     'before',
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/rendering.spec.ts /Users/iiwish/self/tellplot/e2e/rendering.spec.ts
+--- /Users/iiwish/self/g2touch/e2e/rendering.spec.ts	2026-07-17 11:59:03
++++ /Users/iiwish/self/tellplot/e2e/rendering.spec.ts	2026-07-18 22:26:02
+@@ -19,8 +19,8 @@
+ async function openReadyEditor(page: Page, viewport: Viewport): Promise<void> {
+   await page.setViewportSize(viewport);
+   await page.goto('/');
+-  await expect(page.locator('[data-g2touch][data-editor-state="ready"]')).toBeVisible();
+-  await expect(page.getByTestId('g2touch-chart-stage')).toBeVisible();
++  await expect(page.locator('[data-tellplot][data-editor-state="ready"]')).toBeVisible();
++  await expect(page.getByTestId('tellplot-chart-stage')).toBeVisible();
+ }
+ 
+ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+@@ -146,7 +146,7 @@
+ }, testInfo) => {
+   await openReadyEditor(page, DESKTOP);
+ 
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect(canvas).toBeVisible();
+   await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
+ 
+@@ -156,7 +156,7 @@
+   expect(canvasBox?.height ?? 0).toBeGreaterThan(360);
+ 
+   const outlineBox = await page.getByRole('tree', { name: '结构大纲' }).boundingBox();
+-  const chartBox = await page.getByTestId('g2touch-chart-stage').boundingBox();
++  const chartBox = await page.getByTestId('tellplot-chart-stage').boundingBox();
+   const inspectorBox = await page.getByRole('complementary', { name: '检查器' }).boundingBox();
+   expect(outlineBox).not.toBeNull();
+   expect(chartBox).not.toBeNull();
+@@ -177,12 +177,12 @@
+ }, testInfo) => {
+   await openReadyEditor(page, COMPACT);
+ 
+-  const chartStage = page.getByTestId('g2touch-chart-stage');
++  const chartStage = page.getByTestId('tellplot-chart-stage');
+   const chartBox = await chartStage.boundingBox();
+   expect(chartBox).not.toBeNull();
+   expect(chartBox?.width ?? 0).toBeGreaterThan(500);
+   expect(chartBox?.height ?? 0).toBeGreaterThan(480);
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect(canvas).toBeVisible();
+   await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
+   const canvasBox = await canvas.boundingBox();
+@@ -195,7 +195,7 @@
+   await page.getByRole('button', { name: '打开检查器' }).click();
+   const drawer = page.getByRole('dialog', { name: '检查器' });
+   await expect(drawer).toBeVisible();
+-  await expect(page.locator('[data-g2touch="editor"]')).toHaveAttribute(
++  await expect(page.locator('[data-tellplot="editor"]')).toHaveAttribute(
+     'data-overlay-open',
+     'true',
+   );
+@@ -222,11 +222,11 @@
+ }, testInfo) => {
+   await openReadyEditor(page, MOBILE);
+ 
+-  const chartBox = await page.getByTestId('g2touch-chart-stage').boundingBox();
++  const chartBox = await page.getByTestId('tellplot-chart-stage').boundingBox();
+   expect(chartBox).not.toBeNull();
+   expect(chartBox?.width ?? 0).toBeGreaterThan(350);
+   expect(chartBox?.height ?? 0).toBeGreaterThan(420);
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect(canvas).toBeVisible();
+   await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
+   const canvasBox = await canvas.boundingBox();
+@@ -254,7 +254,7 @@
+   await page.getByRole('button', { name: '关闭检查器' }).click();
+   await expect(inspectorSheet).toBeHidden();
+ 
+-  await expect(page.getByTestId('g2touch-chart-stage')).toBeVisible();
++  await expect(page.getByTestId('tellplot-chart-stage')).toBeVisible();
+   await expectNoHorizontalOverflow(page);
+   await attachChromiumScreenshot(page, browserName, testInfo, 'mobile-final.png');
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/waterfall-editor.spec.ts /Users/iiwish/self/tellplot/e2e/waterfall-editor.spec.ts
+--- /Users/iiwish/self/g2touch/e2e/waterfall-editor.spec.ts	2026-07-17 11:46:52
++++ /Users/iiwish/self/tellplot/e2e/waterfall-editor.spec.ts	2026-07-18 22:26:09
+@@ -2,8 +2,8 @@
+ 
+ import { expect, test, type Locator, type Page } from '@playwright/test';
+ 
+-const EDITOR = '[data-g2touch="editor"]';
+-const COMMAND_FEEDBACK = '.gt-command-feedback';
++const EDITOR = '[data-tellplot="editor"]';
++const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const EXPECTED_CHART_BAR_COUNT = 12;
+ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+   process.platform === 'darwin' ? 'Meta' : 'Control';
+@@ -21,7 +21,7 @@
+   await page.setViewportSize({ width: 1440, height: 900 });
+   await page.goto('/');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+-  await expect(page.getByTestId('g2touch-chart').locator('canvas').first()).toBeVisible();
++  await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
+ }
+ 
+ async function rootOrder(page: Page): Promise<readonly string[]> {
+@@ -74,7 +74,7 @@
+ }
+ 
+ async function markCanvas(page: Page, token: string): Promise<Locator> {
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect(canvas).toBeVisible();
+   await canvas.evaluate((element, identity) => {
+     element.setAttribute('data-t106-canvas-identity', identity);
+@@ -112,12 +112,12 @@
+     steps: 6,
+   });
+   await expect(target).toHaveAttribute('data-drop-indicator', 'after');
+-  const chartTarget = page.getByTestId('g2touch-chart');
++  const chartTarget = page.getByTestId('tellplot-chart');
+   await expect(chartTarget).toHaveAttribute('data-drop-indicator', 'after');
+   await expect(chartTarget).toHaveAttribute('data-preview-source', 'outline');
+   expect(
+     await chartTarget.evaluate(element =>
+-      element.style.getPropertyValue('--gt-chart-drop-x').trim(),
++      element.style.getPropertyValue('--tp-chart-drop-x').trim(),
+     ),
+   ).not.toBe('');
+   await page.mouse.up();
+@@ -252,7 +252,7 @@
+ }
+ 
+ async function dragChartContributionAfter(page: Page): Promise<void> {
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(12);
+   const points = await waterfallBarPoints(canvas);
+   const source = points[1];
+@@ -283,7 +283,7 @@
+   await page.mouse.down();
+   await page.mouse.move(pointerX, pointerY, { steps: 8 });
+   await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
+-  await expect(page.getByTestId('g2touch-chart')).toHaveAttribute('data-drop-indicator', 'after');
++  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
+   await expect(page.getByRole('treeitem', { name: /价格提升/ })).toHaveAttribute(
+     'data-drop-indicator',
+     'after',
+@@ -410,7 +410,7 @@
+ 
+ test('blank-chart marquee creates one initially collapsed direct group', async ({ page }) => {
+   await openEditor(page);
+-  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+   await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+   const points = await waterfallBarPoints(canvas);
+   const box = await canvas.boundingBox();
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/package.json /Users/iiwish/self/tellplot/package.json
+--- /Users/iiwish/self/g2touch/package.json	2026-07-17 12:31:52
++++ /Users/iiwish/self/tellplot/package.json	2026-07-18 22:29:23
+@@ -1,7 +1,14 @@
+ {
+-  "name": "g2touch-workspace",
++  "name": "tellplot-workspace",
+   "version": "0.0.0",
+   "private": true,
++  "description": "TellPlot financial narrative chart editor workspace",
++  "license": "MIT",
++  "homepage": "https://tellplot.com",
++  "repository": {
++    "type": "git",
++    "url": "git+https://github.com/iiwish/tellplot.git"
++  },
+   "type": "module",
+   "packageManager": "pnpm@11.1.3",
+   "engines": {
+@@ -9,7 +16,7 @@
+     "pnpm": ">=11.1.0"
+   },
+   "scripts": {
+-    "dev": "pnpm --filter @g2touch/playground dev",
++    "dev": "pnpm --filter @tellplot/playground dev",
+     "build": "pnpm -r --if-present run build",
+     "format": "prettier --write .",
+     "format:check": "prettier --check .",
+@@ -17,7 +24,7 @@
+     "typecheck": "pnpm -r --if-present run typecheck",
+     "test:unit": "vitest run --maxWorkers=4",
+     "test:coverage": "vitest run --coverage --maxWorkers=4",
+-    "test:package": "pnpm --filter @g2touch/editor run test:package",
++    "test:package": "pnpm --filter @tellplot/editor run test:package",
+     "test:react-matrix": "node packages/editor/tests/react-matrix/run-react-matrix.mjs",
+     "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
+     "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/package.json /Users/iiwish/self/tellplot/packages/editor/package.json
+--- /Users/iiwish/self/g2touch/packages/editor/package.json	2026-07-16 10:36:07
++++ /Users/iiwish/self/tellplot/packages/editor/package.json	2026-07-18 22:29:23
+@@ -1,7 +1,17 @@
+ {
+-  "name": "@g2touch/editor",
++  "name": "@tellplot/editor",
+   "version": "0.0.0",
+   "description": "Embeddable financial narrative chart editor",
++  "license": "MIT",
++  "homepage": "https://tellplot.com",
++  "repository": {
++    "type": "git",
++    "url": "git+https://github.com/iiwish/tellplot.git",
++    "directory": "packages/editor"
++  },
++  "bugs": {
++    "url": "https://github.com/iiwish/tellplot/issues"
++  },
+   "type": "module",
+   "sideEffects": [
+     "**/*.css"
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/AccessibleChartSummary.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/AccessibleChartSummary.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/src/components/AccessibleChartSummary.tsx	2026-07-17 11:51:32
++++ /Users/iiwish/self/tellplot/packages/editor/src/components/AccessibleChartSummary.tsx	2026-07-18 22:26:09
+@@ -61,7 +61,7 @@
+ }: AccessibleChartSummaryProps): React.JSX.Element {
+   const copy = SUMMARY_COPY[locale];
+   return (
+-    <section aria-label={copy.label} className="gt-visually-hidden" role="region">
++    <section aria-label={copy.label} className="tp-visually-hidden" role="region">
+       <p>{copy.intro(title, projection.length)}</p>
+       <ol>
+         {projection.map(datum => {
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/EditorToolbar.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/EditorToolbar.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/src/components/EditorToolbar.tsx	2026-07-16 18:52:43
++++ /Users/iiwish/self/tellplot/packages/editor/src/components/EditorToolbar.tsx	2026-07-18 22:29:23
+@@ -33,7 +33,7 @@
+ }): React.JSX.Element {
+   return enabled ? (
+     <button
+-      className="gt-icon-button"
++      className="tp-icon-button"
+       type="button"
+       aria-label={label}
+       title={label}
+@@ -59,7 +59,7 @@
+ }): React.JSX.Element {
+   return (
+     <button
+-      className="gt-icon-button"
++      className="tp-icon-button"
+       type="button"
+       aria-label={label}
+       aria-description={reason}
+@@ -89,18 +89,18 @@
+   const statusLabel = valid ? messages.validated : messages.invalidData;
+ 
+   return (
+-    <header className="gt-toolbar" role="toolbar" aria-label={messages.toolbar}>
+-      <div className="gt-brand-block">
+-        <span className="gt-brand-mark" aria-label="g2touch">
+-          g2touch
++    <header className="tp-toolbar" role="toolbar" aria-label={messages.toolbar}>
++      <div className="tp-brand-block">
++        <span className="tp-brand-mark" aria-label="TellPlot">
++          TellPlot
+         </span>
+-        <span className="gt-toolbar-divider" aria-hidden="true" />
+-        <span className="gt-dataset-title" title={datasetId}>
++        <span className="tp-toolbar-divider" aria-hidden="true" />
++        <span className="tp-dataset-title" title={datasetId}>
+           {datasetId}
+         </span>
+       </div>
+ 
+-      <div className="gt-toolbar-status" data-valid={valid} role="status" aria-label={statusLabel}>
++      <div className="tp-toolbar-status" data-valid={valid} role="status" aria-label={statusLabel}>
+         {valid ? (
+           <ShieldCheck size={15} aria-hidden="true" />
+         ) : (
+@@ -109,10 +109,10 @@
+         <span>{statusLabel}</span>
+       </div>
+ 
+-      <div className="gt-toolbar-actions">
++      <div className="tp-toolbar-actions">
+         {showOutline ? (
+           <button
+-            className="gt-icon-button gt-outline-trigger"
++            className="tp-icon-button tp-outline-trigger"
+             type="button"
+             aria-label={messages.openOutline}
+             title={messages.openOutline}
+@@ -126,7 +126,7 @@
+         ) : null}
+         {showInspector ? (
+           <button
+-            className="gt-icon-button gt-inspector-trigger"
++            className="tp-icon-button tp-inspector-trigger"
+             type="button"
+             aria-label={messages.openInspector}
+             title={messages.openInspector}
+@@ -140,7 +140,7 @@
+         ) : null}
+         {showToolbar ? (
+           <>
+-            <span className="gt-action-divider" aria-hidden="true" />
++            <span className="tp-action-divider" aria-hidden="true" />
+             <HistoryTool
+               enabled={canUndo}
+               label={messages.undo}
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/FinancialChartEditor.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/FinancialChartEditor.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/src/components/FinancialChartEditor.tsx	2026-07-17 11:58:15
++++ /Users/iiwish/self/tellplot/packages/editor/src/components/FinancialChartEditor.tsx	2026-07-18 22:26:09
+@@ -108,8 +108,8 @@
+   readonly title: string;
+ }): React.JSX.Element {
+   return (
+-    <section className="gt-invalid-stage" role="alert">
+-      <div className="gt-invalid-mark" aria-hidden="true">
++    <section className="tp-invalid-stage" role="alert">
++      <div className="tp-invalid-mark" aria-hidden="true">
+         !
+       </div>
+       <div>
+@@ -152,7 +152,7 @@
+ }): React.JSX.Element {
+   return (
+     <div
+-      className="gt-command-feedback"
++      className="tp-command-feedback"
+       data-command-source={feedback.source}
+       data-feedback-tone={feedback.tone}
+       role="status"
+@@ -281,7 +281,7 @@
+     const previewResult = executeCommand(
+       controller.session,
+       buildMoveNodeCommand({
+-        id: 'gt-private-preview',
++        id: 'tp-private-preview',
+         source: activeInteraction.source,
+         baseRevision: controller.viewSpec.revision,
+         nodeId: activeInteraction.preview.itemId,
+@@ -324,8 +324,8 @@
+       ) {
+         throw exportError('EXPORT_UNAVAILABLE', '/export');
+       }
+-      const stage = root.querySelector<HTMLElement>('[data-testid="g2touch-chart-stage"]');
+-      const plot = root.querySelector<HTMLElement>('[data-testid="g2touch-chart"]');
++      const stage = root.querySelector<HTMLElement>('[data-testid="tellplot-chart-stage"]');
++      const plot = root.querySelector<HTMLElement>('[data-testid="tellplot-chart"]');
+       const canvas = plot?.querySelector('canvas') ?? null;
+       if (
+         stage === null ||
+@@ -411,7 +411,7 @@
+ 
+   const nextActionId = useCallback((source: InteractionCommandSource): string => {
+     actionCounterRef.current += 1;
+-    return `gt-${source}-${actionCounterRef.current}`;
++    return `tp-${source}-${actionCounterRef.current}`;
+   }, []);
+ 
+   const focusNode = useCallback((nodeId: string): void => {
+@@ -510,7 +510,7 @@
+       let groupId: GroupId;
+       do {
+         actionCounterRef.current += 1;
+-        groupId = `gt-group-${controller.viewSpec.revision}-${actionCounterRef.current}`;
++        groupId = `tp-group-${controller.viewSpec.revision}-${actionCounterRef.current}`;
+       } while (
+         Object.hasOwn(controller.viewSpec.groups, groupId) ||
+         props.sourceData.items.some(item => String(item.id) === String(groupId))
+@@ -805,8 +805,8 @@
+ 
+   return (
+     <div
+-      className="gt-editor"
+-      data-g2touch="editor"
++      className="tp-editor"
++      data-tellplot="editor"
+       data-editor-state={editorState}
+       data-interaction-state={activeInteraction.preview.state}
+       data-interaction-source={
+@@ -852,13 +852,13 @@
+       />
+ 
+       {invalid || controller.viewSpec === null ? (
+-        <main className="gt-workbench gt-workbench-invalid">
++        <main className="tp-workbench tp-workbench-invalid">
+           <InvalidStage issues={visibleIssues} title={messages.invalidData} />
+         </main>
+       ) : (
+-        <main className="gt-workbench">
++        <main className="tp-workbench">
+           {panels.outline ? (
+-            <aside className="gt-static-panel gt-outline-static">{outline}</aside>
++            <aside className="tp-static-panel tp-outline-static">{outline}</aside>
+           ) : null}
+           <WaterfallCanvas
+             projection={projection}
+@@ -879,7 +879,7 @@
+           />
+           {panels.inspector ? (
+             <aside
+-              className="gt-static-panel gt-inspector-static"
++              className="tp-static-panel tp-inspector-static"
+               role="complementary"
+               aria-label={messages.inspector}
+             >
+@@ -913,7 +913,7 @@
+       ) : null}
+       {pendingChartGroup === null ? null : (
+         <div
+-          className="gt-group-dialog-layer"
++          className="tp-group-dialog-layer"
+           onMouseDown={event => {
+             if (event.target === event.currentTarget) {
+               closeChartGroupDialog();
+@@ -923,7 +923,7 @@
+           <form
+             aria-label={messages.groupDialogTitle}
+             aria-modal="true"
+-            className="gt-group-dialog"
++            className="tp-group-dialog"
+             role="dialog"
+             onKeyDown={event => {
+               if (event.key === 'Escape') {
+@@ -965,15 +965,15 @@
+             <label htmlFor={chartGroupLabelId}>{messages.groupLabel}</label>
+             <input
+               autoFocus
+-              className="gt-text-input"
++              className="tp-text-input"
+               id={chartGroupLabelId}
+               type="text"
+               value={chartGroupLabel}
+               onChange={event => setChartGroupLabel(event.target.value)}
+             />
+-            <div className="gt-group-dialog-actions">
++            <div className="tp-group-dialog-actions">
+               <button
+-                className="gt-command-button gt-command-button-secondary"
++                className="tp-command-button tp-command-button-secondary"
+                 type="button"
+                 onClick={() => {
+                   closeChartGroupDialog();
+@@ -982,7 +982,7 @@
+                 {messages.cancel}
+               </button>
+               <button
+-                className="gt-command-button"
++                className="tp-command-button"
+                 disabled={chartGroupLabel.trim().length === 0}
+                 type="submit"
+               >
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/InspectorPanel.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/InspectorPanel.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/src/components/InspectorPanel.tsx	2026-07-17 11:52:26
++++ /Users/iiwish/self/tellplot/packages/editor/src/components/InspectorPanel.tsx	2026-07-18 22:26:09
+@@ -72,13 +72,13 @@
+   }
+ 
+   return (
+-    <section className="gt-inspector-section gt-annotation-field">
+-      <label className="gt-field-label" htmlFor={fieldId}>
++    <section className="tp-inspector-section tp-annotation-field">
++      <label className="tp-field-label" htmlFor={fieldId}>
+         {messages.annotation}
+       </label>
+       <textarea
+         id={fieldId}
+-        className="gt-text-input gt-text-area"
++        className="tp-text-input tp-text-area"
+         ref={fieldRef}
+         aria-describedby={countId}
+         aria-errormessage={tooLong ? errorId : undefined}
+@@ -88,16 +88,16 @@
+         value={draft}
+         onChange={event => setDraftState({ committedValue: value, draft: event.target.value })}
+       />
+-      <div className="gt-annotation-footer">
++      <div className="tp-annotation-footer">
+         <span
+-          className="gt-annotation-count"
++          className="tp-annotation-count"
+           id={countId}
+           data-invalid={tooLong ? 'true' : 'false'}
+         >
+           {codePointCount} / 500
+         </span>
+         <button
+-          className="gt-command-button"
++          className="tp-command-button"
+           type="button"
+           aria-description={disabledReason ?? undefined}
+           disabled={disabledReason !== null || unchanged}
+@@ -112,7 +112,7 @@
+         </button>
+       </div>
+       {tooLong ? (
+-        <span className="gt-annotation-error" id={errorId} role="alert">
++        <span className="tp-annotation-error" id={errorId} role="alert">
+           {messages.annotationTooLong}
+         </span>
+       ) : null}
+@@ -165,21 +165,21 @@
+   const disabledReason = groupReason(groupSelection, readOnly, groupLabel, messages);
+ 
+   return (
+-    <div className="gt-panel-body gt-inspector-body">
+-      <div className="gt-panel-heading">
++    <div className="tp-panel-body tp-inspector-body">
++      <div className="tp-panel-heading">
+         <h2>{messages.inspector}</h2>
+-        <span className="gt-revision">R{viewSpec.revision}</span>
++        <span className="tp-revision">R{viewSpec.revision}</span>
+       </div>
+ 
+-      <div className="gt-inspector-scroll">
++      <div className="tp-inspector-scroll">
+         {selection === null ? (
+-          <section className="gt-inspector-section gt-validation-section">
+-            <div className="gt-section-kicker">
++          <section className="tp-inspector-section tp-validation-section">
++            <div className="tp-section-kicker">
+               <CheckCircle2 size={15} aria-hidden="true" />
+               <span>{messages.validation}</span>
+             </div>
+             <strong>{messages.valid}</strong>
+-            <dl className="gt-metric-list">
++            <dl className="tp-metric-list">
+               <div>
+                 <dt>{messages.dataset}</dt>
+                 <dd>{sourceData.datasetId}</dd>
+@@ -195,18 +195,18 @@
+             </dl>
+           </section>
+         ) : (
+-          <section className="gt-inspector-section">
+-            <div className="gt-section-kicker">
++          <section className="tp-inspector-section">
++            <div className="tp-section-kicker">
+               <MousePointer2 size={15} aria-hidden="true" />
+               <span>{messages.selectedItem}</span>
+             </div>
+             <strong>{selected?.label ?? selectedGroup?.label ?? selection.nodeId}</strong>
+             {selected === undefined ? null : (
+-              <span className="gt-inspector-amount">
++              <span className="tp-inspector-amount">
+                 {formatAmount(selected.amount, locale, sourceData.currency)}
+               </span>
+             )}
+-            <dl className="gt-metric-list">
++            <dl className="tp-metric-list">
+               <div>
+                 <dt>{messages.sourceCount}</dt>
+                 <dd>{selection.sourceIds.length}</dd>
+@@ -236,20 +236,20 @@
+           />
+         )}
+ 
+-        <section className="gt-inspector-section gt-group-actions">
+-          <label className="gt-field-label" htmlFor={groupLabelId}>
++        <section className="tp-inspector-section tp-group-actions">
++          <label className="tp-field-label" htmlFor={groupLabelId}>
+             {messages.groupLabel}
+           </label>
+           <input
+             id={groupLabelId}
+-            className="gt-text-input"
++            className="tp-text-input"
+             ref={groupLabelRef}
+             type="text"
+             value={groupLabel}
+             onChange={event => setGroupLabel(event.target.value)}
+           />
+           <button
+-            className="gt-command-button"
++            className="tp-command-button"
+             type="button"
+             aria-description={disabledReason ?? undefined}
+             disabled={disabledReason !== null}
+@@ -266,7 +266,7 @@
+ 
+           {selectedGroup === undefined ? null : (
+             <button
+-              className="gt-command-button gt-command-button-secondary"
++              className="tp-command-button tp-command-button-secondary"
+               type="button"
+               disabled={readOnly}
+               aria-description={readOnly ? messages.readOnlyReason : undefined}
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/OutlinePanel.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/OutlinePanel.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/src/components/OutlinePanel.tsx	2026-07-16 16:42:04
++++ /Users/iiwish/self/tellplot/packages/editor/src/components/OutlinePanel.tsx	2026-07-18 22:26:09
+@@ -238,7 +238,7 @@
+   return (
+     <div
+       {...listeners}
+-      className="gt-outline-row"
++      className="tp-outline-row"
+       data-draggable={disabled ? 'false' : 'true'}
+       data-drop-indicator={dropEdge ?? undefined}
+       data-interaction-state={interactionState}
+@@ -308,7 +308,7 @@
+     >
+       <button
+         {...attributes}
+-        className="gt-row-grip"
++        className="tp-row-grip"
+         type="button"
+         tabIndex={-1}
+         aria-label={messages.dragLabel(entry.label)}
+@@ -329,25 +329,25 @@
+       </button>
+       {entry.kind !== 'anchor' ? (
+         <label
+-          className="gt-row-select-control"
++          className="tp-row-select-control"
+           onClick={event => event.stopPropagation()}
+           onPointerDown={event => event.stopPropagation()}
+         >
+           <input
+             aria-label={messages.selectLabel(entry.label)}
+             checked={selected}
+-            className="gt-row-select"
++            className="tp-row-select"
+             type="checkbox"
+             onChange={() => onSelect(entry, true)}
+           />
+         </label>
+       ) : (
+-        <span className="gt-row-select-placeholder" aria-hidden="true" />
++        <span className="tp-row-select-placeholder" aria-hidden="true" />
+       )}
+-      <span className="gt-row-disclosure">
++      <span className="tp-row-disclosure">
+         {entry.expanded === undefined ? null : (
+           <button
+-            className="gt-disclosure-button"
++            className="tp-disclosure-button"
+             type="button"
+             aria-expanded={entry.expanded}
+             aria-description={readOnly ? messages.readOnlyReason : undefined}
+@@ -378,23 +378,23 @@
+           </button>
+         )}
+       </span>
+-      <span className="gt-row-main">
+-        <span className="gt-row-label">{entry.label}</span>
++      <span className="tp-row-main">
++        <span className="tp-row-label">{entry.label}</span>
+         {entry.groupSize === undefined ? null : (
+-          <span className="gt-row-meta">
++          <span className="tp-row-meta">
+             {entry.groupSize} {messages.groupedItems}
+           </span>
+         )}
+       </span>
+-      <span className="gt-row-value">
++      <span className="tp-row-value">
+         {entry.amount === null
+           ? `${entry.sourceIds.length} ${messages.sourceItems}`
+           : formatAmount(entry.amount, locale, sourceData.currency)}
+       </span>
+       {entry.locked ? (
+-        <LockKeyhole className="gt-row-lock" size={13} aria-label={messages.locked} />
++        <LockKeyhole className="tp-row-lock" size={13} aria-label={messages.locked} />
+       ) : (
+-        <span className="gt-row-lock-placeholder" aria-hidden="true" />
++        <span className="tp-row-lock-placeholder" aria-hidden="true" />
+       )}
+     </div>
+   );
+@@ -748,8 +748,8 @@
+   const activeEntry = activeId === null ? undefined : entryById.get(activeId);
+ 
+   return (
+-    <div className="gt-panel-body gt-outline-body">
+-      <div className="gt-panel-heading">
++    <div className="tp-panel-body tp-outline-body">
++      <div className="tp-panel-heading">
+         <h2>{messages.outline}</h2>
+         <span>{entries.length}</span>
+       </div>
+@@ -778,7 +778,7 @@
+         onDragEnd={handleDragEnd}
+       >
+         <div
+-          className="gt-outline-tree"
++          className="tp-outline-tree"
+           role="tree"
+           aria-label={messages.outline}
+           aria-multiselectable="true"
+@@ -818,7 +818,7 @@
+         </div>
+         <DragOverlay dropAnimation={null}>
+           {activeEntry === undefined ? null : (
+-            <div className="gt-drag-overlay" data-testid="outline-drag-overlay" aria-hidden="true">
++            <div className="tp-drag-overlay" data-testid="outline-drag-overlay" aria-hidden="true">
+               <GripVertical size={14} />
+               <span>{activeEntry.label}</span>
+             </div>
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/PanelOverlay.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/PanelOverlay.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/src/components/PanelOverlay.tsx	2026-07-15 19:15:14
++++ /Users/iiwish/self/tellplot/packages/editor/src/components/PanelOverlay.tsx	2026-07-18 22:26:09
+@@ -94,9 +94,9 @@
+   }, []);
+ 
+   return (
+-    <div className="gt-overlay-layer" data-side={side}>
++    <div className="tp-overlay-layer" data-side={side}>
+       <button
+-        className="gt-overlay-scrim"
++        className="tp-overlay-scrim"
+         type="button"
+         aria-label={backdropLabel}
+         onClick={onClose}
+@@ -104,13 +104,13 @@
+       <section
+         aria-label={label}
+         aria-modal="true"
+-        className="gt-panel-overlay"
++        className="tp-panel-overlay"
+         ref={dialogRef}
+         role="dialog"
+         tabIndex={-1}
+       >
+         <button
+-          className="gt-icon-button gt-overlay-close"
++          className="tp-icon-button tp-overlay-close"
+           type="button"
+           ref={closeRef}
+           aria-label={closeLabel}
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/WaterfallCanvas.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/WaterfallCanvas.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/src/components/WaterfallCanvas.tsx	2026-07-17 12:13:22
++++ /Users/iiwish/self/tellplot/packages/editor/src/components/WaterfallCanvas.tsx	2026-07-18 22:26:09
+@@ -245,7 +245,7 @@
+   try {
+     callback(issue);
+   } catch {
+-    console.error('g2touch callback failed: onRenderError');
++    console.error('tellplot callback failed: onRenderError');
+   }
+ }
+ 
+@@ -259,7 +259,7 @@
+   try {
+     callback(preview);
+   } catch {
+-    console.error('g2touch callback failed: onInteractionChange');
++    console.error('tellplot callback failed: onInteractionChange');
+   }
+ }
+ 
+@@ -270,7 +270,7 @@
+   try {
+     callback(reason);
+   } catch {
+-    console.error('g2touch callback failed: onCancel');
++    console.error('tellplot callback failed: onCancel');
+   }
+ }
+ 
+@@ -285,7 +285,7 @@
+   try {
+     callback(itemId, target, 'direct');
+   } catch {
+-    console.error('g2touch callback failed: onMove');
++    console.error('tellplot callback failed: onMove');
+   }
+ }
+ 
+@@ -299,7 +299,7 @@
+   try {
+     callback(nodeIds);
+   } catch {
+-    console.error('g2touch callback failed: onMarqueeSelection');
++    console.error('tellplot callback failed: onMarqueeSelection');
+   }
+ }
+ 
+@@ -313,7 +313,7 @@
+   try {
+     callback(nodeId);
+   } catch {
+-    console.error('g2touch callback failed: onSelectNode');
++    console.error('tellplot callback failed: onSelectNode');
+   }
+ }
+ 
+@@ -622,7 +622,7 @@
+       dragSessionRef.current = null;
+       cancelPointerFrame();
+       detachCanvas(session);
+-      hostRef.current?.style.removeProperty('--gt-chart-drop-x');
++      hostRef.current?.style.removeProperty('--tp-chart-drop-x');
+       if (!isEffectDisposed()) {
+         if (session.moved) {
+           publishInteraction({ state: 'idle' });
+@@ -674,9 +674,9 @@
+       }
+       session.target = target;
+       if (target === null || indicatorX === undefined) {
+-        hostRef.current?.style.removeProperty('--gt-chart-drop-x');
++        hostRef.current?.style.removeProperty('--tp-chart-drop-x');
+       } else {
+-        hostRef.current?.style.setProperty('--gt-chart-drop-x', `${indicatorX}px`);
++        hostRef.current?.style.setProperty('--tp-chart-drop-x', `${indicatorX}px`);
+       }
+       publishInteraction({
+         state: 'dragging',
+@@ -811,9 +811,9 @@
+       if (wasPending) {
+         session.target = target;
+         if (horizontalTarget === null) {
+-          hostRef.current?.style.removeProperty('--gt-chart-drop-x');
++          hostRef.current?.style.removeProperty('--tp-chart-drop-x');
+         } else {
+-          hostRef.current?.style.setProperty('--gt-chart-drop-x', `${horizontalTarget.targetX}px`);
++          hostRef.current?.style.setProperty('--tp-chart-drop-x', `${horizontalTarget.targetX}px`);
+         }
+         publishInteraction({
+           state: 'dragging',
+@@ -1199,7 +1199,7 @@
+             setRenderFailure(null);
+             notifyRenderIssue(onRenderErrorRef.current, null);
+           } else {
+-            console.error('g2touch chart render failed: CHART_RENDER_ERROR /chart');
++            console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+             setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
+             notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
+           }
+@@ -1252,7 +1252,7 @@
+       if (isEffectDisposed()) {
+         return;
+       }
+-      console.error('g2touch chart render failed: CHART_RENDER_ERROR /chart');
++      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+       const request = latestRequestRef.current;
+       if (request !== undefined) {
+         setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
+@@ -1288,7 +1288,7 @@
+       try {
+         chart.destroy();
+       } catch {
+-        console.error('g2touch chart cleanup failed at /chart');
++        console.error('tellplot chart cleanup failed at /chart');
+       } finally {
+         chartRef.current = undefined;
+       }
+@@ -1351,7 +1351,7 @@
+       if (interactionTarget === null) {
+         host.removeAttribute('data-drop-indicator');
+         host.removeAttribute('data-drop-node-id');
+-        host.style.removeProperty('--gt-chart-drop-x');
++        host.style.removeProperty('--tp-chart-drop-x');
+       }
+       return;
+     }
+@@ -1368,13 +1368,13 @@
+       host.removeAttribute('data-drop-indicator');
+       host.removeAttribute('data-drop-node-id');
+       host.removeAttribute('data-preview-source');
+-      host.style.removeProperty('--gt-chart-drop-x');
++      host.style.removeProperty('--tp-chart-drop-x');
+       return;
+     }
+     host.setAttribute('data-drop-indicator', target.edge);
+     host.setAttribute('data-drop-node-id', target.nodeId);
+     host.setAttribute('data-preview-source', 'outline');
+-    host.style.setProperty('--gt-chart-drop-x', `${targetX}px`);
++    host.style.setProperty('--tp-chart-drop-x', `${targetX}px`);
+   }, [externalPreview, interaction.state, interactionTarget]);
+ 
+   const externalInteractionActive =
+@@ -1402,46 +1402,46 @@
+   return (
+     <section
+       aria-labelledby={titleId}
+-      className="gt-chart-stage"
++      className="tp-chart-stage"
+       data-interaction-state={externalInteractionActive ? 'dragging' : interaction.state}
+-      data-testid="g2touch-chart-stage"
++      data-testid="tellplot-chart-stage"
+       ref={stageRef}
+     >
+-      <header className="gt-chart-stage__header">
++      <header className="tp-chart-stage__header">
+         <div>
+-          <p className="gt-chart-stage__eyebrow">{copy.eyebrow}</p>
+-          <h2 className="gt-chart-stage__title" id={titleId}>
++          <p className="tp-chart-stage__eyebrow">{copy.eyebrow}</p>
++          <h2 className="tp-chart-stage__title" id={titleId}>
+             {visibleTitle}
+           </h2>
+         </div>
+-        <span className="gt-chart-stage__count">{copy.visibleNodes(projection.length)}</span>
++        <span className="tp-chart-stage__count">{copy.visibleNodes(projection.length)}</span>
+       </header>
+ 
+-      {isEmpty ? <p className="gt-chart-stage__empty">{copy.empty}</p> : null}
++      {isEmpty ? <p className="tp-chart-stage__empty">{copy.empty}</p> : null}
+       {renderIssue === null ? null : (
+-        <div className="gt-chart-stage__error" role="alert">
++        <div className="tp-chart-stage__error" role="alert">
+           <strong>{renderIssue.code}</strong>
+           <code>{renderIssue.path}</code>
+         </div>
+       )}
+ 
+-      <div className="gt-chart-stage__plot-shell">
++      <div className="tp-chart-stage__plot-shell">
+         <div
+           aria-hidden="true"
+-          className="gt-chart-stage__plot"
++          className="tp-chart-stage__plot"
+           data-drop-indicator={
+             interaction.state === 'dragging' ? interaction.target?.edge : undefined
+           }
+           data-drop-node-id={
+             interaction.state === 'dragging' ? interaction.target?.nodeId : undefined
+           }
+-          data-testid="g2touch-chart"
++          data-testid="tellplot-chart"
+           ref={hostRef}
+         />
+         {selectionRect === null ? null : (
+           <div
+             aria-hidden="true"
+-            className="gt-chart-marquee"
++            className="tp-chart-marquee"
+             data-testid="chart-marquee"
+             style={{
+               left: selectionRect.left,
+@@ -1453,7 +1453,7 @@
+         )}
+         {visibleGroupActions === null ? null : (
+           <div
+-            className="gt-chart-group-actions"
++            className="tp-chart-group-actions"
+             data-node-id={visibleGroupActions.nodeId}
+             style={{ left: visibleGroupActions.left, top: visibleGroupActions.top }}
+             onPointerDown={event => event.stopPropagation()}
+@@ -1499,7 +1499,7 @@
+       {interaction.state === 'dragging' ? (
+         <div
+           aria-hidden="true"
+-          className="gt-chart-drag-overlay"
++          className="tp-chart-drag-overlay"
+           data-node-id={interaction.nodeId}
+           data-testid="chart-drag-overlay"
+           ref={overlayRef}
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/exportOptions.ts /Users/iiwish/self/tellplot/packages/editor/src/export/exportOptions.ts
+--- /Users/iiwish/self/g2touch/packages/editor/src/export/exportOptions.ts	2026-07-16 11:03:22
++++ /Users/iiwish/self/tellplot/packages/editor/src/export/exportOptions.ts	2026-07-18 22:26:02
+@@ -1,6 +1,6 @@
+ import { exportError, type ExportOptions, type NormalizedExportOptions } from './exportTypes';
+ 
+-const DEFAULT_FILENAME = 'g2touch-waterfall';
++const DEFAULT_FILENAME = 'tellplot-waterfall';
+ 
+ function safeFilename(filename: string | undefined, format: 'svg' | 'png'): string {
+   const raw = (filename ?? DEFAULT_FILENAME).trim();
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/exportTypes.ts /Users/iiwish/self/tellplot/packages/editor/src/export/exportTypes.ts
+--- /Users/iiwish/self/g2touch/packages/editor/src/export/exportTypes.ts	2026-07-16 10:47:32
++++ /Users/iiwish/self/tellplot/packages/editor/src/export/exportTypes.ts	2026-07-18 22:26:02
+@@ -16,7 +16,7 @@
+ export type ExportErrorCode = 'INVALID_EXPORT_OPTIONS' | 'EXPORT_UNAVAILABLE' | 'EXPORT_FAILED';
+ 
+ export interface ExportError extends Error {
+-  readonly name: 'G2TouchExportError';
++  readonly name: 'TellPlotExportError';
+   readonly code: ExportErrorCode;
+   readonly path: string;
+ }
+@@ -36,7 +36,7 @@
+ 
+ export function exportError(code: ExportErrorCode, path: string): ExportError {
+   return Object.assign(new Error(ERROR_MESSAGES[code]), {
+-    name: 'G2TouchExportError' as const,
++    name: 'TellPlotExportError' as const,
+     code,
+     path,
+   });
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/pngExport.ts /Users/iiwish/self/tellplot/packages/editor/src/export/pngExport.ts
+--- /Users/iiwish/self/g2touch/packages/editor/src/export/pngExport.ts	2026-07-17 11:54:19
++++ /Users/iiwish/self/tellplot/packages/editor/src/export/pngExport.ts	2026-07-18 22:26:02
+@@ -51,7 +51,7 @@
+     typeof error === 'object' &&
+     error !== null &&
+     'name' in error &&
+-    error.name === 'G2TouchExportError'
++    error.name === 'TellPlotExportError'
+   );
+ }
+ 
+@@ -89,7 +89,7 @@
+       typeof error === 'object' &&
+       error !== null &&
+       'name' in error &&
+-      error.name === 'G2TouchExportError'
++      error.name === 'TellPlotExportError'
+     ) {
+       throw error;
+     }
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/svgExport.ts /Users/iiwish/self/tellplot/packages/editor/src/export/svgExport.ts
+--- /Users/iiwish/self/g2touch/packages/editor/src/export/svgExport.ts	2026-07-17 11:54:19
++++ /Users/iiwish/self/tellplot/packages/editor/src/export/svgExport.ts	2026-07-18 22:26:02
+@@ -92,7 +92,7 @@
+       typeof error === 'object' &&
+       error !== null &&
+       'name' in error &&
+-      error.name === 'G2TouchExportError'
++      error.name === 'TellPlotExportError'
+     ) {
+       throw error;
+     }
+@@ -105,7 +105,7 @@
+     typeof error === 'object' &&
+     error !== null &&
+     'name' in error &&
+-    error.name === 'G2TouchExportError'
++    error.name === 'TellPlotExportError'
+   );
+ }
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/react/useEditorController.ts /Users/iiwish/self/tellplot/packages/editor/src/react/useEditorController.ts
+--- /Users/iiwish/self/g2touch/packages/editor/src/react/useEditorController.ts	2026-07-17 11:52:09
++++ /Users/iiwish/self/tellplot/packages/editor/src/react/useEditorController.ts	2026-07-18 22:26:02
+@@ -162,7 +162,7 @@
+ 
+ function callbackFailure(identity: CallbackIdentity): void {
+   try {
+-    console.error(`[g2touch] Host callback failed: ${identity}`);
++    console.error(`[tellplot] Host callback failed: ${identity}`);
+   } catch {
+     return;
+   }
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/styles/editor.css /Users/iiwish/self/tellplot/packages/editor/src/styles/editor.css
+--- /Users/iiwish/self/g2touch/packages/editor/src/styles/editor.css	2026-07-17 11:57:59
++++ /Users/iiwish/self/tellplot/packages/editor/src/styles/editor.css	2026-07-18 22:26:09
+@@ -1,25 +1,25 @@
+-.gt-editor,
+-.gt-editor * {
++.tp-editor,
++.tp-editor * {
+   box-sizing: border-box;
+ }
+ 
+-.gt-editor {
+-  --gt-bg: #f3f5f4;
+-  --gt-surface: #ffffff;
+-  --gt-surface-subtle: #eaeeec;
+-  --gt-text: #18211d;
+-  --gt-text-muted: #5f6b65;
+-  --gt-border: #d5dbd7;
+-  --gt-border-strong: #aab5af;
+-  --gt-accent: #126e57;
+-  --gt-accent-hover: #0e5b48;
+-  --gt-accent-soft: #dcefe8;
+-  --gt-positive: #168363;
+-  --gt-negative: #d5524a;
+-  --gt-total: #315c8c;
+-  --gt-warning: #a46812;
+-  --gt-danger: #b93832;
+-  --gt-focus: #0d66d0;
++.tp-editor {
++  --tp-bg: #f3f5f4;
++  --tp-surface: #ffffff;
++  --tp-surface-subtle: #eaeeec;
++  --tp-text: #18211d;
++  --tp-text-muted: #5f6b65;
++  --tp-border: #d5dbd7;
++  --tp-border-strong: #aab5af;
++  --tp-accent: #126e57;
++  --tp-accent-hover: #0e5b48;
++  --tp-accent-soft: #dcefe8;
++  --tp-positive: #168363;
++  --tp-negative: #d5524a;
++  --tp-total: #315c8c;
++  --tp-warning: #a46812;
++  --tp-danger: #b93832;
++  --tp-focus: #0d66d0;
+   position: relative;
+   isolation: isolate;
+   display: grid;
+@@ -28,9 +28,9 @@
+   min-width: 0;
+   min-height: 480px;
+   overflow: hidden;
+-  color: var(--gt-text);
+-  background: var(--gt-bg);
+-  border: 1px solid var(--gt-border);
++  color: var(--tp-text);
++  background: var(--tp-bg);
++  border: 1px solid var(--tp-border);
+   border-radius: 6px;
+   font-family: Inter, 'Noto Sans SC', 'PingFang SC', system-ui, sans-serif;
+   font-size: 13px;
+@@ -39,28 +39,28 @@
+   text-rendering: optimizeLegibility;
+ }
+ 
+-.gt-editor[data-overlay-open='true'] {
++.tp-editor[data-overlay-open='true'] {
+   z-index: 100;
+   overflow: visible;
+ }
+ 
+-.gt-editor button,
+-.gt-editor input,
+-.gt-editor textarea {
++.tp-editor button,
++.tp-editor input,
++.tp-editor textarea {
+   color: inherit;
+   font: inherit;
+   letter-spacing: 0;
+ }
+ 
+-.gt-editor button:focus-visible,
+-.gt-editor input:focus-visible,
+-.gt-editor textarea:focus-visible,
+-.gt-editor [tabindex]:focus-visible {
+-  outline: 2px solid var(--gt-focus);
++.tp-editor button:focus-visible,
++.tp-editor input:focus-visible,
++.tp-editor textarea:focus-visible,
++.tp-editor [tabindex]:focus-visible {
++  outline: 2px solid var(--tp-focus);
+   outline-offset: 2px;
+ }
+ 
+-.gt-toolbar {
++.tp-toolbar {
+   position: relative;
+   z-index: 10;
+   display: grid;
+@@ -69,11 +69,11 @@
+   min-width: 0;
+   height: 52px;
+   padding: 0 10px 0 14px;
+-  background: var(--gt-surface);
+-  border-bottom: 1px solid var(--gt-border);
++  background: var(--tp-surface);
++  border-bottom: 1px solid var(--tp-border);
+ }
+ 
+-.gt-command-feedback {
++.tp-command-feedback {
+   position: relative;
+   z-index: 8;
+   display: flex;
+@@ -82,100 +82,100 @@
+   height: 32px;
+   padding: 0 12px;
+   gap: 8px;
+-  color: var(--gt-text-muted);
+-  background: var(--gt-surface-subtle);
+-  border-bottom: 1px solid var(--gt-border);
++  color: var(--tp-text-muted);
++  background: var(--tp-surface-subtle);
++  border-bottom: 1px solid var(--tp-border);
+   font-size: 11px;
+   line-height: 16px;
+ }
+ 
+-.gt-command-feedback strong {
++.tp-command-feedback strong {
+   flex: 0 0 auto;
+   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+   font-size: 10px;
+ }
+ 
+-.gt-command-feedback span {
++.tp-command-feedback span {
+   min-width: 0;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+ }
+ 
+-.gt-command-feedback[data-feedback-tone='success'] {
+-  color: var(--gt-accent);
++.tp-command-feedback[data-feedback-tone='success'] {
++  color: var(--tp-accent);
+   background: #edf7f3;
+ }
+ 
+-.gt-command-feedback[data-feedback-tone='error'] {
+-  color: var(--gt-danger);
++.tp-command-feedback[data-feedback-tone='error'] {
++  color: var(--tp-danger);
+   background: #fff4f3;
+ }
+ 
+-.gt-brand-block,
+-.gt-toolbar-actions,
+-.gt-toolbar-status {
++.tp-brand-block,
++.tp-toolbar-actions,
++.tp-toolbar-status {
+   display: flex;
+   align-items: center;
+ }
+ 
+-.gt-toolbar-status[data-valid='false'] {
+-  color: var(--gt-danger);
++.tp-toolbar-status[data-valid='false'] {
++  color: var(--tp-danger);
+   background: #fff1f0;
+ }
+ 
+-.gt-brand-block {
++.tp-brand-block {
+   min-width: 0;
+   gap: 10px;
+ }
+ 
+-.gt-brand-mark {
++.tp-brand-mark {
+   flex: 0 0 auto;
+-  color: var(--gt-text);
++  color: var(--tp-text);
+   font-size: 15px;
+   font-weight: 750;
+ }
+ 
+-.gt-toolbar-divider,
+-.gt-action-divider {
++.tp-toolbar-divider,
++.tp-action-divider {
+   display: block;
+   width: 1px;
+   height: 20px;
+-  background: var(--gt-border);
++  background: var(--tp-border);
+ }
+ 
+-.gt-dataset-title {
++.tp-dataset-title {
+   min-width: 0;
+   overflow: hidden;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+   font-size: 12px;
+   line-height: 16px;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+ }
+ 
+-.gt-toolbar-status {
++.tp-toolbar-status {
+   height: 28px;
+   margin-right: 8px;
+   padding: 0 9px;
+   gap: 5px;
+-  color: var(--gt-accent);
+-  background: var(--gt-accent-soft);
++  color: var(--tp-accent);
++  background: var(--tp-accent-soft);
+   border-radius: 4px;
+   font-size: 12px;
+   font-weight: 600;
+   line-height: 16px;
+ }
+ 
+-.gt-toolbar-actions {
++.tp-toolbar-actions {
+   gap: 4px;
+ }
+ 
+-.gt-action-divider {
++.tp-action-divider {
+   margin: 0 3px;
+ }
+ 
+-.gt-icon-button {
++.tp-icon-button {
+   display: inline-flex;
+   flex: 0 0 32px;
+   align-items: center;
+@@ -183,7 +183,7 @@
+   width: 32px;
+   height: 32px;
+   padding: 0;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+   background: transparent;
+   border: 1px solid transparent;
+   border-radius: 5px;
+@@ -194,27 +194,27 @@
+     border-color 100ms ease-out;
+ }
+ 
+-.gt-icon-button:hover:not(:disabled) {
+-  color: var(--gt-text);
+-  background: var(--gt-surface-subtle);
++.tp-icon-button:hover:not(:disabled) {
++  color: var(--tp-text);
++  background: var(--tp-surface-subtle);
+ }
+ 
+-.gt-icon-button:active:not(:disabled) {
+-  background: var(--gt-border);
++.tp-icon-button:active:not(:disabled) {
++  background: var(--tp-border);
+ }
+ 
+-.gt-icon-button:disabled {
+-  color: var(--gt-border-strong);
++.tp-icon-button:disabled {
++  color: var(--tp-border-strong);
+   cursor: not-allowed;
+   opacity: 0.58;
+ }
+ 
+-.gt-outline-trigger,
+-.gt-inspector-trigger {
++.tp-outline-trigger,
++.tp-inspector-trigger {
+   display: none;
+ }
+ 
+-.gt-workbench {
++.tp-workbench {
+   position: relative;
+   display: grid;
+   grid-template-columns: 280px minmax(0, 1fr) 300px;
+@@ -223,22 +223,22 @@
+   overflow: hidden;
+ }
+ 
+-.gt-static-panel {
++.tp-static-panel {
+   min-width: 0;
+   min-height: 0;
+   overflow: hidden;
+-  background: var(--gt-surface);
++  background: var(--tp-surface);
+ }
+ 
+-.gt-outline-static {
+-  border-right: 1px solid var(--gt-border);
++.tp-outline-static {
++  border-right: 1px solid var(--tp-border);
+ }
+ 
+-.gt-inspector-static {
+-  border-left: 1px solid var(--gt-border);
++.tp-inspector-static {
++  border-left: 1px solid var(--tp-border);
+ }
+ 
+-.gt-panel-body {
++.tp-panel-body {
+   display: grid;
+   grid-template-rows: 45px minmax(0, 1fr);
+   width: 100%;
+@@ -246,35 +246,35 @@
+   min-height: 0;
+ }
+ 
+-.gt-panel-heading {
++.tp-panel-heading {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   height: 45px;
+   padding: 0 12px;
+-  border-bottom: 1px solid var(--gt-border);
++  border-bottom: 1px solid var(--tp-border);
+ }
+ 
+-.gt-panel-heading h2 {
++.tp-panel-heading h2 {
+   margin: 0;
+   font-size: 14px;
+   font-weight: 650;
+   line-height: 20px;
+ }
+ 
+-.gt-panel-heading > span {
+-  color: var(--gt-text-muted);
++.tp-panel-heading > span {
++  color: var(--tp-text-muted);
+   font-size: 11px;
+   font-variant-numeric: tabular-nums;
+ }
+ 
+-.gt-outline-tree {
++.tp-outline-tree {
+   min-height: 0;
+   padding: 6px;
+   overflow: auto;
+ }
+ 
+-.gt-outline-row {
++.tp-outline-row {
+   position: relative;
+   display: grid;
+   grid-template-columns: 24px 32px 24px minmax(0, 1fr) auto 14px;
+@@ -293,15 +293,15 @@
+     border-color 100ms ease-out;
+ }
+ 
+-.gt-outline-row[data-draggable='true'] {
++.tp-outline-row[data-draggable='true'] {
+   cursor: grab;
+ }
+ 
+-.gt-outline-row[data-draggable='true'][data-interaction-state='dragging'] {
++.tp-outline-row[data-draggable='true'][data-interaction-state='dragging'] {
+   cursor: grabbing;
+ }
+ 
+-.gt-outline-row::before {
++.tp-outline-row::before {
+   position: absolute;
+   z-index: 2;
+   right: 4px;
+@@ -309,50 +309,50 @@
+   height: 2px;
+   content: '';
+   pointer-events: none;
+-  background: var(--gt-focus);
++  background: var(--tp-focus);
+   border-radius: 2px;
+   opacity: 0;
+   transition: opacity 80ms ease-out;
+ }
+ 
+-.gt-outline-row[data-drop-indicator='before']::before {
++.tp-outline-row[data-drop-indicator='before']::before {
+   top: -1px;
+   opacity: 1;
+ }
+ 
+-.gt-outline-row[data-drop-indicator='after']::before {
++.tp-outline-row[data-drop-indicator='after']::before {
+   bottom: -1px;
+   opacity: 1;
+ }
+ 
+-.gt-outline-row[data-interaction-state='dragging'] {
++.tp-outline-row[data-interaction-state='dragging'] {
+   opacity: 0.56;
+ }
+ 
+-.gt-outline-row[data-level='2'] {
++.tp-outline-row[data-level='2'] {
+   padding-left: 22px;
+ }
+ 
+-.gt-outline-row:hover {
+-  background: var(--gt-surface-subtle);
++.tp-outline-row:hover {
++  background: var(--tp-surface-subtle);
+ }
+ 
+-.gt-outline-row[data-selected='true'] {
+-  background: var(--gt-accent-soft);
++.tp-outline-row[data-selected='true'] {
++  background: var(--tp-accent-soft);
+   border-color: #b9dacd;
+ }
+ 
+-.gt-row-grip,
+-.gt-row-disclosure,
+-.gt-row-lock,
+-.gt-row-lock-placeholder {
++.tp-row-grip,
++.tp-row-disclosure,
++.tp-row-lock,
++.tp-row-lock-placeholder {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+ }
+ 
+-.gt-row-grip {
++.tp-row-grip {
+   width: 24px;
+   height: 32px;
+   padding: 0;
+@@ -364,23 +364,23 @@
+   touch-action: none;
+ }
+ 
+-.gt-row-grip:hover:not(:disabled) {
+-  color: var(--gt-text);
+-  background: var(--gt-surface-subtle);
++.tp-row-grip:hover:not(:disabled) {
++  color: var(--tp-text);
++  background: var(--tp-surface-subtle);
+   opacity: 1;
+ }
+ 
+-.gt-row-grip:active:not(:disabled) {
++.tp-row-grip:active:not(:disabled) {
+   cursor: grabbing;
+ }
+ 
+-.gt-row-grip:disabled {
++.tp-row-grip:disabled {
+   cursor: not-allowed;
+   opacity: 0.3;
+ }
+ 
+-.gt-row-select-control,
+-.gt-row-select-placeholder {
++.tp-row-select-control,
++.tp-row-select-placeholder {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+@@ -388,44 +388,44 @@
+   height: 32px;
+ }
+ 
+-.gt-row-select {
++.tp-row-select {
+   width: 16px;
+   height: 16px;
+   margin: 0;
+-  accent-color: var(--gt-accent);
++  accent-color: var(--tp-accent);
+   cursor: pointer;
+ }
+ 
+-.gt-disclosure-button {
++.tp-disclosure-button {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   width: 24px;
+   height: 32px;
+   padding: 0;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+   background: transparent;
+   border: 0;
+   border-radius: 4px;
+   cursor: pointer;
+ }
+ 
+-.gt-disclosure-button:hover {
+-  color: var(--gt-text);
+-  background: var(--gt-surface-subtle);
++.tp-disclosure-button:hover {
++  color: var(--tp-text);
++  background: var(--tp-surface-subtle);
+ }
+ 
+-.gt-row-main {
++.tp-row-main {
+   display: flex;
+   min-width: 0;
+   flex-direction: column;
+   justify-content: center;
+ }
+ 
+-.gt-row-label {
++.tp-row-label {
+   min-width: 0;
+   overflow: hidden;
+-  color: var(--gt-text);
++  color: var(--tp-text);
+   font-size: 12px;
+   font-weight: 560;
+   line-height: 16px;
+@@ -433,16 +433,16 @@
+   white-space: nowrap;
+ }
+ 
+-.gt-row-meta {
+-  color: var(--gt-text-muted);
++.tp-row-meta {
++  color: var(--tp-text-muted);
+   font-size: 10px;
+   line-height: 12px;
+ }
+ 
+-.gt-row-value {
++.tp-row-value {
+   max-width: 88px;
+   overflow: hidden;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+   font-size: 11px;
+   line-height: 16px;
+   text-align: right;
+@@ -451,83 +451,83 @@
+   font-variant-numeric: tabular-nums;
+ }
+ 
+-.gt-inspector-body {
++.tp-inspector-body {
+   grid-template-rows: 45px minmax(0, 1fr);
+ }
+ 
+-.gt-inspector-scroll {
++.tp-inspector-scroll {
+   min-height: 0;
+   overflow: auto;
+ }
+ 
+-.gt-inspector-section {
++.tp-inspector-section {
+   padding: 16px 14px;
+-  border-bottom: 1px solid var(--gt-border);
++  border-bottom: 1px solid var(--tp-border);
+ }
+ 
+-.gt-group-actions {
++.tp-group-actions {
+   display: grid;
+   gap: 8px;
+ }
+ 
+-.gt-field-label {
+-  color: var(--gt-text-muted);
++.tp-field-label {
++  color: var(--tp-text-muted);
+   font-size: 11px;
+   font-weight: 600;
+   line-height: 16px;
+ }
+ 
+-.gt-text-input {
++.tp-text-input {
+   width: 100%;
+   height: 36px;
+   min-width: 0;
+   padding: 0 9px;
+-  background: var(--gt-surface);
+-  border: 1px solid var(--gt-border-strong);
++  background: var(--tp-surface);
++  border: 1px solid var(--tp-border-strong);
+   border-radius: 5px;
+ }
+ 
+-.gt-text-input:hover {
+-  border-color: var(--gt-text-muted);
++.tp-text-input:hover {
++  border-color: var(--tp-text-muted);
+ }
+ 
+-.gt-text-input.gt-text-area {
++.tp-text-input.tp-text-area {
+   height: 88px;
+   padding: 8px 9px;
+   line-height: 18px;
+   resize: vertical;
+ }
+ 
+-.gt-annotation-field {
++.tp-annotation-field {
+   display: grid;
+   gap: 8px;
+ }
+ 
+-.gt-annotation-footer {
++.tp-annotation-footer {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 8px;
+ }
+ 
+-.gt-annotation-count {
+-  color: var(--gt-text-muted);
++.tp-annotation-count {
++  color: var(--tp-text-muted);
+   font-size: 11px;
+   font-variant-numeric: tabular-nums;
+   line-height: 16px;
+ }
+ 
+-.gt-annotation-count[data-invalid='true'] {
+-  color: var(--gt-danger);
++.tp-annotation-count[data-invalid='true'] {
++  color: var(--tp-danger);
+ }
+ 
+-.gt-annotation-error {
+-  color: var(--gt-danger);
++.tp-annotation-error {
++  color: var(--tp-danger);
+   font-size: 11px;
+   line-height: 16px;
+ }
+ 
+-.gt-editor .gt-command-button {
++.tp-editor .tp-command-button {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+@@ -536,8 +536,8 @@
+   padding: 7px 10px;
+   gap: 6px;
+   color: #ffffff;
+-  background: var(--gt-accent);
+-  border: 1px solid var(--gt-accent);
++  background: var(--tp-accent);
++  border: 1px solid var(--tp-accent);
+   border-radius: 5px;
+   cursor: pointer;
+   font-size: 12px;
+@@ -545,28 +545,28 @@
+   line-height: 16px;
+ }
+ 
+-.gt-editor .gt-command-button:hover:not(:disabled) {
+-  background: var(--gt-accent-hover);
++.tp-editor .tp-command-button:hover:not(:disabled) {
++  background: var(--tp-accent-hover);
+ }
+ 
+-.gt-editor .gt-command-button:disabled {
+-  color: var(--gt-text-muted);
+-  background: var(--gt-surface-subtle);
+-  border-color: var(--gt-border);
++.tp-editor .tp-command-button:disabled {
++  color: var(--tp-text-muted);
++  background: var(--tp-surface-subtle);
++  border-color: var(--tp-border);
+   cursor: not-allowed;
+ }
+ 
+-.gt-editor .gt-command-button-secondary {
+-  color: var(--gt-text);
+-  background: var(--gt-surface);
+-  border-color: var(--gt-border-strong);
++.tp-editor .tp-command-button-secondary {
++  color: var(--tp-text);
++  background: var(--tp-surface);
++  border-color: var(--tp-border-strong);
+ }
+ 
+-.gt-editor .gt-command-button-secondary:hover:not(:disabled) {
+-  background: var(--gt-surface-subtle);
++.tp-editor .tp-command-button-secondary:hover:not(:disabled) {
++  background: var(--tp-surface-subtle);
+ }
+ 
+-.gt-drag-overlay {
++.tp-drag-overlay {
+   display: flex;
+   align-items: center;
+   width: 236px;
+@@ -574,9 +574,9 @@
+   padding: 0 9px;
+   gap: 6px;
+   overflow: hidden;
+-  color: var(--gt-text);
+-  background: var(--gt-surface);
+-  border: 1px solid var(--gt-border-strong);
++  color: var(--tp-text);
++  background: var(--tp-surface);
++  border: 1px solid var(--tp-border-strong);
+   border-radius: 4px;
+   box-shadow: 0 8px 20px rgb(24 33 29 / 16%);
+   font-family: Inter, 'Noto Sans SC', 'PingFang SC', system-ui, sans-serif;
+@@ -584,24 +584,24 @@
+   line-height: 16px;
+ }
+ 
+-.gt-drag-overlay span {
++.tp-drag-overlay span {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+ }
+ 
+-.gt-section-kicker {
++.tp-section-kicker {
+   display: flex;
+   align-items: center;
+   margin-bottom: 8px;
+   gap: 6px;
+-  color: var(--gt-accent);
++  color: var(--tp-accent);
+   font-size: 11px;
+   font-weight: 650;
+   line-height: 16px;
+ }
+ 
+-.gt-inspector-section > strong {
++.tp-inspector-section > strong {
+   display: block;
+   margin-bottom: 4px;
+   overflow-wrap: anywhere;
+@@ -609,43 +609,43 @@
+   line-height: 20px;
+ }
+ 
+-.gt-inspector-amount {
++.tp-inspector-amount {
+   display: block;
+   margin-top: 8px;
+-  color: var(--gt-total);
++  color: var(--tp-total);
+   font-size: 22px;
+   font-weight: 650;
+   line-height: 28px;
+   font-variant-numeric: tabular-nums;
+ }
+ 
+-.gt-metric-list {
++.tp-metric-list {
+   display: grid;
+   margin: 18px 0 0;
+-  border-top: 1px solid var(--gt-border);
++  border-top: 1px solid var(--tp-border);
+ }
+ 
+-.gt-metric-list > div {
++.tp-metric-list > div {
+   display: grid;
+   grid-template-columns: minmax(0, 1fr) auto;
+   align-items: center;
+   min-height: 40px;
+   padding: 7px 0;
+   gap: 12px;
+-  border-bottom: 1px solid var(--gt-border);
++  border-bottom: 1px solid var(--tp-border);
+ }
+ 
+-.gt-metric-list dt,
+-.gt-metric-list dd {
++.tp-metric-list dt,
++.tp-metric-list dd {
+   margin: 0;
+ }
+ 
+-.gt-metric-list dt {
+-  color: var(--gt-text-muted);
++.tp-metric-list dt {
++  color: var(--tp-text-muted);
+   font-size: 11px;
+ }
+ 
+-.gt-metric-list dd {
++.tp-metric-list dd {
+   max-width: 150px;
+   overflow-wrap: anywhere;
+   text-align: right;
+@@ -654,7 +654,7 @@
+   font-variant-numeric: tabular-nums;
+ }
+ 
+-.gt-chart-stage {
++.tp-chart-stage {
+   position: relative;
+   display: grid;
+   grid-template-rows: auto minmax(0, 1fr);
+@@ -662,10 +662,10 @@
+   min-height: 0;
+   padding: 20px 24px 16px;
+   overflow: hidden;
+-  background: var(--gt-surface);
++  background: var(--tp-surface);
+ }
+ 
+-.gt-chart-stage__header {
++.tp-chart-stage__header {
+   display: flex;
+   align-items: flex-start;
+   justify-content: space-between;
+@@ -674,31 +674,31 @@
+   gap: 16px;
+ }
+ 
+-.gt-chart-stage__eyebrow {
++.tp-chart-stage__eyebrow {
+   margin: 0 0 2px;
+-  color: var(--gt-accent);
++  color: var(--tp-accent);
+   font-size: 10px;
+   font-weight: 700;
+   line-height: 14px;
+   text-transform: uppercase;
+ }
+ 
+-.gt-chart-stage__title {
++.tp-chart-stage__title {
+   margin: 0;
+   font-size: 18px;
+   font-weight: 680;
+   line-height: 26px;
+ }
+ 
+-.gt-chart-stage__count {
++.tp-chart-stage__count {
+   flex: 0 0 auto;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+   font-size: 11px;
+   line-height: 20px;
+   font-variant-numeric: tabular-nums;
+ }
+ 
+-.gt-chart-stage__plot-shell {
++.tp-chart-stage__plot-shell {
+   position: relative;
+   width: 100%;
+   height: 100%;
+@@ -706,80 +706,80 @@
+   overflow: hidden;
+ }
+ 
+-.gt-chart-stage__plot {
++.tp-chart-stage__plot {
+   position: relative;
+   width: 100%;
+   height: 100%;
+   touch-action: pan-y;
+ }
+ 
+-.gt-chart-stage__plot::after {
++.tp-chart-stage__plot::after {
+   position: absolute;
+   z-index: 3;
+   top: 10px;
+   bottom: 28px;
+-  left: var(--gt-chart-drop-x, 0);
++  left: var(--tp-chart-drop-x, 0);
+   width: 2px;
+   content: '';
+   pointer-events: none;
+-  background: var(--gt-focus);
++  background: var(--tp-focus);
+   box-shadow: 0 0 0 1px rgb(255 255 255 / 82%);
+   opacity: 0;
+   transform: translateX(-1px);
+   transition: opacity 80ms ease-out;
+ }
+ 
+-.gt-chart-stage__plot[data-drop-indicator]::after {
++.tp-chart-stage__plot[data-drop-indicator]::after {
+   opacity: 1;
+ }
+ 
+-.gt-chart-marquee {
++.tp-chart-marquee {
+   position: absolute;
+   z-index: 5;
+   pointer-events: none;
+   background: rgb(13 102 208 / 10%);
+-  border: 1px solid var(--gt-focus);
++  border: 1px solid var(--tp-focus);
+   border-radius: 2px;
+   box-shadow: 0 0 0 1px rgb(255 255 255 / 72%) inset;
+ }
+ 
+-.gt-chart-group-actions {
++.tp-chart-group-actions {
+   position: absolute;
+   z-index: 6;
+   display: flex;
+   padding: 3px;
+   gap: 2px;
+   background: rgb(255 255 255 / 97%);
+-  border: 1px solid var(--gt-border-strong);
++  border: 1px solid var(--tp-border-strong);
+   border-radius: 5px;
+   box-shadow: 0 6px 18px rgb(24 33 29 / 16%);
+   transform: translateX(-50%);
+ }
+ 
+-.gt-chart-group-actions button {
++.tp-chart-group-actions button {
+   display: grid;
+   place-items: center;
+   width: 32px;
+   height: 32px;
+   padding: 0;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+   cursor: pointer;
+   background: transparent;
+   border: 0;
+   border-radius: 3px;
+ }
+ 
+-.gt-chart-group-actions button:hover:not(:disabled) {
+-  color: var(--gt-accent);
+-  background: var(--gt-accent-soft);
++.tp-chart-group-actions button:hover:not(:disabled) {
++  color: var(--tp-accent);
++  background: var(--tp-accent-soft);
+ }
+ 
+-.gt-chart-group-actions button:disabled {
++.tp-chart-group-actions button:disabled {
+   cursor: not-allowed;
+   opacity: 0.45;
+ }
+ 
+-.gt-group-dialog-layer {
++.tp-group-dialog-layer {
+   position: fixed;
+   z-index: 30;
+   inset: 0;
+@@ -789,37 +789,37 @@
+   background: rgb(24 33 29 / 22%);
+ }
+ 
+-.gt-group-dialog {
++.tp-group-dialog {
+   display: grid;
+   width: min(360px, 100%);
+   padding: 18px;
+   gap: 10px;
+-  background: var(--gt-surface);
+-  border: 1px solid var(--gt-border-strong);
++  background: var(--tp-surface);
++  border: 1px solid var(--tp-border-strong);
+   border-radius: 6px;
+   box-shadow: 0 18px 48px rgb(24 33 29 / 24%);
+ }
+ 
+-.gt-group-dialog h2 {
++.tp-group-dialog h2 {
+   margin: 0 0 2px;
+   font-size: 15px;
+   line-height: 22px;
+ }
+ 
+-.gt-group-dialog label {
+-  color: var(--gt-text-muted);
++.tp-group-dialog label {
++  color: var(--tp-text-muted);
+   font-size: 11px;
+   font-weight: 650;
+ }
+ 
+-.gt-group-dialog-actions {
++.tp-group-dialog-actions {
+   display: flex;
+   justify-content: flex-end;
+   gap: 8px;
+   margin-top: 4px;
+ }
+ 
+-.gt-chart-drag-overlay {
++.tp-chart-drag-overlay {
+   position: absolute;
+   z-index: 4;
+   top: 0;
+@@ -830,10 +830,10 @@
+   margin-left: -78px;
+   padding: 6px 9px;
+   overflow: hidden;
+-  color: var(--gt-text);
++  color: var(--tp-text);
+   pointer-events: none;
+   background: rgb(255 255 255 / 96%);
+-  border: 1px solid var(--gt-border-strong);
++  border: 1px solid var(--tp-border-strong);
+   border-radius: 4px;
+   box-shadow: 0 8px 20px rgb(24 33 29 / 16%);
+   font-size: 11px;
+@@ -844,13 +844,13 @@
+   will-change: transform;
+ }
+ 
+-.gt-chart-stage__plot canvas,
+-.gt-chart-stage__plot svg {
++.tp-chart-stage__plot canvas,
++.tp-chart-stage__plot svg {
+   display: block;
+ }
+ 
+-.gt-chart-stage__empty,
+-.gt-chart-stage__error {
++.tp-chart-stage__empty,
++.tp-chart-stage__error {
+   position: absolute;
+   z-index: 2;
+   top: 72px;
+@@ -858,34 +858,34 @@
+   transform: translateX(-50%);
+ }
+ 
+-.gt-chart-stage__empty {
++.tp-chart-stage__empty {
+   margin: 0;
+   padding: 6px 9px;
+-  color: var(--gt-text-muted);
++  color: var(--tp-text-muted);
+   background: rgb(255 255 255 / 92%);
+-  border: 1px solid var(--gt-border);
++  border: 1px solid var(--tp-border);
+   border-radius: 4px;
+   font-size: 11px;
+ }
+ 
+-.gt-chart-stage__error {
++.tp-chart-stage__error {
+   display: flex;
+   align-items: center;
+   padding: 8px 10px;
+   gap: 8px;
+-  color: var(--gt-danger);
++  color: var(--tp-danger);
+   background: #fff5f4;
+   border: 1px solid #e8b9b5;
+   border-radius: 5px;
+ }
+ 
+-.gt-chart-stage__error code,
+-.gt-invalid-stage code {
++.tp-chart-stage__error code,
++.tp-invalid-stage code {
+   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+   font-size: 11px;
+ }
+ 
+-.gt-visually-hidden {
++.tp-visually-hidden {
+   position: absolute;
+   width: 1px;
+   height: 1px;
+@@ -897,41 +897,41 @@
+   border: 0;
+ }
+ 
+-.gt-workbench-invalid {
++.tp-workbench-invalid {
+   grid-template-columns: minmax(0, 1fr);
+ }
+ 
+-.gt-invalid-stage {
++.tp-invalid-stage {
+   display: flex;
+   align-items: flex-start;
+   justify-content: center;
+   min-width: 0;
+   padding: 72px 24px;
+   gap: 14px;
+-  background: var(--gt-surface);
++  background: var(--tp-surface);
+ }
+ 
+-.gt-invalid-mark {
++.tp-invalid-mark {
+   display: flex;
+   flex: 0 0 28px;
+   align-items: center;
+   justify-content: center;
+   width: 28px;
+   height: 28px;
+-  color: var(--gt-danger);
++  color: var(--tp-danger);
+   background: #fff1f0;
+   border: 1px solid #e4aaa5;
+   border-radius: 50%;
+   font-weight: 750;
+ }
+ 
+-.gt-invalid-stage h2 {
++.tp-invalid-stage h2 {
+   margin: 2px 0 12px;
+   font-size: 16px;
+   line-height: 22px;
+ }
+ 
+-.gt-invalid-stage ul {
++.tp-invalid-stage ul {
+   display: grid;
+   min-width: min(460px, 70vw);
+   margin: 0;
+@@ -940,28 +940,28 @@
+   list-style: none;
+ }
+ 
+-.gt-invalid-stage li {
++.tp-invalid-stage li {
+   display: grid;
+   grid-template-columns: minmax(0, 1fr) auto;
+   align-items: center;
+   padding: 8px 10px;
+   gap: 16px;
+   background: #fff8f7;
+-  border-left: 3px solid var(--gt-danger);
++  border-left: 3px solid var(--tp-danger);
+ }
+ 
+-.gt-invalid-stage li strong {
++.tp-invalid-stage li strong {
+   overflow-wrap: anywhere;
+   font-size: 11px;
+ }
+ 
+-.gt-overlay-layer {
++.tp-overlay-layer {
+   position: fixed;
+   z-index: 50;
+   inset: 0;
+ }
+ 
+-.gt-overlay-scrim {
++.tp-overlay-scrim {
+   position: absolute;
+   z-index: 0;
+   inset: 0;
+@@ -973,7 +973,7 @@
+   cursor: default;
+ }
+ 
+-.gt-panel-overlay {
++.tp-panel-overlay {
+   position: absolute;
+   z-index: 1;
+   top: 0;
+@@ -981,33 +981,33 @@
+   width: min(360px, 100%);
+   min-width: 0;
+   overflow: hidden;
+-  background: var(--gt-surface);
++  background: var(--tp-surface);
+   box-shadow: 0 10px 30px rgb(24 33 29 / 18%);
+-  animation: gt-panel-enter 180ms cubic-bezier(0.2, 0, 0, 1);
++  animation: tp-panel-enter 180ms cubic-bezier(0.2, 0, 0, 1);
+ }
+ 
+-.gt-overlay-layer[data-side='left'] .gt-panel-overlay {
+-  --gt-panel-enter-x: -12px;
++.tp-overlay-layer[data-side='left'] .tp-panel-overlay {
++  --tp-panel-enter-x: -12px;
+   left: 0;
+ }
+ 
+-.gt-overlay-layer[data-side='right'] .gt-panel-overlay {
+-  --gt-panel-enter-x: 12px;
++.tp-overlay-layer[data-side='right'] .tp-panel-overlay {
++  --tp-panel-enter-x: 12px;
+   right: 0;
+ }
+ 
+-.gt-overlay-close {
++.tp-overlay-close {
+   position: absolute;
+   z-index: 3;
+   top: 7px;
+   right: 7px;
+-  background: var(--gt-surface);
+-  border-color: var(--gt-border);
++  background: var(--tp-surface);
++  border-color: var(--tp-border);
+ }
+ 
+-@keyframes gt-panel-enter {
++@keyframes tp-panel-enter {
+   from {
+-    transform: translateX(var(--gt-panel-enter-x));
++    transform: translateX(var(--tp-panel-enter-x));
+   }
+ 
+   to {
+@@ -1016,83 +1016,83 @@
+ }
+ 
+ @media (max-width: 1179px) {
+-  .gt-workbench {
++  .tp-workbench {
+     grid-template-columns: 248px minmax(0, 1fr);
+   }
+ 
+-  .gt-inspector-static {
++  .tp-inspector-static {
+     display: none;
+   }
+ 
+-  .gt-inspector-trigger {
++  .tp-inspector-trigger {
+     display: inline-flex;
+   }
+ }
+ 
+ @media (max-width: 759px) {
+-  .gt-editor {
++  .tp-editor {
+     border: 0;
+     border-radius: 0;
+   }
+ 
+-  .gt-toolbar {
++  .tp-toolbar {
+     padding-left: 10px;
+   }
+ 
+-  .gt-toolbar-status span,
+-  .gt-toolbar-divider,
+-  .gt-action-divider {
++  .tp-toolbar-status span,
++  .tp-toolbar-divider,
++  .tp-action-divider {
+     display: none;
+   }
+ 
+-  .gt-toolbar-status {
++  .tp-toolbar-status {
+     width: 28px;
+     padding: 0;
+     justify-content: center;
+   }
+ 
+-  .gt-dataset-title {
++  .tp-dataset-title {
+     max-width: 110px;
+   }
+ 
+-  .gt-outline-trigger {
++  .tp-outline-trigger {
+     display: inline-flex;
+   }
+ 
+-  .gt-workbench {
++  .tp-workbench {
+     grid-template-columns: minmax(0, 1fr);
+   }
+ 
+-  .gt-outline-static {
++  .tp-outline-static {
+     display: none;
+   }
+ 
+-  .gt-chart-stage {
++  .tp-chart-stage {
+     padding: 16px 10px 10px;
+   }
+ 
+-  .gt-chart-stage__header {
++  .tp-chart-stage__header {
+     padding: 0 4px 8px;
+   }
+ 
+-  .gt-chart-stage__count {
++  .tp-chart-stage__count {
+     display: none;
+   }
+ 
+-  .gt-chart-stage__plot-shell {
++  .tp-chart-stage__plot-shell {
+     min-height: 420px;
+   }
+ 
+-  .gt-panel-overlay {
++  .tp-panel-overlay {
+     width: 100%;
+     box-shadow: none;
+   }
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+-  .gt-editor *,
+-  .gt-editor *::before,
+-  .gt-editor *::after {
++  .tp-editor *,
++  .tp-editor *::before,
++  .tp-editor *::after {
+     scroll-behavior: auto !important;
+     transition-duration: 0ms !important;
+     animation-duration: 0ms !important;
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/fixture/package.json /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/fixture/package.json
+--- /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/fixture/package.json	2026-07-17 10:21:43
++++ /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/fixture/package.json	2026-07-18 22:26:02
+@@ -1,5 +1,5 @@
+ {
+-  "name": "g2touch-playwright-previous-matrix",
++  "name": "tellplot-playwright-previous-matrix",
+   "version": "0.0.0",
+   "private": true,
+   "type": "module",
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/run-previous-browsers.mjs /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/run-previous-browsers.mjs
+--- /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/run-previous-browsers.mjs	2026-07-17 11:46:32
++++ /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/run-previous-browsers.mjs	2026-07-18 22:26:02
+@@ -25,7 +25,7 @@
+     id: 'previous-release',
+     fixture: join(HERE, 'fixture'),
+     playwrightVersion: '1.60.0',
+-    cachedModulesEnvironment: 'G2TOUCH_PREVIOUS_MODULES_DIR',
++    cachedModulesEnvironment: 'TELLPLOT_PREVIOUS_MODULES_DIR',
+     projects: [
+       {
+         name: 'previous-chromium',
+@@ -54,7 +54,7 @@
+     id: 'webkit-previous-major',
+     fixture: join(HERE, 'webkit-previous-major-fixture'),
+     playwrightVersion: '1.52.0',
+-    cachedModulesEnvironment: 'G2TOUCH_WEBKIT_PREVIOUS_MAJOR_MODULES_DIR',
++    cachedModulesEnvironment: 'TELLPLOT_WEBKIT_PREVIOUS_MAJOR_MODULES_DIR',
+     projects: [
+       {
+         name: 'previous-major-webkit',
+@@ -219,7 +219,7 @@
+     .join('\n');
+   const config = `import { defineConfig, devices } from '@playwright/test';
+ 
+-const baseURL = process.env.G2TOUCH_PREVIOUS_BASE_URL ?? 'http://127.0.0.1:4174';
++const baseURL = process.env.TELLPLOT_PREVIOUS_BASE_URL ?? 'http://127.0.0.1:4174';
+ 
+ export default defineConfig({
+   testDir: './e2e',
+@@ -244,8 +244,8 @@
+   const probe = `import assert from 'node:assert/strict';
+ import { chromium, firefox, webkit } from '@playwright/test';
+ 
+-const engine = process.env.G2TOUCH_BROWSER_ENGINE;
+-const expectedVersion = process.env.G2TOUCH_BROWSER_VERSION;
++const engine = process.env.TELLPLOT_BROWSER_ENGINE;
++const expectedVersion = process.env.TELLPLOT_BROWSER_VERSION;
+ const browserType = { chromium, firefox, webkit }[engine];
+ assert.notEqual(browserType, undefined, \`\${engine} browser type must exist\`);
+ const browser = await browserType.launch();
+@@ -315,7 +315,7 @@
+     '--frozen-lockfile',
+     '--strict-peer-dependencies',
+   ];
+-  const matrixStore = process.env.G2TOUCH_PREVIOUS_MATRIX_STORE_DIR;
++  const matrixStore = process.env.TELLPLOT_PREVIOUS_MATRIX_STORE_DIR;
+   if (matrixStore !== undefined && matrixStore.trim().length > 0) {
+     installArgs.push('--store-dir', matrixStore);
+   }
+@@ -373,8 +373,8 @@
+       cwd: directory,
+       env: {
+         ...process.env,
+-        G2TOUCH_BROWSER_ENGINE: project.engine,
+-        G2TOUCH_BROWSER_VERSION: project.version,
++        TELLPLOT_BROWSER_ENGINE: project.engine,
++        TELLPLOT_BROWSER_VERSION: project.version,
+       },
+       matrixId: `${matrix.id}:${project.engine}`,
+       timeoutMs: 60_000,
+@@ -417,7 +417,7 @@
+ 
+ async function main() {
+   await assertProjectNodeRuntime();
+-  const temporaryRoot = await mkdtemp(join(tmpdir(), 'g2touch-previous-browser-matrix-'));
++  const temporaryRoot = await mkdtemp(join(tmpdir(), 'tellplot-previous-browser-matrix-'));
+   const preparedMatrices = [];
+   let preview;
+   try {
+@@ -439,7 +439,7 @@
+       return;
+     }
+ 
+-    if (process.env.G2TOUCH_PREVIOUS_SKIP_BROWSER_INSTALL !== '1') {
++    if (process.env.TELLPLOT_PREVIOUS_SKIP_BROWSER_INSTALL !== '1') {
+       for (const prepared of preparedMatrices) {
+         await installBrowsers(prepared.matrix, prepared.directory);
+       }
+@@ -455,7 +455,7 @@
+       'pnpm',
+       [
+         '--filter',
+-        '@g2touch/playground',
++        '@tellplot/playground',
+         'exec',
+         'vite',
+         'preview',
+@@ -478,7 +478,7 @@
+         prepared.matrix,
+         prepared.directory,
+         ['test', '--config=playwright.config.mjs'],
+-        { env: { ...process.env, G2TOUCH_PREVIOUS_BASE_URL: baseURL } },
++        { env: { ...process.env, TELLPLOT_PREVIOUS_BASE_URL: baseURL } },
+       );
+     }
+   } catch (error) {
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json
+--- /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json	2026-07-17 10:48:21
++++ /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json	2026-07-18 22:26:02
+@@ -1,5 +1,5 @@
+ {
+-  "name": "g2touch-playwright-webkit-previous-major-matrix",
++  "name": "tellplot-playwright-webkit-previous-major-matrix",
+   "version": "0.0.0",
+   "private": true,
+   "type": "module",
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/accessibility.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/accessibility.test.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/tests/components/accessibility.test.tsx	2026-07-17 11:54:19
++++ /Users/iiwish/self/tellplot/packages/editor/tests/components/accessibility.test.tsx	2026-07-18 22:26:02
+@@ -103,7 +103,7 @@
+ 
+       const dialog = await screen.findByRole('dialog', { name: panel.dialog });
+       expect(
+-        document.querySelector('[data-g2touch="editor"]')?.getAttribute('data-overlay-open'),
++        document.querySelector('[data-tellplot="editor"]')?.getAttribute('data-overlay-open'),
+       ).toBe('true');
+       await waitFor(() =>
+         expect(document.activeElement).toBe(screen.getByRole('button', { name: panel.close })),
+@@ -112,7 +112,7 @@
+       fireEvent.keyDown(document, { key: 'Escape' });
+       await waitFor(() => expect(document.body.contains(dialog)).toBe(false));
+       expect(
+-        document.querySelector('[data-g2touch="editor"]')?.getAttribute('data-overlay-open'),
++        document.querySelector('[data-tellplot="editor"]')?.getAttribute('data-overlay-open'),
+       ).toBeNull();
+       expect(document.activeElement).toBe(opener);
+     }
+@@ -238,7 +238,7 @@
+ 
+     expect(ref.current?.getViewSpec()).toBe(next);
+     ref.current?.focus();
+-    expect(document.activeElement).toBe(document.querySelector('[data-g2touch="editor"]'));
++    expect(document.activeElement).toBe(document.querySelector('[data-tellplot="editor"]'));
+ 
+     const result = await ref.current?.exportImage({ format: 'png', filename: 'bridge' });
+     expect(result).toMatchObject({
+@@ -295,7 +295,7 @@
+     const ref = createRef<FinancialChartEditorHandle>();
+     render(<FinancialChartEditor ref={ref} sourceData={financialSourceData} />);
+     await waitFor(() => expect(ref.current).not.toBeNull());
+-    const chartStage = screen.getByTestId('g2touch-chart-stage');
++    const chartStage = screen.getByTestId('tellplot-chart-stage');
+     chartStage.setAttribute('data-interaction-state', 'dragging');
+ 
+     await expect(ref.current?.exportImage({ format: 'png' })).rejects.toMatchObject({
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/keyboard.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/keyboard.test.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/tests/components/keyboard.test.tsx	2026-07-16 13:50:02
++++ /Users/iiwish/self/tellplot/packages/editor/tests/components/keyboard.test.tsx	2026-07-18 22:26:09
+@@ -287,7 +287,7 @@
+     fireEvent.keyDown(opening, { key: 'ArrowDown', altKey: true });
+ 
+     await screen.findByText('ITEM_LOCKED');
+-    expect(document.querySelector('.gt-command-feedback')?.textContent).toContain('ITEM_LOCKED');
++    expect(document.querySelector('.tp-command-feedback')?.textContent).toContain('ITEM_LOCKED');
+     expect(onCommandRejected).toHaveBeenCalledOnce();
+     expect(onCommand).not.toHaveBeenCalled();
+     expect(onViewSpecChange).not.toHaveBeenCalled();
+@@ -380,7 +380,7 @@
+       expect(onCommandRejected).toHaveBeenCalledOnce();
+       expect(onCommand).not.toHaveBeenCalled();
+       expect(onViewSpecChange).not.toHaveBeenCalled();
+-      expect(document.querySelector('.gt-command-feedback')?.textContent).not.toContain(
++      expect(document.querySelector('.tp-command-feedback')?.textContent).not.toContain(
+         'confidential',
+       );
+       rendered.unmount();
+@@ -413,8 +413,8 @@
+     await waitFor(() => expect(within(second).getByText('已移动，顺序已更新')).toBeTruthy());
+     expect(firstCommand).not.toHaveBeenCalled();
+     expect(secondCommand).toHaveBeenCalledOnce();
+-    expect(first.querySelector('[data-g2touch]')?.getAttribute('data-view-revision')).toBe('0');
+-    expect(second.querySelector('[data-g2touch]')?.getAttribute('data-view-revision')).toBe('1');
++    expect(first.querySelector('[data-tellplot]')?.getAttribute('data-view-revision')).toBe('0');
++    expect(second.querySelector('[data-tellplot]')?.getAttribute('data-view-revision')).toBe('1');
+     expect(document.activeElement).toBe(secondBeta);
+   });
+ 
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/outline.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/outline.test.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/tests/components/outline.test.tsx	2026-07-16 16:50:58
++++ /Users/iiwish/self/tellplot/packages/editor/tests/components/outline.test.tsx	2026-07-18 22:30:02
+@@ -87,7 +87,7 @@
+     clientY: 105,
+   });
+   await waitFor(() =>
+-    expect(document.querySelector('[data-g2touch]')?.getAttribute('data-interaction-state')).toBe(
++    expect(document.querySelector('[data-tellplot]')?.getAttribute('data-interaction-state')).toBe(
+       'dragging',
+     ),
+   );
+@@ -301,7 +301,7 @@
+       />,
+     );
+ 
+-    const root = document.querySelector<HTMLElement>('[data-g2touch]');
++    const root = document.querySelector<HTMLElement>('[data-tellplot]');
+     const tree = await screen.findByRole('tree', { name: '结构大纲' });
+     installOutlineLayout(tree);
+     const betaRow = screen.getByRole('treeitem', { name: /Beta confidential/ });
+@@ -337,7 +337,7 @@
+       <FinancialChartEditor sourceData={commandSourceData} onViewSpecChange={onViewSpecChange} />,
+     );
+ 
+-    const root = document.querySelector<HTMLElement>('[data-g2touch]');
++    const root = document.querySelector<HTMLElement>('[data-tellplot]');
+     const tree = await screen.findByRole('tree', { name: '结构大纲' });
+     installOutlineLayout(tree);
+     const checkbox = screen.getByRole('checkbox', { name: '选择 Beta confidential' });
+@@ -442,14 +442,14 @@
+       />,
+     );
+ 
+-    const root = document.querySelector<HTMLElement>('[data-g2touch]');
++    const root = document.querySelector<HTMLElement>('[data-tellplot]');
+     const tree = await screen.findByRole('tree', { name: '结构大纲' });
+     installOutlineLayout(tree);
+     await beginBetaDrag(21);
+ 
+     expect(root?.getAttribute('data-interaction-state')).toBe('dragging');
+     expect(screen.getByTestId('outline-drag-overlay')).toBeTruthy();
+-    const status = document.querySelector<HTMLElement>('.gt-command-feedback');
++    const status = document.querySelector<HTMLElement>('.tp-command-feedback');
+     expect(status?.textContent).toContain('正在移动');
+     expect(status?.textContent).not.toContain('Beta confidential');
+     expect(status?.textContent).not.toContain('ledger://private/beta');
+@@ -457,11 +457,11 @@
+ 
+     await moveBetaBeforeGamma(21);
+     await moveBetaAfterGamma(21);
+-    const chartPlot = screen.getByTestId('g2touch-chart');
++    const chartPlot = screen.getByTestId('tellplot-chart');
+     await waitFor(() => {
+       expect(chartPlot.getAttribute('data-drop-indicator')).toBe('after');
+       expect(chartPlot.getAttribute('data-drop-node-id')).toBe('c');
+-      expect(chartPlot.style.getPropertyValue('--gt-chart-drop-x')).toBe('160px');
++      expect(chartPlot.style.getPropertyValue('--tp-chart-drop-x')).toBe('160px');
+     });
+     endPointerDrag(21);
+ 
+@@ -513,9 +513,9 @@
+     );
+ 
+     await waitFor(() =>
+-      expect(document.querySelector('[data-g2touch]')?.getAttribute('data-interaction-state')).toBe(
+-        'idle',
+-      ),
++      expect(
++        document.querySelector('[data-tellplot]')?.getAttribute('data-interaction-state'),
++      ).toBe('idle'),
+     );
+     fireEvent.pointerMove(document, {
+       pointerId: 27,
+@@ -539,7 +539,7 @@
+     expect(onViewSpecChange).not.toHaveBeenCalled();
+     expect(screen.queryByTestId('outline-drag-overlay')).toBeNull();
+     expect(document.querySelectorAll('[data-drop-indicator]')).toHaveLength(0);
+-    expect(document.querySelector('.gt-command-feedback')?.textContent).toContain(
++    expect(document.querySelector('.tp-command-feedback')?.textContent).toContain(
+       'ACTION_CANCELLED',
+     );
+     await waitFor(() =>
+@@ -606,9 +606,9 @@
+     );
+ 
+     await waitFor(() =>
+-      expect(document.querySelector('[data-g2touch]')?.getAttribute('data-interaction-state')).toBe(
+-        'idle',
+-      ),
++      expect(
++        document.querySelector('[data-tellplot]')?.getAttribute('data-interaction-state'),
++      ).toBe('idle'),
+     );
+     expect(onCommand).not.toHaveBeenCalled();
+     expect(onViewSpecChange).not.toHaveBeenCalled();
+@@ -628,7 +628,7 @@
+         />,
+       );
+ 
+-      const root = document.querySelector<HTMLElement>('[data-g2touch]');
++      const root = document.querySelector<HTMLElement>('[data-tellplot]');
+       const tree = await screen.findByRole('tree', { name: '结构大纲' });
+       installOutlineLayout(tree);
+       await beginBetaDrag(cancellation === 'blur' ? 31 : 41);
+@@ -675,7 +675,7 @@
+       />,
+     );
+ 
+-    const root = document.querySelector<HTMLElement>('[data-g2touch]');
++    const root = document.querySelector<HTMLElement>('[data-tellplot]');
+     const tree = await screen.findByRole('tree', { name: '结构大纲' });
+     installOutlineLayout(tree);
+     await beginBetaDrag(51);
+@@ -696,7 +696,7 @@
+     await waitFor(() => expect(root?.getAttribute('data-interaction-state')).toBe('idle'));
+     expect(onCommand).not.toHaveBeenCalled();
+     expect(onViewSpecChange).not.toHaveBeenCalled();
+-    const feedback = document.querySelector<HTMLElement>('.gt-command-feedback');
++    const feedback = document.querySelector<HTMLElement>('.tp-command-feedback');
+     expect(feedback?.textContent).toContain('ACTION_CANCELLED');
+     expect(feedback?.textContent).not.toContain('INVALID_DROP_TARGET');
+     await waitFor(() => {
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/states.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/states.test.tsx
+--- /Users/iiwish/self/g2touch/packages/editor/tests/components/states.test.tsx	2026-07-17 12:38:06
++++ /Users/iiwish/self/tellplot/packages/editor/tests/components/states.test.tsx	2026-07-18 22:30:02
+@@ -140,7 +140,7 @@
+ }
+ 
+ function appendPointerCaptureCanvas(): PointerCaptureCanvas {
+-  const host = screen.getByTestId('g2touch-chart');
++  const host = screen.getByTestId('tellplot-chart');
+   const canvas = document.createElement('canvas');
+   const setPointerCapture = vi.fn<(pointerId: number) => void>();
+   const releasePointerCapture = vi.fn<(pointerId: number) => void>();
+@@ -172,7 +172,7 @@
+ }
+ 
+ function editorState(): string | null {
+-  return document.querySelector('[data-g2touch]')?.getAttribute('data-editor-state') ?? null;
++  return document.querySelector('[data-tellplot]')?.getAttribute('data-editor-state') ?? null;
+ }
+ 
+ beforeEach(() => {
+@@ -207,7 +207,7 @@
+     revenue.focus();
+     fireEvent.keyDown(revenue, { altKey: true, key: 'ArrowDown' });
+     await waitFor(() =>
+-      expect(document.querySelector('[data-g2touch]')?.getAttribute('data-view-revision')).toBe(
++      expect(document.querySelector('[data-tellplot]')?.getAttribute('data-view-revision')).toBe(
+         '1',
+       ),
+     );
+@@ -216,7 +216,7 @@
+     expect(undo.hasAttribute('disabled')).toBe(false);
+     fireEvent.click(undo);
+     await waitFor(() =>
+-      expect(document.querySelector('[data-g2touch]')?.getAttribute('data-view-revision')).toBe(
++      expect(document.querySelector('[data-tellplot]')?.getAttribute('data-view-revision')).toBe(
+         '2',
+       ),
+     );
+@@ -230,7 +230,7 @@
+     expect(redo.hasAttribute('disabled')).toBe(false);
+     fireEvent.click(redo);
+     await waitFor(() =>
+-      expect(document.querySelector('[data-g2touch]')?.getAttribute('data-view-revision')).toBe(
++      expect(document.querySelector('[data-tellplot]')?.getAttribute('data-view-revision')).toBe(
+         '3',
+       ),
+     );
+@@ -247,8 +247,8 @@
+     );
+     expect(screen.queryByRole('button', { name: '导出' })).toBeNull();
+     expect(screen.getByRole('tree', { name: '结构大纲' })).toBeTruthy();
+-    expect(screen.getByTestId('g2touch-chart-stage')).toBeTruthy();
+-    expect(screen.getByTestId('g2touch-chart')).toBeTruthy();
++    expect(screen.getByTestId('tellplot-chart-stage')).toBeTruthy();
++    expect(screen.getByTestId('tellplot-chart')).toBeTruthy();
+     expect(screen.getByRole('complementary', { name: '检查器' })).toBeTruthy();
+ 
+     const summary = screen.getByRole('region', { name: '图表摘要' });
+@@ -269,7 +269,7 @@
+     const outline = screen.getByRole('tree', { name: '结构大纲' });
+     expect(within(outline).getByText('起点')).toBeTruthy();
+     expect(within(outline).getByText('终点')).toBeTruthy();
+-    expect(screen.getByTestId('g2touch-chart')).toBeTruthy();
++    expect(screen.getByTestId('tellplot-chart')).toBeTruthy();
+     await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+     await waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
+   });
+@@ -356,17 +356,17 @@
+     );
+ 
+     await waitFor(() => expect(editorState()).toBe('ready'));
+-    expect(document.querySelector('.gt-command-feedback')?.textContent).toContain(
++    expect(document.querySelector('.tp-command-feedback')?.textContent).toContain(
+       '结构与金额锚点有效',
+     );
+ 
+     rerender(<FinancialChartEditor locale="en-US" sourceData={financialSourceData} />);
+     await waitFor(() =>
+-      expect(document.querySelector('.gt-command-feedback')?.textContent).toContain(
++      expect(document.querySelector('.tp-command-feedback')?.textContent).toContain(
+         'Structure and amount anchors are valid',
+       ),
+     );
+-    expect(document.querySelector('.gt-command-feedback')?.textContent).not.toContain(
++    expect(document.querySelector('.tp-command-feedback')?.textContent).not.toContain(
+       '结构与金额锚点有效',
+     );
+   });
+@@ -1004,7 +1004,7 @@
+     expect(views[0]?.groups['inner']).toBeUndefined();
+     expect(views[0]?.groups['outer']?.childIds).toEqual(['a', 'b', 'c']);
+     expect(views[0]?.collapsedGroupIds).toEqual([]);
+-    await waitFor(() => expect(document.querySelector('.gt-chart-group-actions')).toBeNull());
++    await waitFor(() => expect(document.querySelector('.tp-chart-group-actions')).toBeNull());
+   });
+ 
+   it('clears a parent drag preview when invalid input unmounts the active canvas', async () => {
+@@ -1030,21 +1030,21 @@
+       );
+       emitChartEvent(chart, 'plot:pointermove', plotChartEvent(13, 45));
+     });
+-    expect(document.querySelector('[data-g2touch]')?.getAttribute('data-interaction-state')).toBe(
++    expect(document.querySelector('[data-tellplot]')?.getAttribute('data-interaction-state')).toBe(
+       'dragging',
+     );
+ 
+     rerender(<FinancialChartEditor sourceData={invalidSourceData} />);
+     await waitFor(() => expect(editorState()).toBe('invalid'));
+     await waitFor(() =>
+-      expect(document.querySelector('[data-g2touch]')?.getAttribute('data-interaction-state')).toBe(
+-        'idle',
+-      ),
++      expect(
++        document.querySelector('[data-tellplot]')?.getAttribute('data-interaction-state'),
++      ).toBe('idle'),
+     );
+ 
+     rerender(<FinancialChartEditor sourceData={financialSourceData} />);
+     await waitFor(() => expect(editorState()).toBe('ready'));
+-    expect(document.querySelector('.gt-command-feedback')?.textContent).not.toContain(
++    expect(document.querySelector('.tp-command-feedback')?.textContent).not.toContain(
+       'MOVE_PREVIEW',
+     );
+   });
+@@ -1122,7 +1122,7 @@
+     expect(onMove).not.toHaveBeenCalled();
+     expect(onSelectNode).toHaveBeenCalledOnce();
+     expect(screen.queryByTestId('chart-drag-overlay')).toBeNull();
+-    expect(screen.getByTestId('g2touch-chart-stage').getAttribute('data-interaction-state')).toBe(
++    expect(screen.getByTestId('tellplot-chart-stage').getAttribute('data-interaction-state')).toBe(
+       'idle',
+     );
+   });
+@@ -1361,7 +1361,7 @@
+     const targetRow = screen.getByRole('treeitem', { name: /成本压力/ });
+     await waitFor(() => expect(targetRow.getAttribute('data-drop-indicator')).toBe('after'));
+     expect(targetRow.getAttribute('data-interaction-state')).toBe('idle');
+-    expect(screen.getByTestId('g2touch-chart').getAttribute('data-drop-indicator')).toBe('after');
++    expect(screen.getByTestId('tellplot-chart').getAttribute('data-drop-indicator')).toBe('after');
+ 
+     act(() => {
+       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+@@ -1407,16 +1407,16 @@
+       );
+       emitChartEvent(chart, 'plot:pointermove', plotChartEvent(54, 74.99, -500));
+     });
+-    expect(screen.getByTestId('g2touch-chart').hasAttribute('data-drop-indicator')).toBe(false);
++    expect(screen.getByTestId('tellplot-chart').hasAttribute('data-drop-indicator')).toBe(false);
+ 
+     act(() => {
+       emitChartEvent(chart, 'plot:pointermove', plotChartEvent(54, 75, 2_000));
+     });
+-    const chartHost = screen.getByTestId('g2touch-chart');
++    const chartHost = screen.getByTestId('tellplot-chart');
+     const targetRow = screen.getByRole('treeitem', { name: /成本压力/ });
+     await waitFor(() => expect(chartHost.getAttribute('data-drop-node-id')).toBe('cost-pressure'));
+     expect(chartHost.getAttribute('data-drop-indicator')).toBe('after');
+-    expect(chartHost.style.getPropertyValue('--gt-chart-drop-x')).toBe('140px');
++    expect(chartHost.style.getPropertyValue('--tp-chart-drop-x')).toBe('140px');
+     expect(targetRow.getAttribute('data-drop-indicator')).toBe('after');
+   });
+ 
+@@ -1471,7 +1471,7 @@
+     });
+ 
+     expect(screen.queryByTestId('chart-drag-overlay')).toBeNull();
+-    expect(screen.getByTestId('g2touch-chart').hasAttribute('data-drop-indicator')).toBe(false);
++    expect(screen.getByTestId('tellplot-chart').hasAttribute('data-drop-indicator')).toBe(false);
+     expect(onInteractionChange).not.toHaveBeenCalled();
+ 
+     act(() => {
+@@ -1703,10 +1703,10 @@
+ 
+     expect(capture.setPointerCapture).toHaveBeenCalledWith(17);
+     expect(screen.queryByTestId('chart-drag-overlay')).toBeNull();
+-    expect(screen.getByTestId('g2touch-chart-stage').getAttribute('data-interaction-state')).toBe(
++    expect(screen.getByTestId('tellplot-chart-stage').getAttribute('data-interaction-state')).toBe(
+       'idle',
+     );
+-    expect(screen.getByTestId('g2touch-chart').hasAttribute('data-drop-indicator')).toBe(false);
++    expect(screen.getByTestId('tellplot-chart').hasAttribute('data-drop-indicator')).toBe(false);
+     expect(onInteractionChange).not.toHaveBeenCalled();
+ 
+     act(() => {
+@@ -1723,11 +1723,11 @@
+       );
+     });
+ 
+-    const host = screen.getByTestId('g2touch-chart');
++    const host = screen.getByTestId('tellplot-chart');
+     const overlay = screen.getByTestId('chart-drag-overlay');
+     expect(host.getAttribute('data-drop-indicator')).toBe('after');
+     expect(host.getAttribute('data-drop-node-id')).toBe('cost-pressure');
+-    expect(host.style.getPropertyValue('--gt-chart-drop-x')).toBe('140px');
++    expect(host.style.getPropertyValue('--tp-chart-drop-x')).toBe('140px');
+     await waitFor(() => expect(overlay.style.transform).toBe('translate3d(135px, 24px, 0)'));
+     expect(onInteractionChange).toHaveBeenCalledOnce();
+ 
+@@ -1764,7 +1764,7 @@
+     expect(capture.releasePointerCapture).toHaveBeenCalledWith(17);
+     expect(screen.queryByTestId('chart-drag-overlay')).toBeNull();
+     expect(host.hasAttribute('data-drop-indicator')).toBe(false);
+-    expect(host.style.getPropertyValue('--gt-chart-drop-x')).toBe('');
++    expect(host.style.getPropertyValue('--tp-chart-drop-x')).toBe('');
+     expect(onInteractionChange).toHaveBeenLastCalledWith({ state: 'idle' });
+   });
+ 
+@@ -1799,7 +1799,7 @@
+     };
+     const expectClean = (reason: 'cancelled' | 'invalid-target'): void => {
+       expect(screen.queryByTestId('chart-drag-overlay')).toBeNull();
+-      expect(screen.getByTestId('g2touch-chart').hasAttribute('data-drop-indicator')).toBe(false);
++      expect(screen.getByTestId('tellplot-chart').hasAttribute('data-drop-indicator')).toBe(false);
+       expect(onMove).not.toHaveBeenCalled();
+       expect(onCancel).toHaveBeenLastCalledWith(reason);
+     };
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/export/options.test.ts /Users/iiwish/self/tellplot/packages/editor/tests/export/options.test.ts
+--- /Users/iiwish/self/g2touch/packages/editor/tests/export/options.test.ts	2026-07-16 10:47:32
++++ /Users/iiwish/self/tellplot/packages/editor/tests/export/options.test.ts	2026-07-18 22:26:02
+@@ -18,7 +18,7 @@
+       format: 'png',
+       pixelRatio: 2,
+       background: undefined,
+-      suggestedFilename: 'g2touch-waterfall.png',
++      suggestedFilename: 'tellplot-waterfall.png',
+     });
+     expect(
+       normalizeExportOptions({
+@@ -39,7 +39,7 @@
+       normalizeExportOptions({ format: 'png', filename: 'bridge.svg' }).suggestedFilename,
+     ).toBe('bridge.png');
+     expect(normalizeExportOptions({ format: 'svg', filename: '.svg' }).suggestedFilename).toBe(
+-      'g2touch-waterfall.svg',
++      'tellplot-waterfall.svg',
+     );
+   });
+ 
+@@ -48,7 +48,7 @@
+       normalizeExportOptions({ format: 'pdf' } as unknown as ExportOptions),
+     );
+     expect(formatError).toMatchObject({
+-      name: 'G2TouchExportError',
++      name: 'TellPlotExportError',
+       code: 'INVALID_EXPORT_OPTIONS',
+       path: '/format',
+       message: 'Export options are invalid.',
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/export/png.test.ts /Users/iiwish/self/tellplot/packages/editor/tests/export/png.test.ts
+--- /Users/iiwish/self/g2touch/packages/editor/tests/export/png.test.ts	2026-07-16 10:34:05
++++ /Users/iiwish/self/tellplot/packages/editor/tests/export/png.test.ts	2026-07-18 22:26:02
+@@ -80,7 +80,7 @@
+         suggestedFilename: 'bridge.png',
+       }),
+     ).rejects.toMatchObject({
+-      name: 'G2TouchExportError',
++      name: 'TellPlotExportError',
+       code: 'EXPORT_FAILED',
+       path: '/export/png',
+       message: 'Image export failed.',
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/import-cjs.cjs /Users/iiwish/self/tellplot/packages/editor/tests/package/import-cjs.cjs
+--- /Users/iiwish/self/g2touch/packages/editor/tests/package/import-cjs.cjs	2026-07-16 11:04:27
++++ /Users/iiwish/self/tellplot/packages/editor/tests/package/import-cjs.cjs	2026-07-18 22:26:09
+@@ -32,7 +32,7 @@
+ if (stylesheet.trim().length === 0) {
+   throw new Error('CJS package styles.css export is empty');
+ }
+-if (!stylesheet.includes('.gt-editor')) {
++if (!stylesheet.includes('.tp-editor')) {
+   throw new Error('CJS package stylesheet is missing the editor scope');
+ }
+ if (/^\s*(?::root|html|body)\b/m.test(stylesheet)) {
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/import-esm.mjs /Users/iiwish/self/tellplot/packages/editor/tests/package/import-esm.mjs
+--- /Users/iiwish/self/g2touch/packages/editor/tests/package/import-esm.mjs	2026-07-16 11:04:27
++++ /Users/iiwish/self/tellplot/packages/editor/tests/package/import-esm.mjs	2026-07-18 22:26:09
+@@ -33,7 +33,7 @@
+ if (stylesheet.trim().length === 0) {
+   throw new Error('ESM package styles.css export is empty');
+ }
+-if (!stylesheet.includes('.gt-editor')) {
++if (!stylesheet.includes('.tp-editor')) {
+   throw new Error('ESM package stylesheet is missing the editor scope');
+ }
+ if (/^\s*(?::root|html|body)\b/m.test(stylesheet)) {
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/public-api.test.ts /Users/iiwish/self/tellplot/packages/editor/tests/package/public-api.test.ts
+--- /Users/iiwish/self/g2touch/packages/editor/tests/package/public-api.test.ts	2026-07-16 10:30:34
++++ /Users/iiwish/self/tellplot/packages/editor/tests/package/public-api.test.ts	2026-07-18 22:26:02
+@@ -2,7 +2,7 @@
+ 
+ import * as editor from '../../src/index';
+ 
+-describe('@g2touch/editor public entry', () => {
++describe('@tellplot/editor public entry', () => {
+   it('exposes only the approved T107 runtime API', () => {
+     expect(Object.keys(editor).sort()).toEqual([
+       'FinancialChartEditor',
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/types-consumer.ts /Users/iiwish/self/tellplot/packages/editor/tests/package/types-consumer.ts
+--- /Users/iiwish/self/g2touch/packages/editor/tests/package/types-consumer.ts	2026-07-16 12:52:47
++++ /Users/iiwish/self/tellplot/packages/editor/tests/package/types-consumer.ts	2026-07-18 22:26:02
+@@ -21,7 +21,7 @@
+   type SourceData,
+   type ValidationResult,
+   type ViewSpec,
+-} from '@g2touch/editor';
++} from '@tellplot/editor';
+ 
+ declare const source: SourceData;
+ declare const view: ViewSpec;
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/index.html /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/index.html
+--- /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/index.html	2026-07-16 18:45:48
++++ /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/index.html	2026-07-18 22:29:23
+@@ -3,7 +3,7 @@
+   <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <title>g2touch React consumer</title>
++    <title>TellPlot React consumer</title>
+   </head>
+   <body>
+     <div id="root"></div>
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/src/main.mjs /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/src/main.mjs
+--- /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/src/main.mjs	2026-07-16 18:45:48
++++ /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/src/main.mjs	2026-07-18 22:26:02
+@@ -1,5 +1,5 @@
+-import { FinancialChartEditor } from '@g2touch/editor';
+-import '@g2touch/editor/styles.css';
++import { FinancialChartEditor } from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
+ import React from 'react';
+ import { createRoot } from 'react-dom/client';
+ 
+@@ -30,7 +30,7 @@
+   }),
+ );
+ 
+-globalThis.__g2touchReactMatrix = {
++globalThis.__tellplotReactMatrix = {
+   reactVersion: React.version,
+   unmount() {
+     root.unmount();
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/run-react-matrix.mjs /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/run-react-matrix.mjs
+--- /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/run-react-matrix.mjs	2026-07-17 11:49:44
++++ /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/run-react-matrix.mjs	2026-07-18 22:26:09
+@@ -178,9 +178,9 @@
+     try {
+       await page.emulateMedia({ reducedMotion: 'reduce' });
+       await page.goto(url);
+-      const editor = page.locator('[data-g2touch="editor"][data-editor-state="ready"]');
++      const editor = page.locator('[data-tellplot="editor"][data-editor-state="ready"]');
+       await editor.waitFor({ state: 'visible', timeout: 30_000 });
+-      const canvas = page.locator('[data-testid="g2touch-chart"] canvas').first();
++      const canvas = page.locator('[data-testid="tellplot-chart"] canvas').first();
+       await canvas.waitFor({ state: 'visible', timeout: 30_000 });
+ 
+       const deadline = Date.now() + 30_000;
+@@ -197,8 +197,8 @@
+       assert.equal(stableSamples, 2, `${consumer.id} canvas must settle before matrix acceptance`);
+ 
+       const runtime = await page.evaluate(() => {
+-        const matrix = globalThis.__g2touchReactMatrix;
+-        const editorElement = document.querySelector('.gt-editor');
++        const matrix = globalThis.__tellplotReactMatrix;
++        const editorElement = document.querySelector('.tp-editor');
+         if (matrix === undefined || !(editorElement instanceof HTMLElement)) {
+           return null;
+         }
+@@ -208,7 +208,7 @@
+           boxSizing: style.boxSizing,
+           display: style.display,
+           background: style.backgroundColor,
+-          accent: style.getPropertyValue('--gt-accent').trim(),
++          accent: style.getPropertyValue('--tp-accent').trim(),
+         };
+       });
+       assert.notEqual(runtime, null, `${consumer.id} runtime probe must exist`);
+@@ -218,9 +218,9 @@
+       assert.equal(runtime.background, 'rgb(243, 245, 244)');
+       assert.equal(runtime.accent.toLowerCase(), '#126e57');
+ 
+-      await page.evaluate(() => globalThis.__g2touchReactMatrix?.unmount());
++      await page.evaluate(() => globalThis.__tellplotReactMatrix?.unmount());
+       await page.locator('#root[data-unmounted="true"]').waitFor({ state: 'attached' });
+-      assert.equal(await page.locator('[data-g2touch="editor"]').count(), 0);
++      assert.equal(await page.locator('[data-tellplot="editor"]').count(), 0);
+       await page.waitForTimeout(50);
+       assert.deepEqual(runtimeErrors, []);
+       console.log(
+@@ -235,11 +235,11 @@
+ }
+ 
+ async function main() {
+-  const temporaryRoot = await mkdtemp(join(tmpdir(), 'g2touch-react-matrix-'));
++  const temporaryRoot = await mkdtemp(join(tmpdir(), 'tellplot-react-matrix-'));
+   let browser;
+   try {
+     const sourceManifest = JSON.parse(await readFile(join(EDITOR_PACKAGE, 'package.json'), 'utf8'));
+-    await run('pnpm', ['--filter', '@g2touch/editor', 'build'], { cwd: WORKSPACE });
++    await run('pnpm', ['--filter', '@tellplot/editor', 'build'], { cwd: WORKSPACE });
+     const packDirectory = join(temporaryRoot, 'package');
+     await mkdir(packDirectory);
+     await run('pnpm', ['pack', '--pack-destination', packDirectory], { cwd: EDITOR_PACKAGE });
+@@ -255,13 +255,13 @@
+         join(directory, 'package.json'),
+         `${JSON.stringify(
+           {
+-            name: `g2touch-${consumer.id}-consumer`,
++            name: `tellplot-${consumer.id}-consumer`,
+             private: true,
+             type: 'module',
+             scripts: { build: 'vite build' },
+             dependencies: {
+               '@antv/g2': G2_VERSION,
+-              '@g2touch/editor': `file:${archive}`,
++              '@tellplot/editor': `file:${archive}`,
+               react: consumer.react,
+               'react-dom': consumer.reactDom,
+             },
+@@ -278,7 +278,7 @@
+         '--no-frozen-lockfile',
+         '--strict-peer-dependencies',
+       ];
+-      const matrixStore = process.env['G2TOUCH_MATRIX_STORE_DIR'];
++      const matrixStore = process.env['TELLPLOT_MATRIX_STORE_DIR'];
+       if (matrixStore !== undefined && matrixStore.trim().length > 0) {
+         installArgs.push('--store-dir', matrixStore);
+       }
+@@ -287,9 +287,9 @@
+       assert.equal(await installedVersion(directory, 'react-dom'), consumer.reactDom);
+       assert.equal(await installedVersion(directory, '@antv/g2'), G2_VERSION);
+       const installedManifest = JSON.parse(
+-        await readFile(join(directory, 'node_modules/@g2touch/editor/package.json'), 'utf8'),
++        await readFile(join(directory, 'node_modules/@tellplot/editor/package.json'), 'utf8'),
+       );
+-      assert.equal(installedManifest.name, '@g2touch/editor');
++      assert.equal(installedManifest.name, '@tellplot/editor');
+       assert.equal(installedManifest.version, sourceManifest.version);
+       assert.equal(installedManifest.exports?.['./styles.css'], './dist/styles.css');
+       await run('pnpm', ['run', 'build'], { cwd: directory });
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/playwright.config.ts /Users/iiwish/self/tellplot/playwright.config.ts
+--- /Users/iiwish/self/g2touch/playwright.config.ts	2026-07-17 13:01:19
++++ /Users/iiwish/self/tellplot/playwright.config.ts	2026-07-18 22:26:02
+@@ -1,6 +1,6 @@
+ import { defineConfig, devices } from '@playwright/test';
+ 
+-const e2ePort = process.env['G2TOUCH_E2E_PORT'] ?? '4174';
++const e2ePort = process.env['TELLPLOT_E2E_PORT'] ?? '4174';
+ const e2eBaseUrl = `http://127.0.0.1:${e2ePort}`;
+ const performanceSpec = /performance\.spec\.ts/;
+ 
+@@ -41,7 +41,7 @@
+     },
+   ],
+   webServer: {
+-    command: `pnpm build && pnpm --filter @g2touch/playground exec vite preview --host 127.0.0.1 --port ${e2ePort} --strictPort`,
++    command: `pnpm build && pnpm --filter @tellplot/playground exec vite preview --host 127.0.0.1 --port ${e2ePort} --strictPort`,
+     url: e2eBaseUrl,
+     reuseExistingServer: false,
+   },
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/pnpm-lock.yaml /Users/iiwish/self/tellplot/pnpm-lock.yaml
+--- /Users/iiwish/self/g2touch/pnpm-lock.yaml	2026-07-16 10:42:42
++++ /Users/iiwish/self/tellplot/pnpm-lock.yaml	2026-07-18 22:26:02
+@@ -83,7 +83,7 @@
+       '@antv/g2':
+         specifier: 5.4.8
+         version: 5.4.8
+-      '@g2touch/editor':
++      '@tellplot/editor':
+         specifier: workspace:*
+         version: link:../../packages/editor
+       lucide-react:

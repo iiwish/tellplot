@@ -1,0 +1,143 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T101-A001"
+task_id: "T101"
+feature_id: "001-waterfall-editor-foundation"
+mode: "direct_execute_with_independent_review"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  product_contract: ".ai-platform/docs/product-design.md"
+  tdr: ".ai-platform/docs/technology-decision-record.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  checklist: ".ai-platform/specs/001-waterfall-editor-foundation/checklists/requirements.md"
+  analysis: ".ai-platform/specs/001-waterfall-editor-foundation/analysis.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  approval: "User explicitly approved the technical plan and T101-T108 task graph on 2026-07-15."
+
+work_unit:
+  title: "建立 workspace 与质量工具链"
+  goal: "建立可安装、可构建、可测试的 pnpm workspace、单 editor 产品包和薄 playground 壳层。"
+  requirement_mapping:
+    - "WF-US-005"
+    - "WF-NFR-005"
+    - "WF-NFR-006"
+  dependencies:
+    - "T002 Completed"
+  blocks:
+    - "T102"
+    - "T105"
+    - "T108"
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "Reset documents are staged; no application source or package configuration exists."
+  architectural_boundary:
+    - "packages/editor is the only product package."
+    - "apps/playground consumes only the public package entry."
+    - "T101 must not implement domain, chart, command, or interaction behavior."
+  dependency_baseline:
+    node: ">=22.13.0"
+    pnpm: "11.1.3"
+    typescript: "6.0.3"
+    react: "19.2.7"
+    vite: "8.1.4"
+    vitest: "4.1.10"
+    playwright: "1.61.1"
+    eslint: "10.7.0"
+
+execution_constraints:
+  adapter: "Codex direct execution; independent sub-agent may review but must not edit files."
+  allowed_files:
+    - "package.json"
+    - "pnpm-lock.yaml"
+    - "pnpm-workspace.yaml"
+    - ".npmrc"
+    - ".nvmrc"
+    - "tsconfig.base.json"
+    - "eslint.config.js"
+    - ".prettierignore"
+    - ".gitignore"
+    - "vitest.config.ts"
+    - "playwright.config.ts"
+    - "packages/editor/package.json"
+    - "packages/editor/tsconfig.json"
+    - "packages/editor/tsup.config.ts"
+    - "packages/editor/src/index.ts"
+    - "packages/editor/tests/package/**"
+    - "apps/playground/package.json"
+    - "apps/playground/tsconfig.json"
+    - "apps/playground/vite.config.ts"
+    - "apps/playground/index.html"
+    - "apps/playground/src/main.tsx"
+    - "apps/playground/src/App.tsx"
+  forbidden_changes:
+    - "No domain model or chart behavior."
+    - "No Motion dependency."
+    - "No core package or plugin abstraction."
+    - "No push, PR, merge, or publish."
+  conflicts:
+    - "Do not execute T105 or T108 concurrently because they share root and package configuration."
+
+tdd_plan:
+  red:
+    - "Add package source and consumer smoke tests before package configuration exists."
+    - "Run the narrow test command and capture the expected missing workspace/configuration failure."
+  green:
+    - "Create the minimal exact-version workspace, build configuration, public placeholder export, and playground shell."
+    - "Make smoke tests, typecheck, build, publint, and package type-resolution checks pass."
+  refactor:
+    - "Remove duplicated config and keep the public export surface minimal."
+    - "Run the full T101 validation set again."
+
+validation_loop:
+  commands:
+    - "pnpm install"
+    - "pnpm format:check"
+    - "pnpm lint"
+    - "pnpm typecheck"
+    - "pnpm test:unit"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T101"
+  expected_signals:
+    - "All commands exit 0 after GREEN."
+    - "dist contains ESM and CJS runtime output with format-matched .d.ts and .d.cts declarations."
+    - "React, React DOM, and G2 are not bundled into the editor output."
+  retry_budget: 2
+  failure_policy: "Fix only failures caused by T101; stop if the approved dependency or package boundary must change."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T101"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+  required_content:
+    - "Changed files and scope confirmation."
+    - "Expected RED failure and verified GREEN results."
+    - "Installed dependency versions and package artifact list."
+    - "Residual risks and skipped checks."
+
+review_contract:
+  spec_compliance:
+    - "Only approved T101 files changed outside governance/evidence artifacts."
+    - "Workspace contains one product package and one thin playground."
+  engineering_quality:
+    - "Strict TypeScript, flat ESLint, deterministic scripts, peer dependency externalization."
+    - "No unused runtime dependency or duplicated business logic."
+  qa_acceptance:
+    - "Package and playground build from a fresh install."
+    - "Package import and type consumer smoke tests pass."
+
+handoff:
+  on_success: "Set T101 to Needs_Review, attach evidence, and request user acceptance before marking Accepted and starting T102."
+  on_failure: "Keep T101 Running or mark a documented retry attempt; do not advance T102."
+  remote_actions: "None authorized."
+
+stop_conditions:
+  - "A required dependency license or peer range conflicts with the confirmed TDR."
+  - "T101 would require domain or chart implementation."
+  - "A validation failure requires weakening a test or quality gate."
+  - "Unrelated user changes appear in an allowed file and cannot be preserved."

@@ -1,0 +1,13 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+autoInstallPeers: false
+engineStrict: true
+saveExact: true
+sharedWorkspaceLockfile: true
+strictPeerDependencies: true
+nodeVersion: 22.20.0
+
+allowBuilds:
+  esbuild: true

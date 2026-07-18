@@ -1,0 +1,164 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T106-CR001-A001"
+task_id: "T106-CR001"
+feature_id: "001-waterfall-editor-foundation"
+mode: "direct_execute"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  product_contract: ".ai-platform/docs/product-design.md"
+  tdr: ".ai-platform/docs/technology-decision-record.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  checklist: ".ai-platform/specs/001-waterfall-editor-foundation/checklists/requirements.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  data_model: ".ai-platform/specs/001-waterfall-editor-foundation/data-model.md"
+  design_contract: ".ai-platform/specs/001-waterfall-editor-foundation/design-contract.md"
+  command_contract: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  analysis: ".ai-platform/specs/001-waterfall-editor-foundation/analysis.md"
+  approval: "User explicitly approved the recursive model, interaction analysis and completion of T106-CR001 on 2026-07-16."
+
+execution_receipt:
+  attempt_id: "T106-CR001-A001"
+  status: "Accepted"
+  evidence_directory: ".ai-platform/evidence/T106-CR001"
+  final_validation: "targeted interaction 47/47; unit/component 292/292; selected Chromium 21/21; axe Chromium 7/7; production full Chromium projects 32/32; 200-item p95 26.4ms; coverage/build/package/type/lint/format/diff green"
+  independent_review: "Spec, engineering and visual/QA review report no unresolved Critical, High or Medium finding."
+  user_acceptance: "User explicitly accepted T106-CR001 on 2026-07-16."
+  downstream_gate: "T107 compatibility evidence refresh is unlocked; T107 remains Needs_Review until explicit user acceptance, and T108 remains Draft."
+
+work_unit:
+  title: "递归分组与图表直接编排闭环"
+  goal: "Use one normalized recursive tree and deterministic command path for nested grouping, same-parent chart reorder, blank-area marquee, atomic create-and-collapse, chart group controls and exact ungroup."
+  requirement_mapping:
+    - "WF-US-002"
+    - "WF-US-003"
+    - "WF-FR-003"
+    - "WF-FR-004"
+    - "WF-FR-005"
+    - "WF-FR-006"
+    - "WF-FR-007"
+    - "WF-FR-008"
+    - "WF-FR-009"
+    - "WF-NFR-001"
+    - "WF-NFR-002"
+    - "WF-NFR-003"
+    - "WF-NFR-004"
+  dependencies:
+    - "T102 Accepted"
+    - "T103 Accepted"
+    - "T104 Accepted"
+    - "T105 Accepted"
+    - "T106 Accepted"
+  blocks:
+    - "T107 compatibility evidence refresh and user acceptance"
+    - "T108"
+  parallel: false
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "T106-CR001 is Accepted. The package uses immutable SourceData/ViewSpec separation, a normalized recursive ordered forest, deterministic waterfall projection, G2 horizontal scene bounds, same-parent direct chart interaction, outline dnd-kit interaction, persistence/export and a thin playground. T107 compatibility evidence refresh is unlocked."
+  reusable_boundaries:
+    - "Keep SourceData immutable, IDs stable, executeCommand as the only mutation path, G2 as the only chart renderer and the existing session/history/export shells."
+    - "Use normalized rootOrder plus group records. Derive parent, depth, leaf sources and aggregate values."
+  forbidden_changes:
+    - "Do not mutate SourceData or persist parent/aggregate caches."
+    - "Do not add Motion or another chart/drag/animation engine."
+    - "Do not make chart pointer drag infer cross-level hierarchy changes."
+    - "Do not start T108 before explicit T107 acceptance."
+
+execution_constraints:
+  adapter: "Codex direct execution because repository policy does not authorize subagent delegation for this task."
+  allowed_files:
+    - ".ai-platform/docs/**"
+    - ".ai-platform/specs/001-waterfall-editor-foundation/**"
+    - ".ai-platform/evidence/T106-CR001/**"
+    - "packages/editor/src/**"
+    - "packages/editor/tests/**"
+    - "apps/playground/src/**"
+    - "e2e/waterfall-editor.spec.ts"
+    - "e2e/interaction-cancel.spec.ts"
+    - "e2e/accessibility.spec.ts"
+    - "e2e/export.spec.ts"
+    - "e2e/performance.spec.ts"
+    - "playwright.config.ts"
+    - "package.json"
+  conflicts:
+    - "T107 and T108 share public API, chart adapter, export and E2E files."
+  scope_amendments:
+    - "playwright.config.ts is included after local validation found port 4173 occupied by an unrelated project; the harness must fail on collisions instead of silently reusing another app."
+    - "package.json is included to expose the isolated Chromium performance project through the conventional test:performance script after full-suite browser reuse produced non-representative latency outliers."
+    - "User acceptance reopened chart reorder on 2026-07-16: collision must use the translated bar width and G2 horizontal scene bounds only, while start, subtotal, end and pinned marks never open a drag session."
+    - "Playwright serves the production Vite build so the approved 150ms release metric is not dominated by React/Vite development instrumentation; the threshold and sample count remain unchanged."
+  source_boundary: "SourceData identity and amount values stay unchanged for every success, rejection, undo and redo."
+
+tdd_plan:
+  red:
+    - "Add recursive validation tests for cycle, orphan, multiple parent, exact coverage, minimum children and cross-segment descendants."
+    - "Add command/history tests for nested create, moveGroup, exact ungroup and atomic initially-collapsed creation."
+    - "Add recursive projection and property sequence tests with at least three group levels."
+    - "Add component/browser tests for same-parent marquee, one-history create/collapse, live reorder preview, nested outline and chart group buttons."
+    - "Add acceptance regressions for real-width X-only edge crossing, Y-axis independence, sub-4px jitter, target clearing, locked/read-only click selection and pointer-capture cleanup."
+  green:
+    - "Implement shared recursive tree traversal, parser/validator, commands, projection and persistence."
+    - "Implement pending-bar/marquee state, preview projection, DOM overlay controls and accessible dialog."
+    - "Resolve reorder from translated source bounds and same-parent horizontal scene bounds; keep locked/read-only presses selectable without opening a drag session."
+  refactor:
+    - "Remove one-level scans, centralize parent/leaf traversal and keep pointer-frequency state outside EditorSession history."
+
+validation_loop:
+  commands:
+    - "pnpm test:unit -- packages/editor/tests/domain packages/editor/tests/waterfall packages/editor/tests/components"
+    - "pnpm test:coverage"
+    - "pnpm exec playwright test e2e/waterfall-editor.spec.ts e2e/interaction-cancel.spec.ts e2e/export.spec.ts --project=chromium"
+    - "pnpm exec playwright test e2e/accessibility.spec.ts --project=chromium"
+    - "pnpm test:performance"
+    - "pnpm exec playwright test --project=chromium --project=chromium-performance"
+    - "pnpm typecheck"
+    - "pnpm lint"
+    - "pnpm format:check"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T106-CR001"
+  expected_signals:
+    - "RED failures identify missing recursive or direct-interaction behavior, not harness errors."
+    - "Three-level nested fixtures conserve every source exactly once and preserve totals through collapse/expand/ungroup/undo/redo."
+    - "Real Chromium proves chart marquee, atomic create/collapse, live reorder preview and hover/focus group actions."
+    - "Axe has no serious/critical violations; 200-item performance stays within the existing 150ms target."
+  retry_budget: 3
+  failure_policy: "Fix only T106-CR001 scope. Stop for an unresolved financial invariant, public compatibility conflict or need for a new runtime dependency."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T106-CR001"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+    - "screenshots/nested-expanded.png"
+    - "screenshots/nested-collapsed.png"
+    - "screenshots/marquee-selection.png"
+    - "screenshots/chart-group-actions.png"
+  required_content:
+    - "Approved artifact scope and analysis gate."
+    - "RED/GREEN/REFACTOR commands with exit status and expected failure reason."
+    - "Recursive invariant and history matrix."
+    - "Real browser, axe, performance, persistence, export, package and build results."
+    - "Changed files, diff summary, three-pass review and residual risk."
+
+review_contract:
+  spec_compliance: "Verify recursive tree, command atomicity, same-parent chart boundary, accessibility parity and source/amount conservation against the approved artifacts."
+  engineering: "Review graph validation, command/history identity, projection determinism, pointer cleanup, performance and public compatibility."
+  qa: "Use the real in-app browser to complete marquee create/collapse, nested expand/collapse, dual chart actions, ungroup and undo/redo without relying on the outline for the direct path."
+
+stop_conditions:
+  - "A legal command can lose, duplicate or change a SourceData contribution or amount."
+  - "Recursive structure requires a new runtime dependency or second chart renderer."
+  - "The public persistence format requires an unsupported major-version migration."
+  - "A Critical or High artifact, engineering or QA finding remains unresolved."
+  - "T106-CR001 validation exceeds the retry budget for the same blocker."
+
+handoff:
+  task_status: "Accepted"
+  acceptance_receipt: "User explicitly accepted T106-CR001 on 2026-07-16."
+  next_gate: "Refresh T107 compatibility evidence before its acceptance decision; T108 stays Draft until T107 is explicitly accepted."

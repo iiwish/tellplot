@@ -1,0 +1,109 @@
+schema_version: "1.0"
+packet_id: "002-tellplot-repository-migration-T109-A001"
+task_id: "T109"
+feature_id: "002-tellplot-repository-migration"
+mode: "direct_execute"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  product_contract: ".ai-platform/docs/product-design.md"
+  tdr: ".ai-platform/docs/technology-decision-record.md"
+  spec: ".ai-platform/specs/002-tellplot-repository-migration/spec.md"
+  checklist: ".ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md"
+  plan: ".ai-platform/specs/002-tellplot-repository-migration/plan.md"
+  work_graph: ".ai-platform/specs/002-tellplot-repository-migration/tasks.md"
+  analysis: ".ai-platform/specs/002-tellplot-repository-migration/analysis.md"
+  approval: "User explicitly approved the TellPlot name and repository migration sequence on 2026-07-18."
+
+work_unit:
+  title: "完成 TellPlot 品牌与独立仓库迁移"
+  goal: "Preserve the accepted release candidate while establishing a clean TellPlot namespace, Git root and private GitHub repository."
+  requirement_mapping:
+    - "CD-004"
+    - "TDR-011"
+  dependencies:
+    - "T108 Accepted"
+  blocks:
+    - "remote release validation"
+  parallel: false
+
+codebase_context:
+  branch: "main"
+  current_state: "The accepted T101-T108 implementation was copied from the uncommitted reset worktree into an independent TellPlot Git root."
+  reusable_boundaries:
+    - "Preserve all accepted domain, interaction, export and package behavior."
+    - "Keep .ai-platform/evidence historical patch files byte-stable."
+  forbidden_changes:
+    - "Do not change product behavior, publish npm packages or deploy the website."
+    - "Do not rename, archive, delete or push to iiwish/g2touch."
+
+execution_constraints:
+  adapter: "Codex direct execution under the user-approved migration sequence."
+  allowed_files:
+    - "**/*"
+  allowed_remote:
+    - "github.com/iiwish/tellplot"
+  forbidden_remote:
+    - "github.com/iiwish/g2touch"
+  dependency_boundary: "Do not add runtime dependencies; keep the frozen lockfile dependency graph."
+  historical_boundary: "Legacy names are allowed only in immutable .ai-platform/evidence records and explicit forbidden-remote migration references."
+
+tdd_plan:
+  red:
+    - "Record legacy package, DOM, CSS, runtime and documentation namespace matches before migration."
+  green:
+    - "Replace current namespaces with TellPlot, @tellplot, data-tellplot, tp- and TELLPLOT equivalents."
+  refactor:
+    - "Rewrite README, AGENTS and SSOT as the latest canonical state without altering historical evidence patches."
+
+validation_loop:
+  commands:
+    - "pnpm install --frozen-lockfile"
+    - "pnpm format:check"
+    - "pnpm lint"
+    - "pnpm typecheck"
+    - "pnpm test:coverage"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "pnpm test:react-matrix"
+    - "pnpm test:browser-previous"
+    - "pnpm test:e2e"
+    - "pnpm test:a11y"
+    - "pnpm test:performance"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 002-tellplot-repository-migration --task-id T109 --strict"
+  expected_signals:
+    - "No current source, package, selector, CSS or canonical documentation exposes the legacy namespace."
+    - "All accepted local quality gates pass under the @tellplot package identity."
+    - "GitHub Actions passes from the new private repository and the old remote heads remain unchanged."
+  retry_budget: 3
+  failure_policy: "Fix only migration defects. Stop for behavior changes, dependency additions, old-remote writes or unresolved validation failures."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T109"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "migration-inventory.md"
+    - "brand-audit.md"
+  required_content:
+    - "Source and target inventory, mirror fsck, local validation, remote CI, repository settings and old-remote immutability proof."
+
+review_contract:
+  spec_compliance:
+    - "Confirm every migration requirement and forbidden boundary has direct evidence."
+  engineering_quality:
+    - "Review package metadata, public namespaces, CI reproducibility and clean-clone consumption."
+  qa_acceptance:
+    - "No unresolved Critical, High or Medium migration finding."
+
+stop_conditions:
+  - "Any source or target inventory mismatch."
+  - "Any unresolved current-code legacy namespace residue."
+  - "Any failed local or remote validation."
+  - "Any operation targeting the old GitHub repository."
+
+handoff:
+  task_status: "In_Progress"
+  next_gate: "Complete remote CI and repository protection, then request acceptance before any legacy-repository action."
+  remote_actions: "Creating and pushing iiwish/tellplot is authorized; npm publish and old-repository changes are not authorized."

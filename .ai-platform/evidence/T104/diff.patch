@@ -1,0 +1,1937 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 732a626..4f8892d 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -9,7 +9,7 @@
+
+ ## Current State
+
+-仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器与 T103 命令执行器/历史已经验收；投影、图表、交互、持久化和导出仍未完成，因此当前不存在可发布产品制品。
++仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器、T103 命令执行器/历史与 T104 瀑布投影已经验收；React/G2 图表、交互、持久化和导出仍未完成，因此当前不存在可发布产品制品。
+
+ ## Release Scope
+
+@@ -24,10 +24,10 @@
+ - T101 package 通过 ESM/CJS import、format-matched declarations、publint 与 Are The Types Wrong 检查。
+ - T102 domain model/validator 通过 97 tests 与四项 95% coverage 门槛。
+ - T103 command/session/history 通过 140 tests、四项 95% aggregate coverage、独立 review、ESM/CJS/types/package 检查。
++- T104 waterfall projection 通过 32 个目标测试、172 个全量测试、waterfall 四项 99%/100% coverage、独立 review、ESM/CJS/types/package 检查。
+
+ ## Known Blockers
+
+-- T104 瀑布累计、subtotal 与 end anchor 投影尚未验收。
+ - T105 React 工作台与真实 G2 渲染尚未验收。
+ - T106 排序、分组、折叠与键盘交互尚未验收。
+ - T107 持久化、SVG/PNG 导出与可访问性闭环尚未验收。
+@@ -35,4 +35,4 @@
+
+ ## Release Decision
+
+-结论：不可发布。T101-T103 是已验收的领域基础，不构成用户可操作或可发布产品。
++结论：不可发布。T101-T104 是已验收的领域与投影基础，不构成用户可操作或可发布产品。
+diff --git a/.ai-platform/evidence/T104/summary.md b/.ai-platform/evidence/T104/summary.md
+new file mode 100644
+index 0000000..9219fa8
+--- /dev/null
++++ b/.ai-platform/evidence/T104/summary.md
+@@ -0,0 +1,61 @@
++# T104 Evidence Summary
+
++## Metadata
+
++- Task: T104 - 实现瀑布投影
++- Attempt: T104-A001
++- Status: Accepted
++- Branch: `codex/reset`
++- Date: 2026-07-15
++- Execution: Codex direct TDD execution with delegated RED tests and independent read-only review
+
++## Scope Result
+
++实现 package-internal `projectWaterfall(sourceData, viewSpec)`，把 canonical SourceData/ViewSpec 确定性投影为 renderer-ready waterfall data。投影覆盖 start、正/负/零 contribution、subtotal、end、expanded/collapsed group、pinned lock、source traceability 与稳定 output order，不引入 React、G2、DOM、格式化或第二套累计逻辑。
+
++## Locked Semantics
+
++- 先复用 `validateViewSpec` 完成 source/view 结构校验，失败原样返回且不产生部分 projection。
++- start/subtotal/end 使用绝对锚点 datum；subtotal 校验成功后以声明金额重置累计。
++- contribution 和 group 主累计使用 Neumaier compensated summation；collapsed group 使用独立 compensated aggregate 并按同一 child 顺序喂入主累计。
++- 锚点误差只接受最多 8 ULP；不使用货币舍入、epsilon 或业务容差。
++- 当前累计或 collapsed group aggregate 非有限或超出 `Number.MAX_SAFE_INTEGER` 时返回 value-free `UNSAFE_AMOUNT`。
++- 零 contribution 归为 positive；anchor 始终 locked，pinned contribution 与包含 pinned child 的 collapsed group locked。
++- group 与 direct contribution 使用 own-property lookup，`constructor`、`toString`、`__proto__` 等 ID 不会被 Object prototype 误判。
+
++## TDD Evidence
+
++RED:
+
++- 四个 waterfall test files 先于实现落盘，初次运行 exit 1，均因 `src/waterfall/projectWaterfall` 尚不存在而失败；既有 140 tests 保持通过。
++- GREEN 后独立自审发现 prototype-like contribution ID 会被 inherited group property 误判，新增回归并以 own-property descriptor 修复。
+
++GREEN:
+
++- 32 个 waterfall tests 覆盖基础投影、负基线、零值、多个/连续 subtotal、0.1 + 0.2、large cancellation、正负 8/9 ULP、unsafe current/group、group 展开/折叠 parity、锁定、determinism、immutability 与 hostile input。
++- Fresh 全量 172 tests 通过；waterfall statements 99.04%、branches 100%、functions 100%、lines 99.03%。
++- ESM/CJS/declarations、publint、ATTW、runtime/type consumers、strict TypeScript、lint、format 与 build 全部通过。
+
++## Changed Files
+
++- `packages/editor/src/waterfall/projectWaterfall.ts`
++- `packages/editor/src/waterfall/waterfallTypes.ts`
++- `packages/editor/tests/waterfall/{projectWaterfall,anchors,groups,determinism}.test.ts`
++- T104 packet、projection/API/data/plan contract、task/analysis/release state 与 T104 evidence
+
++## Scope Confirmation
+
++- `projectWaterfall` 保持 package internal，T103 公共 runtime surface 未变化。
++- 未实现 React、G2、DOM、交互、持久化、格式化或导出。
++- 未新增 dependency，未执行 commit、push、PR、merge、publish 或其他远端写操作。
+
++## Residual Risk
+
++- ULP 测试覆盖正负普通数值与精确 8/9 ULP 边界，尚未单独覆盖跨零、subnormal 与接近 `Number.MAX_SAFE_INTEGER` 的位序边界；实现使用完整 signed IEEE-754 ordered-bit mapping，独立 review 判定该缺口为 Low。
++- T104 不包含货币格式化；显示精度由后续单一 formatter/组件合同决定，不参与财务锚点判断。
+
++## Independent Review Verdict
+
++- 无 Critical、High 或 Medium finding，建议 Accepted。
++- Neumaier、8 ULP、safe range、subtotal reset、segment/group、collapsed/expanded parity、锁定、隐私与 prototype-like ID 语义符合锁定合同。
++- 用户已授权 Codex 对 T102-T104 独立 review 并验收，T104 据此进入 Accepted。
+diff --git a/.ai-platform/evidence/T104/test-results.md b/.ai-platform/evidence/T104/test-results.md
+new file mode 100644
+index 0000000..de7d77c
+--- /dev/null
++++ b/.ai-platform/evidence/T104/test-results.md
+@@ -0,0 +1,52 @@
++# T104 Test Results
+
++## RED
+
++| Command | Exit | Expected signal |
++| --- | ---: | --- |
++| `pnpm test:unit -- packages/editor/tests/waterfall` before implementation | 1 | 4 suites 因 `projectWaterfall` module 缺失失败；既有 140 tests 通过 |
+
++## GREEN And Fresh Validation
+
++| Command | Exit | Result |
++| --- | ---: | --- |
++| `pnpm exec vitest run packages/editor/tests/waterfall` | 0 | 4 files、32 tests passed |
++| `pnpm test:unit` | 0 | 12 files、172 tests passed |
++| `pnpm test:coverage` | 0 | 172 tests passed；waterfall 99.04% / 100% / 100% / 99.03% |
++| `pnpm typecheck` | 0 | editor 与 playground strict TypeScript 通过 |
++| `pnpm lint` | 0 | 0 warning/error |
++| `pnpm format:check` | 0 | 全部 matched files 通过 |
++| `pnpm build` | 0 | editor ESM/CJS/d.ts/d.cts 与 playground production build 成功 |
++| `pnpm test:package` | 0 | publint、ATTW、ESM/CJS runtime 与 type consumer 全部通过 |
++| `git diff --check` | 0 | 无 whitespace error |
++| independent T104 review | 0 | 无 Critical、High 或 Medium finding，建议 Accepted |
+
++## Coverage Boundary
+
++`packages/editor/src/waterfall/**`：
+
++- Statements: 99.04%
++- Branches: 100%
++- Functions: 100%
++- Lines: 99.03%
+
++全量 aggregate：statements 97.89%、branches 95.47%、functions 100%、lines 97.85%。
+
++## Numeric And Privacy Boundaries
+
++- 正负锚点均验证精确 8 ULP 接受、9 ULP 拒绝。
++- `0.1 + 0.2` subtotal 通过 compensated comparison 并按声明值 reset。
++- `9e15 + 0.5 - 9e15` 保留 0.5 cancellation result。
++- unsafe main/current 与 collapsed group aggregate 返回固定 path/details，不包含 amount、label 或 sourceRef。
++- invalid structural source/view、hostile Proxy 与 accessor view 返回 canonical privacy-safe validation failure。
+
++## Group And Determinism Boundaries
+
++- expanded 按 childIds 输出且不产生 group datum；collapsed 产生单一 group datum。
++- collapsed/expanded 使用相同 child feed，最终累计与 end anchor 一致。
++- 重复调用 deep-equal、JSON-compatible、plain data 且 output/sourceIds 不别名输入。
++- prototype-like contribution IDs 使用 own-property semantics。
+
++## Not Run
+
++- Browser E2E 与视觉截图：T104 是 package-internal 纯投影，无 DOM；由 T105 真实 G2 工作台覆盖。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+index d36439a..0aad853 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+@@ -8,7 +8,7 @@
+
+ ## Verdict
+
+-没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T103 已验收，T104 按任务图进入下一执行节点。
++没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T104 已验收，T105 是下一执行节点。
+
+ ## Requirement Coverage
+
+@@ -71,4 +71,4 @@ Disposition: spec 的 Non-Goals 与 research 风险已经把本切片限制为
+ - Constitution: Confirmed。
+ - Feature spec/plan/TDR/tasks: Confirmed。
+ - Checklist: Completed。
+-- Execute: T101-T103 Accepted；T104-T108 保持 Draft。T102-T104 由 Codex 独立 review 并验收，T105 进入 Needs_Review 后请求用户可视化验收。
++- Execute: T101-T104 Accepted；T105-T108 保持 Draft。T102-T104 由 Codex 独立 review 并验收，T105 进入 Needs_Review 后请求用户可视化验收。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+index fe1dd0c..165e6ac 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+@@ -24,6 +24,7 @@
+ - `@g2touch/editor/styles.css`
+
+ 不导出 G2 chart instance、内部 reducer、DOM components、dnd-kit adapter 或 projection cache。
++`projectWaterfall` 是 package 内部的确定性 adapter input，不属于第一阶段公共 runtime surface；公共组件与导出模块复用同一实现。
+
+ ## Domain Validation Contract
+
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md b/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
+index 1293c68..5166f6d 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
+@@ -182,14 +182,29 @@ interface WaterfallDatum {
+   readonly locked: boolean;
+   readonly order: number;
+ }
+
++type WaterfallProjection = readonly WaterfallDatum[];
++type WaterfallProjectionResult = ValidationResult<WaterfallProjection>;
+ ```
+
+ Projection algorithm:
+
+-1. 输出 start anchor。
+-2. 按 `rootOrder` 展开普通 contribution；collapsed group 输出一个聚合 datum，expanded group 输出 children。
+-3. subtotal 使用 source amount 作为声明值并校验当前累计口径；不允许通过排序跨越 subtotal 锚点。
+-4. 输出 end anchor并校验来源定义的 end amount与累计结果一致。
++1. 先验证 SourceData 与 ViewSpec；结构错误原样返回 ValidationResult failure，不生成部分 projection。
++2. 输出 start anchor，`start=0`、`end=amount`、`sourceIds=[anchorId]`、`locked=true`，累计基线设为 start amount。
++3. 按 subtotal segment 与 `rootOrder` 消费 contribution。普通项输出单个 datum；collapsed group 输出一个 group datum；expanded group 不输出 group datum并按 `childIds` 连续输出 children。
++4. contribution 的 `start` 是进入前累计、`end` 是进入后累计、`amount` 是 source amount；amount `< 0` 为 negative，否则包括零值在内为 positive。pinned contribution 的 `locked=true`。
++5. collapsed group 的 amount 是 children compensated sum，sourceIds 是独立 child ID 副本；任一 child pinned 时 group datum `locked=true`。collapsed 与 expanded 路径向主 accumulator 喂入完全相同的 child 顺序。
++6. subtotal 使用 source amount 作为绝对声明值并校验当前累计；成功后以声明值重置累计基线。连续 subtotal 与空 segment 合法。
++7. end 使用 source amount 作为绝对声明值并校验最终累计；anchor datum 均使用 `start=0`、`end=amount`、`sourceIds=[anchorId]`、`locked=true`。
++8. `order` 等于最终 projection 数组的零基索引。同一有效输入重复调用产生 deep-equal、JSON-compatible plain data，输出 array/sourceIds 不与输入容器共享。
+
++Numeric rules:
+
++- 主累计与 group 聚合使用 Neumaier compensated summation。
++- subtotal/end mismatch 仅允许最多 8 ULP 的 IEEE-754 表示误差；不使用货币精度、百分比或任意业务容差。
++- anchor mismatch 返回 `INVALID_SOURCE_DATA / INVALID_ANCHOR`，path 指向 `/items/{sourceIndex}/amount`，details 固定为 `{ anchor: 'subtotal' | 'end', sourceIndex }`。
++- 聚合或当前累计变为非有限数或绝对值超过 `Number.MAX_SAFE_INTEGER` 时返回 `INVALID_SOURCE_DATA / UNSAFE_AMOUNT`，details 固定为 `{ operation: 'accumulate' | 'groupAggregate', sourceIndex }`，不返回部分 projection。
++- projection error 不使用 CommandError，因为不存在 command ID。
+
+ ## State Transitions
+
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T104.yaml b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T104.yaml
+new file mode 100644
+index 0000000..ab8f853
+--- /dev/null
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T104.yaml
+@@ -0,0 +1,134 @@
++schema_version: "1.0"
++packet_id: "001-waterfall-editor-foundation-T104-A001"
++task_id: "T104"
++feature_id: "001-waterfall-editor-foundation"
++mode: "direct_execute_with_independent_review"
+
++governance_inputs:
++  constitution: ".ai-platform/memory/constitution.md"
++  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
++  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
++  data_model: ".ai-platform/specs/001-waterfall-editor-foundation/data-model.md"
++  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
++  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
++  approval: "T103 Accepted; user authorized Codex to review and accept T102-T104 on 2026-07-15."
+
++work_unit:
++  title: "实现瀑布投影"
++  goal: "把 SourceData 与 ViewSpec 确定性投影为真实 G2 adapter 使用的可见 waterfall data，并校验 subtotal/end 财务锚点。"
++  requirement_mapping:
++    - "WF-US-001"
++    - "WF-US-003"
++    - "WF-FR-006"
++    - "WF-NFR-001"
++  dependencies:
++    - "T102 Accepted"
++    - "T103 Accepted"
++  blocks:
++    - "T105"
++    - "T106"
++    - "T107"
+
++codebase_context:
++  branch: "codex/reset"
++  current_state: "T103 provides Accepted immutable source/view/session/command/history contracts and invariant validation."
++  architectural_boundary:
++    - "projectWaterfall is one package-internal pure projection path used by G2, export and outline value lookup."
++    - "Outline combines ViewSpec with projection so expanded group headers remain structural rather than chart data."
++    - "Projection returns ValidationResult and never returns partial data on structural, anchor or safe-number failure."
++    - "No React, G2, DOM, formatting, interaction or export implementation belongs to T104."
++  public_runtime_surface:
++    - "Unchanged from T103; projectWaterfall remains internal."
+
++locked_contract:
++  result: "WaterfallProjectionResult wraps a readonly WaterfallDatum array in ValidationResult; structural errors reuse canonical validators."
++  ordering: "start, segment root nodes, segment subtotal if present, final segment nodes, end; order equals output index."
++  groups: "Expanded emits children only in childIds order; collapsed emits one group datum but feeds the same children into the main accumulator."
++  anchors: "subtotal and end are absolute declared cumulative values; successful subtotal resets the accumulator to the declared value."
++  numeric: "Neumaier compensated summation; anchor equality permits at most 8 ULP; no business or currency tolerance."
++  safe_range: "Non-finite or abs(current/group total) above Number.MAX_SAFE_INTEGER returns INVALID_SOURCE_DATA/UNSAFE_AMOUNT."
++  zero: "Zero contribution kind is positive; only amount < 0 is negative."
++  locks: "Anchors locked; contribution locked when pinned; collapsed group locked when any child is pinned."
++  privacy: "Anchor and numeric errors expose path, anchor enum, source index and operation only; never amount or label."
+
++execution_constraints:
++  adapter: "Codex direct TDD execution; independent sub-agent review is read-only."
++  allowed_files:
++    - "packages/editor/src/waterfall/waterfallTypes.ts"
++    - "packages/editor/src/waterfall/projectWaterfall.ts"
++    - "packages/editor/src/waterfall/formatWaterfall.ts"
++    - "packages/editor/src/index.ts"
++    - "packages/editor/tests/waterfall/projectWaterfall.test.ts"
++    - "packages/editor/tests/waterfall/anchors.test.ts"
++    - "packages/editor/tests/waterfall/groups.test.ts"
++    - "packages/editor/tests/waterfall/determinism.test.ts"
++  forbidden_changes:
++    - "No React, G2, DOM, command, session, persistence, export or interaction implementation."
++    - "No arbitrary epsilon, currency rounding, partial projection or duplicated waterfall arithmetic."
++    - "No new dependency, public runtime export, push, PR, merge or publish."
++  conflicts:
++    - "Do not execute T105 concurrently because it consumes the projection contract."
+
++tdd_plan:
++  red:
++    - "Add start/positive/negative/zero/end and anchors-only projection tests."
++    - "Add subtotal, consecutive/empty segment, anchor mismatch, ULP and cancellation tests."
++    - "Add collapsed/expanded group ordering, aggregation, lock and sourceIds alias tests."
++    - "Add deterministic replay, JSON/plain data, immutability and hostile invalid-input tests."
++  green:
++    - "Implement projection types, segment indexing and a single forward projection pass."
++    - "Implement compensated accumulator, 8-ULP anchor comparator and safe-number errors."
++  refactor:
++    - "Share anchor datum, contribution datum and group feeding helpers without creating a generic chart grammar."
++    - "Run full domain/waterfall coverage, package build and dependency/privacy scans."
+
++validation_loop:
++  commands:
++    - "pnpm test:unit -- packages/editor/tests/waterfall"
++    - "pnpm test:coverage"
++    - "pnpm typecheck"
++    - "pnpm lint"
++    - "pnpm format:check"
++    - "pnpm build"
++    - "pnpm test:package"
++    - "git diff --check"
++    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T104"
++  expected_signals:
++    - "All commands exit 0 after GREEN."
++    - "Domain and waterfall statement, branch, function and line coverage each meet their configured 95% gates."
++    - "Collapsed and expanded paths finish at the same compensated cumulative value."
++    - "Invalid anchors and unsafe accumulation return privacy-safe failures without partial projection."
++  retry_budget: 2
++  failure_policy: "Fix only T104 projection contract failures; stop if SourceData/ViewSpec semantics must materially change."
+
++evidence_contract:
++  directory: ".ai-platform/evidence/T104"
++  required_files:
++    - "summary.md"
++    - "test-results.md"
++    - "diff.patch"
++  required_content:
++    - "RED/GREEN results and projection fixture outputs."
++    - "ULP/cancellation, subtotal/end mismatch and collapsed/expanded parity evidence."
++    - "Coverage, privacy checks, changed files, diff summary and residual risk."
+
++review_contract:
++  spec_compliance:
++    - "Every datum field, segment/anchor rule, group mode and error contract has a direct test."
++    - "projectWaterfall remains internal and only approved T104 source/test files change outside governance/evidence."
++  engineering_quality:
++    - "One forward pure projection pass, no duplicated arithmetic and no input/output aliasing."
++    - "Numerics use compensated summation and explicit ULP comparison, not rounding heuristics."
++  qa_acceptance:
++    - "Positive, negative, zero, subtotal, end, expanded/collapsed and deterministic fixtures pass."
++    - "No Critical/High/Medium independent review finding remains."
+
++handoff:
++  on_success: "Attach evidence, complete independent review, mark T104 Accepted under delegated authority, then execute T105 and request user visual acceptance."
++  on_failure: "Keep T104 Running and document bounded retry; do not advance T105."
++  remote_actions: "None authorized."
+
++stop_conditions:
++  - "Projection requires mutating SourceData/ViewSpec or using a second arithmetic path."
++  - "Anchor correctness requires business currency assumptions absent from SourceData."
++  - "A failure can only be hidden by increasing tolerance beyond the locked 8 ULP boundary."
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/plan.md b/.ai-platform/specs/001-waterfall-editor-foundation/plan.md
+index c68ac13..dda79a8 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/plan.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/plan.md
+@@ -83,9 +83,17 @@ playwright.config.ts
+ - `ViewSpec` 是唯一可持久化编辑状态；使用规范化结构保存根顺序和 group entities。
+ - `EditorSession` 组合 source fingerprint、current ViewSpec、revision、undo stack 和 redo stack，不进入公共持久化格式。
+ - `executeCommand` 是唯一 mutation 入口，返回 discriminated union，不抛出可预期业务错误。
+-- `projectWaterfall` 是纯函数，负责把 source + view 转成 G2 和 outline 共同消费的 projection。
++- `projectWaterfall` 是包内纯函数，负责把 source + view 转成 chart projection；公共 package runtime 不直接导出该函数。
++- G2 直接消费 projection；outline 组合 `ViewSpec` 与 projection，保留 expanded group header 与层级信息。
+ - G2 chart instance、DOM ref、pointer session 和导出 canvas 都属于 adapter 临时状态。
+
++## Projection Numerics
+
++- contribution 按当前 `ViewSpec` 顺序进入 Neumaier compensated accumulator，避免重排触发普通浮点加法漂移。
++- collapsed group 与 expanded children 使用同一 child 顺序和同一累加路径；group 自身金额使用独立 Neumaier accumulator。
++- subtotal 与 end 是绝对累计锚点。比较使用最多 8 ULP 的 IEEE-754 误差边界，不使用货币小数位或业务容差。
++- subtotal 校验成功后以声明值重置 accumulator；累计或聚合超出 finite safe-number range 时返回结构化错误，不生成部分 projection。
+
+ ## React Boundary
+
+ - `FinancialChartEditor` 是公共 root component。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+index 9e55ec6..59b3f3e 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+@@ -75,7 +75,7 @@
+
+ ## T104 - 实现瀑布投影
+
+-- Status: Draft
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: T102、T103
+ - Blocks: T105、T106、T107
+@@ -92,6 +92,7 @@
+ - TDD plan: RED：先覆盖简单累计，再覆盖负数、group、subtotal、invalid end；GREEN：实现单向纯投影；REFACTOR：提取 anchor segment 与 aggregate helpers。
+ - Packet path: `.ai-platform/specs/001-waterfall-editor-foundation/packets/T104.yaml`
+ - Evidence required: RED/GREEN 输出、fixture projection snapshots、coverage、changed files、diff summary、residual risk。
++- Acceptance authority: 用户授权 Codex 对 T102-T104 执行独立 review 并验收；fresh 独立 review 无 Critical、High 或 Medium finding。
+
+ ### Story S2 - 可操作组件
+
+diff --git a/packages/editor/src/waterfall/projectWaterfall.ts b/packages/editor/src/waterfall/projectWaterfall.ts
+new file mode 100644
+index 0000000..fc1adc4
+--- /dev/null
++++ b/packages/editor/src/waterfall/projectWaterfall.ts
+@@ -0,0 +1,280 @@
++import { validationFailure, validationIssue, validationSuccess } from '../domain/errors';
++import type { ViewNodeId } from '../domain/ids';
++import type { SourceData, SourceItem, ViewGroup, ViewSpec } from '../domain/model';
++import { validateViewSpec } from '../domain/validation';
++import type {
++  WaterfallDatum,
++  WaterfallDatumKind,
++  WaterfallProjectionResult,
++} from './waterfallTypes';
+
++const MAX_ULP_DISTANCE = 8n;
++const FLOAT_SIGN_BIT = 1n << 63n;
++const FLOAT_MASK = (1n << 64n) - 1n;
+
++interface IndexedSource {
++  readonly itemsById: ReadonlyMap<string, SourceItem>;
++  readonly sourceIndexById: ReadonlyMap<string, number>;
++  readonly segmentByContributionId: ReadonlyMap<string, number>;
++  readonly subtotalsBySegment: ReadonlyMap<number, SourceItem>;
++  readonly segmentCount: number;
++  readonly start: SourceItem;
++  readonly end: SourceItem;
++}
+
++interface CompensatedAccumulator {
++  sum: number;
++  correction: number;
++}
+
++function createAccumulator(initialValue: number): CompensatedAccumulator {
++  return { sum: initialValue, correction: 0 };
++}
+
++function add(accumulator: CompensatedAccumulator, value: number): void {
++  const next = accumulator.sum + value;
++  accumulator.correction +=
++    Math.abs(accumulator.sum) >= Math.abs(value)
++      ? accumulator.sum - next + value
++      : value - next + accumulator.sum;
++  accumulator.sum = next;
++}
+
++function total(accumulator: CompensatedAccumulator): number {
++  return accumulator.sum + accumulator.correction;
++}
+
++function reset(accumulator: CompensatedAccumulator, value: number): void {
++  accumulator.sum = value;
++  accumulator.correction = 0;
++}
+
++function isSafe(accumulator: CompensatedAccumulator): boolean {
++  const value = total(accumulator);
++  return Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER;
++}
+
++function orderedFloatBits(value: number): bigint {
++  const view = new DataView(new ArrayBuffer(8));
++  view.setFloat64(0, value, false);
++  const bits = view.getBigUint64(0, false);
++  return (bits & FLOAT_SIGN_BIT) === 0n ? bits | FLOAT_SIGN_BIT : ~bits & FLOAT_MASK;
++}
+
++function equalsWithinUlps(left: number, right: number): boolean {
++  if (left === right) {
++    return true;
++  }
++  const leftBits = orderedFloatBits(left);
++  const rightBits = orderedFloatBits(right);
++  const distance = leftBits >= rightBits ? leftBits - rightBits : rightBits - leftBits;
++  return distance <= MAX_ULP_DISTANCE;
++}
+
++function indexSource(sourceData: SourceData): IndexedSource {
++  const itemsById = new Map<string, SourceItem>();
++  const sourceIndexById = new Map<string, number>();
++  const segmentByContributionId = new Map<string, number>();
++  const subtotalsBySegment = new Map<number, SourceItem>();
++  let segment = 0;
+
++  sourceData.items.forEach((item, index) => {
++    itemsById.set(item.id, item);
++    sourceIndexById.set(item.id, index);
++    if (item.kind === 'contribution') {
++      segmentByContributionId.set(item.id, segment);
++    } else if (item.kind === 'subtotal') {
++      subtotalsBySegment.set(segment, item);
++      segment += 1;
++    }
++  });
+
++  // The canonical validator proves both anchors and every indexed relationship below.
++  const start = sourceData.items[0] as SourceItem;
++  const end = sourceData.items.at(-1) as SourceItem;
+
++  return {
++    itemsById,
++    sourceIndexById,
++    segmentByContributionId,
++    subtotalsBySegment,
++    segmentCount: segment + 1,
++    start,
++    end,
++  };
++}
+
++function anchorDatum(item: SourceItem, kind: 'start' | 'subtotal' | 'end'): WaterfallDatum {
++  return {
++    nodeId: item.id,
++    label: item.label,
++    start: 0,
++    end: item.amount,
++    amount: item.amount,
++    kind,
++    sourceIds: [item.id],
++    locked: true,
++    order: -1,
++  };
++}
+
++function contributionDatum(
++  item: SourceItem,
++  start: number,
++  end: number,
++  locked: boolean,
++): WaterfallDatum {
++  const kind: WaterfallDatumKind = item.amount < 0 ? 'negative' : 'positive';
++  return {
++    nodeId: item.id,
++    label: item.label,
++    start,
++    end,
++    amount: item.amount,
++    kind,
++    sourceIds: [item.id],
++    locked,
++    order: -1,
++  };
++}
+
++function withOrder(datum: WaterfallDatum, order: number): WaterfallDatum {
++  return { ...datum, order };
++}
+
++function numericFailure(
++  sourceIndex: number,
++  operation: 'accumulate' | 'groupAggregate',
++): WaterfallProjectionResult {
++  return validationFailure([
++    validationIssue('INVALID_SOURCE_DATA', 'UNSAFE_AMOUNT', `/items/${sourceIndex}/amount`, {
++      operation,
++      sourceIndex,
++    }),
++  ]);
++}
+
++function anchorFailure(sourceIndex: number, anchor: 'subtotal' | 'end'): WaterfallProjectionResult {
++  return validationFailure([
++    validationIssue('INVALID_SOURCE_DATA', 'INVALID_ANCHOR', `/items/${sourceIndex}/amount`, {
++      anchor,
++      sourceIndex,
++    }),
++  ]);
++}
+
++function groupSegment(group: ViewGroup, source: IndexedSource): number {
++  return source.segmentByContributionId.get(group.childIds[0] as string) as number;
++}
+
++function getGroup(viewSpec: ViewSpec, nodeId: ViewNodeId): ViewGroup | undefined {
++  const descriptor = Object.getOwnPropertyDescriptor(viewSpec.groups, nodeId);
++  return descriptor !== undefined && 'value' in descriptor
++    ? (descriptor.value as ViewGroup)
++    : undefined;
++}
+
++function projectValidated(sourceData: SourceData, viewSpec: ViewSpec): WaterfallProjectionResult {
++  const source = indexSource(sourceData);
++  const nodesBySegment = new Map<number, ViewNodeId[]>();
++  for (const nodeId of viewSpec.rootOrder) {
++    const group = getGroup(viewSpec, nodeId);
++    const segment =
++      group === undefined
++        ? source.segmentByContributionId.get(nodeId)
++        : groupSegment(group, source);
++    const validatedSegment = segment as number;
++    const nodes = nodesBySegment.get(validatedSegment) ?? [];
++    nodes.push(nodeId);
++    nodesBySegment.set(validatedSegment, nodes);
++  }
+
++  const projection: WaterfallDatum[] = [];
++  const push = (datum: WaterfallDatum): void => {
++    projection.push(withOrder(datum, projection.length));
++  };
++  const pinnedIds = new Set(viewSpec.pinnedItemIds);
++  const collapsedGroupIds = new Set(viewSpec.collapsedGroupIds);
++  const current = createAccumulator(source.start.amount);
++  push(anchorDatum(source.start, 'start'));
+
++  for (let segment = 0; segment < source.segmentCount; segment += 1) {
++    for (const nodeId of nodesBySegment.get(segment) ?? []) {
++      const group = getGroup(viewSpec, nodeId);
++      const childIds = group?.childIds ?? [nodeId];
++      const collapsed = group !== undefined && collapsedGroupIds.has(group.id);
++      const groupAccumulator = collapsed ? createAccumulator(0) : undefined;
++      const groupStart = total(current);
+
++      for (const childId of childIds) {
++        const item = source.itemsById.get(childId) as SourceItem;
++        const sourceIndex = source.sourceIndexById.get(childId) as number;
+
++        if (groupAccumulator !== undefined) {
++          add(groupAccumulator, item.amount);
++          if (!isSafe(groupAccumulator)) {
++            return numericFailure(sourceIndex, 'groupAggregate');
++          }
++        }
+
++        const itemStart = total(current);
++        add(current, item.amount);
++        if (!isSafe(current)) {
++          return numericFailure(sourceIndex, 'accumulate');
++        }
++        if (!collapsed) {
++          push(contributionDatum(item, itemStart, total(current), pinnedIds.has(item.id)));
++        }
++      }
+
++      if (group !== undefined && groupAccumulator !== undefined) {
++        push({
++          nodeId: group.id,
++          label: group.label,
++          start: groupStart,
++          end: total(current),
++          amount: total(groupAccumulator),
++          kind: 'group',
++          sourceIds: [...group.childIds],
++          locked: group.childIds.some(childId => pinnedIds.has(childId)),
++          order: -1,
++        });
++      }
++    }
+
++    const subtotal = source.subtotalsBySegment.get(segment);
++    if (subtotal !== undefined) {
++      const sourceIndex = source.sourceIndexById.get(subtotal.id) as number;
++      if (!equalsWithinUlps(total(current), subtotal.amount)) {
++        return anchorFailure(sourceIndex, 'subtotal');
++      }
++      push(anchorDatum(subtotal, 'subtotal'));
++      reset(current, subtotal.amount);
++    }
++  }
+
++  const endIndex = source.sourceIndexById.get(source.end.id) as number;
++  if (!equalsWithinUlps(total(current), source.end.amount)) {
++    return anchorFailure(endIndex, 'end');
++  }
++  push(anchorDatum(source.end, 'end'));
+
++  return validationSuccess(projection);
++}
+
++/** Projects immutable source and view state into one renderer-ready waterfall sequence. */
++export function projectWaterfall(
++  sourceData: SourceData,
++  viewSpec: ViewSpec,
++): WaterfallProjectionResult {
++  const validation = validateViewSpec(viewSpec, sourceData);
++  if (!validation.ok) {
++    return validation;
++  }
+
++  try {
++    return projectValidated(sourceData, validation.value);
++  } catch {
++    return validationFailure([validationIssue('INVALID_VIEW_SPEC', 'UNREADABLE_INPUT', '/')]);
++  }
++}
+diff --git a/packages/editor/src/waterfall/waterfallTypes.ts b/packages/editor/src/waterfall/waterfallTypes.ts
+new file mode 100644
+index 0000000..34e519c
+--- /dev/null
++++ b/packages/editor/src/waterfall/waterfallTypes.ts
+@@ -0,0 +1,20 @@
++import type { ValidationResult } from '../domain/errors';
++import type { SourceItemId, ViewNodeId } from '../domain/ids';
+
++export type WaterfallDatumKind = 'start' | 'positive' | 'negative' | 'subtotal' | 'group' | 'end';
+
++/** A deterministic, renderer-ready waterfall mark. */
++export interface WaterfallDatum {
++  readonly nodeId: ViewNodeId;
++  readonly label: string;
++  readonly start: number;
++  readonly end: number;
++  readonly amount: number;
++  readonly kind: WaterfallDatumKind;
++  readonly sourceIds: readonly SourceItemId[];
++  readonly locked: boolean;
++  readonly order: number;
++}
+
++export type WaterfallProjection = readonly WaterfallDatum[];
++export type WaterfallProjectionResult = ValidationResult<WaterfallProjection>;
+diff --git a/packages/editor/tests/waterfall/anchors.test.ts b/packages/editor/tests/waterfall/anchors.test.ts
+new file mode 100644
+index 0000000..48e82ac
+--- /dev/null
++++ b/packages/editor/tests/waterfall/anchors.test.ts
+@@ -0,0 +1,421 @@
++import { describe, expect, it } from 'vitest';
+
++import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
++import type { SourceData, SourceItem, ViewSpec } from '../../src/domain/model';
++import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+
++function sourceData(items: readonly SourceItem[], datasetId = 'anchor-tests'): SourceData {
++  return {
++    schemaVersion: '1.0.0',
++    datasetId,
++    items,
++  };
++}
+
++function initialView(source: SourceData): ViewSpec {
++  const result = createInitialViewSpec(source);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected a valid anchor test fixture');
++  }
++  return result.value;
++}
+
++function projectionOf(source: SourceData, view = initialView(source)) {
++  const result = projectWaterfall(source, view);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected waterfall projection to succeed');
++  }
++  return result.value;
++}
+
++function advancePositiveUlps(value: number, count: number): number {
++  const buffer = new ArrayBuffer(8);
++  const dataView = new DataView(buffer);
++  dataView.setFloat64(0, value, false);
++  dataView.setBigUint64(0, dataView.getBigUint64(0, false) + BigInt(count), false);
++  return dataView.getFloat64(0, false);
++}
+
++function advanceNegativeUlps(value: number, count: number): number {
++  const buffer = new ArrayBuffer(8);
++  const dataView = new DataView(buffer);
++  dataView.setFloat64(0, value, false);
++  dataView.setBigUint64(0, dataView.getBigUint64(0, false) + BigInt(count), false);
++  return dataView.getFloat64(0, false);
++}
+
++describe('waterfall absolute anchors', () => {
++  it('projects a single subtotal as an absolute anchor', () => {
++    const source = sourceData([
++      { id: 'start', label: 'Opening', amount: 100, kind: 'start' },
++      { id: 'growth', label: 'Growth', amount: 20, kind: 'contribution' },
++      { id: 'subtotal', label: 'Operating result', amount: 120, kind: 'subtotal' },
++      { id: 'tax', label: 'Tax', amount: -10, kind: 'contribution' },
++      { id: 'end', label: 'Closing', amount: 110, kind: 'end' },
++    ]);
+
++    expect(projectionOf(source)).toEqual([
++      {
++        nodeId: 'start',
++        label: 'Opening',
++        start: 0,
++        end: 100,
++        amount: 100,
++        kind: 'start',
++        sourceIds: ['start'],
++        locked: true,
++        order: 0,
++      },
++      {
++        nodeId: 'growth',
++        label: 'Growth',
++        start: 100,
++        end: 120,
++        amount: 20,
++        kind: 'positive',
++        sourceIds: ['growth'],
++        locked: false,
++        order: 1,
++      },
++      {
++        nodeId: 'subtotal',
++        label: 'Operating result',
++        start: 0,
++        end: 120,
++        amount: 120,
++        kind: 'subtotal',
++        sourceIds: ['subtotal'],
++        locked: true,
++        order: 2,
++      },
++      {
++        nodeId: 'tax',
++        label: 'Tax',
++        start: 120,
++        end: 110,
++        amount: -10,
++        kind: 'negative',
++        sourceIds: ['tax'],
++        locked: false,
++        order: 3,
++      },
++      {
++        nodeId: 'end',
++        label: 'Closing',
++        start: 0,
++        end: 110,
++        amount: 110,
++        kind: 'end',
++        sourceIds: ['end'],
++        locked: true,
++        order: 4,
++      },
++    ]);
++  });
+
++  it('supports multiple and consecutive subtotals, including empty segments', () => {
++    const source = sourceData([
++      { id: 'start', label: 'Opening', amount: 10, kind: 'start' },
++      { id: 'increase', label: 'Increase', amount: 2, kind: 'contribution' },
++      { id: 'subtotal-a', label: 'Subtotal A', amount: 12, kind: 'subtotal' },
++      { id: 'subtotal-empty', label: 'Empty segment', amount: 12, kind: 'subtotal' },
++      { id: 'decrease', label: 'Decrease', amount: -2, kind: 'contribution' },
++      { id: 'subtotal-b', label: 'Subtotal B', amount: 10, kind: 'subtotal' },
++      { id: 'end', label: 'Closing', amount: 10, kind: 'end' },
++    ]);
+
++    const projection = projectionOf(source);
+
++    expect(projection.map(datum => datum.nodeId)).toEqual([
++      'start',
++      'increase',
++      'subtotal-a',
++      'subtotal-empty',
++      'decrease',
++      'subtotal-b',
++      'end',
++    ]);
++    expect(
++      projection
++        .filter(datum => datum.kind === 'subtotal')
++        .map(datum => ({ start: datum.start, end: datum.end, amount: datum.amount })),
++    ).toEqual([
++      { start: 0, end: 12, amount: 12 },
++      { start: 0, end: 12, amount: 12 },
++      { start: 0, end: 10, amount: 10 },
++    ]);
++    expect(projection.find(datum => datum.nodeId === 'decrease')).toMatchObject({
++      start: 12,
++      end: 10,
++    });
++  });
+
++  it('accepts 0.1 + 0.2 within 8 ULP and resets accumulation to the declared subtotal', () => {
++    const source = sourceData([
++      { id: 'start', label: 'Opening', amount: 0, kind: 'start' },
++      { id: 'first', label: 'First', amount: 0.1, kind: 'contribution' },
++      { id: 'second', label: 'Second', amount: 0.2, kind: 'contribution' },
++      { id: 'subtotal', label: 'Declared subtotal', amount: 0.3, kind: 'subtotal' },
++      { id: 'after', label: 'After subtotal', amount: 0.1, kind: 'contribution' },
++      { id: 'end', label: 'Closing', amount: 0.4, kind: 'end' },
++    ]);
+
++    const projection = projectionOf(source);
+
++    expect(projection.find(datum => datum.nodeId === 'subtotal')).toMatchObject({
++      start: 0,
++      end: 0.3,
++      amount: 0.3,
++    });
++    expect(projection.find(datum => datum.nodeId === 'after')).toMatchObject({
++      start: 0.3,
++      end: 0.4,
++    });
++    expect(projection.at(-1)).toMatchObject({ nodeId: 'end', end: 0.4 });
++  });
+
++  it('uses compensated summation for large cancellation without exceeding the safe range', () => {
++    const source = sourceData([
++      { id: 'start', label: 'Opening', amount: 0, kind: 'start' },
++      {
++        id: 'large-positive',
++        label: 'Large positive',
++        amount: 9_000_000_000_000_000,
++        kind: 'contribution',
++      },
++      { id: 'small', label: 'Small retained amount', amount: 0.5, kind: 'contribution' },
++      {
++        id: 'large-negative',
++        label: 'Large negative',
++        amount: -9_000_000_000_000_000,
++        kind: 'contribution',
++      },
++      { id: 'end', label: 'Closing', amount: 0.5, kind: 'end' },
++    ]);
+
++    const projection = projectionOf(source);
+
++    expect(projection.at(-2)).toMatchObject({ nodeId: 'large-negative', end: 0.5 });
++    expect(projection.at(-1)).toMatchObject({ nodeId: 'end', end: 0.5 });
++  });
+
++  it('accepts exactly 8 ULP of anchor representation error and rejects more than 8 ULP', () => {
++    const withinTolerance = advancePositiveUlps(1, 8);
++    const outsideTolerance = advancePositiveUlps(1, 9);
++    const sourceWithinTolerance = sourceData(
++      [
++        { id: 'start', label: 'Opening', amount: 0, kind: 'start' },
++        { id: 'change', label: 'Change', amount: 1, kind: 'contribution' },
++        { id: 'end', label: 'Closing', amount: withinTolerance, kind: 'end' },
++      ],
++      'ulp-within',
++    );
++    const sourceOutsideTolerance = sourceData(
++      [
++        { id: 'start', label: 'Opening', amount: 0, kind: 'start' },
++        { id: 'change', label: 'Change', amount: 1, kind: 'contribution' },
++        { id: 'end', label: 'Closing', amount: outsideTolerance, kind: 'end' },
++      ],
++      'ulp-outside',
++    );
+
++    expect(projectWaterfall(sourceWithinTolerance, initialView(sourceWithinTolerance)).ok).toBe(
++      true,
++    );
+
++    const rejected = projectWaterfall(sourceOutsideTolerance, initialView(sourceOutsideTolerance));
++    expect(rejected).toEqual({
++      ok: false,
++      errors: [
++        {
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'INVALID_ANCHOR',
++          message: 'Source anchors are invalid.',
++          path: '/items/2/amount',
++          details: { anchor: 'end', sourceIndex: 2 },
++        },
++      ],
++    });
++    expect(rejected).not.toHaveProperty('value');
++  });
+
++  it('applies the same ULP boundary to negative anchors', () => {
++    const withinTolerance = advanceNegativeUlps(-1, 8);
++    const outsideTolerance = advanceNegativeUlps(-1, 9);
++    const createNegativeSource = (amount: number, datasetId: string): SourceData =>
++      sourceData(
++        [
++          { id: 'start', label: 'Opening', amount: 0, kind: 'start' },
++          { id: 'change', label: 'Change', amount: -1, kind: 'contribution' },
++          { id: 'end', label: 'Closing', amount, kind: 'end' },
++        ],
++        datasetId,
++      );
++    const accepted = createNegativeSource(withinTolerance, 'negative-ulp-within');
++    const rejected = createNegativeSource(outsideTolerance, 'negative-ulp-outside');
+
++    expect(projectWaterfall(accepted, initialView(accepted)).ok).toBe(true);
++    expect(projectWaterfall(rejected, initialView(rejected))).toMatchObject({
++      ok: false,
++      errors: [{ reason: 'INVALID_ANCHOR', details: { anchor: 'end', sourceIndex: 2 } }],
++    });
++  });
++});
+
++describe('waterfall anchor and numeric failures', () => {
++  it.each([
++    {
++      name: 'subtotal',
++      source: sourceData(
++        [
++          { id: 'start', label: 'Opening secret', amount: 5, kind: 'start' },
++          {
++            id: 'contribution',
++            label: 'Contribution secret',
++            amount: 2,
++            kind: 'contribution',
++            sourceRef: 'private-ledger-reference',
++          },
++          {
++            id: 'subtotal',
++            label: 'Subtotal secret',
++            amount: 123_456.789,
++            kind: 'subtotal',
++          },
++          { id: 'end', label: 'Closing', amount: 7, kind: 'end' },
++        ],
++        'invalid-subtotal',
++      ),
++      sourceIndex: 2,
++      privateAmount: '123456.789',
++      privateLabel: 'Subtotal secret',
++    },
++    {
++      name: 'end',
++      source: sourceData(
++        [
++          { id: 'start', label: 'Opening secret', amount: 5, kind: 'start' },
++          {
++            id: 'contribution',
++            label: 'Contribution secret',
++            amount: 2,
++            kind: 'contribution',
++            sourceRef: 'private-ledger-reference',
++          },
++          { id: 'end', label: 'Closing secret', amount: 987_654.321, kind: 'end' },
++        ],
++        'invalid-end',
++      ),
++      sourceIndex: 2,
++      privateAmount: '987654.321',
++      privateLabel: 'Closing secret',
++    },
++  ])('rejects a mismatched $name anchor without leaking financial values', testCase => {
++    const result = projectWaterfall(testCase.source, initialView(testCase.source));
+
++    expect(result).toEqual({
++      ok: false,
++      errors: [
++        {
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'INVALID_ANCHOR',
++          message: 'Source anchors are invalid.',
++          path: `/items/${testCase.sourceIndex}/amount`,
++          details: { anchor: testCase.name, sourceIndex: testCase.sourceIndex },
++        },
++      ],
++    });
++    expect(result).not.toHaveProperty('value');
+
++    const serialized = JSON.stringify(result);
++    expect(serialized).not.toContain(testCase.privateAmount);
++    expect(serialized).not.toContain(testCase.privateLabel);
++    expect(serialized).not.toContain('private-ledger-reference');
++  });
+
++  it('rejects an unsafe current accumulation with a structured, value-free error', () => {
++    const source = sourceData(
++      [
++        {
++          id: 'start',
++          label: 'Private opening',
++          amount: Number.MAX_SAFE_INTEGER,
++          kind: 'start',
++        },
++        { id: 'overflow', label: 'Private overflow', amount: 1, kind: 'contribution' },
++        {
++          id: 'end',
++          label: 'Private closing',
++          amount: Number.MAX_SAFE_INTEGER,
++          kind: 'end',
++        },
++      ],
++      'unsafe-current',
++    );
+
++    const result = projectWaterfall(source, initialView(source));
+
++    expect(result).toEqual({
++      ok: false,
++      errors: [
++        {
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'UNSAFE_AMOUNT',
++          message: 'Amount exceeds the supported numeric range.',
++          path: '/items/1/amount',
++          details: { operation: 'accumulate', sourceIndex: 1 },
++        },
++      ],
++    });
++    expect(result).not.toHaveProperty('value');
++    expect(JSON.stringify(result)).not.toContain('Private');
++  });
+
++  it('rejects an unsafe collapsed-group aggregate before returning projection data', () => {
++    const source = sourceData(
++      [
++        { id: 'start', label: 'Opening', amount: 0, kind: 'start' },
++        {
++          id: 'large',
++          label: 'Private large amount',
++          amount: Number.MAX_SAFE_INTEGER,
++          kind: 'contribution',
++        },
++        { id: 'overflow', label: 'Private overflow', amount: 1, kind: 'contribution' },
++        { id: 'end', label: 'Closing', amount: 0, kind: 'end' },
++      ],
++      'unsafe-group',
++    );
++    const view: ViewSpec = {
++      ...initialView(source),
++      rootOrder: ['overflow-group'],
++      groups: {
++        'overflow-group': {
++          id: 'overflow-group',
++          label: 'Private group',
++          childIds: ['large', 'overflow'],
++        },
++      },
++      collapsedGroupIds: ['overflow-group'],
++    };
+
++    const result = projectWaterfall(source, view);
+
++    expect(result).toEqual({
++      ok: false,
++      errors: [
++        {
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'UNSAFE_AMOUNT',
++          message: 'Amount exceeds the supported numeric range.',
++          path: '/items/2/amount',
++          details: { operation: 'groupAggregate', sourceIndex: 2 },
++        },
++      ],
++    });
++    expect(result).not.toHaveProperty('value');
++    expect(JSON.stringify(result)).not.toContain('Private');
++  });
++});
+diff --git a/packages/editor/tests/waterfall/determinism.test.ts b/packages/editor/tests/waterfall/determinism.test.ts
+new file mode 100644
+index 0000000..9d34c0c
+--- /dev/null
++++ b/packages/editor/tests/waterfall/determinism.test.ts
+@@ -0,0 +1,262 @@
++import { describe, expect, it } from 'vitest';
+
++import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
++import type { SourceData, SourceItem, ViewSpec } from '../../src/domain/model';
++import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+
++function sourceData(items: readonly SourceItem[], datasetId: string): SourceData {
++  return {
++    schemaVersion: '1.0.0',
++    datasetId,
++    items,
++  };
++}
+
++function initialView(source: SourceData): ViewSpec {
++  const result = createInitialViewSpec(source);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected a valid determinism test fixture');
++  }
++  return result.value;
++}
+
++function projectionOf(source: SourceData, view: ViewSpec) {
++  const result = projectWaterfall(source, view);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected waterfall projection to succeed');
++  }
++  return result.value;
++}
+
++const deterministicSource = sourceData(
++  [
++    { id: 'start', label: 'Opening', amount: 100, kind: 'start' },
++    { id: 'a', label: 'A', amount: 20, kind: 'contribution' },
++    { id: 'b', label: 'B', amount: -5, kind: 'contribution' },
++    { id: 'c', label: 'C', amount: 2, kind: 'contribution' },
++    { id: 'subtotal', label: 'Subtotal', amount: 117, kind: 'subtotal' },
++    { id: 'd', label: 'D', amount: -7, kind: 'contribution' },
++    { id: 'end', label: 'Closing', amount: 110, kind: 'end' },
++  ],
++  'deterministic-source',
++);
+
++const groupedSource = sourceData(
++  [
++    { id: 'start', label: 'Opening', amount: 0, kind: 'start' },
++    { id: 'a-1', label: 'A1', amount: 1, kind: 'contribution' },
++    { id: 'a-2', label: 'A2', amount: 2, kind: 'contribution' },
++    { id: 'b-1', label: 'B1', amount: 3, kind: 'contribution' },
++    { id: 'b-2', label: 'B2', amount: 4, kind: 'contribution' },
++    { id: 'end', label: 'Closing', amount: 10, kind: 'end' },
++  ],
++  'grouped-deterministic-source',
++);
+
++function groupedView(collapsedGroupIds: readonly string[]): ViewSpec {
++  return {
++    ...initialView(groupedSource),
++    rootOrder: ['group-a', 'group-b'],
++    groups: {
++      'group-a': {
++        id: 'group-a',
++        label: 'Group A',
++        childIds: ['a-1', 'a-2'],
++      },
++      'group-b': {
++        id: 'group-b',
++        label: 'Group B',
++        childIds: ['b-1', 'b-2'],
++      },
++    },
++    collapsedGroupIds,
++  };
++}
+
++describe('waterfall projection determinism', () => {
++  it('returns deep-equal JSON-compatible plain data for repeated calls', () => {
++    const view = initialView(deterministicSource);
+
++    const first = projectionOf(deterministicSource, view);
++    const second = projectionOf(deterministicSource, view);
+
++    expect(second).toEqual(first);
++    expect(second).not.toBe(first);
++    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
++    expect(JSON.parse(JSON.stringify(first))).toEqual(first);
++    first.forEach((firstDatum, index) => {
++      const secondDatum = second[index];
++      if (secondDatum === undefined) {
++        throw new Error('Repeated projection has a different length');
++      }
++      expect(Object.getPrototypeOf(firstDatum)).toBe(Object.prototype);
++      expect(Object.getPrototypeOf(firstDatum.sourceIds)).toBe(Array.prototype);
++      expect(secondDatum).not.toBe(firstDatum);
++      expect(secondDatum.sourceIds).not.toBe(firstDatum.sourceIds);
++    });
++  });
+
++  it('keeps absolute anchor results stable for legal permutations within a segment', () => {
++    const base = initialView(deterministicSource);
++    const firstView: ViewSpec = { ...base, rootOrder: ['a', 'b', 'c', 'd'] };
++    const permutedView: ViewSpec = { ...base, rootOrder: ['c', 'a', 'b', 'd'] };
+
++    const firstAnchors = projectionOf(deterministicSource, firstView).filter(
++      datum => datum.kind === 'start' || datum.kind === 'subtotal' || datum.kind === 'end',
++    );
++    const permutedAnchors = projectionOf(deterministicSource, permutedView).filter(
++      datum => datum.kind === 'start' || datum.kind === 'subtotal' || datum.kind === 'end',
++    );
+
++    expect(permutedAnchors).toEqual(firstAnchors);
++  });
+
++  it('treats collapsedGroupIds as membership rather than display order', () => {
++    const first = projectionOf(groupedSource, groupedView(['group-a', 'group-b']));
++    const reversed = projectionOf(groupedSource, groupedView(['group-b', 'group-a']));
+
++    expect(reversed).toEqual(first);
++    expect(first.map(datum => datum.nodeId)).toEqual(['start', 'group-a', 'group-b', 'end']);
++  });
+
++  it('does not alias projection arrays or sourceIds to input containers', () => {
++    const view = groupedView(['group-a']);
++    const first = projectionOf(groupedSource, view);
++    const second = projectionOf(groupedSource, view);
+
++    expect(first).not.toBe(groupedSource.items);
++    expect(first).not.toBe(view.rootOrder);
++    expect(first).not.toBe(view.collapsedGroupIds);
++    expect(first).not.toBe(second);
+
++    const groupA = view.groups['group-a'];
++    const groupB = view.groups['group-b'];
++    if (groupA === undefined || groupB === undefined) {
++      throw new Error('Expected both deterministic groups');
++    }
++    const inputArrays: readonly (readonly unknown[])[] = [
++      groupedSource.items,
++      view.rootOrder,
++      view.collapsedGroupIds,
++      view.pinnedItemIds,
++      groupA.childIds,
++      groupB.childIds,
++    ];
+
++    first.forEach((datum, index) => {
++      const secondDatum = second[index];
++      if (secondDatum === undefined) {
++        throw new Error('Repeated projection has a different length');
++      }
++      expect(inputArrays.some(input => input === datum.sourceIds)).toBe(false);
++      expect(datum.sourceIds).not.toBe(secondDatum.sourceIds);
++    });
++    expect(first.find(datum => datum.nodeId === 'group-a')?.sourceIds).toEqual(['a-1', 'a-2']);
++  });
++});
+
++describe('waterfall projection validation boundaries', () => {
++  it('returns structural source and view failures without partial projection data', () => {
++    const validView = initialView(deterministicSource);
++    const invalidSource = {
++      ...deterministicSource,
++      items: deterministicSource.items.slice(0, -1),
++    } as SourceData;
++    const invalidView = {
++      ...validView,
++      rootOrder: ['a', 'b', 'd'],
++    } as ViewSpec;
+
++    const sourceFailure = projectWaterfall(invalidSource, validView);
++    const viewFailure = projectWaterfall(deterministicSource, invalidView);
+
++    expect(sourceFailure).toMatchObject({
++      ok: false,
++      errors: [{ code: 'INVALID_SOURCE_DATA', reason: 'INVALID_ANCHOR' }],
++    });
++    expect(viewFailure).toMatchObject({
++      ok: false,
++      errors: [{ code: 'SOURCE_CONFLICT', reason: 'MISSING_SOURCE_REFERENCE' }],
++    });
++    expect(sourceFailure).not.toHaveProperty('value');
++    expect(viewFailure).not.toHaveProperty('value');
++  });
+
++  it('contains hostile source and view reflection failures without throwing or leaking trap text', () => {
++    const validView = initialView(deterministicSource);
++    const sourceSecret = 'source proxy financial secret';
++    const viewSecret = 'view proxy financial secret';
++    const hostileSource = new Proxy(
++      {},
++      {
++        ownKeys(): never {
++          throw new Error(sourceSecret);
++        },
++      },
++    ) as unknown as SourceData;
++    const hostileView = new Proxy(
++      {},
++      {
++        ownKeys(): never {
++          throw new Error(viewSecret);
++        },
++      },
++    ) as unknown as ViewSpec;
+
++    let sourceResult: ReturnType<typeof projectWaterfall> | undefined;
++    let viewResult: ReturnType<typeof projectWaterfall> | undefined;
++    expect(() => {
++      sourceResult = projectWaterfall(hostileSource, validView);
++    }).not.toThrow();
++    expect(() => {
++      viewResult = projectWaterfall(deterministicSource, hostileView);
++    }).not.toThrow();
+
++    expect(sourceResult).toMatchObject({
++      ok: false,
++      errors: [{ code: 'INVALID_SOURCE_DATA', reason: 'UNREADABLE_INPUT', path: '/' }],
++    });
++    expect(viewResult).toMatchObject({
++      ok: false,
++      errors: [{ code: 'INVALID_VIEW_SPEC', reason: 'UNREADABLE_INPUT', path: '/' }],
++    });
++    expect(JSON.stringify(sourceResult)).not.toContain(sourceSecret);
++    expect(JSON.stringify(viewResult)).not.toContain(viewSecret);
++    expect(sourceResult).not.toHaveProperty('value');
++    expect(viewResult).not.toHaveProperty('value');
++  });
+
++  it('rejects view accessors without executing them or exposing their text', () => {
++    const accessorSecret = 'view accessor financial secret';
++    let getterCalled = false;
++    const accessorView = { ...initialView(deterministicSource) };
++    Object.defineProperty(accessorView, 'rootOrder', {
++      enumerable: true,
++      get(): never {
++        getterCalled = true;
++        throw new Error(accessorSecret);
++      },
++    });
+
++    let result: ReturnType<typeof projectWaterfall> | undefined;
++    expect(() => {
++      result = projectWaterfall(deterministicSource, accessorView);
++    }).not.toThrow();
+
++    expect(getterCalled).toBe(false);
++    expect(result).toMatchObject({ ok: false });
++    expect(result?.errors).toEqual(
++      expect.arrayContaining([
++        expect.objectContaining({
++          code: 'INVALID_VIEW_SPEC',
++          reason: 'NON_PLAIN_DATA',
++          path: '/rootOrder',
++        }),
++      ]),
++    );
++    expect(JSON.stringify(result)).not.toContain(accessorSecret);
++    expect(result).not.toHaveProperty('value');
++  });
++});
+diff --git a/packages/editor/tests/waterfall/groups.test.ts b/packages/editor/tests/waterfall/groups.test.ts
+new file mode 100644
+index 0000000..ad3c238
+--- /dev/null
++++ b/packages/editor/tests/waterfall/groups.test.ts
+@@ -0,0 +1,255 @@
++import { describe, expect, it } from 'vitest';
+
++import type { SourceData, ViewSpec } from '../../src/domain/model';
++import { validateViewSpec } from '../../src/domain/validation';
++import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import type {
++  WaterfallProjection,
++  WaterfallProjectionResult,
++} from '../../src/waterfall/waterfallTypes';
+
++const GROUP_ID = 'drivers';
+
++function expectProjection(result: WaterfallProjectionResult): WaterfallProjection {
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected a valid grouped waterfall projection');
++  }
+
++  return result.value;
++}
+
++function createTwoChildSource(
++  datasetId: string,
++  startAmount: number,
++  amounts: readonly [number, number],
++): SourceData {
++  return {
++    schemaVersion: '1.0.0',
++    datasetId,
++    items: [
++      { id: 'start', label: 'Start', amount: startAmount, kind: 'start' },
++      { id: 'first', label: 'First', amount: amounts[0], kind: 'contribution' },
++      { id: 'second', label: 'Second', amount: amounts[1], kind: 'contribution' },
++      {
++        id: 'end',
++        label: 'End',
++        amount: startAmount + amounts[0] + amounts[1],
++        kind: 'end',
++      },
++    ],
++  };
++}
+
++interface GroupedViewOptions {
++  readonly childIds?: readonly string[];
++  readonly rootOrder?: readonly string[];
++  readonly collapsed?: boolean;
++  readonly pinnedItemIds?: readonly string[];
++}
+
++function createGroupedView(sourceData: SourceData, options: GroupedViewOptions = {}): ViewSpec {
++  const childIds = options.childIds ?? ['first', 'second'];
+
++  return {
++    schemaVersion: '1.0.0',
++    datasetId: sourceData.datasetId,
++    chartType: 'waterfall',
++    revision: 0,
++    rootOrder: options.rootOrder ?? [GROUP_ID],
++    groups: {
++      [GROUP_ID]: {
++        id: GROUP_ID,
++        label: 'Drivers',
++        childIds,
++      },
++    },
++    collapsedGroupIds: options.collapsed === true ? [GROUP_ID] : [],
++    pinnedItemIds: options.pinnedItemIds ?? [],
++    annotations: {},
++    emphasis: {},
++  };
++}
+
++describe('projectWaterfall groups', () => {
++  it('omits an expanded group datum and emits its children strictly in childIds order', () => {
++    const sourceData: SourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'expanded-order',
++      items: [
++        { id: 'start', label: 'Start', amount: 100, kind: 'start' },
++        { id: 'first', label: 'First', amount: 10, kind: 'contribution' },
++        { id: 'second', label: 'Second', amount: -4, kind: 'contribution' },
++        { id: 'third', label: 'Third', amount: 3, kind: 'contribution' },
++        { id: 'end', label: 'End', amount: 109, kind: 'end' },
++      ],
++    };
++    const viewSpec = createGroupedView(sourceData, {
++      childIds: ['second', 'first'],
++      rootOrder: [GROUP_ID, 'third'],
++    });
+
++    const projection = expectProjection(projectWaterfall(sourceData, viewSpec));
+
++    expect(projection.map(datum => datum.nodeId)).toEqual([
++      'start',
++      'second',
++      'first',
++      'third',
++      'end',
++    ]);
++    expect(projection.some(datum => datum.nodeId === GROUP_ID)).toBe(false);
++    expect(projection.slice(1, 4).map(datum => [datum.start, datum.end])).toEqual([
++      [100, 96],
++      [96, 106],
++      [106, 109],
++    ]);
++  });
+
++  const collapsedCases = [
++    { name: 'positive', amounts: [8, -3] as const, total: 5 },
++    { name: 'negative', amounts: [-8, 3] as const, total: -5 },
++    { name: 'zero', amounts: [3, -3] as const, total: 0 },
++  ] as const;
+
++  it.each(collapsedCases)(
++    'emits one complete collapsed group datum for a $name aggregate',
++    ({ name, amounts, total }) => {
++      const sourceData = createTwoChildSource(`collapsed-${name}`, 10, amounts);
++      const viewSpec = createGroupedView(sourceData, { collapsed: true });
+
++      const projection = expectProjection(projectWaterfall(sourceData, viewSpec));
+
++      expect(projection).toHaveLength(3);
++      expect(projection[1]).toEqual({
++        nodeId: GROUP_ID,
++        label: 'Drivers',
++        start: 10,
++        end: 10 + total,
++        amount: total,
++        kind: 'group',
++        sourceIds: ['first', 'second'],
++        locked: false,
++        order: 1,
++      });
++    },
++  );
+
++  it('feeds identical children into the accumulator for collapsed and expanded views', () => {
++    const sourceData = createTwoChildSource('collapsed-expanded-parity', 25, [10, -3]);
++    const expanded = expectProjection(
++      projectWaterfall(sourceData, createGroupedView(sourceData, { collapsed: false })),
++    );
++    const collapsed = expectProjection(
++      projectWaterfall(sourceData, createGroupedView(sourceData, { collapsed: true })),
++    );
+
++    expect(expanded.map(datum => datum.nodeId)).toEqual(['start', 'first', 'second', 'end']);
++    expect(collapsed.map(datum => datum.nodeId)).toEqual(['start', GROUP_ID, 'end']);
++    expect(expanded[2]?.end).toBe(32);
++    expect(collapsed[1]?.end).toBe(32);
++    expect(collapsed.at(-1)).toMatchObject({ nodeId: 'end', end: 32, amount: 32 });
++    expect(expanded.at(-1)).toMatchObject({ nodeId: 'end', end: 32, amount: 32 });
++  });
+
++  it('emits a collapsed group in its source subtotal segment position', () => {
++    const sourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'segmented-group',
++      items: [
++        { id: 'start', label: 'Start', amount: 100, kind: 'start' },
++        { id: 'before-a', label: 'Before A', amount: 10, kind: 'contribution' },
++        { id: 'before-b', label: 'Before B', amount: 5, kind: 'contribution' },
++        { id: 'subtotal', label: 'Subtotal', amount: 115, kind: 'subtotal' },
++        { id: 'first', label: 'After A', amount: -20, kind: 'contribution' },
++        { id: 'second', label: 'After B', amount: 5, kind: 'contribution' },
++        { id: 'end', label: 'End', amount: 100, kind: 'end' },
++      ],
++    } as const satisfies SourceData;
++    const viewSpec = createGroupedView(sourceData, {
++      rootOrder: ['before-a', 'before-b', GROUP_ID],
++      collapsed: true,
++    });
+
++    const projection = expectProjection(projectWaterfall(sourceData, viewSpec));
+
++    expect(projection.map(datum => datum.nodeId)).toEqual([
++      'start',
++      'before-a',
++      'before-b',
++      'subtotal',
++      GROUP_ID,
++      'end',
++    ]);
++    expect(projection[3]).toMatchObject({
++      nodeId: 'subtotal',
++      kind: 'subtotal',
++      start: 0,
++      end: 115,
++      locked: true,
++    });
++    expect(projection[4]).toMatchObject({
++      nodeId: GROUP_ID,
++      start: 115,
++      end: 100,
++      amount: -15,
++      order: 4,
++    });
++  });
+
++  it('locks only pinned expanded children and locks a collapsed group when any child is pinned', () => {
++    const sourceData = createTwoChildSource('pinned-child', 0, [4, 6]);
++    const expanded = expectProjection(
++      projectWaterfall(sourceData, createGroupedView(sourceData, { pinnedItemIds: ['second'] })),
++    );
++    const collapsed = expectProjection(
++      projectWaterfall(
++        sourceData,
++        createGroupedView(sourceData, { collapsed: true, pinnedItemIds: ['second'] }),
++      ),
++    );
+
++    expect(expanded.map(datum => [datum.nodeId, datum.locked])).toEqual([
++      ['start', true],
++      ['first', false],
++      ['second', true],
++      ['end', true],
++    ]);
++    expect(collapsed.map(datum => [datum.nodeId, datum.locked])).toEqual([
++      ['start', true],
++      [GROUP_ID, true],
++      ['end', true],
++    ]);
++  });
+
++  it('copies collapsed and expanded sourceIds instead of aliasing group childIds', () => {
++    const sourceData = createTwoChildSource('group-source-id-copy', 0, [2, 3]);
++    const childIds = ['first', 'second'];
++    const expandedView = createGroupedView(sourceData, { childIds });
++    const collapsedView = createGroupedView(sourceData, { childIds, collapsed: true });
+
++    const expanded = expectProjection(projectWaterfall(sourceData, expandedView));
++    const collapsed = expectProjection(projectWaterfall(sourceData, collapsedView));
+
++    expect(expanded[1]?.sourceIds).toEqual(['first']);
++    expect(expanded[2]?.sourceIds).toEqual(['second']);
++    expect(expanded[1]?.sourceIds).not.toBe(childIds);
++    expect(expanded[2]?.sourceIds).not.toBe(childIds);
++    expect(expanded[1]?.sourceIds).not.toBe(expanded[2]?.sourceIds);
++    expect(collapsed[1]?.sourceIds).toEqual(childIds);
++    expect(collapsed[1]?.sourceIds).not.toBe(childIds);
++  });
+
++  it('returns the original validation failure for an invalid group/view structure', () => {
++    const sourceData = createTwoChildSource('invalid-group-view', 0, [2, 3]);
++    const invalidView = createGroupedView(sourceData, {
++      childIds: ['first'],
++      rootOrder: [GROUP_ID, 'second'],
++      collapsed: true,
++    });
++    const validationResult = validateViewSpec(invalidView, sourceData);
+
++    expect(validationResult.ok).toBe(false);
++    expect(projectWaterfall(sourceData, invalidView)).toEqual(validationResult);
++  });
++});
+diff --git a/packages/editor/tests/waterfall/projectWaterfall.test.ts b/packages/editor/tests/waterfall/projectWaterfall.test.ts
+new file mode 100644
+index 0000000..dce097d
+--- /dev/null
++++ b/packages/editor/tests/waterfall/projectWaterfall.test.ts
+@@ -0,0 +1,254 @@
++import { describe, expect, it } from 'vitest';
+
++import type { SourceData, ViewSpec } from '../../src/domain/model';
++import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import type {
++  WaterfallProjection,
++  WaterfallProjectionResult,
++} from '../../src/waterfall/waterfallTypes';
+
++function expectProjection(result: WaterfallProjectionResult): WaterfallProjection {
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected a valid waterfall projection');
++  }
+
++  return result.value;
++}
+
++function createView(sourceData: SourceData, rootOrder: readonly string[]): ViewSpec {
++  return {
++    schemaVersion: '1.0.0',
++    datasetId: sourceData.datasetId,
++    chartType: 'waterfall',
++    revision: 0,
++    rootOrder,
++    groups: {},
++    collapsedGroupIds: [],
++    pinnedItemIds: [],
++    annotations: {},
++    emphasis: {},
++  };
++}
+
++describe('projectWaterfall basic projection', () => {
++  it('projects complete start, positive, negative, zero and end data from a negative base', () => {
++    const sourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'negative-base',
++      items: [
++        { id: 'opening', label: 'Opening', amount: -100, kind: 'start' },
++        { id: 'growth', label: 'Growth', amount: 30, kind: 'contribution' },
++        { id: 'cost', label: 'Cost', amount: -20, kind: 'contribution' },
++        { id: 'neutral', label: 'Neutral', amount: 0, kind: 'contribution' },
++        { id: 'closing', label: 'Closing', amount: -90, kind: 'end' },
++      ],
++    } as const satisfies SourceData;
++    const viewSpec = createView(sourceData, ['growth', 'cost', 'neutral']);
+
++    const projection = expectProjection(projectWaterfall(sourceData, viewSpec));
+
++    expect(projection).toEqual([
++      {
++        nodeId: 'opening',
++        label: 'Opening',
++        start: 0,
++        end: -100,
++        amount: -100,
++        kind: 'start',
++        sourceIds: ['opening'],
++        locked: true,
++        order: 0,
++      },
++      {
++        nodeId: 'growth',
++        label: 'Growth',
++        start: -100,
++        end: -70,
++        amount: 30,
++        kind: 'positive',
++        sourceIds: ['growth'],
++        locked: false,
++        order: 1,
++      },
++      {
++        nodeId: 'cost',
++        label: 'Cost',
++        start: -70,
++        end: -90,
++        amount: -20,
++        kind: 'negative',
++        sourceIds: ['cost'],
++        locked: false,
++        order: 2,
++      },
++      {
++        nodeId: 'neutral',
++        label: 'Neutral',
++        start: -90,
++        end: -90,
++        amount: 0,
++        kind: 'positive',
++        sourceIds: ['neutral'],
++        locked: false,
++        order: 3,
++      },
++      {
++        nodeId: 'closing',
++        label: 'Closing',
++        start: 0,
++        end: -90,
++        amount: -90,
++        kind: 'end',
++        sourceIds: ['closing'],
++        locked: true,
++        order: 4,
++      },
++    ]);
++  });
+
++  it('projects an anchors-only source without inventing contribution data', () => {
++    const sourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'anchors-only-negative',
++      items: [
++        { id: 'opening', label: 'Opening', amount: -250, kind: 'start' },
++        { id: 'closing', label: 'Closing', amount: -250, kind: 'end' },
++      ],
++    } as const satisfies SourceData;
+
++    const projection = expectProjection(projectWaterfall(sourceData, createView(sourceData, [])));
+
++    expect(projection).toEqual([
++      {
++        nodeId: 'opening',
++        label: 'Opening',
++        start: 0,
++        end: -250,
++        amount: -250,
++        kind: 'start',
++        sourceIds: ['opening'],
++        locked: true,
++        order: 0,
++      },
++      {
++        nodeId: 'closing',
++        label: 'Closing',
++        start: 0,
++        end: -250,
++        amount: -250,
++        kind: 'end',
++        sourceIds: ['closing'],
++        locked: true,
++        order: 1,
++      },
++    ]);
++  });
+
++  it('assigns every order from the final output index', () => {
++    const sourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'output-order',
++      items: [
++        { id: 'start', label: 'Start', amount: 10, kind: 'start' },
++        { id: 'a', label: 'A', amount: 2, kind: 'contribution' },
++        { id: 'b', label: 'B', amount: -3, kind: 'contribution' },
++        { id: 'end', label: 'End', amount: 9, kind: 'end' },
++      ],
++    } as const satisfies SourceData;
+
++    const projection = expectProjection(
++      projectWaterfall(sourceData, createView(sourceData, ['b', 'a'])),
++    );
+
++    expect(projection.map(datum => datum.nodeId)).toEqual(['start', 'b', 'a', 'end']);
++    projection.forEach((datum, index) => {
++      expect(datum.order).toBe(index);
++    });
++  });
+
++  it('uses IDs rather than duplicate labels to preserve source traceability', () => {
++    const sourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'duplicate-labels',
++      items: [
++        { id: 'start-id', label: 'Same label', amount: 0, kind: 'start' },
++        { id: 'first-id', label: 'Same label', amount: 4, kind: 'contribution' },
++        { id: 'second-id', label: 'Same label', amount: -1, kind: 'contribution' },
++        { id: 'end-id', label: 'Same label', amount: 3, kind: 'end' },
++      ],
++    } as const satisfies SourceData;
++    const viewSpec = createView(sourceData, ['second-id', 'first-id']);
+
++    const projection = expectProjection(projectWaterfall(sourceData, viewSpec));
+
++    expect(projection.map(datum => datum.label)).toEqual([
++      'Same label',
++      'Same label',
++      'Same label',
++      'Same label',
++    ]);
++    expect(projection.map(datum => [datum.nodeId, datum.sourceIds])).toEqual([
++      ['start-id', ['start-id']],
++      ['second-id', ['second-id']],
++      ['first-id', ['first-id']],
++      ['end-id', ['end-id']],
++    ]);
++  });
+
++  it('treats prototype-like contribution IDs as source nodes rather than inherited groups', () => {
++    const sourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'prototype-like-ids',
++      items: [
++        { id: 'start', label: 'Start', amount: 0, kind: 'start' },
++        { id: 'constructor', label: 'Constructor', amount: 1, kind: 'contribution' },
++        { id: 'toString', label: 'To string', amount: 2, kind: 'contribution' },
++        { id: '__proto__', label: 'Proto', amount: 3, kind: 'contribution' },
++        { id: 'end', label: 'End', amount: 6, kind: 'end' },
++      ],
++    } as const satisfies SourceData;
++    const viewSpec = createView(sourceData, ['constructor', 'toString', '__proto__']);
+
++    const projection = expectProjection(projectWaterfall(sourceData, viewSpec));
+
++    expect(projection.map(datum => datum.nodeId)).toEqual([
++      'start',
++      'constructor',
++      'toString',
++      '__proto__',
++      'end',
++    ]);
++    expect(projection.at(-1)?.end).toBe(6);
++  });
+
++  it('does not mutate inputs or alias projection and source ID arrays', () => {
++    const sourceData: SourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'immutable-projection',
++      items: [
++        { id: 'start', label: 'Start', amount: 5, kind: 'start' },
++        { id: 'a', label: 'A', amount: 2, kind: 'contribution' },
++        { id: 'b', label: 'B', amount: -1, kind: 'contribution' },
++        { id: 'end', label: 'End', amount: 6, kind: 'end' },
++      ],
++    };
++    const viewSpec = createView(sourceData, ['a', 'b']);
++    const sourceSnapshot = structuredClone(sourceData);
++    const viewSnapshot = structuredClone(viewSpec);
+
++    const projection = expectProjection(projectWaterfall(sourceData, viewSpec));
+
++    expect(sourceData).toEqual(sourceSnapshot);
++    expect(viewSpec).toEqual(viewSnapshot);
++    expect(projection).not.toBe(sourceData.items);
++    expect(projection).not.toBe(viewSpec.rootOrder);
+
++    const sourceIdArrays = projection.map(datum => datum.sourceIds);
++    expect(new Set(sourceIdArrays).size).toBe(sourceIdArrays.length);
++    for (const sourceIds of sourceIdArrays) {
++      expect(sourceIds).not.toBe(viewSpec.rootOrder);
++      expect(sourceIds).not.toBe(sourceData.items);
++    }
++  });
++});

@@ -1,0 +1,474 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 75123b1..f4235d1 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -4,12 +4,12 @@
+
+ - Version: 0.1.0
+ - Status: Not_Released
+-- Last updated: 2026-07-15
++- Last updated: 2026-07-16
+ - Branch: `codex/reset`
+
+ ## Current State
+
+-仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器、T103 命令执行器/历史、T104 瀑布投影与 T105 React/G2 工作台已经验收。T106 排序、分组、折叠和键盘交互完成 TDD、真实浏览器、性能、axe 与独立 review，处于 `Needs_Review`。持久化和导出仍未完成，因此当前不存在可发布产品制品。
++仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器、T103 命令执行器/历史、T104 瀑布投影与 T105 React/G2 工作台已经验收。T106 排序、分组、折叠和键盘交互完成 TDD、真实浏览器、性能、axe、独立 review 与整行拖拽热区修复，处于 `Needs_Review`。持久化和导出仍未完成，因此当前不存在可发布产品制品。
+
+ ## Release Scope
+
+@@ -26,7 +26,7 @@
+ - T103 command/session/history 通过 140 tests、四项 95% aggregate coverage、独立 review、ESM/CJS/types/package 检查。
+ - T104 waterfall projection 通过 32 个目标测试、172 个全量测试、waterfall 四项 99%/100% coverage、独立 review、ESM/CJS/types/package 检查。
+ - T105 React/G2 工作台通过 22 个组件测试、194 个全量测试、Chromium 三视口 3/3、真实 Canvas 像素、构建、包消费与独立 engineering/test/visual review；无 Critical、High 或 Medium finding。
+-- T106 交互通过 68 个组件测试、240 个全量测试、21/21 real Chromium、5 个 axe 场景、200 项 30 样本 p95 30.0ms、同目标 root commit delta 0、构建与包消费；最终 engineering/spec/visual review 无 Critical、High 或 Medium finding。
++- T106 交互通过 70 个组件测试、242 个全量测试、21/21 real Chromium、5 个 axe 场景、200 项 30 样本 p95 30.0ms、同目标 root commit delta 0、构建与包消费；行正文拖拽取代 grip-only 命中，最终 review 无 Critical、High 或 Medium finding。
+
+ ## Known Blockers
+
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index df8f78a..2e02010 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -4,7 +4,7 @@
+
+ - Version: 0.3.0
+ - Status: Execution_In_Progress
+-- Last updated: 2026-07-15
++- Last updated: 2026-07-16
+ - Scope: 产品与技术方案已确认；瀑布图基础切片按 T101-T108 任务图执行
+
+ ## T001 - 确认产品设计与项目章程
+@@ -58,10 +58,10 @@
+ | T103 - 命令执行器与历史 | Accepted | 完成 |
+ | T104 - 瀑布投影 | Accepted | 完成 |
+ | T105 - React 工作台与 G2 渲染 | Accepted | 完成 |
+-| T106 - 排序、分组与折叠交互 | Needs_Review | 等待用户验收 |
++| T106 - 排序、分组与折叠交互 | Needs_Review | 整行拖拽热区修复完成，等待用户复验 |
+ | T107 - 持久化、导出与可访问性闭环 | Draft | 依赖 T106 Accepted |
+ | T108 - 集成、包质量与视觉验收 | Draft | 依赖 T101-T107 |
+
+ ## Next Gate
+
+-T106 的实现、证据和独立 review 已满足 `Needs_Review`。用户明确接受 T106 后，T107 才进入执行；T107 与 T108 当前保持 Draft。
++T106 的实现、证据、独立 review 与整行拖拽热区 amendment 已满足 `Needs_Review`。用户明确接受 T106 后，T107 才进入执行；T107 与 T108 当前保持 Draft。
+diff --git a/.ai-platform/evidence/T106/summary.md b/.ai-platform/evidence/T106/summary.md
+index 7cf2ae1..909c43d 100644
+--- a/.ai-platform/evidence/T106/summary.md
++++ b/.ai-platform/evidence/T106/summary.md
+@@ -6,12 +6,12 @@
+ - Attempt: T106-A001
+ - Status: Needs_Review
+ - Branch: `codex/reset`
+-- Date: 2026-07-15
+-- Execution: Codex TDD execution with delegated RED work、real Chromium validation and independent engineering/visual review
++- Date: 2026-07-16
++- Execution: Codex TDD execution with delegated RED work、real Chromium validation、independent engineering/visual review and user-acceptance hit-target amendment
+
+ ## Scope Result
+
+-图表、大纲和键盘通过同一 `executeCommand` 路径完成 `moveItem`；大纲支持直接拖动、无修饰键多选、创建分组、折叠、展开和取消分组。图表与大纲共享语义落点，活动手势支持 Escape、blur、pointercancel、无目标释放以及 ViewSpec/projection/readOnly 更新取消。实现保留单一 G2 Chart 实例、latest-wins render queue、隐私安全的行内反馈、模态焦点管理、reduced motion 和 200 项性能边界。
++图表、大纲和键盘通过同一 `executeCommand` 路径完成 `moveItem`；大纲支持从可拖动行正文直接起拖，不再要求精确命中 24px grip，同时保留无修饰键多选、创建分组、折叠、展开和取消分组。图表与大纲共享语义落点，活动手势支持 Escape、blur、pointercancel、无目标释放以及 ViewSpec/projection/readOnly 更新取消。实现保留单一 G2 Chart 实例、latest-wins render queue、隐私安全的行内反馈、模态焦点管理、reduced motion 和 200 项性能边界。
+
+ T106 未改变领域命令、瀑布投影、公共 API 或 SourceData/ViewSpec 语义；未引入 Motion、Framer Motion、GSAP、全局 store、第二个 renderer、持久化或导出。
+
+@@ -23,7 +23,7 @@ T106 未改变领域命令、瀑布投影、公共 API 或 SourceData/ViewSpec
+ - fixed item、跨 segment、两项分组 child 移出等非法操作不提交 revision/history，并只输出 code 与通用文案。
+ - 连续、直接根级、未 pinned contribution 可用原生 checkbox 在触摸设备无修饰键多选；显式非空组名后创建分组。
+ - group create/collapse/expand/ungroup 保持 amount、sourceIds 与根顺序守恒；折叠组金额只来自 T104 projection。
+-- 大纲保留 `tree/treeitem/aria-multiselectable`、36px row、roving focus、disclosure button 与锁定状态；grip 不进入 Tab 顺序。
++- 大纲保留 `tree/treeitem/aria-multiselectable`、36px row、roving focus、disclosure button 与锁定状态；未锁定行正文是鼠标/触控笔拖拽热区，checkbox/disclosure 不触发拖拽，grip 保留触摸可靠区且不进入 Tab 顺序。
+ - modal 打开后获得焦点、Tab 被约束在 dialog、Escape 关闭并恢复触发按钮焦点。
+ - G2 和 row committed transition 使用 160ms `cubic-bezier(0.2, 0, 0, 1)`；reduced motion 将非必要 duration 置零但保留目标和状态。
+ - projection/locale/motion 更新复用同一 Chart；新请求覆盖旧请求，卸载只 destroy 一次且清理 listener、pointer capture、rAF 与 pending render。
+@@ -36,13 +36,14 @@ RED:
+ - 初始 real Chromium 15/15 按预期失败；ready root 存在，但 move/group/cancel/axe/performance 合同尚未实现。
+ - 独立 review 后新增 modal focus、触摸 checkbox 多选、跨 surface target、valid-to-valid controlled update cancel、locale feedback、精确 easing 与 label halo 回归；focused RED 为 9 failed / 39 passed。
+ - 最终 engineering re-review 证明受控更新后 dnd-kit sensor 仍可通过后续 move/up 提交旧手势；新增 stale-session 回归先复现旧 command。首轮 guard 阻止提交后，follow-up RED 又证明 dnd-kit 行仍处于 dragging/transform；最后用父级 layout effect 在受控 commit 内释放旧指针，复现 passive-effect 窗口中的旧 command。最终以 `useLayoutEffect` scope invalidation、session epoch remount、active guard、焦点恢复和立即复用断言闭环。
++- 用户验收复测测得 267x36px 行中只有 24x32px grip 可起拖，实际命中面积约 8%；新增 row-body 回归从 label 区按下后仍得到 `idle`，按预期 RED。
+
+ GREEN:
+
+-- Review regression focused run 48/48 通过；最终全部 editor component tests 7 files / 68 tests 通过。
+-- Packet focused component gate 3 files / 28 tests 通过；全部 editor component tests 7 files / 68 tests，fresh 全量 19 files / 240 tests 通过。
+-- Fresh coverage 为 statements 92.36%、branches 87.00%、functions 93.17%、lines 92.45%。
+-- 完整 real Chromium 21/21 通过，覆盖 parity、group lifecycle、12 类 cancel/reject、5 个 axe 场景、reduced motion 与 200 项性能。
++- Review regression focused run 48/48 通过；整行热区 amendment 的 focused outline tests 11/11 通过。
++- 全部 editor component tests 7 files / 70 tests，fresh 全量 19 files / 242 tests 通过。
++- Fresh coverage 为 statements 92.33%、branches 87.02%、functions 92.94%、lines 92.42%。
++- 整行热区 amendment 后完整 real Chromium 21/21 通过，覆盖 row-body parity、group lifecycle、12 类 cancel/reject、5 个 axe 场景、reduced motion 与 200 项性能。
+ - 200 contribution / 202 marks、30 次完整拖动样本，nearest-rank p95 为 30.0ms，门槛为 150ms；同一目标 pointermove root commit delta 为 0。
+ - build、strict typecheck、ESLint、Prettier、publint、ATTW、ESM/CJS/types consumers 与 `git diff --check` 全部通过。
+
+@@ -77,13 +78,13 @@ Required captures:
+ ## Independent Review Verdict
+
+ - Engineering/spec/visual review 发现性能争用证据、跨 surface target、触摸多选、活动手势 stale state、modal focus、对比度、grip Tab 和 easing 等问题；最终 re-review 继续发现 dnd-kit stale command、残留 visual transform 与 passive-effect pointerup 竞态，每项均先补失败回归再修复。
+-- Fresh validation 后的最终 engineering/spec 与 visual/QA 复审无 Critical、High 或 Medium finding。
++- 原完整实现的 independent engineering/spec 与 visual/QA 复审无 Critical、High 或 Medium finding；整行热区 amendment 另经 targeted diff review，未改变 domain、projection、public API、键盘路径或触摸滚动边界，无新增 Critical、High 或 Medium finding。
+ - T106 满足 packet 的 `Needs_Review` 门槛，等待用户明确验收；T107、T108 保持 Draft。
+
+ ## Residual Risk
+
+ - T106 的浏览器合同以 Chromium 为验收环境；Firefox/WebKit 与 React 版本矩阵属于 T108。
+-- Fresh full run 的 30 个性能样本最大值为 30.0ms、p95 为 30.0ms；T108 继续在完整矩阵中监控尾延迟。
++- 已记录的 30 个性能样本最大值为 30.0ms、p95 为 30.0ms；整行热区 amendment 后 21-test Chromium run 再次通过 `<=150ms` 门禁，T108 继续在完整矩阵中监控尾延迟。
+ - Playground production build 的 lazy G2 chunk 约 1.3MB；editor package 保持 G2 peer external，bundle budget 属于 T108。
+ - 持久化、SVG/PNG export 与最终可访问摘要闭环属于 T107，当前不可发布。
+
+diff --git a/.ai-platform/evidence/T106/test-results.md b/.ai-platform/evidence/T106/test-results.md
+index f0f1d0d..a7a3fe0 100644
+--- a/.ai-platform/evidence/T106/test-results.md
++++ b/.ai-platform/evidence/T106/test-results.md
+@@ -10,31 +10,32 @@
+ | stale dnd-kit session regression | 1 | 受控 ViewSpec 更新后再次 pointermove + pointerup 仍产生 1 个旧手势 command |
+ | stale dnd-kit visual-session regression | 1 | active guard 后旧 command 已被阻止，但 row 仍保留 `dragging` 与 transform |
+ | controlled commit layout race regression | 1 | 父级 layout effect 在新 ViewSpec commit 中释放旧 pointer，passive invalidation 前仍提交 1 个 command |
++| row-body drag hit target regression | 1 | 267x36px 行中仅 24x32px grip 可起拖；从 label 区按下并移动后 editor 仍为 `idle` |
+
+ ## GREEN And Fresh Validation
+
+ | Command | Exit | Result |
+ | --- | ---: | --- |
+ | `pnpm exec vitest run --project editor-components packages/editor/tests/components/outline.test.tsx packages/editor/tests/components/keyboard.test.tsx packages/editor/tests/components/group-actions.test.tsx` | 0 | 3 files、28 tests passed |
+-| `pnpm exec vitest run --project editor-components --maxWorkers=4` | 0 | 7 files、68 tests passed |
+-| `pnpm test:unit` | 0 | 19 files、240 tests passed |
+-| `pnpm test:coverage` | 0 | 240 tests passed；全部 thresholds 通过 |
++| `pnpm exec vitest run --project editor-components --maxWorkers=4` | 0 | 7 files、70 tests passed |
++| `pnpm test:unit` | 0 | 19 files、242 tests passed |
++| `pnpm test:coverage` | 0 | 242 tests passed；全部 thresholds 通过 |
+ | `pnpm typecheck` | 0 | editor 与 playground strict source typecheck 通过 |
+ | `pnpm lint` | 0 | 0 warning/error |
+ | `pnpm format:check` | 0 | 全部 matched files 通过 |
+ | `pnpm build` | 0 | editor ESM/CJS/CSS/declarations 与 playground production build 成功 |
+ | `pnpm test:package` | 0 | publint、ATTW、ESM/CJS runtime 与 type consumer 通过 |
+-| isolated Chromium T106 suite on port 4174 | 0 | 21/21 passed、0 skipped、0 flaky、0 unexpected |
++| isolated Chromium T106 suite after row-body amendment | 0 | 21/21 passed、0 skipped、0 flaky、0 unexpected |
+ | `git diff --check` | 0 | 无 whitespace error |
+
+-默认 Playwright 端口 4173 被本机无关服务占用；T106 使用一次性等价配置在 4174 启动同一 playground 命令、单 Chromium worker，并在交付前移除该配置。5173 acceptance server 保持运行。
++默认 Playwright 端口 4173 被本机无关服务占用；原 T106 使用一次性等价配置在 4174 验证。本轮直接连接用户运行的 `http://localhost:5174/`，单 Chromium worker 完成复验，并在交付前移除临时配置。
+
+ ## Coverage
+
+ | Boundary | Statements | Branches | Functions | Lines |
+ | --- | ---: | ---: | ---: | ---: |
+-| Aggregate | 92.36% | 87.00% | 93.17% | 92.45% |
+-| Components | 87.66% | 81.88% | 86.62% | 87.99% |
++| Aggregate | 92.33% | 87.02% | 92.94% | 92.42% |
++| Components | 87.61% | 81.93% | 86.28% | 87.94% |
+ | Interactions | 79.86% | 70.45% | 100% | 79.57% |
+ | Domain | 97.87% | 95.26% | 100% | 97.82% |
+ | Waterfall | 99.04% | 100% | 100% | 99.03% |
+@@ -43,6 +44,7 @@
+
+ - 21 tests: accessibility 5、outline/chart cancel and reject 12、parity/group/reduced motion 3、performance 1。
+ - chart、outline、keyboard move 后根顺序一致；G2 Canvas identity 保留，accepted update 不 recreate Chart。
++- outline parity 从行正文 62% 横向位置起拖，computed cursor 为 `grab`；真实浏览器提交 revision 并得到相同 post-removal 顺序，不再依赖 grip 精确命中。
+ - Escape、window blur、pointercancel、无语义目标释放和 dnd-kit cancel 均保持 revision/history/order identity，随后可立即执行新动作。
+ - fixed anchor、cross-segment move、两项 group child 移出均被 domain 拒绝，console 不包含 label、amount、sourceRef 或 caller exception。
+ - group create/collapse/expand/ungroup 保持 2 个 source、`¥1,280` aggregate 与原始 contribution order。
+@@ -76,8 +78,9 @@
+
+ - 第一轮 review 中多个 Playwright/build 进程并发，performance trials 得到 176-290.4ms；这些结果明确标记为争用环境下的非验收运行，不计作通过证据。
+ - 修复 cross-surface target 后的一次 21-test run 有 7 个失败：6 个由高对比 label halo 把一个短柱的像素簇分成两个造成测试取点误判，另一个 performance p95 为 163.1ms。测试改为按 12 个真实类别带宽聚合像素，15 个相关用例随后全绿；最终 layout-effect/epoch 修复后的 fresh 21-test run p95 为 30.0ms。
+-- 一次并发 unit run 使既有 seeded property test 超过 5 秒；隔离运行通过，并将全量脚本固定为 `--maxWorkers=4`。最终 unit 与 coverage 均 fresh 240/240。
++- 一次并发 unit run 使既有 seeded property test 超过 5 秒；隔离运行通过，并将全量脚本固定为 `--maxWorkers=4`。整行热区 amendment 后 unit 与 coverage 均 fresh 242/242。
+ - 最终 engineering re-review 的 stale dnd-kit sensor High 以定向回归复现；active guards 先阻止迟到 command，session epoch remount 再终止 dnd-kit 内部 active/transform。父 harness layout-effect regression 进一步锁定 commit 后、下一输入前的时序，scope invalidation 因此使用 `useLayoutEffect`。回归同时验证 focus 返回原 row、释放后下一次 pointer move 可立即成功；fresh component、unit、coverage 与 21-test Chromium 均通过。
++- 整行热区浏览器复验首次使用 `127.0.0.1:5174`，因现有服务仅绑定 `localhost` 得到连接拒绝；切换到页面实际 URL 后同一测试配置 3/3，随后完整 T106 suite 21/21。该失败是地址绑定问题，不计作产品行为失败。
+
+ ## Not Run
+
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+index 4da3729..b6e4df9 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+@@ -4,11 +4,11 @@
+
+ - Version: 0.1.0
+ - Status: Clear_For_Execution
+-- Analyzed: 2026-07-15
++- Analyzed: 2026-07-16
+
+ ## Verdict
+
+-没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T105 已验收；T106 实现、TDD、真实 Chromium、性能、axe、包质量与独立 review 证据完整，处于 `Needs_Review` 并等待用户验收。
++没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T105 已验收；T106 实现、TDD、真实 Chromium、性能、axe、包质量、独立 review 与整行拖拽热区修复证据完整，处于 `Needs_Review` 并等待用户验收。
+
+ ## Requirement Coverage
+
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
+index 23c6ebc..aeb8fa2 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
+@@ -20,9 +20,10 @@ execution_receipt:
+   attempt_id: "T106-A001"
+   status: "Needs_Review"
+   evidence_directory: ".ai-platform/evidence/T106"
+-  final_validation: "component 68/68; unit 240/240; Chromium 21/21; 200-item nearest-rank p95 30.0ms; same-target root commit delta 0; coverage/build/package/type/lint/format green"
+-  independent_review: "engineering/spec and visual/QA report no Critical, High or Medium finding"
+-  user_acceptance: "Pending explicit acceptance before T107"
++  final_validation: "component 70/70; unit 242/242; Chromium 21/21 after row-body drag amendment; recorded 200-item nearest-rank p95 30.0ms; same-target root commit delta 0; coverage/build/package/type/lint/format green"
++  independent_review: "original engineering/spec and visual/QA review plus targeted amendment diff review report no Critical, High or Medium finding"
++  review_amendment: "User acceptance testing found the 24x32 grip was only about 8% of a 267x36 row. TDD moved the PointerSensor activator to the full draggable row body, excluded checkbox/disclosure controls, retained a touch-safe grip and verified real Chromium row-body drag."
++  user_acceptance: "Pending explicit acceptance of the row-body drag amendment before T107"
+
+ work_unit:
+   title: "实现排序、分组与折叠交互"
+@@ -72,6 +73,7 @@ locked_behavior:
+     - "Group disclosure communicates expanded state and is a real button with an accessible name; group actions expose disabled reasons when unavailable."
+   outline_and_keyboard:
+     - "Outline retains tree/treeitem semantics, 36px stable rows, amount/source count, lock and expanded state."
++    - "Mouse and pen can start sorting from the full draggable row body; checkbox and disclosure controls are excluded, while the grip remains a touch-action none target so vertical list scrolling is preserved."
+     - "dnd-kit core/sortable provides pointer sorting and drag overlay; explicit keyboard operations cover move before/after and supported move into/out paths without requiring pointer simulation."
+     - "Keyboard before/after moves one semantic sibling position using post-removal indices. Out inserts the child immediately after its root group; into appends to an immediately preceding group or prepends to an immediately following group."
+     - "Focus remains visible and returns to a meaningful row/action after commit, cancel, collapse or ungroup."
+@@ -165,6 +167,7 @@ evidence_contract:
+     - "summary.md"
+     - "test-results.md"
+     - "diff.patch"
++    - "hit-target-fix.patch"
+     - "screenshots/desktop-drag-target.png"
+     - "screenshots/collapsed-group.png"
+     - "screenshots/mobile-group-actions.png"
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+index c275b94..0991f5a 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+@@ -5,7 +5,7 @@
+ - Version: 0.1.0
+ - Status: Confirmed
+ - Approval: 用户于 2026-07-15 明确批准 spec、plan、TDR 与 T101-T108 任务图
+-- Last updated: 2026-07-15
++- Last updated: 2026-07-16
+
+ ## Epic E1 - 可嵌入瀑布图编辑器
+
+@@ -136,7 +136,7 @@
+ - TDD plan: RED：分别覆盖 outline move、keyboard move、chart drop、cancel、group/collapse；GREEN：接入统一 commands；REFACTOR：抽取 interaction adapters，确保高频 pointer state 不进 React render loop。
+ - Packet path: `.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml`
+ - Evidence required: RED/GREEN 输出、相同 command parity 证据、cancel state snapshots、performance trace、axe result、changed files、diff summary、residual risk。
+-- Review state: fresh engineering/spec 与 visual/QA review 无 Critical、High 或 Medium finding；component 68/68、unit 240/240、Chromium 21/21、200-item p95 30.0ms 和 package/build gates 全绿。
++- Review state: fresh engineering/spec 与 visual/QA review 无 Critical、High 或 Medium finding；整行拖拽热区 amendment 后 component 70/70、unit 242/242、Chromium 21/21、已记录 200-item p95 30.0ms 和 package/build gates 全绿。
+ - Acceptance authority: 等待用户明确接受 T106；T107 在此之前保持 Draft。
+
+ ### Story S3 - 可恢复与可交付
+diff --git a/e2e/waterfall-editor.spec.ts b/e2e/waterfall-editor.spec.ts
+index 63d42a7..c65106c 100644
+--- a/e2e/waterfall-editor.spec.ts
++++ b/e2e/waterfall-editor.spec.ts
+@@ -74,7 +74,7 @@ async function dragOutlineAfter(
+   sourceLabel: string,
+   targetLabel: string,
+ ): Promise<void> {
+-  const source = page.getByRole('button', { name: `拖动 ${sourceLabel}` });
++  const source = page.getByRole('treeitem', { name: new RegExp(sourceLabel) });
+   const target = page.getByRole('treeitem', { name: new RegExp(targetLabel) });
+   const sourceBox = await source.boundingBox();
+   const targetBox = await target.boundingBox();
+@@ -84,15 +84,11 @@ async function dragOutlineAfter(
+     return;
+   }
+
+-  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
++  const sourceBodyX = sourceBox.x + sourceBox.width * 0.62;
++  await expect(source).toHaveCSS('cursor', 'grab');
++  await page.mouse.move(sourceBodyX, sourceBox.y + sourceBox.height / 2);
+   await page.mouse.down();
+-  await page.mouse.move(
+-    sourceBox.x + sourceBox.width / 2 + 12,
+-    sourceBox.y + sourceBox.height / 2,
+-    {
+-      steps: 3,
+-    },
+-  );
++  await page.mouse.move(sourceBodyX + 12, sourceBox.y + sourceBox.height / 2, { steps: 3 });
+   await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
+   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 3, {
+     steps: 6,
+diff --git a/packages/editor/src/components/OutlinePanel.tsx b/packages/editor/src/components/OutlinePanel.tsx
+index 61862b1..058de07 100644
+--- a/packages/editor/src/components/OutlinePanel.tsx
++++ b/packages/editor/src/components/OutlinePanel.tsx
+@@ -231,6 +231,13 @@ function SortableRow({
+       id: entry.nodeId,
+       disabled,
+     });
++  const setRowRef = useCallback(
++    (node: HTMLDivElement | null): void => {
++      setNodeRef(node);
++      setActivatorNodeRef(node);
++    },
++    [setActivatorNodeRef, setNodeRef],
++  );
+   const style: CSSProperties = {
+     transform: sortableTransform(transform),
+     transition: isDragging ? undefined : 'transform 160ms cubic-bezier(0.2, 0, 0, 1)',
+@@ -240,7 +247,9 @@ function SortableRow({
+
+   return (
+     <div
++      {...listeners}
+       className="gt-outline-row"
++      data-draggable={disabled ? 'false' : 'true'}
+       data-drop-indicator={dropEdge ?? undefined}
+       data-interaction-state={interactionState}
+       data-level={entry.level}
+@@ -258,7 +267,7 @@ function SortableRow({
+           : undefined
+       }
+       tabIndex={tabIndex}
+-      ref={setNodeRef}
++      ref={setRowRef}
+       style={style}
+       onClick={event => {
+         event.currentTarget.focus();
+@@ -309,9 +318,7 @@ function SortableRow({
+     >
+       <button
+         {...attributes}
+-        {...listeners}
+         className="gt-row-grip"
+-        ref={setActivatorNodeRef}
+         type="button"
+         tabIndex={-1}
+         aria-label={messages.dragLabel(entry.label)}
+@@ -331,7 +338,11 @@ function SortableRow({
+         <GripVertical size={14} aria-hidden="true" />
+       </button>
+       {entry.kind === 'contribution' ? (
+-        <label className="gt-row-select-control" onClick={event => event.stopPropagation()}>
++        <label
++          className="gt-row-select-control"
++          onClick={event => event.stopPropagation()}
++          onPointerDown={event => event.stopPropagation()}
++        >
+           <input
+             aria-label={messages.selectLabel(entry.label)}
+             checked={selected}
+@@ -363,6 +374,7 @@ function SortableRow({
+                   : messages.expandGroup(entry.label)
+             }
+             disabled={readOnly}
++            onPointerDown={event => event.stopPropagation()}
+             onClick={event => {
+               event.stopPropagation();
+               onToggleGroup(entry);
+diff --git a/packages/editor/src/styles/editor.css b/packages/editor/src/styles/editor.css
+index 8a00de3..004721b 100644
+--- a/packages/editor/src/styles/editor.css
++++ b/packages/editor/src/styles/editor.css
+@@ -280,12 +280,21 @@
+   border: 1px solid transparent;
+   border-radius: 4px;
+   cursor: default;
++  touch-action: pan-y;
+   transition:
+     color 100ms ease-out,
+     background-color 100ms ease-out,
+     border-color 100ms ease-out;
+ }
+
++.gt-outline-row[data-draggable='true'] {
++  cursor: grab;
++}
++
++.gt-outline-row[data-draggable='true'][data-interaction-state='dragging'] {
++  cursor: grabbing;
++}
++
+ .gt-outline-row::before {
+   position: absolute;
+   z-index: 2;
+@@ -346,6 +355,7 @@
+   border-radius: 4px;
+   cursor: grab;
+   opacity: 0.58;
++  touch-action: none;
+ }
+
+ .gt-row-grip:hover:not(:disabled) {
+diff --git a/packages/editor/tests/components/outline.test.tsx b/packages/editor/tests/components/outline.test.tsx
+index 1a48f04..c92dac2 100644
+--- a/packages/editor/tests/components/outline.test.tsx
++++ b/packages/editor/tests/components/outline.test.tsx
+@@ -230,6 +230,79 @@ describe('outline pointer targets', () => {
+     expect(dragInstructions?.textContent).not.toMatch(/space|空格/i);
+   });
+
++  it('starts pointer sorting from the draggable row body instead of requiring the grip', async () => {
++    const views: ViewSpec[] = [];
++    render(
++      <FinancialChartEditor
++        sourceData={commandSourceData}
++        onViewSpecChange={view => views.push(view)}
++      />,
++    );
++
++    const root = document.querySelector<HTMLElement>('[data-g2touch]');
++    const tree = await screen.findByRole('tree', { name: '结构大纲' });
++    installOutlineLayout(tree);
++    const betaRow = screen.getByRole('treeitem', { name: /Beta confidential/ });
++    const betaLabel = within(betaRow).getByText('Beta confidential');
++
++    fireEvent.pointerDown(betaLabel, {
++      button: 0,
++      pointerId: 20,
++      isPrimary: true,
++      clientX: 150,
++      clientY: 98,
++    });
++    fireEvent.pointerMove(document, {
++      pointerId: 20,
++      isPrimary: true,
++      clientX: 150,
++      clientY: 105,
++    });
++    await waitFor(() => expect(root?.getAttribute('data-interaction-state')).toBe('dragging'));
++
++    await moveBetaAfterGamma(20);
++    endPointerDrag(20);
++
++    await waitFor(() => expect(views).toHaveLength(1));
++    expect(views[0]?.rootOrder).toEqual(['a', 'c', 'b', 'd', 'e']);
++  });
++
++  it('keeps selection controls outside the row drag activator', async () => {
++    const onViewSpecChange = vi.fn();
++    render(
++      <FinancialChartEditor sourceData={commandSourceData} onViewSpecChange={onViewSpecChange} />,
++    );
++
++    const root = document.querySelector<HTMLElement>('[data-g2touch]');
++    const tree = await screen.findByRole('tree', { name: '结构大纲' });
++    installOutlineLayout(tree);
++    const checkbox = screen.getByRole('checkbox', { name: '选择 Beta confidential' });
++
++    fireEvent.pointerDown(checkbox, {
++      button: 0,
++      pointerId: 19,
++      isPrimary: true,
++      clientX: 52,
++      clientY: 98,
++    });
++    fireEvent.pointerMove(document, {
++      pointerId: 19,
++      isPrimary: true,
++      clientX: 52,
++      clientY: 112,
++    });
++    fireEvent.pointerUp(document, {
++      pointerId: 19,
++      isPrimary: true,
++      clientX: 52,
++      clientY: 112,
++    });
++
++    expect(root?.getAttribute('data-interaction-state')).toBe('idle');
++    expect(screen.queryByTestId('outline-drag-overlay')).toBeNull();
++    expect(onViewSpecChange).not.toHaveBeenCalled();
++  });
++
+   it('keeps a contiguous multi-selection in source order without changing the view', async () => {
+     const onSelectionChange = vi.fn();
+     const onViewSpecChange = vi.fn();

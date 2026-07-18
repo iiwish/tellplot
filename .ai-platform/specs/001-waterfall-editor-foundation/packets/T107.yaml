@@ -1,0 +1,201 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T107-A001"
+task_id: "T107"
+feature_id: "001-waterfall-editor-foundation"
+mode: "direct_execute"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  checklist: ".ai-platform/specs/001-waterfall-editor-foundation/checklists/requirements.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  design_contract: ".ai-platform/specs/001-waterfall-editor-foundation/design-contract.md"
+  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  analysis: ".ai-platform/specs/001-waterfall-editor-foundation/analysis.md"
+  approval: "User explicitly accepted T106 and T106-CR001 on 2026-07-16; the Confirmed T101-T108 work graph unlocked the T107 recursive compatibility refresh, and the user explicitly accepted T107 on 2026-07-16."
+
+execution_receipt:
+  attempt_id: "T107-A001"
+  status: "Accepted"
+  evidence_directory: ".ai-platform/evidence/T107"
+  final_validation: "unit 295/295; coverage 90.30% statements / 84.14% branches / 92.32% functions / 90.40% lines; selected Chromium 13/13; emphasis stability 3/3; build/package/type/lint/format/diff green"
+  review: "Independent compatibility review reports no unresolved Critical, High or Medium finding after recursive persistence/summary/export, shared emphasis styling and active-gesture export consistency fixes."
+  user_acceptance: "User explicitly accepted T107 on 2026-07-16."
+  downstream_gate: "T108 is unlocked for execution under the Confirmed T101-T108 work graph."
+
+work_unit:
+  title: "实现持久化、导出与可访问性闭环"
+  goal: "提供确定性 ViewSpec round-trip、无隐式下载的 SVG/PNG export、有限公共 handle、可读图表摘要和可完成的参考编辑器文件工作流。"
+  requirement_mapping:
+    - "WF-US-004"
+    - "WF-US-005"
+    - "WF-FR-011"
+    - "WF-FR-012"
+    - "WF-FR-013"
+    - "WF-NFR-003"
+    - "WF-NFR-007"
+  dependencies:
+    - "T103 Accepted"
+    - "T104 Accepted"
+    - "T105 Accepted"
+    - "T106 Accepted"
+    - "T106-CR001 Accepted"
+  blocks:
+    - "T108"
+  parallel: false
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "T106-CR001 and T107 are Accepted. The editor uses one recursive ViewSpec forest, one projectWaterfall path, one persistent G2 Canvas chart and one shared G2 chart spec for screen and export. T107 persistence, file workflow and accessibility behavior are accepted, and T108 is unlocked."
+  architectural_boundary:
+    - "serializeViewSpec and parseViewSpec are pure domain functions; parse delegates semantic truth to validateViewSpec and never reconciles or rewrites missing source references."
+    - "On-screen Canvas, PNG and SVG consume the same T104 projection and one shared G2 chart-spec builder; no handwritten second chart renderer or waterfall arithmetic is permitted."
+    - "FinancialChartEditorHandle exposes focus, exportImage and getViewSpec only; it does not expose dispatch, controller state, projection or G2 Chart."
+    - "The package export API returns a Blob and metadata or throws a structured privacy-safe export error; it never creates a download link or performs network access."
+    - "The playground owns explicit download links, JSON file import/export and object URL cleanup; it imports only the public package entry."
+
+locked_behavior:
+  persistence:
+    - "serializeViewSpec emits deterministic JSON for the current schema without mutating input or including SourceData values."
+    - "parseViewSpec accepts JSON text plus SourceData, rejects malformed/non-object input, unsupported major schema, dataset mismatch and missing or unresolved source references with existing stable ValidationIssue codes and paths."
+    - "A successful parse returns the validated plain ViewSpec with order, groups, collapse, pin, annotations, emphasis and revision preserved; it does not silently migrate or reconcile."
+  export:
+    - "ExportOptions supports svg/png, optional filename/background and PNG pixelRatio 1..4 with default 2; invalid options reject before render."
+    - "PNG uses the mounted real G2 canvas and produces a nonempty Blob at requested pixel density; SVG uses a supported offscreen G2 SVG renderer with the same projection/spec and cleans up chart, DOM and object resources on success or failure."
+    - "SVG contains no script, foreignObject, external URL, SourceData metadata, sourceRef or hidden financial payload; visible labels and current visible node order remain inspectable."
+    - "ViewSpec emphasis is rendered by the shared chart spec: highlight uses full opacity with a 3px #18211D stroke, muted uses 0.28 opacity, and SVG/PNG follow the same screen semantics."
+    - "Image export rejects with EXPORT_UNAVAILABLE /export while chart or outline live reorder preview is active, before the PNG/SVG branch, so formats cannot capture different orders."
+    - "ExportResult contains blob, exact MIME type, safe suggested filename, width and height; methods never auto-download."
+    - "Export failure rejects a structured code/path error without labels, amounts, sourceRef, caller exception text or console leakage."
+  handle_and_accessibility:
+    - "focus moves focus to the editor root or its first meaningful control; getViewSpec returns the current visible ViewSpec and never stale initial props."
+    - "exportImage is unavailable for invalid/unmounted/no-canvas/live-preview state with a structured error and otherwise uses the current stable canonical visible projection."
+    - "AccessibleChartSummary is a dedicated text equivalent with title, visible count, ordered labels, kind and formatted amount; collapsed groups summarize only the visible aggregate and expanded groups expose children."
+    - "Recursive summary and export consume only the current visible projection: inner collapse, outer collapse and full expansion preserve order without exposing hidden descendants."
+    - "Export progress/result/error and JSON import result use visible status plus a polite live region; focus remains visible and menus/file controls are keyboard reachable."
+  playground:
+    - "The reference editor provides ViewSpec JSON export/import and SVG/PNG actions using the public API only, without a second reducer or private package imports."
+    - "Import requires explicit file selection and applies only a successful parse; invalid files leave the current ViewSpec unchanged and show code/path only."
+    - "Download URLs are created only after an explicit user action and revoked after use or component cleanup."
+
+execution_constraints:
+  adapter: "Codex direct TDD implementation with separate delegated validation and independent compatibility review; evidence and user acceptance remain distinct gates."
+  allowed_files:
+    - "package.json"
+    - "pnpm-lock.yaml"
+    - "packages/editor/package.json"
+    - "packages/editor/tsup.config.ts"
+    - "packages/editor/src/domain/persistence.ts"
+    - "packages/editor/src/export/**"
+    - "packages/editor/src/components/FinancialChartEditor.tsx"
+    - "packages/editor/src/components/EditorToolbar.tsx"
+    - "packages/editor/src/components/WaterfallCanvas.tsx"
+    - "packages/editor/src/components/AccessibleChartSummary.tsx"
+    - "packages/editor/src/components/editorMessages.ts"
+    - "packages/editor/src/react/editorTypes.ts"
+    - "packages/editor/src/styles/**"
+    - "packages/editor/src/index.ts"
+    - "packages/editor/tests/domain/persistence.test.ts"
+    - "packages/editor/tests/components/accessibility.test.tsx"
+    - "packages/editor/tests/export/**"
+    - "packages/editor/tests/package/**"
+    - "apps/playground/package.json"
+    - "apps/playground/src/**"
+    - "e2e/export.spec.ts"
+    - "e2e/accessibility.spec.ts"
+  dependency_changes:
+    - "@antv/g-svg 2.1.1 is the exact dependency used by the real-browser G2 SVG prototype and is retained only if output fidelity and cleanup pass."
+    - "The playground may declare the already-approved lucide-react 1.24.0 icon package directly instead of relying on a transitive editor dependency."
+    - "No raster/SVG conversion library, animation library, global store, file saver or second charting library may be added."
+  allowed_scope_correction: "T107 public handle types belong with existing public React types in packages/editor/src/react/editorTypes.ts, localized export status belongs in editorMessages.ts, and package consumer tests must lock the new surface. These files are added to the canonical allowed scope without changing product behavior."
+  forbidden_changes:
+    - "No SourceData mutation, migration engine, autosave, localStorage, backend, network, AI, routing, PowerPoint generation or new chart type."
+    - "No handwritten SVG waterfall renderer, Canvas geometry inference or duplicate chart-spec theme."
+    - "No public G2 instance, projection, controller or dispatch escape hatch."
+    - "No commit, push, PR, merge, publish or remote mutation."
+  worktree_ownership: "T101-T106 and T106-CR001 accepted reset work remains in the existing codex/reset worktree. T107 edits stay within its approved implementation and governance/evidence paths and preserve accepted recursive interaction behavior."
+  conflicts:
+    - "T108 must not execute concurrently because it owns the same E2E, package and playground surfaces."
+
+tdd_plan:
+  red:
+    - "Add persistence tests for deterministic round-trip, malformed JSON, unsupported major version, dataset mismatch, missing or unresolved source IDs, immutability and non-plain data."
+    - "Add export option/error/blob tests before export modules and public handle exist."
+    - "Add component tests for current-view handle, invalid/unmounted export, focus, ordered summary, collapsed/expanded summary and live export status."
+    - "Add real Chromium tests for nonempty PNG pixels, inspectable SVG order/text/safety, current reordered/collapsed state, explicit download and invalid JSON no-change."
+    - "After T106-CR001, add RED regressions for missing emphasis styling and image export during a live reorder preview; add recursive summary and nested JSON/SVG compatibility proof."
+  green:
+    - "Implement pure persistence, shared G2 chart spec, PNG Canvas export, offscreen G2 SVG export, structured errors and exact cleanup."
+    - "Implement forwardRef handle, dedicated AccessibleChartSummary and keyboard-reachable export/file controls."
+    - "Implement controlled playground ViewSpec and public-only import/export/download workflow."
+    - "Pass emphasis through the shared screen/SVG chart spec and reject image export from the real chart-stage interaction state before selecting PNG or SVG."
+  refactor:
+    - "Separate option validation, filename policy, Canvas/SVG adapters and component orchestration; keep shared visual spec single-source."
+    - "Inspect desktop/mobile export states and correct focus, overflow, progress, contrast and text-fit defects without adding decoration."
+
+validation_loop:
+  commands:
+    - "pnpm exec vitest run --project editor-unit packages/editor/tests/domain/persistence.test.ts"
+    - "pnpm exec vitest run --project editor-components packages/editor/tests/export packages/editor/tests/components/accessibility.test.tsx"
+    - "pnpm test:unit"
+    - "pnpm test:coverage"
+    - "pnpm typecheck"
+    - "pnpm lint"
+    - "pnpm format:check"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "pnpm exec playwright test e2e/export.spec.ts e2e/accessibility.spec.ts --project=chromium"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T107"
+  expected_signals:
+    - "RED fails for missing persistence/export/handle/summary behavior rather than syntax or harness errors."
+    - "Round-trip preserves every ViewSpec field byte-for-byte after normalization; conflict fixtures return stable code/path and leave the editor unchanged."
+    - "Real Chromium PNG has requested dimensions and non-background pixels; SVG is nonempty, parseable, ordered, readable and free of prohibited content."
+    - "Real Chromium SVG exposes the imported highlight stroke and muted opacity; nested JSON/SVG preserve the recursive tree while exporting only visible descendants."
+    - "Axe reports zero serious/critical violations for ready, export progress/result/error, JSON import error and mobile file controls."
+    - "All unit/coverage/type/lint/format/build/package and selected real-browser commands exit 0 after GREEN."
+  retry_budget: 3
+  failure_policy: "Fix only T107 persistence/export/handle/accessibility/playground defects. Stop if G2 cannot produce safe matching SVG without a second renderer or if domain command semantics must change."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T107"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+    - "compatibility-refresh.patch"
+    - "screenshots/desktop-export-menu.png"
+    - "screenshots/svg-export-result.png"
+    - "screenshots/mobile-file-controls.png"
+  required_content:
+    - "RED/GREEN/REFACTOR commands and exit status."
+    - "Round-trip/conflict matrix, PNG dimensions/pixel evidence, SVG text/order/safety evidence and cleanup counts."
+    - "Handle/current-view, focus, live region, axe, changed files, diff summary, reviews and residual risks."
+
+review_contract:
+  spec_compliance:
+    - "Every T107 requirement has direct unit/component or real-browser evidence and the playground uses public APIs only."
+    - "Persistence does not reconcile; export reuses the accepted projection/chart spec and performs no implicit download/network."
+  engineering_quality:
+    - "Strict types, no any/ignore, deterministic JSON, structured privacy-safe errors, no input mutation and complete chart/DOM/object URL cleanup."
+    - "Package ESM/CJS/types/CSS consumers expose the exact handle, persistence and export surface without exposing internals."
+  visual_quality:
+    - "File/export controls remain a restrained operator surface with stable dimensions, visible progress/focus and no overlap at desktop/mobile targets."
+    - "Exported chart is presentation-ready, readable and faithful to current visible order/group/collapse state."
+  qa_acceptance:
+    - "Independent spec, engineering and visual/QA review has no remaining Critical/High/Medium finding."
+    - "The user explicitly accepted T107 on 2026-07-16, unlocking T108."
+
+handoff:
+  task_status: "Accepted"
+  acceptance_receipt: "User explicitly accepted T107 on 2026-07-16."
+  next_gate: "T108 is unlocked for execution under the Confirmed T101-T108 work graph."
+  on_failure: "Keep T107 Running with an explicit blocker and failed evidence; do not advance T108."
+  remote_actions: "None authorized."
+
+stop_conditions:
+  - "Safe SVG matching the accepted G2 chart requires handwritten waterfall geometry or a second visualization engine."
+  - "Persistence requires silent reconciliation, schema migration or SourceData mutation."
+  - "Export can pass only by embedding a raster image in SVG, leaking source metadata or auto-downloading from the package API."
+  - "T107 requires changing command/invariant semantics or weakening accessibility/export assertions."

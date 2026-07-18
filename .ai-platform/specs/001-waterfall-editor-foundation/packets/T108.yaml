@@ -1,0 +1,208 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T108-A001"
+task_id: "T108"
+feature_id: "001-waterfall-editor-foundation"
+mode: "delegated_execute"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  product_contract: ".ai-platform/docs/product-design.md"
+  tdr: ".ai-platform/docs/technology-decision-record.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  checklist: ".ai-platform/specs/001-waterfall-editor-foundation/checklists/requirements.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  quickstart: ".ai-platform/specs/001-waterfall-editor-foundation/quickstart.md"
+  design_contract: ".ai-platform/specs/001-waterfall-editor-foundation/design-contract.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  analysis: ".ai-platform/specs/001-waterfall-editor-foundation/analysis.md"
+  approval: "User approved the T101-T108 work graph and explicitly accepted T107 on 2026-07-16, unlocking T108."
+
+execution_receipt:
+  attempt_id: "T108-A001"
+  status: "Accepted"
+  evidence_directory: ".ai-platform/evidence/T108"
+  final_validation: "Complete after DEF003-DEF011: 314 unit/coverage tests, 108 current non-performance E2E, one zero-retry isolated performance gate, 144 previous-browser E2E, 21 accessibility tests, package/build/static, React 18.3/19.2 consumers, final patch checks and artifact validation all pass."
+  independent_review: "Browser/CI, final engineering, final visual/QA and final spec/evidence reviews pass with no unresolved Critical, High or Medium finding."
+  user_acceptance: "Accepted explicitly by the user on 2026-07-18."
+  downstream_gate: "Feature execution is complete; release, publish and remote delivery remain separately authorized actions."
+
+work_unit:
+  title: "完成集成、包质量与视觉验收"
+  goal: "Prove the accepted waterfall foundation through isolated React consumers, package checks, three browser engines, accessibility, performance, responsive visual evidence and CI."
+  requirement_mapping:
+    - "WF-SC-001"
+    - "WF-SC-002"
+    - "WF-SC-003"
+    - "WF-SC-004"
+    - "WF-SC-005"
+    - "WF-NFR-001"
+    - "WF-NFR-002"
+    - "WF-NFR-003"
+    - "WF-NFR-004"
+    - "WF-NFR-005"
+    - "WF-NFR-006"
+    - "WF-NFR-007"
+  dependencies:
+    - "T101 Accepted"
+    - "T102 Accepted"
+    - "T103 Accepted"
+    - "T104 Accepted"
+    - "T105 Accepted"
+    - "T106 Accepted"
+    - "T106-CR001 Accepted"
+    - "T107 Accepted"
+  blocks:
+    - "release candidate review"
+  parallel: false
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "T101-T107 and T106-CR001 are Accepted. The intentionally dirty reset worktree contains the complete new workspace and evidence history. Current and compatibility Playwright browser binaries are available for the full matrices."
+  reusable_boundaries:
+    - "Use the built and packed @tellplot/editor public exports and styles; do not import src internals in consumer fixtures."
+    - "Reuse the existing production-preview Playwright harness, responsive rendering assertions, accessibility scenarios and 200-item performance contract."
+    - "Treat SourceData, ViewSpec, deterministic commands, G2 rendering and T107 export semantics as accepted behavior."
+  forbidden_changes:
+    - "Do not add an animation library, second renderer, backend, AI provider, autosave, migration or release publishing."
+    - "Do not weaken financial invariants, browser assertions, accessibility thresholds, performance targets or package consumer checks to obtain GREEN."
+    - "Do not edit accepted implementation source unless a specific T108 integration defect is first reproduced by a regression and recorded as a task-local fix scope."
+
+execution_constraints:
+  adapter: "Codex delegated execution. The worker receives this packet, may not delegate, and returns changed files plus real command output for orchestrator review."
+  allowed_files:
+    - ".github/workflows/ci.yml"
+    - "package.json"
+    - "playwright.config.ts"
+    - "vitest.config.ts"
+    - "e2e/**"
+    - "packages/editor/tests/**"
+    - "packages/editor/src/components/EditorToolbar.tsx"
+    - "packages/editor/src/components/AccessibleChartSummary.tsx"
+    - "packages/editor/src/components/FinancialChartEditor.tsx"
+    - "packages/editor/src/components/InspectorPanel.tsx"
+    - "packages/editor/src/components/PanelOverlay.tsx"
+    - "packages/editor/src/components/WaterfallCanvas.tsx"
+    - "packages/editor/src/components/editorMessages.ts"
+    - "packages/editor/src/interactions/chartPointer.ts"
+    - "packages/editor/src/react/editorTypes.ts"
+    - "packages/editor/src/react/useEditorController.ts"
+    - "packages/editor/src/export/pngExport.ts"
+    - "packages/editor/src/export/svgExport.ts"
+    - "packages/editor/src/export/waterfallChartSpec.ts"
+    - "packages/editor/src/styles/editor.css"
+    - "apps/playground/src/**"
+    - ".ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml"
+    - ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+    - ".ai-platform/specs/001-waterfall-editor-foundation/analysis.md"
+    - ".ai-platform/specs/001-waterfall-editor-foundation/quickstart.md"
+    - ".ai-platform/docs/tasks.md"
+    - ".ai-platform/docs/release-report.md"
+    - ".ai-platform/evidence/T108/**"
+  external_prerequisite:
+    - "Install the current Playwright browser binaries and both compatibility fixtures' exact pinned browser binaries before the full matrices. This writes outside the repository and may require explicit sandbox/network approval."
+  conflicts:
+    - "All accepted tasks share final package and E2E behavior; preserve their implementation and evidence."
+  source_boundary: "No SourceData amount, identifier, order or metadata may be changed by validation facilities."
+  dependency_boundary: "Do not change the root pnpm-lock.yaml or add runtime dependencies. Matrix-only tools must use existing root tooling and isolated temporary consumers; the Playwright 1.60.0 release-train fixture and Playwright 1.52.0 WebKit prior-major fixture each own an exact, independent test-only lockfile."
+  scope_amendments:
+    - "T108-DEF001: the fresh WebKit accessibility preflight reproduced pointer-opened panel focus returning to document body because WebKit does not implicitly focus clicked buttons. A focused component regression and explicit outline/inspector trigger focus in EditorToolbar are approved as the narrow T108 integration fix; no public API or domain behavior changes."
+    - "T108-DEF002: the confirmed quickstart still named the retired 1,000-to-1,010 fixture, a cross-subtotal move and a pin action not exposed by the reference UI. Update only the canonical quickstart scenario to the accepted 3,200-to-3,440 fixture, same-segment reorder, contiguous cost group and locked-anchor rejection before walkthrough evidence."
+    - "T108-DEF003: final spec review found the confirmed design contract's selected-node annotation field absent from InspectorPanel, so the canonical save/restore walkthrough could not create annotation state. Add one focused component RED and the narrow InspectorPanel/FinancialChartEditor/messages/CSS setAnnotation wiring; preserve the existing command schema, controlled/uncontrolled controller and public API."
+    - "T108-DEF004: final spec review found WF-NFR-006 current-plus-previous browser-major support was only evidenced for the current Playwright bundle. Playwright 1.60.0 retains release-train breadth for Chromium 148, Firefox 150 and WebKit 26.4, while an independent Playwright 1.52.0 fixture supplies literal prior-major WebKit 18.4 evidence because WebKit 26.4 and current 26.5 share a major. Both fixtures run through the same CI/script entry without a root dependency or root lockfile change."
+    - "T108-DEF005: canonical acceptance requires annotation to survive JSON and remain visible in image exports, but the accepted Inspector-only wiring did not repaint screen/PNG or reach SVG. Add focused chart-spec, SVG and real-canvas RED coverage, then route visible-node annotation summaries through the existing shared G2 spec in WaterfallCanvas and svgExport. JSON remains exact, image summaries are limited to two ellipsized lines, and no second renderer or public API is added."
+    - "T108-DEF006: independent visual review reproduced five acceptance defects: mobile amount labels were fully disabled, narrow G2 marks did not meet the 32px touch contract, default axis labels had insufficient contrast, editor-scoped modal drawers left the host filebar pointer-active, and the accessible chart summary omitted visible annotations. Add focused component/spec/browser RED coverage, then preserve mobile amount feedback, expand mobile mark hit areas from renderer-owned scene bounds, set readable shared axis colors, make the modal boundary cover the viewport, and include own-property-safe annotation text in the ordered summary. Do not change financial semantics or add a second renderer."
+    - "T108-DEF007: independent engineering review reproduced export and state defects plus two gate defects: image exports omitted the chart title, SVG label policy diverged from screen, immediate PNG export could read a stale canvas, annotation save remounted the focused control, controlled/imported ViewSpec could retain an invalid selection, the performance gate ended at a revision attribute instead of a painted frame, and the React matrix did not terminate the full preview process group. Add focused RED coverage and limit fixes to deterministic shared-spec export, render synchronization, focus/selection reconciliation, painted-canvas timing and process cleanup; preserve the public API and SourceData."
+    - "T108-DEF008: the final isolated painted-frame RED showed that a chart-drag release can commit canonical state after live preview has already painted the same target, so a post-release canvas hash is not a reliable commit-to-visible signal; a full-canvas checksum also perturbed the frame cadence it was measuring, and the temporary test asserted a per-sample maximum stricter than the confirmed nearest-rank p95 contract. Keep the pointer-feedback/zero-React-commit probe, but measure 30 alternating keyboard reorder commands with no live preview against the renderer pixels spanning the affected bars and evaluate only the confirmed nearest-rank p95 <=150ms gate. Do not change product rendering, the threshold, the 200-item fixture or the sample count."
+    - "T108-DEF009: the fresh combined Playwright command reproduced an isolated-performance p95 of 397.5ms after 36 Chromium scenarios, while the same canonical performance project passed at 74.1ms in its dedicated production-preview process. Preserve the T106-CR001 isolation contract by making test:e2e run only the three non-performance browser projects and running test:performance as its own CI step before that matrix; do not skip either gate or change the performance threshold."
+    - "T108-DEF010: the exact isolated test:performance command subsequently reproduced a 348.6ms p95 on the no-preview keyboard path, proving the dense 200-item render is not robust to host load even with a low-overhead affected-bar pixel probe. Disable mark animation only above the existing 80-item dense-canvas threshold, where 202 simultaneous sub-pixel animations are not visually informative; retain normal 160ms motion for ordinary charts, reduced-motion semantics, the 200-item fixture, 30 samples and the 150ms threshold."
+    - "T108-DEF011: final engineering review found that the global CI retries setting also applied to chromium-performance, allowing a first-run p95 failure to be hidden by a later retry. Add a focused config-contract RED, set only the performance project to retries: 0, and preserve retries for functional browser projects."
+
+tdd_plan:
+  red:
+    - "Record that pnpm test:react-matrix fails because the script and isolated public-package consumer fixtures do not exist."
+    - "Record that pnpm test:browser-previous fails because the isolated Playwright 1.60.0 runner and fixture do not exist."
+    - "Record that Playwright 1.60.0 WebKit 26.4 is a previous release but not a previous major relative to current WebKit 26.5, so it cannot alone close WF-NFR-006."
+    - "Add a release visual test or equivalent assertions before any visual defect fix; existing rendering coverage alone is not screenshot evidence."
+    - "For every integration defect found by quickstart, browser, package or visual review, add a focused regression and confirm behavior RED before implementation."
+    - "DEF003-DEF007 focused REDs reproduced the absent annotation editor, missing screen/PNG/SVG annotation, five visual acceptance defects, export title/label/staleness defects, focus/selection defects, revision-only timing and leaked preview descendants."
+    - "DEF008 proved drag release and full-canvas hashing were invalid painted-update proxies. DEF009 reproduced combined-load p95 397.5ms. DEF010 reproduced isolated p95 348.6ms and a dense chart spec that still animated 202 marks. DEF011 proved the performance project inherited CI retries instead of failing on its first threshold breach."
+  green:
+    - "Pack @tellplot/editor and install it into temporary React 18.3 and React 19.2 hosts with exact peer versions. In a real browser, prove the public component reaches ready state with painted G2 output and unmounts cleanly."
+    - "Add CI that performs frozen install, static quality gates, coverage, build/package/matrix checks and Playwright browser validation with artifacts on failure."
+    - "Copy the complete root non-performance E2E tree into exact temporary Playwright hosts. Run 36 tests each on Playwright 1.60.0 Chromium 148, Firefox 150 and WebKit 26.4, plus Playwright 1.52.0 WebKit 18.4, for 144/144 without changing the workspace lockfile."
+    - "Run the accepted quickstart and all browser projects; capture desktop, compact and mobile final screenshots from the production build."
+    - "Route annotation, title and amount-label policy through the shared G2 spec; export PNG from the latest canonical projection; reconcile controlled selection and preserve annotation-field focus."
+    - "Measure 30 alternating no-preview keyboard commits through affected-bar Canvas pixels, isolate the zero-retry performance project from non-performance E2E, and disable mark animation only above the existing 80-item dense threshold. The final raw p95 is 77.20000004768372ms with zero same-target React commits."
+  refactor:
+    - "Keep matrix orchestration version-driven and temporary across independently locked hosts, enforce the .nvmrc Node 22 runtime, verify versions through per-fixture child probes, copy E2E helpers recursively, install Linux browser dependencies through each fixture CLI, and terminate the complete preview process group."
+    - "Keep ordinary charts on the approved 160ms motion curve, retain reduced-motion semantics, use renderer-owned G2 bounds for expanded mobile hit areas, and preserve SourceData, public API, financial invariants and all confirmed thresholds."
+
+validation_loop:
+  commands:
+    - "pnpm install --frozen-lockfile"
+    - "pnpm format:check"
+    - "pnpm lint"
+    - "pnpm typecheck"
+    - "pnpm test:coverage"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "pnpm test:react-matrix"
+    - "pnpm test:browser-previous"
+    - "pnpm test:e2e"
+    - "pnpm test:a11y"
+    - "pnpm test:performance"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T108"
+  expected_signals:
+    - "React 18.3 and React 19.2 isolated hosts install the packed package, import its CSS/public API, render a painted ready chart and unmount without page errors."
+    - "Current Playwright 1.61.1 Chromium 149, Firefox 151 and WebKit 26.5; Playwright 1.60.0 Chromium 148, Firefox 150 and WebKit 26.4; and Playwright 1.52.0 WebKit 18.4 pass their configured E2E gates with actual runtime-version probes. The isolated current Chromium performance project passes p95 <=150ms with zero same-target React commits."
+    - "Axe reports no serious or critical violation in each configured browser."
+    - "Desktop 1440x900, compact 1024x768 and mobile 390x844 screenshots show nonblank charts, readable controls, no clipping, incoherent overlap or horizontal overflow."
+    - "Coverage thresholds, ESM/CJS/types/CSS consumers, build and whitespace gates all exit 0."
+  retry_budget: 3
+  failure_policy: "Fix only a reproduced T108 integration or test-infrastructure defect. Stop for a financial invariant change, accepted public contract change, new runtime dependency, unavailable required browser after three attempts, or unresolved Critical/High finding."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T108"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+    - "screenshots/desktop-final.png"
+    - "screenshots/compact-final.png"
+    - "screenshots/mobile-final.png"
+    - "screenshots/annotation-workflow.png"
+    - "quickstart-receipt.md"
+    - "performance-samples.json"
+  required_content:
+    - "T107 acceptance receipt, packet validation and RED/GREEN/REFACTOR trail."
+    - "Exact command, exit code, count, browser engine, React version, coverage and performance results."
+    - "Quickstart walkthrough and screenshot inspection at all three target viewports."
+    - "Changed files, diff summary, CI/package evidence, independent reviews and residual risks."
+
+review_contract:
+  spec_compliance:
+    - "Map every WF-SC and WF-NFR acceptance condition to direct evidence without relying on claims from earlier tasks."
+    - "Confirm the quickstart uses public editor workflows and all accepted recursive, export and accessibility contracts remain intact."
+  engineering_quality:
+    - "Review isolated consumer integrity, exact peer versions, process cleanup, deterministic ports/temp cleanup, CI reproducibility, strict typing and absence of weakened gates."
+    - "Review full diff for scope drift and confirm no accepted implementation source changed without a RED regression and recorded fix scope."
+  visual_quality:
+    - "Inspect original desktop, compact and mobile screenshots for nonblank G2 output, hierarchy, readable labels, stable control dimensions, focus affordances, overflow and overlap."
+    - "The operational editor remains dense, restrained and task-focused rather than becoming a decorative landing surface."
+  qa_acceptance:
+    - "Independent spec, engineering and visual/QA reviews have no unresolved Critical or High finding; all Medium findings are fixed or explicitly accepted by the user."
+    - "T108 enters Needs_Review and waits for explicit user acceptance."
+
+stop_conditions:
+  - "A full validation exposes loss, duplication or mutation of a financial contribution or SourceData."
+  - "React 18.3 or React 19.2 requires changing the approved public API or bundling React/G2 into the editor package."
+  - "Firefox or WebKit cannot be installed or launched after the retry budget."
+  - "A required GREEN can only be achieved by weakening assertions, accessibility or performance gates."
+  - "A Critical or High spec, engineering, package, browser or visual finding remains unresolved."
+
+handoff:
+  task_status: "Accepted"
+  acceptance_receipt: "User explicitly accepted T108 on 2026-07-18."
+  next_gate: "T101-T108 are complete; any release, publish or remote delivery action requires separate authorization."
+  remote_actions: "No commit, push, PR, merge, publish or deployment is authorized."

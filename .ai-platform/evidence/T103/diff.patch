@@ -1,0 +1,3956 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index f222989..732a626 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -9,11 +9,11 @@
+
+ ## Current State
+
+-仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链与 T102 领域模型/验证器已经验收；命令、投影、图表和交互行为仍未验收，因此当前不存在可发布产品制品。
++仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器与 T103 命令执行器/历史已经验收；投影、图表、交互、持久化和导出仍未完成，因此当前不存在可发布产品制品。
+
+ ## Release Scope
+
+-当前没有 release scope。产品设计和技术决策通过审批后，才定义首个可运行里程碑、版本号、验收证据和发布边界。
++首个 release scope 是已批准的瀑布图端到端基础切片 T101-T108。只有领域、投影、React/G2、交互、持久化、导出、可访问性、包质量和真实浏览器证据全部通过后，才形成 release candidate。
+
+ ## Validation Evidence
+
+@@ -22,14 +22,17 @@
+ - `git diff --check` 无空白错误。
+ - AI Delivery Governor artifact validator 用于检查核心文档和任务字段。
+ - T101 package 通过 ESM/CJS import、format-matched declarations、publint 与 Are The Types Wrong 检查。
++- T102 domain model/validator 通过 97 tests 与四项 95% coverage 门槛。
++- T103 command/session/history 通过 140 tests、四项 95% aggregate coverage、独立 review、ESM/CJS/types/package 检查。
+
+ ## Known Blockers
+
+-- 第一阶段交付形态未确认。
+-- 演示文稿导出边界未确认。
+-- AI 数据边界未确认。
+-- 产品名称未确认。
++- T104 瀑布累计、subtotal 与 end anchor 投影尚未验收。
++- T105 React 工作台与真实 G2 渲染尚未验收。
++- T106 排序、分组、折叠与键盘交互尚未验收。
++- T107 持久化、SVG/PNG 导出与可访问性闭环尚未验收。
++- T108 集成、性能、三浏览器、React 版本矩阵和视觉证据尚未完成。
+
+ ## Release Decision
+
+-结论：不可发布。当前阶段只接受产品与技术方向评审，不接受实现完成或可发布声明。
++结论：不可发布。T101-T103 是已验收的领域基础，不构成用户可操作或可发布产品。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+index bee86d2..d36439a 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+@@ -8,7 +8,7 @@
+
+ ## Verdict
+
+-没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T102 已验收，T103 等待执行。
++没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T103 已验收，T104 按任务图进入下一执行节点。
+
+ ## Requirement Coverage
+
+@@ -71,4 +71,4 @@ Disposition: spec 的 Non-Goals 与 research 风险已经把本切片限制为
+ - Constitution: Confirmed。
+ - Feature spec/plan/TDR/tasks: Confirmed。
+ - Checklist: Completed。
+-- Execute: T101-T102 Accepted；T103-T108 保持 Draft。T102-T104 由 Codex 独立 review 并验收，T105 进入 Needs_Review 后请求用户可视化验收。
++- Execute: T101-T103 Accepted；T104-T108 保持 Draft。T102-T104 由 Codex 独立 review 并验收，T105 进入 Needs_Review 后请求用户可视化验收。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
+index 2e97b17..c5aa65b 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
+@@ -2,7 +2,7 @@
+
+ ## Metadata
+
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+ - Schema family: `g2touch.command.v1`
+
+@@ -21,6 +21,10 @@ interface CommandEnvelope<TType extends string, TPayload> {
+
+ Command ID 在一个 session 日志中必须唯一。重复 ID 返回已记录结果或明确拒绝，不能执行两次。
+
++本合同覆盖瀑布图切片的单项移动、单层分组、折叠、固定和注释命令。`moveGroup` 与 `setSort` 属于分类图切片或后续已批准任务，不在 T103 中实现；`undo` 与 `redo` 是 session action，不属于可重放的 `EditorCommand`。
++
++运行时 command 使用 closed schema：envelope、payload 与嵌套 target 拒绝未知字段、symbol key、accessor property 和非普通对象。无法安全反射的输入返回不含原始异常文本的 `INVALID_COMMAND`。
++
+ ## Move Item
+
+ ```typescript
+@@ -54,9 +58,11 @@ type CreateGroupCommand = CommandEnvelope<
+ >;
+ ```
+
+-- item 必须在同一容器连续排列。
++- item 必须是 `rootOrder` 中连续排列的 direct-root contribution；当前单层 group 模型不在 group 内创建嵌套 group。
+ - 至少两个未固定 contribution。
+ - group ID 不得与 source 或现有 group ID 冲突。
++- `itemIds` 是选择集合；children 按当前 `rootOrder` 顺序保存。
++- label 去除首尾空白后必须非空，保存时保留调用方原文本。
+
+ ## Ungroup
+
+@@ -67,7 +73,7 @@ type UngroupCommand = CommandEnvelope<
+ >;
+ ```
+
+-group children 在 group 所在位置按内部顺序恢复；annotation 迁移规则由命令结果 event 明确记录。
++group children 在 group 所在位置按内部顺序恢复。group 自身的 annotation、emphasis 和 collapsed reference 被删除，不复制到 children。包含 pinned child 的 group 必须先 unpin 才能 ungroup。
+
+ ## Collapse And Expand
+
+@@ -115,13 +121,23 @@ type SetAnnotationCommand = CommandEnvelope<
+
+ trim 后空字符串规范化为 null。第一阶段最大长度 500 Unicode code points，不解释 HTML 或 Markdown。
+
++start、end、subtotal 与 contribution、group 都可作为 annotation node。非空文本保存原值，不执行 trim 改写。
++
++## Move And Group Semantics
++
++- `moveItem` 的 target index 按从来源容器移除 item 后的目标容器计算，范围是 `0..destination.length`。
++- root 与 group 之间可以移动 contribution，但不得跨 subtotal segment。
++- 从 group 移出 item 后若来源 group 少于两个 children，命令以 `INVALID_DROP_TARGET` 拒绝，不自动解组。
++- 对当前结构没有影响的 move 返回成功 no-op。
++- collapse、expand、pin、unpin 和 setAnnotation 重复设置相同规范化状态时返回成功 no-op。
++
+ ## Result Event
+
+ ```typescript
+ interface CommandEvent {
+   readonly commandId: string;
+-  readonly type: EditorCommand['type'];
+-  readonly source: EditorCommand['source'];
++  readonly type: EditorCommand['type'] | 'undo' | 'redo';
++  readonly source: CommandSource;
+   readonly previousRevision: number;
+   readonly nextRevision: number;
+   readonly affectedNodeIds: readonly ViewNodeId[];
+@@ -131,6 +147,59 @@ interface CommandEvent {
+
+ 事件不包含 amount、label、annotation text 或 sourceRef。宿主如需数据可用 node ID 在自身权限边界内查询。
+
++## Session Actions And Results
++
++```typescript
++interface SessionActionMeta {
++  readonly id: string;
++  readonly source: CommandSource;
++  readonly baseRevision: number;
++}
++
++type CommandResult =
++  | {
++      readonly ok: true;
++      readonly session: EditorSession;
++      readonly viewSpec: ViewSpec;
++      readonly event: CommandEvent;
++    }
++  | {
++      readonly ok: false;
++      readonly session: EditorSession;
++      readonly error: CommandError;
++    };
++```
++
++- `executeCommand`、`undoSession` 与 `redoSession` 都返回新的 session result；失败时返回的 `session` 与输入 session identity 相同。
++- accepted state-changing action 与 accepted no-op 都记录 action ID；所有已接受 ID 的重复使用统一以 `DUPLICATE_COMMAND_ID` 拒绝，不回放旧结果。被拒绝的 ID 不占用。
++- duplicate 检查先于 base revision 检查。
++- state-changing success 使 revision 增加 1、写入 bounded history 并清空 redo branch。
++- no-op 保持 ViewSpec、revision、undoStack 与 redoStack identity，只追加 processed ID；no-op 不清空 redo branch。
++- undo/redo 恢复 snapshot 内容，但 revision 使用当前 revision + 1。空栈以 `HISTORY_EMPTY` 拒绝。
++- revision 已为 `Number.MAX_SAFE_INTEGER` 时，任何 state-changing action 以 `REVISION_OVERFLOW` 拒绝。
++- historyLimit 默认 100，必须是非负 safe integer；0 表示允许编辑但不保存 undo history。
++
++## Error Contract
++
++命令错误码至少包括：
++
++- `INVALID_COMMAND`
++- `DUPLICATE_COMMAND_ID`
++- `REVISION_CONFLICT`
++- `REVISION_OVERFLOW`
++- `ITEM_NOT_FOUND`
++- `GROUP_NOT_FOUND`
++- `NODE_NOT_FOUND`
++- `ITEM_LOCKED`
++- `INVALID_DROP_TARGET`
++- `NON_CONTIGUOUS_GROUP_SELECTION`
++- `GROUP_TOO_SMALL`
++- `GROUP_ID_CONFLICT`
++- `HISTORY_EMPTY`
++- `INVARIANT_VIOLATION`
++
++error path 使用 JSON Pointer。revision conflict details 只含 expected/actual revision；长度、索引和 lock details 只含结构化数字或枚举。错误 message/details 不包含 amount、label、annotation text、sourceRef、metadata value 或调用方异常文本。
++
+ ## Execution Guarantees
+
+ 1. 检查 envelope 和 base revision。
+@@ -139,4 +208,6 @@ interface CommandEvent {
+ 4. 验证来源守恒、顺序唯一、group aggregation 和 anchor 边界。
+ 5. 成功时 commit revision；失败时返回结构化 error。
+
++每个 state-changing command 只通过一次 validate-apply-validate-commit pipeline 提交。SourceData reference 在所有成功、no-op、undo 与 redo 结果中保持不变。
++
+ AI 在 Phase 1B 只能产生同一 schema 的候选命令，不拥有额外命令类型或绕过 base revision。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+index 1bc028a..fe1dd0c 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+@@ -2,7 +2,7 @@
+
+ ## Metadata
+
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+ - Package: `@g2touch/editor`
+
+@@ -31,6 +31,13 @@
+ function validateSourceData(input: unknown): ValidationResult<SourceData>;
+ function validateViewSpec(input: unknown, sourceData: SourceData): ValidationResult<ViewSpec>;
+ function createInitialViewSpec(sourceData: SourceData): ValidationResult<ViewSpec>;
++function createEditorSession(
++  sourceData: SourceData,
++  options?: EditorSessionOptions,
++): ValidationResult<EditorSession>;
++function executeCommand(session: EditorSession, command: EditorCommand): CommandResult;
++function undoSession(session: EditorSession, action: SessionActionMeta): CommandResult;
++function redoSession(session: EditorSession, action: SessionActionMeta): CommandResult;
+ ```
+
+ - validator 返回累积式结构化 issue，不为预期输入错误抛异常。
+@@ -39,6 +46,9 @@ function createInitialViewSpec(sourceData: SourceData): ValidationResult<ViewSpe
+ - issue 的 message/details 不包含 amount、label、sourceRef 或 metadata value。
+ - schema objects 拒绝未知字段、symbol key、accessor property、稀疏数组和数组附加属性；validator 不执行调用方 getter。
+ - hostile Proxy 等无法安全反射的输入返回通用 `UNREADABLE_INPUT`，不传播原始异常文本。
++- `EditorSessionOptions` 支持 `viewSpec` 与 `historyLimit`；historyLimit 默认 100，0 表示禁用历史，非法值返回 `INVALID_SESSION_OPTIONS` validation issue。
++- session factory 验证 source 与可选 view，保留 source identity，并生成确定性、非加密的 `fnv1a64:` source fingerprint；fingerprint 不包含可还原的原始字段值。
++- command/session action 结果遵循 command contract；预期输入错误不抛异常，失败保持输入 session identity。
+
+ ## Component Contract
+
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md b/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
+index e711079..1293c68 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
+@@ -2,7 +2,7 @@
+
+ ## Metadata
+
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+ - Schema version: `1.0.0`
+
+@@ -107,11 +107,13 @@ type EditorCommand =
+ type CommandResult =
+   | {
+       readonly ok: true;
++      readonly session: EditorSession;
+       readonly viewSpec: ViewSpec;
+       readonly event: CommandEvent;
+     }
+   | {
+       readonly ok: false;
++      readonly session: EditorSession;
+       readonly error: CommandError;
+     };
+ ```
+@@ -120,13 +122,20 @@ Error codes:
+
+ - `INVALID_SOURCE_DATA`
+ - `INVALID_VIEW_SPEC`
++- `INVALID_SESSION_OPTIONS`
++- `INVALID_COMMAND`
++- `DUPLICATE_COMMAND_ID`
+ - `REVISION_CONFLICT`
++- `REVISION_OVERFLOW`
+ - `ITEM_NOT_FOUND`
+ - `GROUP_NOT_FOUND`
++- `NODE_NOT_FOUND`
+ - `ITEM_LOCKED`
+ - `INVALID_DROP_TARGET`
+ - `NON_CONTIGUOUS_GROUP_SELECTION`
+ - `GROUP_TOO_SMALL`
++- `GROUP_ID_CONFLICT`
++- `HISTORY_EMPTY`
+ - `INVARIANT_VIOLATION`
+ - `UNSUPPORTED_SCHEMA_VERSION`
+ - `SOURCE_CONFLICT`
+@@ -151,10 +160,13 @@ interface EditorSession {
+   readonly undoStack: readonly HistoryEntry[];
+   readonly redoStack: readonly HistoryEntry[];
+   readonly historyLimit: number;
++  readonly processedActionIds: readonly string[];
+ }
+ ```
+
+-History entry 保存规范化 ViewSpec snapshot 与 command metadata。默认最多 100 条；超限从最旧条目淘汰。sourceData 不重复存入每个 entry。
++History entry 保存 before/after ViewSpec snapshot、command type/source/id、affected node IDs。默认最多 100 条；超限从最旧条目淘汰。sourceData 不重复存入每个 entry。historyLimit 必须是非负 safe integer，0 表示编辑仍提交但不保留 undo history。
++
++accepted state-changing command、accepted no-op、undo 与 redo 的 ID 都进入 `processedActionIds`。重复 ID 明确拒绝；rejected attempt 不记录 ID。no-op 只更新 processed IDs，保持 ViewSpec 与两个 history stack identity。source fingerprint 使用稳定 canonical source 表示的 64-bit FNV-1a 十六进制摘要，前缀为 `fnv1a64:`；该 fingerprint 用于一致性识别，不作为安全哈希。
+
+ ## WaterfallProjection
+
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+index 861e2c0..9e55ec6 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+@@ -54,7 +54,7 @@
+
+ ## T103 - 实现命令执行器与历史
+
+-- Status: Draft
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: T102
+ - Blocks: T104、T106、T107
+@@ -62,8 +62,8 @@
+ - Parallel: 否
+ - Conflicts with: T102、T104、T106；共享 command/session contracts
+ - Goal: 用单一纯函数路径实现类型化命令、原子校验、revision、undo/redo 和非敏感事件。
+-- Allowed files: `packages/editor/src/domain/commands.ts`、`packages/editor/src/domain/session.ts`、`packages/editor/src/domain/executeCommand.ts`、`packages/editor/src/domain/history.ts`、`packages/editor/src/domain/invariants.ts`、`packages/editor/src/domain/errors.ts`、`packages/editor/src/index.ts`、`packages/editor/tests/domain/commands.test.ts`、`packages/editor/tests/domain/history.test.ts`、`packages/editor/tests/domain/invariants.test.ts`、`packages/editor/tests/domain/property-sequences.test.ts`
+-- Test targets: `packages/editor/tests/domain/commands.test.ts`、`packages/editor/tests/domain/history.test.ts`、`packages/editor/tests/domain/invariants.test.ts`、`packages/editor/tests/domain/property-sequences.test.ts`
++- Allowed files: `packages/editor/src/domain/commands.ts`、`packages/editor/src/domain/session.ts`、`packages/editor/src/domain/executeCommand.ts`、`packages/editor/src/domain/history.ts`、`packages/editor/src/domain/invariants.ts`、`packages/editor/src/domain/errors.ts`、`packages/editor/src/index.ts`、`packages/editor/tests/domain/commands.test.ts`、`packages/editor/tests/domain/history.test.ts`、`packages/editor/tests/domain/invariants.test.ts`、`packages/editor/tests/domain/property-sequences.test.ts`、`packages/editor/tests/fixtures/commandSourceData.ts`、`packages/editor/tests/package/**`
++- Test targets: `packages/editor/tests/domain/commands.test.ts`、`packages/editor/tests/domain/history.test.ts`、`packages/editor/tests/domain/invariants.test.ts`、`packages/editor/tests/domain/property-sequences.test.ts`、既有 package public API consumer tests
+ - Deliverables: command union、session factory、executor、undo/redo、invariant checks、command events。
+ - Acceptance criteria: 所有命令成功、拒绝、no-op、revision conflict 和 history branch 行为满足合同；随机合法序列保持来源与金额守恒。
+ - Definition of Done: 每种命令有 RED/GREEN 证据；失败命令 state identity 不变；coverage 门槛通过。
+@@ -71,6 +71,7 @@
+ - TDD plan: RED：按 move、group、collapse、pin、annotation、history 顺序增加失败测试；GREEN：逐个实现 command handler；REFACTOR：抽取共享 immutable update 与 invariant pipeline。
+ - Packet path: `.ai-platform/specs/001-waterfall-editor-foundation/packets/T103.yaml`
+ - Evidence required: 按命令分类的 RED/GREEN 输出、property sequence seed/result、coverage、changed files、diff summary、residual risk。
++- Acceptance authority: 用户授权 Codex 对 T102-T104 执行独立 review 并验收；T103 已完成 fresh 独立 review，无 Critical、High 或 Medium finding。
+
+ ## T104 - 实现瀑布投影
+
+diff --git a/packages/editor/src/domain/errors.ts b/packages/editor/src/domain/errors.ts
+index d74a175..15f32ff 100644
+--- a/packages/editor/src/domain/errors.ts
++++ b/packages/editor/src/domain/errors.ts
+@@ -1,5 +1,9 @@
+ export type ValidationErrorCode =
+-  'INVALID_SOURCE_DATA' | 'INVALID_VIEW_SPEC' | 'UNSUPPORTED_SCHEMA_VERSION' | 'SOURCE_CONFLICT';
++  | 'INVALID_SOURCE_DATA'
++  | 'INVALID_VIEW_SPEC'
++  | 'INVALID_SESSION_OPTIONS'
++  | 'UNSUPPORTED_SCHEMA_VERSION'
++  | 'SOURCE_CONFLICT';
+
+ export type ValidationIssueReason =
+   | 'EXPECTED_OBJECT'
+@@ -19,6 +23,7 @@ export type ValidationIssueReason =
+   | 'DATASET_ID_MISMATCH'
+   | 'INVALID_CHART_TYPE'
+   | 'INVALID_REVISION'
++  | 'INVALID_HISTORY_LIMIT'
+   | 'UNKNOWN_SOURCE_REFERENCE'
+   | 'MISSING_SOURCE_REFERENCE'
+   | 'DUPLICATE_VIEW_NODE'
+@@ -78,6 +83,7 @@ const ISSUE_MESSAGES: Readonly<Record<ValidationIssueReason, string>> = {
+   DATASET_ID_MISMATCH: 'View and source datasets do not match.',
+   INVALID_CHART_TYPE: 'Chart type is not supported.',
+   INVALID_REVISION: 'Revision must be a non-negative safe integer.',
++  INVALID_HISTORY_LIMIT: 'History limit must be a non-negative safe integer.',
+   UNKNOWN_SOURCE_REFERENCE: 'View references an unknown source item.',
+   MISSING_SOURCE_REFERENCE: 'View does not cover every contribution.',
+   DUPLICATE_VIEW_NODE: 'View node appears more than once.',
+@@ -125,3 +131,102 @@ export function validationFailure<TValue>(
+ ): ValidationResult<TValue> {
+   return { ok: false, errors };
+ }
++
++export type CommandErrorCode =
++  | 'INVALID_COMMAND'
++  | 'DUPLICATE_COMMAND_ID'
++  | 'REVISION_CONFLICT'
++  | 'REVISION_OVERFLOW'
++  | 'ITEM_NOT_FOUND'
++  | 'GROUP_NOT_FOUND'
++  | 'NODE_NOT_FOUND'
++  | 'ITEM_LOCKED'
++  | 'INVALID_DROP_TARGET'
++  | 'NON_CONTIGUOUS_GROUP_SELECTION'
++  | 'GROUP_TOO_SMALL'
++  | 'GROUP_ID_CONFLICT'
++  | 'HISTORY_EMPTY'
++  | 'INVARIANT_VIOLATION';
++
++export type CommandErrorReason =
++  | 'EXPECTED_OBJECT'
++  | 'INVALID_TYPE'
++  | 'NON_PLAIN_DATA'
++  | 'UNKNOWN_FIELD'
++  | 'UNREADABLE_INPUT'
++  | 'UNSUPPORTED_SCHEMA_VERSION'
++  | 'EMPTY_ID'
++  | 'EMPTY_LABEL'
++  | 'DUPLICATE_ITEM_ID'
++  | 'ANNOTATION_TOO_LONG'
++  | 'DUPLICATE_COMMAND_ID'
++  | 'REVISION_CONFLICT'
++  | 'REVISION_OVERFLOW'
++  | 'ITEM_NOT_FOUND'
++  | 'GROUP_NOT_FOUND'
++  | 'NODE_NOT_FOUND'
++  | 'SYSTEM_ANCHOR'
++  | 'PINNED_ITEM'
++  | 'INVALID_INDEX'
++  | 'CROSS_SEGMENT'
++  | 'GROUP_WOULD_BE_TOO_SMALL'
++  | 'NON_CONTIGUOUS_SELECTION'
++  | 'GROUP_TOO_SMALL'
++  | 'GROUP_ID_CONFLICT'
++  | 'HISTORY_EMPTY'
++  | 'INVALID_SESSION_STATE';
++
++export interface CommandError {
++  readonly code: CommandErrorCode;
++  readonly reason: CommandErrorReason;
++  readonly message: string;
++  readonly path: string;
++  readonly commandId: string | null;
++  readonly details: Readonly<Record<string, string | number | boolean | null>>;
++}
++
++const COMMAND_ERROR_MESSAGES: Readonly<Record<CommandErrorReason, string>> = {
++  EXPECTED_OBJECT: 'Expected a plain command object.',
++  INVALID_TYPE: 'Command field has an invalid type.',
++  NON_PLAIN_DATA: 'Command must use enumerable data properties only.',
++  UNKNOWN_FIELD: 'Command field is not part of the current schema.',
++  UNREADABLE_INPUT: 'Command cannot be inspected safely.',
++  UNSUPPORTED_SCHEMA_VERSION: 'Command schema version is not supported.',
++  EMPTY_ID: 'Command identifier must not be empty.',
++  EMPTY_LABEL: 'Group label must not be empty.',
++  DUPLICATE_ITEM_ID: 'Group selection contains a duplicate item.',
++  ANNOTATION_TOO_LONG: 'Annotation exceeds the supported length.',
++  DUPLICATE_COMMAND_ID: 'Action identifier has already been accepted.',
++  REVISION_CONFLICT: 'Command revision does not match the current view.',
++  REVISION_OVERFLOW: 'View revision cannot be incremented safely.',
++  ITEM_NOT_FOUND: 'Source item does not exist.',
++  GROUP_NOT_FOUND: 'View group does not exist.',
++  NODE_NOT_FOUND: 'View node does not exist.',
++  SYSTEM_ANCHOR: 'System anchors cannot be edited by this command.',
++  PINNED_ITEM: 'Pinned items cannot be moved by this command.',
++  INVALID_INDEX: 'Target index is outside the destination container.',
++  CROSS_SEGMENT: 'Items cannot move or group across subtotal segments.',
++  GROUP_WOULD_BE_TOO_SMALL: 'Move would leave a group with fewer than two items.',
++  NON_CONTIGUOUS_SELECTION: 'Group selection must be contiguous in root order.',
++  GROUP_TOO_SMALL: 'A group requires at least two contribution items.',
++  GROUP_ID_CONFLICT: 'Group identifier conflicts with an existing identifier.',
++  HISTORY_EMPTY: 'Requested history direction has no entry.',
++  INVALID_SESSION_STATE: 'Editor session violates a domain invariant.',
++};
++
++export function commandError(
++  code: CommandErrorCode,
++  reason: CommandErrorReason,
++  path: string,
++  commandId: string | null,
++  details: Readonly<Record<string, string | number | boolean | null>> = {},
++): CommandError {
++  return {
++    code,
++    reason,
++    message: COMMAND_ERROR_MESSAGES[reason],
++    path,
++    commandId,
++    details,
++  };
++}
+diff --git a/packages/editor/src/index.ts b/packages/editor/src/index.ts
+index 4096bee..22c1e2b 100644
+--- a/packages/editor/src/index.ts
++++ b/packages/editor/src/index.ts
+@@ -1,13 +1,36 @@
++export { createEditorSession } from './domain/session';
+ export { createInitialViewSpec } from './domain/createInitialViewSpec';
++export { executeCommand } from './domain/executeCommand';
++export { redoSession, undoSession } from './domain/history';
+ export { validateSourceData, validateViewSpec } from './domain/validation';
+
++export type {
++  CollapseGroupCommand,
++  CommandEnvelope,
++  CommandSource,
++  CreateGroupCommand,
++  EditorCommand,
++  EditorCommandType,
++  ExpandGroupCommand,
++  MoveItemCommand,
++  PinItemCommand,
++  SessionActionMeta,
++  SetAnnotationCommand,
++  UngroupCommand,
++  UnpinItemCommand,
++} from './domain/commands';
+ export type { DatasetId, GroupId, SourceItemId, ViewNodeId } from './domain/ids';
+ export type {
++  CommandError,
++  CommandErrorCode,
++  CommandErrorReason,
+   ValidationErrorCode,
+   ValidationIssue,
+   ValidationIssueReason,
+   ValidationResult,
+ } from './domain/errors';
++export type { CommandEvent, CommandResult } from './domain/executeCommand';
++export type { HistoryAction, HistoryEntry } from './domain/history';
+ export type {
+   Annotation,
+   Emphasis,
+@@ -19,3 +42,4 @@ export type {
+   ViewGroup,
+   ViewSpec,
+ } from './domain/model';
++export type { EditorSession, EditorSessionOptions } from './domain/session';
+diff --git a/packages/editor/tests/package/import-cjs.cjs b/packages/editor/tests/package/import-cjs.cjs
+index 826dc96..b0a218c 100644
+--- a/packages/editor/tests/package/import-cjs.cjs
++++ b/packages/editor/tests/package/import-cjs.cjs
+@@ -1,7 +1,15 @@
+ const editor = require('../../dist/index.cjs');
+
+-const expected = ['createInitialViewSpec', 'validateSourceData', 'validateViewSpec'];
++const expected = [
++  'createEditorSession',
++  'createInitialViewSpec',
++  'executeCommand',
++  'redoSession',
++  'undoSession',
++  'validateSourceData',
++  'validateViewSpec',
++];
+
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('CJS runtime API does not match the approved T102 surface');
++  throw new Error('CJS runtime API does not match the approved T103 surface');
+ }
+diff --git a/packages/editor/tests/package/import-esm.mjs b/packages/editor/tests/package/import-esm.mjs
+index 1f28e46..eb8dbd6 100644
+--- a/packages/editor/tests/package/import-esm.mjs
++++ b/packages/editor/tests/package/import-esm.mjs
+@@ -1,7 +1,15 @@
+ const editor = await import('../../dist/index.js');
+
+-const expected = ['createInitialViewSpec', 'validateSourceData', 'validateViewSpec'];
++const expected = [
++  'createEditorSession',
++  'createInitialViewSpec',
++  'executeCommand',
++  'redoSession',
++  'undoSession',
++  'validateSourceData',
++  'validateViewSpec',
++];
+
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('ESM runtime API does not match the approved T102 surface');
++  throw new Error('ESM runtime API does not match the approved T103 surface');
+ }
+diff --git a/packages/editor/tests/package/public-api.test.ts b/packages/editor/tests/package/public-api.test.ts
+index 6a6e50d..b942ab9 100644
+--- a/packages/editor/tests/package/public-api.test.ts
++++ b/packages/editor/tests/package/public-api.test.ts
+@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest';
+ import * as editor from '../../src/index';
+
+ describe('@g2touch/editor public entry', () => {
+-  it('exposes only the approved T102 runtime API', () => {
++  it('exposes only the approved T103 runtime API', () => {
+     expect(Object.keys(editor).sort()).toEqual([
++      'createEditorSession',
+       'createInitialViewSpec',
++      'executeCommand',
++      'redoSession',
++      'undoSession',
+       'validateSourceData',
+       'validateViewSpec',
+     ]);
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index f8b7f15..596cbc3 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -1,5 +1,13 @@
+ import {
++  createEditorSession,
+   createInitialViewSpec,
++  executeCommand,
++  redoSession,
++  undoSession,
++  type CommandResult,
++  type EditorCommand,
++  type EditorSession,
++  type SessionActionMeta,
+   validateSourceData,
+   validateViewSpec,
+   type SourceData,
+@@ -9,7 +17,17 @@ import {
+
+ declare const source: SourceData;
+ declare const view: ViewSpec;
++declare const session: EditorSession;
++declare const command: EditorCommand;
++declare const historyAction: SessionActionMeta;
+
+ export const sourceValidation: ValidationResult<SourceData> = validateSourceData(source);
+ export const viewValidation: ValidationResult<ViewSpec> = validateViewSpec(view, source);
+ export const initialView: ValidationResult<ViewSpec> = createInitialViewSpec(source);
++export const editorSession: ValidationResult<EditorSession> = createEditorSession(source, {
++  viewSpec: view,
++  historyLimit: 100,
++});
++export const commandResult: CommandResult = executeCommand(session, command);
++export const undoResult: CommandResult = undoSession(session, historyAction);
++export const redoResult: CommandResult = redoSession(session, historyAction);
+diff --git a/.ai-platform/evidence/T103/summary.md b/.ai-platform/evidence/T103/summary.md
+new file mode 100644
+index 0000000..0ee3833
+--- /dev/null
++++ b/.ai-platform/evidence/T103/summary.md
+@@ -0,0 +1,70 @@
++# T103 Evidence Summary
++
++## Metadata
++
++- Task: T103 - 实现命令执行器与历史
++- Attempt: T103-A001
++- Status: Accepted
++- Branch: `codex/reset`
++- Date: 2026-07-15
++- Execution: Codex direct TDD execution with bounded subtask implementation and independent read-only review
++
++## Scope Result
++
++实现无 React/G2/DOM 依赖的 command union、closed-schema runtime parser、editor session factory、单一 immutable executor、bounded snapshot history、undo/redo、revision、duplicate action ID、privacy-safe event/error 和 commit invariant gate。公共运行时入口新增 `createEditorSession`、`executeCommand`、`undoSession` 与 `redoSession`。
++
++## Locked Semantics
++
++- duplicate accepted action ID 在 revision 前拒绝；rejected ID 可复用。
++- state-changing success 只增加一次 revision、写 undo、清 redo；no-op 不增加 revision、不进 undo、不清 redo，但记录 ID。
++- undo/redo 恢复 snapshot 内容，revision 使用 current + 1；空栈结构化拒绝。
++- historyLimit 默认 100，允许 0 禁用 snapshot；SourceData 不进入 history entry。
++- createGroup 只接受 direct-root、连续、同 subtotal segment、未 pinned contribution；当前模型保持单层 group。
++- 从二成员 group 移出 item 会被拒绝；含 pinned child 的 group 必须先 unpin 才能 ungroup。
++- runtime parser 不执行 getter，拒绝 accessor、symbol、unknown field、sparse/附加属性数组与 hostile Proxy。
++- event/error 只含 ID、revision、路径、枚举和结构数字，不含 amount、label、annotation text、sourceRef 或调用方异常文本。
++
++## TDD Evidence
++
++RED:
++
++- 完整 T103 tests 先于实现落盘，初次运行 exit 1：30 tests failed，缺少 session/command/history runtime API 与 invariant module。
++- 独立 review 发现 stale revision 与 tampered session 组合的错误优先级不符合合同；新增回归测试后 exit 1，实际返回 `INVARIANT_VIOLATION` 而非 `REVISION_CONFLICT`。
++
++GREEN:
++
++- 实现 8 类 command 及 session action parser、纯函数 command handlers、post-apply invariant gate 和 deep snapshot history。
++- 修复 review finding，使 envelope -> duplicate ID -> base revision -> session invariant -> command precondition 顺序稳定。
++- 增加 prototype-like ID 回归，`constructor`、`toString` 与 `__proto__` 通过 own-property lookup 正确处理。
++- 32 个固定 seed、每 seed 160 步的 deterministic sequence 重放保持 source identity、coverage、revision 单调性和合法 ViewSpec。
++
++## Changed Files
++
++- `packages/editor/src/domain/{commands,session,executeCommand,history,invariants,errors}.ts`
++- `packages/editor/src/index.ts`
++- `packages/editor/tests/domain/{commands,history,invariants,property-sequences}.test.ts`
++- `packages/editor/tests/fixtures/commandSourceData.ts`
++- `packages/editor/tests/package/**` public runtime/type consumers
++- T103 packet、command/data/API contracts、task/analysis/release state 与 T103 evidence
++
++## Scope Confirmation
++
++- 未实现 waterfall projection、React、G2、DOM、persistence、export 或 interaction。
++- 未新增 runtime 或 test dependency。
++- 未执行 commit、push、PR、merge、publish 或其他远端写操作。
++
++## Review Finding Resolved
++
++- Medium: executor 在 base revision 前验证 tampered session，违反 command execution order。新增 stale + tampered RED 后，将 revision conflict check 移到 session invariant 前；duplicate ID 仍保持更高优先级。
++
++## Residual Risk
++
++- `processedActionIds` 为 plain-data array，会随长 session 增长并使用线性 duplicate lookup；当前阶段优先满足 JSON-compatible session 与永久 ID 唯一性，后续可在不改变公开语义的前提下增加内部索引或 session compaction。
++- 公共 readonly `EditorSession` 在纯 JavaScript 中仍可被主动伪造；executor 会复验 SourceData/ViewSpec，但不完整验证伪造的 history metadata 与 processed IDs。当前公开 factory 路径和所有合法 transition 均受测试保护，session hardening 可在 persistence 边界继续。
++- T103 只校验来源覆盖、分段和结构守恒；subtotal/end 金额累计与数值稳定性由 T104 单一 projection 实现。
++
++## Independent Review Verdict
++
++- 修复后无 Critical、High 或 Medium finding。
++- Fresh 140 tests、coverage、typecheck、lint、format、build、package、git diff check 全部通过。
++- 用户已授权 Codex 对 T102-T104 独立 review 并验收，T103 据此进入 Accepted。
+diff --git a/.ai-platform/evidence/T103/test-results.md b/.ai-platform/evidence/T103/test-results.md
+new file mode 100644
+index 0000000..8c72f5c
+--- /dev/null
++++ b/.ai-platform/evidence/T103/test-results.md
+@@ -0,0 +1,53 @@
++# T103 Test Results
++
++## RED
++
++| Command | Exit | Expected signal |
++| --- | ---: | --- |
++| T103 targeted unit command before implementation | 1 | 30 tests failed；`createEditorSession`、executor、history 与 invariants 尚不存在 |
++| review regression before fix | 1 | stale + tampered session 返回 `INVARIANT_VIOLATION /rootOrder`，复现错误优先级偏差 |
++
++## GREEN And Fresh Validation
++
++| Command | Exit | Result |
++| --- | ---: | --- |
++| T103 targeted unit command | 0 | 8 files、140 tests passed |
++| `pnpm test:coverage` | 0 | 140 tests passed；domain statements 97.64%、branches 95.11%、functions 100%、lines 97.59% |
++| `pnpm typecheck` | 0 | editor 与 playground strict TypeScript 通过 |
++| `pnpm lint` | 0 | 0 warning/error |
++| `pnpm format:check` | 0 | 全部 matched files 通过 |
++| `pnpm build` | 0 | editor ESM/CJS/d.ts/d.cts 与 playground production build 成功 |
++| `pnpm test:package` | 0 | publint、ATTW、ESM/CJS runtime 与 type consumer 全部通过 |
++| `git diff --check` | 0 | 无 whitespace error |
++| independent T103 review | 0 | 修复 1 个 Medium 后，无 Critical、High 或 Medium finding |
++| T103 delivery artifact validator | 0 | packet、task、evidence 与 feature artifacts 通过 lightweight validation |
++
++## Coverage Boundary
++
++`packages/editor/src/domain/**`：
++
++- Statements: 97.64% (872/893)
++- Branches: 95.11% (623/655)
++- Functions: 100% (104/104)
++- Lines: 97.59% (853/874)
++
++## Property Sequence
++
++- Seeds: 1-32。
++- Steps per seed: 160。
++- Each seed replayed twice。
++- Operations: move、create/ungroup、collapse/expand、pin/unpin、annotation、undo、redo，以及预期拒绝的跨 segment move。
++- Assertions per step: failure identity、source identity、ViewSpec validation、source coverage、revision monotonicity、event/error privacy；second replay deep-equals first session history state。
++
++## Privacy And Runtime Boundaries
++
++- accessor command/options 不执行 getter。
++- hostile Proxy 不传播调用方异常文本。
++- sparse、symbol、unknown field、array attached property、invalid nested target/payload 均结构化拒绝。
++- `constructor`、`toString`、`__proto__` ID 使用 own-property semantics，不读取 Object prototype。
++- history entry 不包含 SourceData 或 command payload；event/error 不包含财务或 annotation 内容。
++
++## Not Run
++
++- Browser E2E、axe、performance：T103 是纯领域 session/command/history，无 DOM。
++- Waterfall arithmetic：subtotal/end 与 compensated accumulation 属于 T104。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T103.yaml b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T103.yaml
+new file mode 100644
+index 0000000..4cab0d4
+--- /dev/null
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T103.yaml
+@@ -0,0 +1,146 @@
++schema_version: "1.0"
++packet_id: "001-waterfall-editor-foundation-T103-A001"
++task_id: "T103"
++feature_id: "001-waterfall-editor-foundation"
++mode: "direct_execute_with_independent_review"
++
++governance_inputs:
++  constitution: ".ai-platform/memory/constitution.md"
++  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
++  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
++  data_model: ".ai-platform/specs/001-waterfall-editor-foundation/data-model.md"
++  command_contract: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md"
++  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
++  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
++  approval: "T102 accepted; user authorized Codex to review and accept T102-T104 on 2026-07-15."
++
++work_unit:
++  title: "实现命令执行器与历史"
++  goal: "用单一纯函数路径实现类型化命令、原子校验、revision、undo/redo 与 privacy-safe events。"
++  requirement_mapping:
++    - "WF-US-002"
++    - "WF-US-003"
++    - "WF-US-004"
++    - "WF-FR-004"
++    - "WF-FR-005"
++    - "WF-FR-009"
++    - "WF-FR-013"
++  dependencies:
++    - "T102 Accepted"
++  blocks:
++    - "T104"
++    - "T106"
++    - "T107"
++
++codebase_context:
++  branch: "codex/reset"
++  current_state: "T102 provides Accepted immutable source/view types, closed-schema validators and initial ViewSpec factory."
++  architectural_boundary:
++    - "executeCommand is the only ViewSpec mutation entry."
++    - "All expected failures return structured CommandError and preserve caller session identity."
++    - "T103 preserves source identity and validates candidate ViewSpec before commit."
++    - "Waterfall arithmetic and end-anchor calculation remain in T104."
++    - "This waterfall slice excludes moveGroup and setSort; createGroup only accepts contiguous direct-root contributions."
++  public_runtime_surface:
++    - "createEditorSession"
++    - "executeCommand"
++    - "undoSession"
++    - "redoSession"
++
++locked_contract:
++  result_shape: "Success returns session, viewSpec and event; failure returns the identical input session and CommandError."
++  action_ids: "Accepted writes, no-ops, undo and redo consume unique IDs; duplicate accepted IDs reject before revision checks; rejected IDs remain reusable."
++  no_op: "ViewSpec revision and both history stack identities stay unchanged; processedActionIds alone is appended and redo is preserved."
++  history: "Default 100; non-negative safe integer; zero disables storage; undo/redo restore content with current revision plus one."
++  grouping: "Single-level only; createGroup selects contiguous direct-root contribution nodes; moving out of a two-child group rejects rather than auto-ungrouping."
++  ungroup_cleanup: "Reject groups containing pinned children; otherwise delete group annotation, emphasis and collapsed reference; event affects group and children."
++  fingerprint: "Canonical source FNV-1a 64-bit hex with fnv1a64 prefix; deterministic identity hint, not a security hash."
++  runtime_validation: "Closed-schema descriptor-safe command parsing; hostile reflection maps to privacy-safe INVALID_COMMAND."
++  overflow: "State-changing action at Number.MAX_SAFE_INTEGER rejects with REVISION_OVERFLOW."
++
++execution_constraints:
++  adapter: "Codex direct TDD execution; independent sub-agent review is read-only."
++  allowed_files:
++    - "packages/editor/src/domain/commands.ts"
++    - "packages/editor/src/domain/session.ts"
++    - "packages/editor/src/domain/executeCommand.ts"
++    - "packages/editor/src/domain/history.ts"
++    - "packages/editor/src/domain/invariants.ts"
++    - "packages/editor/src/domain/errors.ts"
++    - "packages/editor/src/index.ts"
++    - "packages/editor/tests/domain/commands.test.ts"
++    - "packages/editor/tests/domain/history.test.ts"
++    - "packages/editor/tests/domain/invariants.test.ts"
++    - "packages/editor/tests/domain/property-sequences.test.ts"
++    - "packages/editor/tests/fixtures/commandSourceData.ts"
++    - "packages/editor/tests/package/**"
++  forbidden_changes:
++    - "No React, G2, DOM, persistence, projection, export or interaction implementation."
++    - "No source mutation, expected-error throw, amount/label/annotation text in events or errors."
++    - "No new runtime dependency, push, PR, merge or publish."
++  conflicts:
++    - "Do not execute T104 or T106 concurrently because they consume command/session contracts."
++
++tdd_plan:
++  red:
++    - "Add session creation and invariant tests."
++    - "Add move, group, ungroup, collapse/expand, pin/unpin and annotation success/rejection/no-op tests."
++    - "Add revision, duplicate action ID, atomic failure, undo/redo cap/branch and seeded property-sequence tests."
++  green:
++    - "Implement typed command/session/event/error contracts and deterministic source fingerprint."
++    - "Implement immutable command handlers through validate-apply-validate-commit."
++    - "Implement bounded snapshot history with monotonic revision and explicit history actions."
++  refactor:
++    - "Share container lookup, immutable collection updates, error/event creation and invariant gates."
++    - "Run full domain coverage, package consumers and privacy scans."
++
++validation_loop:
++  commands:
++    - "pnpm test:unit -- packages/editor/tests/domain/commands.test.ts packages/editor/tests/domain/history.test.ts packages/editor/tests/domain/invariants.test.ts packages/editor/tests/domain/property-sequences.test.ts"
++    - "pnpm test:coverage"
++    - "pnpm typecheck"
++    - "pnpm lint"
++    - "pnpm format:check"
++    - "pnpm build"
++    - "pnpm test:package"
++    - "git diff --check"
++    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T103"
++  expected_signals:
++    - "All commands exit 0 after GREEN."
++    - "Domain statement, branch, function and line coverage are each at least 95%."
++    - "Rejected commands preserve session identity; successful writes increment revision exactly once."
++    - "Seeded legal sequences preserve source identity, source coverage and valid ViewSpec."
++  retry_budget: 2
++  failure_policy: "Fix only T103 contract failures; stop if the confirmed ViewSpec or command schema must materially change."
++
++evidence_contract:
++  directory: ".ai-platform/evidence/T103"
++  required_files:
++    - "summary.md"
++    - "test-results.md"
++    - "diff.patch"
++  required_content:
++    - "Per-command RED/GREEN results."
++    - "History branch/cap and property-sequence seed evidence."
++    - "Coverage, privacy checks, changed files, diff summary and residual risk."
++
++review_contract:
++  spec_compliance:
++    - "Every approved command, history action, rejection and no-op rule has a direct test."
++    - "Only approved T103 source/test files changed outside governance and evidence."
++  engineering_quality:
++    - "Pure immutable updates, exhaustive command switch and one post-apply invariant gate."
++    - "Events/errors contain IDs and structural metadata only, never financial or annotation content."
++  qa_acceptance:
++    - "Failure preserves input session identity and history; undo/redo revisions are monotonic."
++    - "Random legal sequences remain valid and source-conserving."
++
++handoff:
++  on_success: "Attach evidence, complete independent review, mark T103 Accepted under delegated authority, then prepare T104."
++  on_failure: "Keep T103 Running and document a bounded retry; do not advance T104."
++  remote_actions: "None authorized."
++
++stop_conditions:
++  - "A command requires mutating SourceData or bypassing validate-apply-validate-commit."
++  - "History requires storing source data in each entry or exposing sensitive event payloads."
++  - "A validation failure can only be solved by weakening T102 invariants."
+diff --git a/packages/editor/src/domain/commands.ts b/packages/editor/src/domain/commands.ts
+new file mode 100644
+index 0000000..706a5b3
+--- /dev/null
++++ b/packages/editor/src/domain/commands.ts
+@@ -0,0 +1,533 @@
++import { commandError, type CommandError, type CommandErrorReason } from './errors';
++import type { GroupId, SourceItemId, ViewNodeId } from './ids';
++
++export type CommandSource = 'direct' | 'outline' | 'keyboard' | 'host' | 'ai';
++
++export interface CommandEnvelope<TType extends string, TPayload> {
++  readonly schemaVersion: '1.0.0';
++  readonly id: string;
++  readonly type: TType;
++  readonly source: CommandSource;
++  readonly baseRevision: number;
++  readonly payload: TPayload;
++}
++
++export interface MoveItemPayload {
++  readonly itemId: SourceItemId;
++  readonly target: {
++    readonly containerId: 'root' | GroupId;
++    readonly index: number;
++  };
++}
++
++export type MoveItemCommand = CommandEnvelope<'moveItem', MoveItemPayload>;
++
++export interface CreateGroupPayload {
++  readonly groupId: GroupId;
++  readonly label: string;
++  readonly itemIds: readonly SourceItemId[];
++}
++
++export type CreateGroupCommand = CommandEnvelope<'createGroup', CreateGroupPayload>;
++
++export interface GroupPayload {
++  readonly groupId: GroupId;
++}
++
++export type UngroupCommand = CommandEnvelope<'ungroup', GroupPayload>;
++export type CollapseGroupCommand = CommandEnvelope<'collapseGroup', GroupPayload>;
++export type ExpandGroupCommand = CommandEnvelope<'expandGroup', GroupPayload>;
++
++export interface ItemPayload {
++  readonly itemId: SourceItemId;
++}
++
++export type PinItemCommand = CommandEnvelope<'pinItem', ItemPayload>;
++export type UnpinItemCommand = CommandEnvelope<'unpinItem', ItemPayload>;
++
++export interface SetAnnotationPayload {
++  readonly nodeId: ViewNodeId;
++  readonly text: string | null;
++}
++
++export type SetAnnotationCommand = CommandEnvelope<'setAnnotation', SetAnnotationPayload>;
++
++export type EditorCommand =
++  | MoveItemCommand
++  | CreateGroupCommand
++  | UngroupCommand
++  | CollapseGroupCommand
++  | ExpandGroupCommand
++  | PinItemCommand
++  | UnpinItemCommand
++  | SetAnnotationCommand;
++
++export type EditorCommandType = EditorCommand['type'];
++
++export interface SessionActionMeta {
++  readonly id: string;
++  readonly source: CommandSource;
++  readonly baseRevision: number;
++}
++
++export type CommandParseResult<TValue> =
++  | {
++      readonly ok: true;
++      readonly value: TValue;
++    }
++  | {
++      readonly ok: false;
++      readonly error: CommandError;
++    };
++
++type SafeDetails = Readonly<Record<string, string | number | boolean | null>>;
++
++interface ParseIssue {
++  readonly reason: CommandErrorReason;
++  readonly path: string;
++  readonly details: SafeDetails;
++}
++
++interface InternalFailure {
++  readonly ok: false;
++  readonly issue: ParseIssue;
++}
++
++type InternalResult<TValue> =
++  | {
++      readonly ok: true;
++      readonly value: TValue;
++    }
++  | InternalFailure;
++
++const COMMAND_SOURCES: ReadonlySet<CommandSource> = new Set([
++  'direct',
++  'outline',
++  'keyboard',
++  'host',
++  'ai',
++]);
++
++const COMMAND_TYPES: ReadonlySet<EditorCommandType> = new Set([
++  'moveItem',
++  'createGroup',
++  'ungroup',
++  'collapseGroup',
++  'expandGroup',
++  'pinItem',
++  'unpinItem',
++  'setAnnotation',
++]);
++
++const ENVELOPE_FIELDS: ReadonlySet<string> = new Set([
++  'schemaVersion',
++  'id',
++  'type',
++  'source',
++  'baseRevision',
++  'payload',
++]);
++const SESSION_ACTION_FIELDS: ReadonlySet<string> = new Set(['id', 'source', 'baseRevision']);
++const MOVE_ITEM_FIELDS: ReadonlySet<string> = new Set(['itemId', 'target']);
++const MOVE_TARGET_FIELDS: ReadonlySet<string> = new Set(['containerId', 'index']);
++const CREATE_GROUP_FIELDS: ReadonlySet<string> = new Set(['groupId', 'label', 'itemIds']);
++const GROUP_FIELDS: ReadonlySet<string> = new Set(['groupId']);
++const ITEM_FIELDS: ReadonlySet<string> = new Set(['itemId']);
++const ANNOTATION_FIELDS: ReadonlySet<string> = new Set(['nodeId', 'text']);
++
++function success<TValue>(value: TValue): InternalResult<TValue> {
++  return { ok: true, value };
++}
++
++function failure(
++  reason: CommandErrorReason,
++  path: string,
++  details: SafeDetails = {},
++): InternalFailure {
++  return { ok: false, issue: { reason, path, details } };
++}
++
++function publicFailure<TValue>(
++  issue: ParseIssue,
++  commandId: string | null,
++): CommandParseResult<TValue> {
++  return {
++    ok: false,
++    error: commandError('INVALID_COMMAND', issue.reason, issue.path, commandId, issue.details),
++  };
++}
++
++function pointer(base: string, segment: string | number): string {
++  const escaped = String(segment).replaceAll('~', '~0').replaceAll('/', '~1');
++  return `${base === '/' ? '' : base}/${escaped}`;
++}
++
++function safelyReadCommandId(input: unknown): string | null {
++  if ((typeof input !== 'object' && typeof input !== 'function') || input === null) {
++    return null;
++  }
++
++  try {
++    const descriptor = Object.getOwnPropertyDescriptor(input, 'id');
++    return descriptor !== undefined && 'value' in descriptor && typeof descriptor.value === 'string'
++      ? descriptor.value
++      : null;
++  } catch {
++    return null;
++  }
++}
++
++function inspectRecord(
++  input: unknown,
++  allowedFields: ReadonlySet<string>,
++  path: string,
++): InternalResult<ReadonlyMap<string, unknown>> {
++  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
++    return failure('EXPECTED_OBJECT', path);
++  }
++
++  const prototype = Object.getPrototypeOf(input) as unknown;
++  if (prototype !== Object.prototype && prototype !== null) {
++    return failure('NON_PLAIN_DATA', path);
++  }
++
++  const values = new Map<string, unknown>();
++  for (const key of Reflect.ownKeys(input)) {
++    if (typeof key === 'symbol') {
++      return failure('NON_PLAIN_DATA', path);
++    }
++    if (!allowedFields.has(key)) {
++      return failure('UNKNOWN_FIELD', pointer(path, key));
++    }
++
++    const descriptor = Object.getOwnPropertyDescriptor(input, key);
++    if (descriptor === undefined || !descriptor.enumerable || !('value' in descriptor)) {
++      return failure('NON_PLAIN_DATA', pointer(path, key));
++    }
++    values.set(key, descriptor.value);
++  }
++  return success(values);
++}
++
++function isArrayIndexKey(key: string, length: number): boolean {
++  const index = Number(key);
++  return Number.isInteger(index) && index >= 0 && index < length && String(index) === key;
++}
++
++function inspectDenseArray(input: unknown, path: string): InternalResult<readonly unknown[]> {
++  if (!Array.isArray(input)) {
++    return failure('INVALID_TYPE', path);
++  }
++  if (Object.getPrototypeOf(input) !== Array.prototype) {
++    return failure('NON_PLAIN_DATA', path);
++  }
++
++  const lengthDescriptor = Object.getOwnPropertyDescriptor(input, 'length');
++  if (
++    lengthDescriptor === undefined ||
++    !('value' in lengthDescriptor) ||
++    !Number.isSafeInteger(lengthDescriptor.value) ||
++    (lengthDescriptor.value as number) < 0
++  ) {
++    return failure('NON_PLAIN_DATA', path);
++  }
++  const length = lengthDescriptor.value as number;
++  const entriesByIndex = new Map<number, unknown>();
++
++  for (const key of Reflect.ownKeys(input)) {
++    if (key === 'length') {
++      continue;
++    }
++    if (typeof key === 'symbol') {
++      return failure('NON_PLAIN_DATA', path);
++    }
++    if (!isArrayIndexKey(key, length)) {
++      return failure('UNKNOWN_FIELD', pointer(path, key));
++    }
++
++    const descriptor = Object.getOwnPropertyDescriptor(input, key);
++    if (descriptor === undefined || !descriptor.enumerable || !('value' in descriptor)) {
++      return failure('NON_PLAIN_DATA', pointer(path, key));
++    }
++    const index = Number(key);
++    entriesByIndex.set(index, descriptor.value);
++  }
++
++  if (entriesByIndex.size !== length) {
++    for (let index = 0; index < length; index += 1) {
++      if (!entriesByIndex.has(index)) {
++        return failure('INVALID_TYPE', pointer(path, index));
++      }
++    }
++  }
++
++  const entries: unknown[] = [];
++  for (let index = 0; index < length; index += 1) {
++    entries.push(entriesByIndex.get(index));
++  }
++  return success(entries);
++}
++
++function nonEmptyString(
++  values: ReadonlyMap<string, unknown>,
++  key: string,
++  path: string,
++): InternalResult<string> {
++  const value = values.get(key);
++  if (typeof value !== 'string') {
++    return failure('INVALID_TYPE', pointer(path, key));
++  }
++  if (value.trim().length === 0) {
++    return failure('EMPTY_ID', pointer(path, key));
++  }
++  return success(value);
++}
++
++function parseMoveItemPayload(input: unknown): InternalResult<MoveItemPayload> {
++  const payload = inspectRecord(input, MOVE_ITEM_FIELDS, '/payload');
++  if (!payload.ok) {
++    return payload;
++  }
++  const itemId = nonEmptyString(payload.value, 'itemId', '/payload');
++  if (!itemId.ok) {
++    return itemId;
++  }
++
++  const target = inspectRecord(payload.value.get('target'), MOVE_TARGET_FIELDS, '/payload/target');
++  if (!target.ok) {
++    return target;
++  }
++  const containerId = nonEmptyString(target.value, 'containerId', '/payload/target');
++  if (!containerId.ok) {
++    return containerId;
++  }
++  const index = target.value.get('index');
++  if (!Number.isSafeInteger(index)) {
++    return failure('INVALID_TYPE', '/payload/target/index');
++  }
++
++  return success({
++    itemId: itemId.value,
++    target: { containerId: containerId.value, index: index as number },
++  });
++}
++
++function parseCreateGroupPayload(input: unknown): InternalResult<CreateGroupPayload> {
++  const payload = inspectRecord(input, CREATE_GROUP_FIELDS, '/payload');
++  if (!payload.ok) {
++    return payload;
++  }
++  const groupId = nonEmptyString(payload.value, 'groupId', '/payload');
++  if (!groupId.ok) {
++    return groupId;
++  }
++
++  const label = payload.value.get('label');
++  if (typeof label !== 'string') {
++    return failure('INVALID_TYPE', '/payload/label');
++  }
++  if (label.trim().length === 0) {
++    return failure('EMPTY_LABEL', '/payload/label');
++  }
++
++  const rawItemIds = inspectDenseArray(payload.value.get('itemIds'), '/payload/itemIds');
++  if (!rawItemIds.ok) {
++    return rawItemIds;
++  }
++  const itemIds: SourceItemId[] = [];
++  const indexesById = new Map<string, number>();
++  for (let index = 0; index < rawItemIds.value.length; index += 1) {
++    const itemId = rawItemIds.value[index];
++    if (typeof itemId !== 'string' || itemId.trim().length === 0) {
++      return failure('INVALID_TYPE', pointer('/payload/itemIds', index));
++    }
++    const firstIndex = indexesById.get(itemId);
++    if (firstIndex !== undefined) {
++      return failure('DUPLICATE_ITEM_ID', pointer('/payload/itemIds', index), { firstIndex });
++    }
++    indexesById.set(itemId, index);
++    itemIds.push(itemId);
++  }
++
++  return success({ groupId: groupId.value, label, itemIds });
++}
++
++function parseGroupPayload(input: unknown): InternalResult<GroupPayload> {
++  const payload = inspectRecord(input, GROUP_FIELDS, '/payload');
++  if (!payload.ok) {
++    return payload;
++  }
++  const groupId = nonEmptyString(payload.value, 'groupId', '/payload');
++  return groupId.ok ? success({ groupId: groupId.value }) : groupId;
++}
++
++function parseItemPayload(input: unknown): InternalResult<ItemPayload> {
++  const payload = inspectRecord(input, ITEM_FIELDS, '/payload');
++  if (!payload.ok) {
++    return payload;
++  }
++  const itemId = nonEmptyString(payload.value, 'itemId', '/payload');
++  return itemId.ok ? success({ itemId: itemId.value }) : itemId;
++}
++
++function hasMoreThanFiveHundredCodePoints(text: string): boolean {
++  let count = 0;
++  for (const codePoint of text) {
++    void codePoint;
++    count += 1;
++    if (count > 500) {
++      return true;
++    }
++  }
++  return false;
++}
++
++function parseSetAnnotationPayload(input: unknown): InternalResult<SetAnnotationPayload> {
++  const payload = inspectRecord(input, ANNOTATION_FIELDS, '/payload');
++  if (!payload.ok) {
++    return payload;
++  }
++  const nodeId = nonEmptyString(payload.value, 'nodeId', '/payload');
++  if (!nodeId.ok) {
++    return nodeId;
++  }
++  const text = payload.value.get('text');
++  if (text !== null && typeof text !== 'string') {
++    return failure('INVALID_TYPE', '/payload/text');
++  }
++  if (typeof text === 'string' && hasMoreThanFiveHundredCodePoints(text)) {
++    return failure('ANNOTATION_TOO_LONG', '/payload/text', { maximumCodePoints: 500 });
++  }
++  return success({ nodeId: nodeId.value, text });
++}
++
++function parseEditorCommandInternal(
++  input: unknown,
++  commandId: string | null,
++): CommandParseResult<EditorCommand> {
++  const envelope = inspectRecord(input, ENVELOPE_FIELDS, '/');
++  if (!envelope.ok) {
++    return publicFailure(envelope.issue, commandId);
++  }
++
++  const schemaVersion = envelope.value.get('schemaVersion');
++  if (typeof schemaVersion !== 'string') {
++    return publicFailure(failure('INVALID_TYPE', '/schemaVersion').issue, commandId);
++  }
++  if (schemaVersion !== '1.0.0') {
++    return publicFailure(failure('UNSUPPORTED_SCHEMA_VERSION', '/schemaVersion').issue, commandId);
++  }
++
++  const id = nonEmptyString(envelope.value, 'id', '/');
++  if (!id.ok) {
++    return publicFailure(id.issue, commandId);
++  }
++
++  const rawType = envelope.value.get('type');
++  if (typeof rawType !== 'string' || !COMMAND_TYPES.has(rawType as EditorCommandType)) {
++    return publicFailure(failure('INVALID_TYPE', '/type').issue, id.value);
++  }
++  const type = rawType as EditorCommandType;
++
++  const rawSource = envelope.value.get('source');
++  if (typeof rawSource !== 'string' || !COMMAND_SOURCES.has(rawSource as CommandSource)) {
++    return publicFailure(failure('INVALID_TYPE', '/source').issue, id.value);
++  }
++  const source = rawSource as CommandSource;
++
++  const baseRevision = envelope.value.get('baseRevision');
++  if (!Number.isSafeInteger(baseRevision) || (baseRevision as number) < 0) {
++    return publicFailure(failure('INVALID_TYPE', '/baseRevision').issue, id.value);
++  }
++  const common = {
++    schemaVersion: '1.0.0' as const,
++    id: id.value,
++    source,
++    baseRevision: baseRevision as number,
++  };
++  const rawPayload = envelope.value.get('payload');
++
++  switch (type) {
++    case 'moveItem': {
++      const payload = parseMoveItemPayload(rawPayload);
++      return payload.ok
++        ? { ok: true, value: { ...common, type, payload: payload.value } }
++        : publicFailure(payload.issue, id.value);
++    }
++    case 'createGroup': {
++      const payload = parseCreateGroupPayload(rawPayload);
++      return payload.ok
++        ? { ok: true, value: { ...common, type, payload: payload.value } }
++        : publicFailure(payload.issue, id.value);
++    }
++    case 'ungroup':
++    case 'collapseGroup':
++    case 'expandGroup': {
++      const payload = parseGroupPayload(rawPayload);
++      return payload.ok
++        ? { ok: true, value: { ...common, type, payload: payload.value } }
++        : publicFailure(payload.issue, id.value);
++    }
++    case 'pinItem':
++    case 'unpinItem': {
++      const payload = parseItemPayload(rawPayload);
++      return payload.ok
++        ? { ok: true, value: { ...common, type, payload: payload.value } }
++        : publicFailure(payload.issue, id.value);
++    }
++    case 'setAnnotation': {
++      const payload = parseSetAnnotationPayload(rawPayload);
++      return payload.ok
++        ? { ok: true, value: { ...common, type, payload: payload.value } }
++        : publicFailure(payload.issue, id.value);
++    }
++  }
++}
++
++/** Parses untrusted data into the closed, replayable editor command schema. */
++export function parseEditorCommand(input: unknown): CommandParseResult<EditorCommand> {
++  const commandId = safelyReadCommandId(input);
++  try {
++    return parseEditorCommandInternal(input, commandId);
++  } catch {
++    return publicFailure(failure('UNREADABLE_INPUT', '/').issue, commandId);
++  }
++}
++
++/** Parses the metadata envelope used by an undo or redo session action. */
++export function parseSessionActionMeta(
++  input: unknown,
++  actionType: 'undo' | 'redo',
++): CommandParseResult<SessionActionMeta> {
++  void actionType;
++  const commandId = safelyReadCommandId(input);
++  try {
++    const action = inspectRecord(input, SESSION_ACTION_FIELDS, '/');
++    if (!action.ok) {
++      return publicFailure(action.issue, commandId);
++    }
++    const id = nonEmptyString(action.value, 'id', '/');
++    if (!id.ok) {
++      return publicFailure(id.issue, commandId);
++    }
++    const rawSource = action.value.get('source');
++    if (typeof rawSource !== 'string' || !COMMAND_SOURCES.has(rawSource as CommandSource)) {
++      return publicFailure(failure('INVALID_TYPE', '/source').issue, id.value);
++    }
++    const baseRevision = action.value.get('baseRevision');
++    if (!Number.isSafeInteger(baseRevision) || (baseRevision as number) < 0) {
++      return publicFailure(failure('INVALID_TYPE', '/baseRevision').issue, id.value);
++    }
++
++    return {
++      ok: true,
++      value: {
++        id: id.value,
++        source: rawSource as CommandSource,
++        baseRevision: baseRevision as number,
++      },
++    };
++  } catch {
++    return publicFailure(failure('UNREADABLE_INPUT', '/').issue, commandId);
++  }
++}
+diff --git a/packages/editor/src/domain/executeCommand.ts b/packages/editor/src/domain/executeCommand.ts
+new file mode 100644
+index 0000000..5e8b157
+--- /dev/null
++++ b/packages/editor/src/domain/executeCommand.ts
+@@ -0,0 +1,748 @@
++import {
++  parseEditorCommand,
++  type CommandSource,
++  type EditorCommand,
++  type EditorCommandType,
++} from './commands';
++import { commandError, type CommandError } from './errors';
++import { appendHistory, cloneViewSpec, type HistoryEntry } from './history';
++import type { GroupId, SourceItemId, ViewNodeId } from './ids';
++import { validateEditorInvariants } from './invariants';
++import type { SourceItem, ViewGroup, ViewSpec } from './model';
++import type { EditorSession } from './session';
++
++export interface CommandEvent {
++  readonly commandId: string;
++  readonly type: EditorCommandType | 'undo' | 'redo';
++  readonly source: CommandSource;
++  readonly previousRevision: number;
++  readonly nextRevision: number;
++  readonly affectedNodeIds: readonly ViewNodeId[];
++  readonly noOp: boolean;
++}
++
++export type CommandResult =
++  | {
++      readonly ok: true;
++      readonly session: EditorSession;
++      readonly viewSpec: ViewSpec;
++      readonly event: CommandEvent;
++    }
++  | {
++      readonly ok: false;
++      readonly session: EditorSession;
++      readonly error: CommandError;
++    };
++
++interface ApplySuccess {
++  readonly ok: true;
++  readonly viewSpec: ViewSpec;
++  readonly affectedNodeIds: readonly ViewNodeId[];
++  readonly noOp: boolean;
++}
++
++interface ApplyFailure {
++  readonly ok: false;
++  readonly error: CommandError;
++}
++
++type ApplyResult = ApplySuccess | ApplyFailure;
++
++interface ItemLocation {
++  readonly containerId: 'root' | GroupId;
++  readonly index: number;
++  readonly values: readonly ViewNodeId[] | readonly SourceItemId[];
++}
++
++function failure(session: EditorSession, error: CommandError): CommandResult {
++  return { ok: false, session, error };
++}
++
++function itemById(session: EditorSession, itemId: SourceItemId): SourceItem | undefined {
++  return session.sourceData.items.find(item => item.id === itemId);
++}
++
++function ownRecordValue<TValue>(
++  record: Readonly<Record<string, TValue>>,
++  key: string,
++): TValue | undefined {
++  const descriptor = Object.getOwnPropertyDescriptor(record, key);
++  return descriptor !== undefined && 'value' in descriptor ? descriptor.value : undefined;
++}
++
++function groupById(session: EditorSession, groupId: string): ViewGroup | undefined {
++  return ownRecordValue(session.viewSpec.groups, groupId);
++}
++
++function contributionSegment(session: EditorSession, itemId: SourceItemId): number | undefined {
++  let segment = 0;
++  for (const item of session.sourceData.items) {
++    if (item.kind === 'subtotal') {
++      segment += 1;
++    } else if (item.kind === 'contribution' && item.id === itemId) {
++      return segment;
++    }
++  }
++  return undefined;
++}
++
++function nodeSegment(session: EditorSession, nodeId: ViewNodeId): number | undefined {
++  const group = groupById(session, nodeId);
++  return contributionSegment(session, group?.childIds[0] ?? (nodeId as SourceItemId));
++}
++
++function locateItem(session: EditorSession, itemId: SourceItemId): ItemLocation | undefined {
++  const rootIndex = session.viewSpec.rootOrder.indexOf(itemId);
++  if (rootIndex >= 0) {
++    return { containerId: 'root', index: rootIndex, values: session.viewSpec.rootOrder };
++  }
++
++  for (const group of Object.values(session.viewSpec.groups)) {
++    const childIndex = group.childIds.indexOf(itemId);
++    if (childIndex >= 0) {
++      return { containerId: group.id, index: childIndex, values: group.childIds };
++    }
++  }
++  return undefined;
++}
++
++function equalIds(first: readonly ViewNodeId[], second: readonly ViewNodeId[]): boolean {
++  return first.length === second.length && first.every((value, index) => value === second[index]);
++}
++
++function insertAt<T>(values: readonly T[], index: number, value: T): readonly T[] {
++  return [...values.slice(0, index), value, ...values.slice(index)];
++}
++
++function removeAt<T>(values: readonly T[], index: number): readonly T[] {
++  return [...values.slice(0, index), ...values.slice(index + 1)];
++}
++
++function uniqueNodes(nodes: readonly ViewNodeId[]): readonly ViewNodeId[] {
++  return [...new Set(nodes)];
++}
++
++function withoutKey<TValue>(
++  record: Readonly<Record<string, TValue>>,
++  removedKey: string,
++): Record<string, TValue> {
++  return Object.fromEntries(Object.entries(record).filter(([key]) => key !== removedKey));
++}
++
++function invalidSession(session: EditorSession, commandId: string): CommandResult | undefined {
++  const result = validateEditorInvariants(session.sourceData, session.viewSpec);
++  if (result.ok) {
++    return undefined;
++  }
++  const first = result.errors[0];
++  return failure(
++    session,
++    commandError(
++      'INVARIANT_VIOLATION',
++      'INVALID_SESSION_STATE',
++      first?.path ?? '/',
++      commandId,
++      first === undefined ? {} : { invariantReason: first.reason },
++    ),
++  );
++}
++
++function validateMovableItem(
++  session: EditorSession,
++  commandId: string,
++  itemId: SourceItemId,
++  path: string,
++): ApplyFailure | { readonly ok: true; readonly item: SourceItem } {
++  const item = itemById(session, itemId);
++  if (item === undefined) {
++    return {
++      ok: false,
++      error: commandError('ITEM_NOT_FOUND', 'ITEM_NOT_FOUND', path, commandId, { itemId }),
++    };
++  }
++  if (item.kind !== 'contribution') {
++    return {
++      ok: false,
++      error: commandError('ITEM_LOCKED', 'SYSTEM_ANCHOR', path, commandId, {
++        lockReason: 'system-anchor',
++      }),
++    };
++  }
++  if (session.viewSpec.pinnedItemIds.includes(itemId)) {
++    return {
++      ok: false,
++      error: commandError('ITEM_LOCKED', 'PINNED_ITEM', path, commandId, {
++        lockReason: 'pinned',
++      }),
++    };
++  }
++  return { ok: true, item };
++}
++
++function applyMoveItem(
++  session: EditorSession,
++  command: Extract<EditorCommand, { type: 'moveItem' }>,
++): ApplyResult {
++  const itemResult = validateMovableItem(
++    session,
++    command.id,
++    command.payload.itemId,
++    '/payload/itemId',
++  );
++  if (!itemResult.ok) {
++    return itemResult;
++  }
++
++  const source = locateItem(session, command.payload.itemId);
++  if (source === undefined) {
++    return {
++      ok: false,
++      error: commandError(
++        'INVARIANT_VIOLATION',
++        'INVALID_SESSION_STATE',
++        '/payload/itemId',
++        command.id,
++      ),
++    };
++  }
++
++  const destinationGroup =
++    command.payload.target.containerId === 'root'
++      ? undefined
++      : groupById(session, command.payload.target.containerId);
++  if (command.payload.target.containerId !== 'root' && destinationGroup === undefined) {
++    return {
++      ok: false,
++      error: commandError(
++        'GROUP_NOT_FOUND',
++        'GROUP_NOT_FOUND',
++        '/payload/target/containerId',
++        command.id,
++        { groupId: command.payload.target.containerId },
++      ),
++    };
++  }
++
++  if (source.containerId !== command.payload.target.containerId && source.containerId !== 'root') {
++    const sourceGroup = groupById(session, source.containerId);
++    if (sourceGroup !== undefined && sourceGroup.childIds.length <= 2) {
++      return {
++        ok: false,
++        error: commandError(
++          'INVALID_DROP_TARGET',
++          'GROUP_WOULD_BE_TOO_SMALL',
++          '/payload/target/containerId',
++          command.id,
++          { minimum: 2 },
++        ),
++      };
++    }
++  }
++
++  const destinationValues: readonly ViewNodeId[] | readonly SourceItemId[] =
++    command.payload.target.containerId === 'root'
++      ? session.viewSpec.rootOrder
++      : (destinationGroup?.childIds ?? []);
++  const sameContainer = source.containerId === command.payload.target.containerId;
++  const destinationLength = destinationValues.length - (sameContainer ? 1 : 0);
++  if (command.payload.target.index < 0 || command.payload.target.index > destinationLength) {
++    return {
++      ok: false,
++      error: commandError(
++        'INVALID_DROP_TARGET',
++        'INVALID_INDEX',
++        '/payload/target/index',
++        command.id,
++        { minimum: 0, maximum: destinationLength },
++      ),
++    };
++  }
++
++  const itemSegment = contributionSegment(session, command.payload.itemId);
++  if (command.payload.target.containerId !== 'root') {
++    const destinationSegment = destinationGroup?.childIds[0]
++      ? contributionSegment(session, destinationGroup.childIds[0])
++      : undefined;
++    if (itemSegment !== destinationSegment) {
++      return {
++        ok: false,
++        error: commandError(
++          'INVALID_DROP_TARGET',
++          'CROSS_SEGMENT',
++          '/payload/target/containerId',
++          command.id,
++        ),
++      };
++    }
++  }
++
++  let nextRoot = session.viewSpec.rootOrder;
++  const nextGroups: Record<string, ViewGroup> = { ...session.viewSpec.groups };
++  if (source.containerId === 'root') {
++    nextRoot = removeAt(nextRoot, source.index);
++  } else {
++    const group = nextGroups[source.containerId];
++    if (group !== undefined) {
++      nextGroups[source.containerId] = {
++        ...group,
++        childIds: removeAt(group.childIds, source.index) as readonly SourceItemId[],
++      };
++    }
++  }
++
++  if (command.payload.target.containerId === 'root') {
++    const previousNode = nextRoot[command.payload.target.index - 1];
++    const nextNode = nextRoot[command.payload.target.index];
++    const previousSegment =
++      previousNode === undefined ? undefined : nodeSegment(session, previousNode);
++    const nextSegment = nextNode === undefined ? undefined : nodeSegment(session, nextNode);
++    if (
++      itemSegment === undefined ||
++      (previousSegment !== undefined && previousSegment > itemSegment) ||
++      (nextSegment !== undefined && nextSegment < itemSegment)
++    ) {
++      return {
++        ok: false,
++        error: commandError(
++          'INVALID_DROP_TARGET',
++          'CROSS_SEGMENT',
++          '/payload/target/index',
++          command.id,
++        ),
++      };
++    }
++    nextRoot = insertAt(nextRoot, command.payload.target.index, command.payload.itemId);
++  } else {
++    const currentDestination = nextGroups[command.payload.target.containerId];
++    if (currentDestination === undefined) {
++      return {
++        ok: false,
++        error: commandError(
++          'INVARIANT_VIOLATION',
++          'INVALID_SESSION_STATE',
++          '/payload/target/containerId',
++          command.id,
++        ),
++      };
++    }
++    nextGroups[command.payload.target.containerId] = {
++      ...currentDestination,
++      childIds: insertAt(
++        currentDestination.childIds,
++        command.payload.target.index,
++        command.payload.itemId,
++      ),
++    };
++  }
++
++  const affected = uniqueNodes([
++    command.payload.itemId,
++    ...(source.containerId === 'root' ? [] : [source.containerId]),
++    ...(command.payload.target.containerId === 'root' ? [] : [command.payload.target.containerId]),
++  ]);
++  const noOp =
++    equalIds(nextRoot, session.viewSpec.rootOrder) &&
++    Object.keys(nextGroups).every(groupId =>
++      equalIds(
++        nextGroups[groupId]?.childIds ?? [],
++        session.viewSpec.groups[groupId]?.childIds ?? [],
++      ),
++    );
++  return {
++    ok: true,
++    viewSpec: noOp
++      ? session.viewSpec
++      : { ...session.viewSpec, rootOrder: nextRoot, groups: nextGroups },
++    affectedNodeIds: affected,
++    noOp,
++  };
++}
++
++function applyCreateGroup(
++  session: EditorSession,
++  command: Extract<EditorCommand, { type: 'createGroup' }>,
++): ApplyResult {
++  const { groupId, itemIds, label } = command.payload;
++  if (
++    String(groupId) === 'root' ||
++    groupById(session, groupId) !== undefined ||
++    session.sourceData.items.some(item => String(item.id) === String(groupId))
++  ) {
++    return {
++      ok: false,
++      error: commandError(
++        'GROUP_ID_CONFLICT',
++        'GROUP_ID_CONFLICT',
++        '/payload/groupId',
++        command.id,
++        { groupId },
++      ),
++    };
++  }
++  if (itemIds.length < 2) {
++    return {
++      ok: false,
++      error: commandError('GROUP_TOO_SMALL', 'GROUP_TOO_SMALL', '/payload/itemIds', command.id, {
++        minimum: 2,
++        actual: itemIds.length,
++      }),
++    };
++  }
++
++  const positions: number[] = [];
++  for (let index = 0; index < itemIds.length; index += 1) {
++    const itemId = itemIds[index];
++    if (itemId === undefined) {
++      continue;
++    }
++    const itemResult = validateMovableItem(
++      session,
++      command.id,
++      itemId,
++      `/payload/itemIds/${index}`,
++    );
++    if (!itemResult.ok) {
++      return itemResult;
++    }
++    const position = session.viewSpec.rootOrder.indexOf(itemId);
++    if (position < 0) {
++      return {
++        ok: false,
++        error: commandError(
++          'INVALID_DROP_TARGET',
++          'NON_CONTIGUOUS_SELECTION',
++          `/payload/itemIds/${index}`,
++          command.id,
++        ),
++      };
++    }
++    positions.push(position);
++  }
++
++  const orderedPositions = [...positions].sort((first, second) => first - second);
++  const contiguous = orderedPositions.every(
++    (position, index) => index === 0 || position === (orderedPositions[index - 1] ?? position) + 1,
++  );
++  if (!contiguous) {
++    return {
++      ok: false,
++      error: commandError(
++        'NON_CONTIGUOUS_GROUP_SELECTION',
++        'NON_CONTIGUOUS_SELECTION',
++        '/payload/itemIds',
++        command.id,
++      ),
++    };
++  }
++
++  const orderedIds = orderedPositions.map(
++    position => session.viewSpec.rootOrder[position] as SourceItemId,
++  );
++  const segments = new Set(orderedIds.map(itemId => contributionSegment(session, itemId)));
++  if (segments.size !== 1) {
++    return {
++      ok: false,
++      error: commandError('INVALID_DROP_TARGET', 'CROSS_SEGMENT', '/payload/itemIds', command.id),
++    };
++  }
++
++  const firstPosition = orderedPositions[0] ?? 0;
++  const selectedPositions = new Set(orderedPositions);
++  const nextRoot = session.viewSpec.rootOrder.filter((_, index) => !selectedPositions.has(index));
++  const rootWithGroup = insertAt(nextRoot, firstPosition, groupId);
++  const nextGroup: ViewGroup = { id: groupId, label, childIds: orderedIds };
++  return {
++    ok: true,
++    viewSpec: {
++      ...session.viewSpec,
++      rootOrder: rootWithGroup,
++      groups: { ...session.viewSpec.groups, [groupId]: nextGroup },
++    },
++    affectedNodeIds: [groupId, ...orderedIds],
++    noOp: false,
++  };
++}
++
++function applyUngroup(
++  session: EditorSession,
++  command: Extract<EditorCommand, { type: 'ungroup' }>,
++): ApplyResult {
++  const group = groupById(session, command.payload.groupId);
++  if (group === undefined) {
++    return {
++      ok: false,
++      error: commandError('GROUP_NOT_FOUND', 'GROUP_NOT_FOUND', '/payload/groupId', command.id, {
++        groupId: command.payload.groupId,
++      }),
++    };
++  }
++  const pinnedChild = group.childIds.find(itemId =>
++    session.viewSpec.pinnedItemIds.includes(itemId),
++  );
++  if (pinnedChild !== undefined) {
++    return {
++      ok: false,
++      error: commandError('ITEM_LOCKED', 'PINNED_ITEM', '/payload/groupId', command.id, {
++        lockReason: 'pinned',
++        itemId: pinnedChild,
++      }),
++    };
++  }
++
++  const rootIndex = session.viewSpec.rootOrder.indexOf(group.id);
++  if (rootIndex < 0) {
++    return {
++      ok: false,
++      error: commandError(
++        'INVARIANT_VIOLATION',
++        'INVALID_SESSION_STATE',
++        '/payload/groupId',
++        command.id,
++      ),
++    };
++  }
++  const groups = withoutKey(session.viewSpec.groups, group.id);
++  const annotations = withoutKey(session.viewSpec.annotations, group.id);
++  const emphasis = withoutKey(session.viewSpec.emphasis, group.id);
++
++  return {
++    ok: true,
++    viewSpec: {
++      ...session.viewSpec,
++      rootOrder: [
++        ...session.viewSpec.rootOrder.slice(0, rootIndex),
++        ...group.childIds,
++        ...session.viewSpec.rootOrder.slice(rootIndex + 1),
++      ],
++      groups,
++      collapsedGroupIds: session.viewSpec.collapsedGroupIds.filter(groupId => groupId !== group.id),
++      annotations,
++      emphasis,
++    },
++    affectedNodeIds: [group.id, ...group.childIds],
++    noOp: false,
++  };
++}
++
++function applyGroupVisibility(
++  session: EditorSession,
++  command: Extract<EditorCommand, { type: 'collapseGroup' | 'expandGroup' }>,
++): ApplyResult {
++  const { groupId } = command.payload;
++  if (groupById(session, groupId) === undefined) {
++    return {
++      ok: false,
++      error: commandError('GROUP_NOT_FOUND', 'GROUP_NOT_FOUND', '/payload/groupId', command.id, {
++        groupId,
++      }),
++    };
++  }
++  const collapsed = session.viewSpec.collapsedGroupIds.includes(groupId);
++  const shouldCollapse = command.type === 'collapseGroup';
++  if (collapsed === shouldCollapse) {
++    return { ok: true, viewSpec: session.viewSpec, affectedNodeIds: [groupId], noOp: true };
++  }
++  return {
++    ok: true,
++    viewSpec: {
++      ...session.viewSpec,
++      collapsedGroupIds: shouldCollapse
++        ? [...session.viewSpec.collapsedGroupIds, groupId]
++        : session.viewSpec.collapsedGroupIds.filter(id => id !== groupId),
++    },
++    affectedNodeIds: [groupId],
++    noOp: false,
++  };
++}
++
++function applyPin(
++  session: EditorSession,
++  command: Extract<EditorCommand, { type: 'pinItem' | 'unpinItem' }>,
++): ApplyResult {
++  const item = itemById(session, command.payload.itemId);
++  if (item === undefined) {
++    return {
++      ok: false,
++      error: commandError('ITEM_NOT_FOUND', 'ITEM_NOT_FOUND', '/payload/itemId', command.id, {
++        itemId: command.payload.itemId,
++      }),
++    };
++  }
++  if (item.kind !== 'contribution') {
++    return {
++      ok: false,
++      error: commandError('ITEM_LOCKED', 'SYSTEM_ANCHOR', '/payload/itemId', command.id, {
++        lockReason: 'system-anchor',
++      }),
++    };
++  }
++  const pinned = session.viewSpec.pinnedItemIds.includes(item.id);
++  const shouldPin = command.type === 'pinItem';
++  if (pinned === shouldPin) {
++    return { ok: true, viewSpec: session.viewSpec, affectedNodeIds: [item.id], noOp: true };
++  }
++  return {
++    ok: true,
++    viewSpec: {
++      ...session.viewSpec,
++      pinnedItemIds: shouldPin
++        ? [...session.viewSpec.pinnedItemIds, item.id]
++        : session.viewSpec.pinnedItemIds.filter(itemId => itemId !== item.id),
++    },
++    affectedNodeIds: [item.id],
++    noOp: false,
++  };
++}
++
++function applyAnnotation(
++  session: EditorSession,
++  command: Extract<EditorCommand, { type: 'setAnnotation' }>,
++): ApplyResult {
++  const { nodeId, text } = command.payload;
++  const known =
++    session.sourceData.items.some(item => item.id === nodeId) ||
++    groupById(session, nodeId) !== undefined;
++  if (!known) {
++    return {
++      ok: false,
++      error: commandError('NODE_NOT_FOUND', 'NODE_NOT_FOUND', '/payload/nodeId', command.id, {
++        nodeId,
++      }),
++    };
++  }
++
++  const normalized = text === null || text.trim().length === 0 ? null : text;
++  const current = ownRecordValue(session.viewSpec.annotations, nodeId) ?? null;
++  if (current === normalized) {
++    return { ok: true, viewSpec: session.viewSpec, affectedNodeIds: [nodeId], noOp: true };
++  }
++  const annotations =
++    normalized === null
++      ? withoutKey(session.viewSpec.annotations, nodeId)
++      : { ...session.viewSpec.annotations, [nodeId]: normalized };
++  return {
++    ok: true,
++    viewSpec: { ...session.viewSpec, annotations },
++    affectedNodeIds: [nodeId],
++    noOp: false,
++  };
++}
++
++function applyCommand(session: EditorSession, command: EditorCommand): ApplyResult {
++  switch (command.type) {
++    case 'moveItem':
++      return applyMoveItem(session, command);
++    case 'createGroup':
++      return applyCreateGroup(session, command);
++    case 'ungroup':
++      return applyUngroup(session, command);
++    case 'collapseGroup':
++    case 'expandGroup':
++      return applyGroupVisibility(session, command);
++    case 'pinItem':
++    case 'unpinItem':
++      return applyPin(session, command);
++    case 'setAnnotation':
++      return applyAnnotation(session, command);
++  }
++}
++
++/** Executes a typed editor command through the immutable invariant-gated session path. */
++export function executeCommand(session: EditorSession, command: EditorCommand): CommandResult {
++  const parsed = parseEditorCommand(command);
++  if (!parsed.ok) {
++    return failure(session, parsed.error);
++  }
++
++  const acceptedCommand = parsed.value;
++  if (session.processedActionIds.includes(acceptedCommand.id)) {
++    return failure(
++      session,
++      commandError('DUPLICATE_COMMAND_ID', 'DUPLICATE_COMMAND_ID', '/id', acceptedCommand.id),
++    );
++  }
++
++  if (acceptedCommand.baseRevision !== session.viewSpec.revision) {
++    return failure(
++      session,
++      commandError('REVISION_CONFLICT', 'REVISION_CONFLICT', '/baseRevision', acceptedCommand.id, {
++        expectedRevision: acceptedCommand.baseRevision,
++        actualRevision: session.viewSpec.revision,
++      }),
++    );
++  }
++  const invalid = invalidSession(session, acceptedCommand.id);
++  if (invalid !== undefined) {
++    return invalid;
++  }
++
++  const applied = applyCommand(session, acceptedCommand);
++  if (!applied.ok) {
++    return failure(session, applied.error);
++  }
++
++  const previousRevision = session.viewSpec.revision;
++  if (applied.noOp) {
++    const event: CommandEvent = {
++      commandId: acceptedCommand.id,
++      type: acceptedCommand.type,
++      source: acceptedCommand.source,
++      previousRevision,
++      nextRevision: previousRevision,
++      affectedNodeIds: applied.affectedNodeIds,
++      noOp: true,
++    };
++    const nextSession: EditorSession = {
++      ...session,
++      processedActionIds: [...session.processedActionIds, acceptedCommand.id],
++    };
++    return { ok: true, session: nextSession, viewSpec: nextSession.viewSpec, event };
++  }
++
++  if (previousRevision === Number.MAX_SAFE_INTEGER) {
++    return failure(
++      session,
++      commandError('REVISION_OVERFLOW', 'REVISION_OVERFLOW', '/baseRevision', acceptedCommand.id),
++    );
++  }
++
++  const nextView: ViewSpec = { ...applied.viewSpec, revision: previousRevision + 1 };
++  const invariantResult = validateEditorInvariants(session.sourceData, nextView);
++  if (!invariantResult.ok) {
++    const first = invariantResult.errors[0];
++    return failure(
++      session,
++      commandError(
++        'INVARIANT_VIOLATION',
++        'INVALID_SESSION_STATE',
++        first?.path ?? '/',
++        acceptedCommand.id,
++        first === undefined ? {} : { invariantReason: first.reason },
++      ),
++    );
++  }
++
++  const event: CommandEvent = {
++    commandId: acceptedCommand.id,
++    type: acceptedCommand.type,
++    source: acceptedCommand.source,
++    previousRevision,
++    nextRevision: nextView.revision,
++    affectedNodeIds: applied.affectedNodeIds,
++    noOp: false,
++  };
++  const entry: HistoryEntry = {
++    before: cloneViewSpec(session.viewSpec),
++    after: cloneViewSpec(nextView),
++    action: { id: acceptedCommand.id, type: acceptedCommand.type, source: acceptedCommand.source },
++    affectedNodeIds: [...applied.affectedNodeIds],
++  };
++  const nextSession: EditorSession = {
++    ...session,
++    viewSpec: nextView,
++    undoStack: appendHistory(session.undoStack, entry, session.historyLimit),
++    redoStack: [],
++    processedActionIds: [...session.processedActionIds, acceptedCommand.id],
++  };
++  return { ok: true, session: nextSession, viewSpec: nextView, event };
++}
+diff --git a/packages/editor/src/domain/history.ts b/packages/editor/src/domain/history.ts
+new file mode 100644
+index 0000000..23e50e4
+--- /dev/null
++++ b/packages/editor/src/domain/history.ts
+@@ -0,0 +1,188 @@
++import { parseSessionActionMeta } from './commands';
++import type { CommandSource, EditorCommandType, SessionActionMeta } from './commands';
++import { commandError } from './errors';
++import type { CommandError } from './errors';
++import type { CommandEvent, CommandResult } from './executeCommand';
++import type { ViewNodeId } from './ids';
++import { validateEditorInvariants } from './invariants';
++import type { ViewSpec } from './model';
++import type { EditorSession } from './session';
++
++export interface HistoryAction {
++  readonly id: string;
++  readonly type: EditorCommandType;
++  readonly source: CommandSource;
++}
++
++export interface HistoryEntry {
++  readonly before: ViewSpec;
++  readonly after: ViewSpec;
++  readonly action: HistoryAction;
++  readonly affectedNodeIds: readonly ViewNodeId[];
++}
++
++/** Creates an independent plain-data snapshot of a view specification. */
++export function cloneViewSpec(view: ViewSpec): ViewSpec {
++  const groups = Object.fromEntries(
++    Object.entries(view.groups).map(([groupId, group]) => [
++      groupId,
++      {
++        id: group.id,
++        label: group.label,
++        childIds: [...group.childIds],
++      },
++    ]),
++  );
++
++  return {
++    schemaVersion: view.schemaVersion,
++    datasetId: view.datasetId,
++    chartType: view.chartType,
++    revision: view.revision,
++    rootOrder: [...view.rootOrder],
++    groups,
++    collapsedGroupIds: [...view.collapsedGroupIds],
++    pinnedItemIds: [...view.pinnedItemIds],
++    annotations: { ...view.annotations },
++    emphasis: { ...view.emphasis },
++  };
++}
++
++/** Appends an entry while evicting the oldest entries beyond the configured limit. */
++export function appendHistory(
++  entries: readonly HistoryEntry[],
++  entry: HistoryEntry,
++  limit: number,
++): readonly HistoryEntry[] {
++  if (limit === 0) {
++    return [];
++  }
++
++  const firstRetainedIndex = Math.max(0, entries.length - limit + 1);
++  return [...entries.slice(firstRetainedIndex), entry];
++}
++
++type HistoryDirection = 'undo' | 'redo';
++
++function failedHistoryResult(session: EditorSession, error: CommandError): CommandResult {
++  return { ok: false, session, error };
++}
++
++function invariantFailure(session: EditorSession, actionId: string): CommandResult {
++  return failedHistoryResult(
++    session,
++    commandError('INVARIANT_VIOLATION', 'INVALID_SESSION_STATE', '/viewSpec', actionId),
++  );
++}
++
++function applyHistoryAction(
++  session: EditorSession,
++  actionInput: SessionActionMeta,
++  direction: HistoryDirection,
++): CommandResult {
++  const parsed = parseSessionActionMeta(actionInput, direction);
++  if (!parsed.ok) {
++    return failedHistoryResult(session, parsed.error);
++  }
++
++  const action = parsed.value;
++  if (session.processedActionIds.includes(action.id)) {
++    return failedHistoryResult(
++      session,
++      commandError('DUPLICATE_COMMAND_ID', 'DUPLICATE_COMMAND_ID', '/id', action.id),
++    );
++  }
++
++  const currentRevision = session.viewSpec.revision;
++  if (action.baseRevision !== currentRevision) {
++    return failedHistoryResult(
++      session,
++      commandError('REVISION_CONFLICT', 'REVISION_CONFLICT', '/baseRevision', action.id, {
++        expectedRevision: action.baseRevision,
++        actualRevision: currentRevision,
++      }),
++    );
++  }
++
++  const sourceStack = direction === 'undo' ? session.undoStack : session.redoStack;
++  const stackPath = direction === 'undo' ? '/undoStack' : '/redoStack';
++  const entry = sourceStack.at(-1);
++  if (entry === undefined) {
++    return failedHistoryResult(
++      session,
++      commandError('HISTORY_EMPTY', 'HISTORY_EMPTY', stackPath, action.id),
++    );
++  }
++
++  if (currentRevision === Number.MAX_SAFE_INTEGER) {
++    return failedHistoryResult(
++      session,
++      commandError('REVISION_OVERFLOW', 'REVISION_OVERFLOW', '/viewSpec/revision', action.id),
++    );
++  }
++
++  const currentInvariant = validateEditorInvariants(session.sourceData, session.viewSpec);
++  if (!currentInvariant.ok) {
++    return invariantFailure(session, action.id);
++  }
++
++  let restoredView: ViewSpec;
++  try {
++    const snapshot = direction === 'undo' ? entry.before : entry.after;
++    restoredView = {
++      ...cloneViewSpec(snapshot),
++      revision: currentRevision + 1,
++    };
++  } catch {
++    return invariantFailure(session, action.id);
++  }
++
++  const restoredInvariant = validateEditorInvariants(session.sourceData, restoredView);
++  if (!restoredInvariant.ok) {
++    return invariantFailure(session, action.id);
++  }
++
++  const remainingSourceStack = sourceStack.slice(0, -1);
++  const undoStack =
++    direction === 'undo'
++      ? remainingSourceStack
++      : appendHistory(session.undoStack, entry, session.historyLimit);
++  const redoStack =
++    direction === 'redo'
++      ? remainingSourceStack
++      : appendHistory(session.redoStack, entry, session.historyLimit);
++  const nextSession: EditorSession = {
++    ...session,
++    sourceData: session.sourceData,
++    viewSpec: restoredView,
++    undoStack,
++    redoStack,
++    processedActionIds: [...session.processedActionIds, action.id],
++  };
++  const event: CommandEvent = {
++    commandId: action.id,
++    type: direction,
++    source: action.source,
++    previousRevision: currentRevision,
++    nextRevision: restoredView.revision,
++    affectedNodeIds: [...entry.affectedNodeIds],
++    noOp: false,
++  };
++
++  return {
++    ok: true,
++    session: nextSession,
++    viewSpec: restoredView,
++    event,
++  };
++}
++
++/** Restores the most recent pre-command snapshot with a new monotonic revision. */
++export function undoSession(session: EditorSession, action: SessionActionMeta): CommandResult {
++  return applyHistoryAction(session, action, 'undo');
++}
++
++/** Reapplies the most recently undone snapshot with a new monotonic revision. */
++export function redoSession(session: EditorSession, action: SessionActionMeta): CommandResult {
++  return applyHistoryAction(session, action, 'redo');
++}
+diff --git a/packages/editor/src/domain/invariants.ts b/packages/editor/src/domain/invariants.ts
+new file mode 100644
+index 0000000..e50cb06
+--- /dev/null
++++ b/packages/editor/src/domain/invariants.ts
+@@ -0,0 +1,11 @@
++import type { ValidationResult } from './errors';
++import type { SourceData, ViewSpec } from './model';
++import { validateViewSpec } from './validation';
++
++/** Applies the canonical ViewSpec validator as the command commit invariant gate. */
++export function validateEditorInvariants(
++  sourceData: SourceData,
++  viewSpec: ViewSpec,
++): ValidationResult<ViewSpec> {
++  return validateViewSpec(viewSpec, sourceData);
++}
+diff --git a/packages/editor/src/domain/session.ts b/packages/editor/src/domain/session.ts
+new file mode 100644
+index 0000000..939671f
+--- /dev/null
++++ b/packages/editor/src/domain/session.ts
+@@ -0,0 +1,204 @@
++import { createInitialViewSpec } from './createInitialViewSpec';
++import {
++  validationFailure,
++  validationIssue,
++  validationSuccess,
++  type ValidationIssue,
++  type ValidationResult,
++} from './errors';
++import type { HistoryEntry } from './history';
++import type { SourceData, ViewSpec } from './model';
++import { validateSourceData, validateViewSpec } from './validation';
++
++const DEFAULT_HISTORY_LIMIT = 100;
++const SESSION_OPTION_FIELDS: ReadonlySet<string> = new Set(['viewSpec', 'historyLimit']);
++const FNV1A_64_OFFSET = 0xcbf29ce484222325n;
++const FNV1A_64_PRIME = 0x100000001b3n;
++
++type UnknownRecord = Record<string, unknown>;
++
++interface ParsedSessionOptions {
++  readonly hasViewSpec: boolean;
++  readonly viewSpec: unknown;
++  readonly historyLimit: number;
++}
++
++export interface EditorSessionOptions {
++  readonly viewSpec?: ViewSpec;
++  readonly historyLimit?: number;
++}
++
++export interface EditorSession {
++  readonly sourceData: SourceData;
++  readonly sourceFingerprint: string;
++  readonly viewSpec: ViewSpec;
++  readonly undoStack: readonly HistoryEntry[];
++  readonly redoStack: readonly HistoryEntry[];
++  readonly historyLimit: number;
++  readonly processedActionIds: readonly string[];
++}
++
++function pointer(segment: string): string {
++  return `/${segment.replaceAll('~', '~0').replaceAll('/', '~1')}`;
++}
++
++function optionIssue(
++  reason: 'INVALID_HISTORY_LIMIT' | 'NON_PLAIN_DATA' | 'UNKNOWN_FIELD' | 'UNREADABLE_INPUT',
++  path: string,
++): ValidationIssue {
++  return validationIssue('INVALID_SESSION_OPTIONS', reason, path);
++}
++
++function isPlainRecord(value: unknown): value is UnknownRecord {
++  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
++    return false;
++  }
++
++  const prototype = Object.getPrototypeOf(value) as unknown;
++  return prototype === Object.prototype || prototype === null;
++}
++
++function parseSessionOptionsInternal(options: unknown): ValidationResult<ParsedSessionOptions> {
++  if (options === undefined) {
++    return validationSuccess({
++      hasViewSpec: false,
++      viewSpec: undefined,
++      historyLimit: DEFAULT_HISTORY_LIMIT,
++    });
++  }
++
++  if (!isPlainRecord(options)) {
++    return validationFailure([optionIssue('NON_PLAIN_DATA', '/')]);
++  }
++
++  const errors: ValidationIssue[] = [];
++  let hasViewSpec = false;
++  let viewSpec: unknown;
++  let hasHistoryLimit = false;
++  let historyLimit: unknown;
++
++  for (const key of Reflect.ownKeys(options)) {
++    if (typeof key === 'symbol') {
++      errors.push(optionIssue('NON_PLAIN_DATA', '/'));
++      continue;
++    }
++
++    if (!SESSION_OPTION_FIELDS.has(key)) {
++      errors.push(optionIssue('UNKNOWN_FIELD', pointer(key)));
++      continue;
++    }
++
++    const descriptor = Object.getOwnPropertyDescriptor(options, key);
++    if (descriptor === undefined || !descriptor.enumerable || !('value' in descriptor)) {
++      errors.push(optionIssue('NON_PLAIN_DATA', pointer(key)));
++      continue;
++    }
++
++    if (key === 'viewSpec') {
++      hasViewSpec = true;
++      viewSpec = descriptor.value;
++    } else {
++      hasHistoryLimit = true;
++      historyLimit = descriptor.value;
++    }
++  }
++
++  const resolvedHistoryLimit = hasHistoryLimit ? historyLimit : DEFAULT_HISTORY_LIMIT;
++  if (!Number.isSafeInteger(resolvedHistoryLimit) || (resolvedHistoryLimit as number) < 0) {
++    errors.push(optionIssue('INVALID_HISTORY_LIMIT', '/historyLimit'));
++  }
++
++  if (errors.length > 0) {
++    return validationFailure(errors);
++  }
++
++  return validationSuccess({
++    hasViewSpec,
++    viewSpec,
++    historyLimit: resolvedHistoryLimit as number,
++  });
++}
++
++function parseSessionOptions(options: unknown): ValidationResult<ParsedSessionOptions> {
++  try {
++    return parseSessionOptionsInternal(options);
++  } catch {
++    return validationFailure([optionIssue('UNREADABLE_INPUT', '/')]);
++  }
++}
++
++function sourceFingerprint(sourceData: SourceData): string {
++  const canonicalSource = {
++    schemaVersion: sourceData.schemaVersion,
++    datasetId: sourceData.datasetId,
++    ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
++    items: sourceData.items.map(item => ({
++      id: item.id,
++      label: item.label,
++      amount: item.amount,
++      kind: item.kind,
++      ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
++      ...(item.metadata === undefined
++        ? {}
++        : {
++            metadata: Object.fromEntries(
++              Object.entries(item.metadata).sort(([first], [second]) =>
++                first < second ? -1 : first > second ? 1 : 0,
++              ),
++            ),
++          }),
++    })),
++  };
++  const bytes = new TextEncoder().encode(JSON.stringify(canonicalSource));
++  let hash = FNV1A_64_OFFSET;
++  for (const byte of bytes) {
++    hash ^= BigInt(byte);
++    hash = BigInt.asUintN(64, hash * FNV1A_64_PRIME);
++  }
++  return `fnv1a64:${hash.toString(16).padStart(16, '0')}`;
++}
++
++/** Creates an immutable editor session after validating its source, options and initial view. */
++export function createEditorSession(
++  sourceData: SourceData,
++  options?: EditorSessionOptions,
++): ValidationResult<EditorSession> {
++  const sourceResult = validateSourceData(sourceData);
++  if (!sourceResult.ok) {
++    return validationFailure(sourceResult.errors);
++  }
++
++  const optionsResult = parseSessionOptions(options);
++  if (!optionsResult.ok) {
++    return optionsResult;
++  }
++
++  let viewResult: ValidationResult<ViewSpec>;
++  try {
++    viewResult = optionsResult.value.hasViewSpec
++      ? validateViewSpec(optionsResult.value.viewSpec, sourceResult.value)
++      : createInitialViewSpec(sourceResult.value);
++  } catch {
++    return validationFailure([validationIssue('INVALID_SOURCE_DATA', 'UNREADABLE_INPUT', '/')]);
++  }
++  if (!viewResult.ok) {
++    return validationFailure(viewResult.errors);
++  }
++
++  let fingerprint: string;
++  try {
++    fingerprint = sourceFingerprint(sourceResult.value);
++  } catch {
++    return validationFailure([validationIssue('INVALID_SOURCE_DATA', 'UNREADABLE_INPUT', '/')]);
++  }
++
++  return validationSuccess({
++    sourceData: sourceResult.value,
++    sourceFingerprint: fingerprint,
++    viewSpec: viewResult.value,
++    undoStack: [],
++    redoStack: [],
++    historyLimit: optionsResult.value.historyLimit,
++    processedActionIds: [],
++  });
++}
+diff --git a/packages/editor/tests/domain/commands.test.ts b/packages/editor/tests/domain/commands.test.ts
+new file mode 100644
+index 0000000..0c44e20
+--- /dev/null
++++ b/packages/editor/tests/domain/commands.test.ts
+@@ -0,0 +1,663 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  executeCommand,
++  type CollapseGroupCommand,
++  type CommandError,
++  type CommandResult,
++  type CreateGroupCommand,
++  type EditorSession,
++  type EditorSessionOptions,
++  type ExpandGroupCommand,
++  type MoveItemCommand,
++  type PinItemCommand,
++  type SetAnnotationCommand,
++  type SourceData,
++  type UngroupCommand,
++  type UnpinItemCommand,
++  type ValidationResult,
++} from '../../src';
++import { commandSourceData } from '../fixtures/commandSourceData';
++import { anchorsOnlySourceData, financialSourceData } from '../fixtures/financialSourceData';
++
++function sessionFrom(
++  sourceData: SourceData = commandSourceData,
++  options?: Parameters<typeof createEditorSession>[1],
++): EditorSession {
++  const result = createEditorSession(sourceData, options);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected a valid editor session');
++  }
++  return result.value;
++}
++
++function expectSuccess(result: CommandResult): EditorSession {
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error(`Expected command success, received ${result.error.code}`);
++  }
++  expect(result.viewSpec).toBe(result.session.viewSpec);
++  return result.session;
++}
++
++function expectFailure(result: CommandResult, code: CommandError['code']): CommandError {
++  expect(result.ok).toBe(false);
++  if (result.ok) {
++    throw new Error('Expected command failure');
++  }
++  expect(result.error.code).toBe(code);
++  return result.error;
++}
++
++function move(
++  id: string,
++  baseRevision: number,
++  itemId: string,
++  containerId: string,
++  index: number,
++): MoveItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'moveItem',
++    source: 'outline',
++    baseRevision,
++    payload: { itemId, target: { containerId, index } },
++  };
++}
++
++function group(
++  id: string,
++  baseRevision: number,
++  groupId = 'group-1',
++  itemIds: readonly string[] = ['a', 'b'],
++  label = 'Drivers',
++): CreateGroupCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'createGroup',
++    source: 'direct',
++    baseRevision,
++    payload: { groupId, label, itemIds },
++  };
++}
++
++function ungroup(id: string, baseRevision: number, groupId = 'group-1'): UngroupCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'ungroup',
++    source: 'direct',
++    baseRevision,
++    payload: { groupId },
++  };
++}
++
++function collapse(id: string, baseRevision: number, groupId = 'group-1'): CollapseGroupCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'collapseGroup',
++    source: 'keyboard',
++    baseRevision,
++    payload: { groupId },
++  };
++}
++
++function expand(id: string, baseRevision: number, groupId = 'group-1'): ExpandGroupCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'expandGroup',
++    source: 'keyboard',
++    baseRevision,
++    payload: { groupId },
++  };
++}
++
++function pin(id: string, baseRevision: number, itemId: string): PinItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'pinItem',
++    source: 'host',
++    baseRevision,
++    payload: { itemId },
++  };
++}
++
++function unpin(id: string, baseRevision: number, itemId: string): UnpinItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'unpinItem',
++    source: 'host',
++    baseRevision,
++    payload: { itemId },
++  };
++}
++
++function annotate(
++  id: string,
++  baseRevision: number,
++  nodeId: string,
++  text: string | null,
++): SetAnnotationCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'setAnnotation',
++    source: 'ai',
++    baseRevision,
++    payload: { nodeId, text },
++  };
++}
++
++describe('createEditorSession', () => {
++  it('preserves source identity and creates a deterministic privacy-safe fingerprint', () => {
++    const first = sessionFrom();
++    const second = sessionFrom(structuredClone(commandSourceData));
++
++    expect(first.sourceData).toBe(commandSourceData);
++    expect(first.sourceFingerprint).toMatch(/^fnv1a64:[0-9a-f]{16}$/);
++    expect(second.sourceFingerprint).toBe(first.sourceFingerprint);
++    expect(first).toMatchObject({ historyLimit: 100, undoStack: [], redoStack: [] });
++    expect(first.processedActionIds).toEqual([]);
++    expect(JSON.stringify(first.sourceFingerprint)).not.toContain('Alpha confidential');
++  });
++
++  it('fingerprints valid sources with and without optional source fields', () => {
++    const minimal = sessionFrom(anchorsOnlySourceData);
++    const detailed = sessionFrom(financialSourceData);
++
++    expect(minimal.sourceFingerprint).toMatch(/^fnv1a64:[0-9a-f]{16}$/);
++    expect(detailed.sourceFingerprint).toMatch(/^fnv1a64:[0-9a-f]{16}$/);
++    expect(detailed.sourceFingerprint).not.toBe(minimal.sourceFingerprint);
++  });
++
++  it('canonicalizes metadata by code-unit key order rather than insertion order', () => {
++    const firstSource: SourceData = {
++      ...financialSourceData,
++      items: financialSourceData.items.map((item, index) =>
++        index === 0 ? { ...item, metadata: { z: 1, '\u00e4': 2, a: 3 } } : item,
++      ),
++    };
++    const secondSource: SourceData = {
++      ...financialSourceData,
++      items: financialSourceData.items.map((item, index) =>
++        index === 0 ? { ...item, metadata: { a: 3, '\u00e4': 2, z: 1 } } : item,
++      ),
++    };
++
++    expect(sessionFrom(firstSource).sourceFingerprint).toBe(
++      sessionFrom(secondSource).sourceFingerprint,
++    );
++  });
++
++  it('accepts a caller view and a zero history limit', () => {
++    const initial = sessionFrom();
++    const result = createEditorSession(commandSourceData, {
++      viewSpec: initial.viewSpec,
++      historyLimit: 0,
++    });
++
++    expect(result.ok).toBe(true);
++    if (result.ok) {
++      expect(result.value.viewSpec).toBe(initial.viewSpec);
++      expect(result.value.historyLimit).toBe(0);
++    }
++  });
++
++  it.each([[-1], [1.5], [Number.NaN], [Number.MAX_SAFE_INTEGER + 1]])(
++    'rejects invalid historyLimit %s without throwing',
++    historyLimit => {
++      const result: ValidationResult<EditorSession> = createEditorSession(commandSourceData, {
++        historyLimit,
++      });
++      expect(result.ok).toBe(false);
++      if (!result.ok) {
++        expect(result.errors[0]).toMatchObject({
++          code: 'INVALID_SESSION_OPTIONS',
++          reason: 'INVALID_HISTORY_LIMIT',
++          path: '/historyLimit',
++        });
++      }
++    },
++  );
++
++  it('rejects an invalid supplied view through the existing validator', () => {
++    const valid = sessionFrom();
++    const result = createEditorSession(commandSourceData, {
++      viewSpec: { ...valid.viewSpec, rootOrder: ['a'] },
++    });
++
++    expect(result.ok).toBe(false);
++    if (!result.ok) {
++      expect(result.errors.some(issue => issue.code === 'SOURCE_CONFLICT')).toBe(true);
++    }
++  });
++
++  it('rejects unsafe option objects without invoking accessors or exposing proxy failures', () => {
++    let getterCalls = 0;
++    const accessor = {};
++    Object.defineProperty(accessor, 'historyLimit', {
++      enumerable: true,
++      get() {
++        getterCalls += 1;
++        throw new Error('private option getter');
++      },
++    });
++    const proxy = new Proxy(
++      {},
++      {
++        ownKeys() {
++          throw new Error('private option proxy');
++        },
++      },
++    );
++    const withSymbol = { [Symbol('private')]: true };
++
++    for (const options of [new Date(0), accessor, proxy, withSymbol, { unknown: true }]) {
++      const result = createEditorSession(commandSourceData, options as EditorSessionOptions);
++      expect(result.ok).toBe(false);
++      expect(JSON.stringify(result)).not.toContain('private option');
++    }
++    expect(getterCalls).toBe(0);
++  });
++
++  it('treats prototype-like source and group IDs as ordinary own record keys', () => {
++    const source: SourceData = {
++      schemaVersion: '1.0.0',
++      datasetId: 'prototype-like-ids',
++      items: [
++        { id: 'start', label: 'Start', amount: 0, kind: 'start' },
++        { id: 'constructor', label: 'Constructor', amount: 1, kind: 'contribution' },
++        { id: 'toString', label: 'To string', amount: 2, kind: 'contribution' },
++        { id: 'end', label: 'End', amount: 3, kind: 'end' },
++      ],
++    };
++    const start = sessionFrom(source);
++    const annotationNoOp = expectSuccess(
++      executeCommand(start, annotate('prototype-note', 0, 'toString', null)),
++    );
++    const grouped = expectSuccess(
++      executeCommand(
++        annotationNoOp,
++        group('prototype-group', 0, '__proto__', ['constructor', 'toString']),
++      ),
++    );
++
++    expect(annotationNoOp.viewSpec).toBe(start.viewSpec);
++    expect(Object.hasOwn(grouped.viewSpec.groups, '__proto__')).toBe(true);
++    expect(grouped.viewSpec.groups['__proto__']?.childIds).toEqual(['constructor', 'toString']);
++    const restored = expectSuccess(
++      executeCommand(grouped, ungroup('prototype-ungroup', 1, '__proto__')),
++    );
++    expect(restored.viewSpec.rootOrder).toEqual(['constructor', 'toString']);
++  });
++});
++
++describe('moveItem', () => {
++  it('reorders root items using the target index after removal', () => {
++    const start = sessionFrom();
++    const result = executeCommand(start, move('move-1', 0, 'c', 'root', 0));
++    const next = expectSuccess(result);
++
++    expect(next.viewSpec.rootOrder).toEqual(['c', 'a', 'b', 'd', 'e']);
++    expect(next.viewSpec.revision).toBe(1);
++    if (result.ok) {
++      expect(result.event).toEqual({
++        commandId: 'move-1',
++        type: 'moveItem',
++        source: 'outline',
++        previousRevision: 0,
++        nextRevision: 1,
++        affectedNodeIds: ['c'],
++        noOp: false,
++      });
++    }
++    expect(next.sourceData).toBe(start.sourceData);
++  });
++
++  it('moves items within, into and out of a group without mutating prior sessions', () => {
++    const start = sessionFrom();
++    const grouped = expectSuccess(executeCommand(start, group('group', 0)));
++    const into = expectSuccess(executeCommand(grouped, move('into', 1, 'c', 'group-1', 2)));
++    const within = expectSuccess(executeCommand(into, move('within', 2, 'c', 'group-1', 0)));
++    const out = expectSuccess(executeCommand(within, move('out', 3, 'b', 'root', 1)));
++
++    expect(grouped.viewSpec.groups['group-1']?.childIds).toEqual(['a', 'b']);
++    expect(into.viewSpec.groups['group-1']?.childIds).toEqual(['a', 'b', 'c']);
++    expect(within.viewSpec.groups['group-1']?.childIds).toEqual(['c', 'a', 'b']);
++    expect(out.viewSpec.groups['group-1']?.childIds).toEqual(['c', 'a']);
++    expect(out.viewSpec.rootOrder).toEqual(['group-1', 'b', 'd', 'e']);
++    expect(start.viewSpec.rootOrder).toEqual(['a', 'b', 'c', 'd', 'e']);
++  });
++
++  it('returns a recorded no-op when the final container order is unchanged', () => {
++    const start = sessionFrom();
++    const result = executeCommand(start, move('same', 0, 'a', 'root', 0));
++    const next = expectSuccess(result);
++
++    expect(next.viewSpec).toBe(start.viewSpec);
++    expect(next.undoStack).toBe(start.undoStack);
++    expect(next.redoStack).toBe(start.redoStack);
++    expect(next.processedActionIds).toEqual(['same']);
++    if (result.ok) {
++      expect(result.event.noOp).toBe(true);
++      expect(result.event.nextRevision).toBe(0);
++    }
++  });
++
++  it('rejects unknown, anchor, pinned, out-of-range, cross-segment and undersized moves', () => {
++    const start = sessionFrom();
++    expectFailure(
++      executeCommand(start, move('missing', 0, 'missing', 'root', 0)),
++      'ITEM_NOT_FOUND',
++    );
++    expectFailure(executeCommand(start, move('anchor', 0, 'start', 'root', 0)), 'ITEM_LOCKED');
++    expectFailure(executeCommand(start, move('range', 0, 'a', 'root', 99)), 'INVALID_DROP_TARGET');
++    expectFailure(executeCommand(start, move('segment', 0, 'd', 'root', 0)), 'INVALID_DROP_TARGET');
++
++    const pinned = expectSuccess(executeCommand(start, pin('pin-a', 0, 'a')));
++    expectFailure(executeCommand(pinned, move('pinned', 1, 'a', 'root', 1)), 'ITEM_LOCKED');
++
++    const grouped = expectSuccess(executeCommand(start, group('group-two', 0)));
++    expectFailure(
++      executeCommand(grouped, move('too-small', 1, 'a', 'root', 1)),
++      'INVALID_DROP_TARGET',
++    );
++    expectFailure(
++      executeCommand(grouped, move('bad-container', 1, 'd', 'unknown', 0)),
++      'GROUP_NOT_FOUND',
++    );
++  });
++});
++
++describe('group commands', () => {
++  it('creates a root group in current display order and ungroups it in place', () => {
++    const start = sessionFrom();
++    const groupedResult = executeCommand(start, group('create', 0, 'drivers', ['b', 'a']));
++    const grouped = expectSuccess(groupedResult);
++
++    expect(grouped.viewSpec.rootOrder).toEqual(['drivers', 'c', 'd', 'e']);
++    expect(grouped.viewSpec.groups['drivers']).toEqual({
++      id: 'drivers',
++      label: 'Drivers',
++      childIds: ['a', 'b'],
++    });
++    if (groupedResult.ok) {
++      expect(groupedResult.event.affectedNodeIds).toEqual(['drivers', 'a', 'b']);
++    }
++
++    const restored = expectSuccess(executeCommand(grouped, ungroup('remove', 1, 'drivers')));
++    expect(restored.viewSpec.rootOrder).toEqual(start.viewSpec.rootOrder);
++    expect(restored.viewSpec.groups).toEqual({});
++  });
++
++  it('removes group-owned collapsed, annotation and emphasis state on ungroup', () => {
++    const base = sessionFrom();
++    const seededView = {
++      ...base.viewSpec,
++      rootOrder: ['group-1', 'c', 'd', 'e'],
++      groups: { 'group-1': { id: 'group-1', label: 'Drivers', childIds: ['a', 'b'] } },
++      collapsedGroupIds: ['group-1'],
++      annotations: { 'group-1': 'private annotation', a: 'child note' },
++      emphasis: { 'group-1': 'highlight' as const, a: 'muted' as const },
++    };
++    const seeded = sessionFrom(commandSourceData, { viewSpec: seededView });
++    const next = expectSuccess(executeCommand(seeded, ungroup('ungroup-clean', 0)));
++
++    expect(next.viewSpec.collapsedGroupIds).toEqual([]);
++    expect(next.viewSpec.annotations).toEqual({ a: 'child note' });
++    expect(next.viewSpec.emphasis).toEqual({ a: 'muted' });
++  });
++
++  it('rejects invalid selections, IDs, labels, pinned members and pinned ungroup', () => {
++    const start = sessionFrom();
++    expectFailure(executeCommand(start, group('small', 0, 'g', ['a'])), 'GROUP_TOO_SMALL');
++    expectFailure(
++      executeCommand(start, group('non-contiguous', 0, 'g', ['a', 'c'])),
++      'NON_CONTIGUOUS_GROUP_SELECTION',
++    );
++    expectFailure(executeCommand(start, group('cross', 0, 'g', ['c', 'd'])), 'INVALID_DROP_TARGET');
++    expectFailure(executeCommand(start, group('source-id', 0, 'a')), 'GROUP_ID_CONFLICT');
++    expectFailure(executeCommand(start, group('reserved-id', 0, 'root')), 'GROUP_ID_CONFLICT');
++    expectFailure(
++      executeCommand(start, group('blank-label', 0, 'g', ['a', 'b'], '  ')),
++      'INVALID_COMMAND',
++    );
++
++    const pinned = expectSuccess(executeCommand(start, pin('pin', 0, 'a')));
++    expectFailure(executeCommand(pinned, group('pinned-group', 1)), 'ITEM_LOCKED');
++
++    const grouped = expectSuccess(executeCommand(start, group('create', 0)));
++    const pinnedChild = expectSuccess(executeCommand(grouped, pin('pin-child', 1, 'a')));
++    expectFailure(executeCommand(pinnedChild, ungroup('blocked-ungroup', 2)), 'ITEM_LOCKED');
++    expectFailure(executeCommand(start, ungroup('unknown-group', 0)), 'GROUP_NOT_FOUND');
++  });
++});
++
++describe('collapse, pin and annotation commands', () => {
++  it('toggles group collapse and records repeated state as a no-op', () => {
++    const grouped = expectSuccess(executeCommand(sessionFrom(), group('create', 0)));
++    const collapsed = expectSuccess(executeCommand(grouped, collapse('collapse', 1)));
++    const repeatedResult = executeCommand(collapsed, collapse('collapse-again', 2));
++    const repeated = expectSuccess(repeatedResult);
++    const expanded = expectSuccess(executeCommand(repeated, expand('expand', 2)));
++
++    expect(collapsed.viewSpec.collapsedGroupIds).toEqual(['group-1']);
++    expect(repeated.viewSpec).toBe(collapsed.viewSpec);
++    expect(repeated.undoStack).toBe(collapsed.undoStack);
++    expect(expanded.viewSpec.collapsedGroupIds).toEqual([]);
++    if (repeatedResult.ok) {
++      expect(repeatedResult.event.noOp).toBe(true);
++    }
++    expectFailure(executeCommand(sessionFrom(), collapse('missing', 0)), 'GROUP_NOT_FOUND');
++  });
++
++  it('pins root and group children and treats repeated pin/unpin as no-ops', () => {
++    const start = sessionFrom();
++    const pinned = expectSuccess(executeCommand(start, pin('pin', 0, 'a')));
++    const repeated = expectSuccess(executeCommand(pinned, pin('pin-again', 1, 'a')));
++    const unpinned = expectSuccess(executeCommand(repeated, unpin('unpin', 1, 'a')));
++    const repeatedUnpin = expectSuccess(executeCommand(unpinned, unpin('unpin-again', 2, 'a')));
++
++    expect(pinned.viewSpec.pinnedItemIds).toEqual(['a']);
++    expect(repeated.viewSpec).toBe(pinned.viewSpec);
++    expect(unpinned.viewSpec.pinnedItemIds).toEqual([]);
++    expect(repeatedUnpin.viewSpec).toBe(unpinned.viewSpec);
++
++    const grouped = expectSuccess(executeCommand(start, group('group', 0)));
++    expectSuccess(executeCommand(grouped, pin('pin-child', 1, 'a')));
++    expectFailure(executeCommand(start, pin('pin-anchor', 0, 'start')), 'ITEM_LOCKED');
++    expectFailure(executeCommand(start, pin('pin-missing', 0, 'missing')), 'ITEM_NOT_FOUND');
++  });
++
++  it('sets source, anchor and group annotations while preserving non-empty text', () => {
++    const start = sessionFrom();
++    const sourceText = '  <b>private</b>  ';
++    const annotated = expectSuccess(executeCommand(start, annotate('note', 0, 'a', sourceText)));
++    const anchor = expectSuccess(
++      executeCommand(annotated, annotate('anchor-note', 1, 'start', 'anchor')),
++    );
++    const same = expectSuccess(executeCommand(anchor, annotate('same-note', 2, 'a', sourceText)));
++    const removed = expectSuccess(executeCommand(same, annotate('remove-note', 2, 'a', '   ')));
++
++    expect(annotated.viewSpec.annotations['a']).toBe(sourceText);
++    expect(anchor.viewSpec.annotations['start']).toBe('anchor');
++    expect(same.viewSpec).toBe(anchor.viewSpec);
++    expect(removed.viewSpec.annotations['a']).toBeUndefined();
++
++    const grouped = expectSuccess(executeCommand(start, group('group', 0)));
++    const groupNote = expectSuccess(
++      executeCommand(grouped, annotate('group-note', 1, 'group-1', 'summary')),
++    );
++    expect(groupNote.viewSpec.annotations['group-1']).toBe('summary');
++  });
++
++  it('enforces annotation code points and known nodes without leaking text', () => {
++    const start = sessionFrom();
++    const fiveHundred = '😀'.repeat(500);
++    const accepted = expectSuccess(executeCommand(start, annotate('max', 0, 'a', fiveHundred)));
++    expect(accepted.viewSpec.annotations['a']).toBe(fiveHundred);
++
++    const tooLong = 'sensitive'.repeat(63);
++    const result = executeCommand(start, annotate('too-long', 0, 'a', tooLong));
++    const error = expectFailure(result, 'INVALID_COMMAND');
++    expect(error.reason).toBe('ANNOTATION_TOO_LONG');
++    expect(JSON.stringify(error)).not.toContain(tooLong);
++    expectFailure(
++      executeCommand(start, annotate('unknown', 0, 'missing', 'text')),
++      'NODE_NOT_FOUND',
++    );
++  });
++});
++
++describe('command envelope and atomicity', () => {
++  it('checks duplicate IDs before revision and lets a rejected ID be reused', () => {
++    const start = sessionFrom();
++    const first = expectSuccess(executeCommand(start, pin('same-id', 0, 'a')));
++    const duplicate = executeCommand(first, unpin('same-id', 0, 'a'));
++    expectFailure(duplicate, 'DUPLICATE_COMMAND_ID');
++    expect(duplicate.session).toBe(first);
++
++    const rejected = executeCommand(start, move('reusable', 0, 'missing', 'root', 0));
++    expectFailure(rejected, 'ITEM_NOT_FOUND');
++    const reused = expectSuccess(executeCommand(start, pin('reusable', 0, 'a')));
++    expect(reused.processedActionIds).toEqual(['reusable']);
++  });
++
++  it('rejects stale revisions and preserves every input identity', () => {
++    const start = sessionFrom();
++    const result = executeCommand(start, pin('stale', 2, 'a'));
++
++    const error = expectFailure(result, 'REVISION_CONFLICT');
++    expect(result.session).toBe(start);
++    expect(error).toMatchObject({
++      path: '/baseRevision',
++      details: { expectedRevision: 2, actualRevision: 0 },
++    });
++  });
++
++  it('validates closed-schema command data without invoking getters or leaking proxy errors', () => {
++    const start = sessionFrom();
++    let getterCalls = 0;
++    const accessor = {
++      schemaVersion: '1.0.0',
++      id: 'accessor',
++      type: 'pinItem',
++      source: 'host',
++      baseRevision: 0,
++    };
++    Object.defineProperty(accessor, 'payload', {
++      enumerable: true,
++      get() {
++        getterCalls += 1;
++        throw new Error('private getter text');
++      },
++    });
++
++    const accessorResult = executeCommand(start, accessor as PinItemCommand);
++    expectFailure(accessorResult, 'INVALID_COMMAND');
++    expect(getterCalls).toBe(0);
++    expect(JSON.stringify(accessorResult)).not.toContain('private getter text');
++
++    const proxy = new Proxy(
++      {},
++      {
++        ownKeys() {
++          throw new Error('private proxy text');
++        },
++      },
++    );
++    const proxyResult = executeCommand(start, proxy as PinItemCommand);
++    expectFailure(proxyResult, 'INVALID_COMMAND');
++    expect(JSON.stringify(proxyResult)).not.toContain('private proxy text');
++
++    const extra = { ...pin('extra', 0, 'a'), secret: 'private field' };
++    expectFailure(executeCommand(start, extra), 'INVALID_COMMAND');
++  });
++
++  it('rejects malformed envelope and payload variants with stable privacy-safe errors', () => {
++    const start = sessionFrom();
++    const validPin = pin('raw', 0, 'a');
++    const sparseIds = ['a', 'b'];
++    delete sparseIds[1];
++    const extraIds = ['a', 'b'];
++    Object.defineProperty(extraIds, 'extra', { enumerable: true, value: true });
++    const symbolIds = ['a', 'b'];
++    Object.defineProperty(symbolIds, Symbol('private'), { enumerable: true, value: true });
++    const accessorIds = ['a', 'b'];
++    Object.defineProperty(accessorIds, '1', {
++      enumerable: true,
++      get() {
++        throw new Error('private array getter');
++      },
++    });
++    const commandWithSymbol = { ...validPin };
++    Object.defineProperty(commandWithSymbol, Symbol('private'), { enumerable: true, value: true });
++    const idTrap = new Proxy(
++      {},
++      {
++        getOwnPropertyDescriptor() {
++          throw new Error('private id trap');
++        },
++      },
++    );
++
++    const cases: readonly unknown[] = [
++      null,
++      42,
++      () => undefined,
++      new Date(0),
++      commandWithSymbol,
++      { ...validPin, schemaVersion: 1 },
++      { ...validPin, schemaVersion: '2.0.0' },
++      { ...validPin, id: ' ' },
++      { ...validPin, type: 'unknown' },
++      { ...validPin, source: 'unknown' },
++      { ...validPin, baseRevision: -1 },
++      { ...validPin, payload: null },
++      { ...validPin, payload: { itemId: ' ' } },
++      { ...move('raw-move', 0, 'a', 'root', 0), payload: null },
++      { ...move('raw-move', 0, 'a', 'root', 0), payload: { itemId: 1, target: {} } },
++      { ...move('raw-move', 0, 'a', 'root', 0), payload: { itemId: 'a', target: null } },
++      {
++        ...move('raw-move', 0, 'a', 'root', 0),
++        payload: { itemId: 'a', target: { containerId: ' ', index: 0 } },
++      },
++      {
++        ...move('raw-move', 0, 'a', 'root', 0),
++        payload: { itemId: 'a', target: { containerId: 'root', index: 0.5 } },
++      },
++      { ...group('raw-group', 0), payload: null },
++      { ...group('raw-group', 0), payload: { groupId: ' ', label: 'x', itemIds: [] } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 1, itemIds: [] } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 'x', itemIds: {} } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 'x', itemIds: sparseIds } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 'x', itemIds: extraIds } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 'x', itemIds: symbolIds } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 'x', itemIds: accessorIds } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 'x', itemIds: ['a', 'a'] } },
++      { ...group('raw-group', 0), payload: { groupId: 'g', label: 'x', itemIds: ['a', 1] } },
++      { ...collapse('raw-collapse', 0), payload: null },
++      { ...collapse('raw-collapse', 0), payload: { groupId: ' ' } },
++      { ...annotate('raw-note', 0, 'a', null), payload: null },
++      { ...annotate('raw-note', 0, 'a', null), payload: { nodeId: ' ', text: null } },
++      { ...annotate('raw-note', 0, 'a', null), payload: { nodeId: 'a', text: 1 } },
++      idTrap,
++    ];
++
++    for (const input of cases) {
++      const result = executeCommand(start, input as PinItemCommand);
++      const error = expectFailure(result, 'INVALID_COMMAND');
++      expect(error.message.length).toBeGreaterThan(0);
++      expect(result.session).toBe(start);
++      expect(JSON.stringify(result)).not.toContain('private');
++    }
++  });
++});
+diff --git a/packages/editor/tests/domain/history.test.ts b/packages/editor/tests/domain/history.test.ts
+new file mode 100644
+index 0000000..44c653f
+--- /dev/null
++++ b/packages/editor/tests/domain/history.test.ts
+@@ -0,0 +1,329 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  executeCommand,
++  redoSession,
++  undoSession,
++  type CommandResult,
++  type EditorSession,
++  type HistoryEntry,
++  type MoveItemCommand,
++  type PinItemCommand,
++  type SessionActionMeta,
++  type SetAnnotationCommand,
++} from '../../src';
++import { commandSourceData } from '../fixtures/commandSourceData';
++
++function session(historyLimit?: number): EditorSession {
++  const result = createEditorSession(
++    commandSourceData,
++    historyLimit === undefined ? undefined : { historyLimit },
++  );
++  if (!result.ok) {
++    throw new Error('Expected a valid session fixture');
++  }
++  return result.value;
++}
++
++function success(result: CommandResult): EditorSession {
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error(`Expected success, received ${result.error.code}`);
++  }
++  return result.session;
++}
++
++function action(id: string, baseRevision: number, source: SessionActionMeta['source'] = 'host') {
++  return { id, source, baseRevision } satisfies SessionActionMeta;
++}
++
++function move(id: string, baseRevision: number, itemId: string, index: number): MoveItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'moveItem',
++    source: 'outline',
++    baseRevision,
++    payload: { itemId, target: { containerId: 'root', index } },
++  };
++}
++
++function pin(id: string, baseRevision: number, itemId: string): PinItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'pinItem',
++    source: 'host',
++    baseRevision,
++    payload: { itemId },
++  };
++}
++
++function note(id: string, baseRevision: number, text: string): SetAnnotationCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'setAnnotation',
++    source: 'direct',
++    baseRevision,
++    payload: { nodeId: 'a', text },
++  };
++}
++
++function content(sessionValue: EditorSession): unknown {
++  return { ...sessionValue.viewSpec, revision: 0 };
++}
++
++describe('undo and redo', () => {
++  it('restores snapshot content while revisions remain monotonic', () => {
++    const initial = session();
++    const moved = success(executeCommand(initial, move('move', 0, 'c', 0)));
++    const undoResult = undoSession(moved, action('undo', 1, 'keyboard'));
++    const undone = success(undoResult);
++    const redoResult = redoSession(undone, action('redo', 2, 'keyboard'));
++    const redone = success(redoResult);
++
++    expect(content(undone)).toEqual(content(initial));
++    expect(undone.viewSpec.revision).toBe(2);
++    expect(content(redone)).toEqual(content(moved));
++    expect(redone.viewSpec.revision).toBe(3);
++    expect(redone.sourceData).toBe(initial.sourceData);
++    if (undoResult.ok && redoResult.ok) {
++      expect(undoResult.event).toMatchObject({
++        commandId: 'undo',
++        type: 'undo',
++        source: 'keyboard',
++        previousRevision: 1,
++        nextRevision: 2,
++        noOp: false,
++      });
++      expect(redoResult.event.type).toBe('redo');
++    }
++  });
++
++  it('clears redo on a new write but preserves it after a rejection or no-op', () => {
++    const initial = session();
++    const moved = success(executeCommand(initial, move('move', 0, 'c', 0)));
++    const undone = success(undoSession(moved, action('undo', 1)));
++    const redoIdentity = undone.redoStack;
++
++    const rejected = executeCommand(undone, move('bad', 2, 'missing', 0));
++    expect(rejected.ok).toBe(false);
++    expect(rejected.session).toBe(undone);
++
++    const noOp = success(executeCommand(undone, move('noop', 2, 'a', 0)));
++    expect(noOp.redoStack).toBe(redoIdentity);
++    expect(noOp.viewSpec).toBe(undone.viewSpec);
++    expect(success(redoSession(noOp, action('redo', 2))).redoStack).toEqual([]);
++
++    const branched = success(executeCommand(undone, pin('pin', 2, 'a')));
++    expect(branched.redoStack).toEqual([]);
++    const empty = redoSession(branched, action('empty-redo', 3));
++    expect(empty.ok).toBe(false);
++    if (!empty.ok) {
++      expect(empty.error.code).toBe('HISTORY_EMPTY');
++    }
++  });
++
++  it('rejects empty, duplicate and stale history actions atomically', () => {
++    const initial = session();
++    const empty = undoSession(initial, action('empty', 0));
++    expect(empty.ok).toBe(false);
++    expect(empty.session).toBe(initial);
++    if (!empty.ok) {
++      expect(empty.error).toMatchObject({ code: 'HISTORY_EMPTY', path: '/undoStack' });
++    }
++
++    const moved = success(executeCommand(initial, move('move', 0, 'c', 0)));
++    const stale = undoSession(moved, action('stale', 0));
++    expect(stale.ok).toBe(false);
++    if (!stale.ok) {
++      expect(stale.error.code).toBe('REVISION_CONFLICT');
++    }
++    const undone = success(undoSession(moved, action('history-id', 1)));
++    const duplicate = redoSession(undone, action('history-id', 2));
++    expect(duplicate.ok).toBe(false);
++    if (!duplicate.ok) {
++      expect(duplicate.error.code).toBe('DUPLICATE_COMMAND_ID');
++    }
++    expect(duplicate.session).toBe(undone);
++  });
++
++  it('rejects malformed history action metadata before inspecting history', () => {
++    const initial = session();
++    const withSymbol = { id: 'symbol', source: 'host', baseRevision: 0 };
++    Object.defineProperty(withSymbol, Symbol('private'), { enumerable: true, value: true });
++    const hostile = new Proxy(
++      {},
++      {
++        ownKeys() {
++          throw new Error('private history proxy');
++        },
++      },
++    );
++    const cases: readonly unknown[] = [
++      null,
++      withSymbol,
++      { id: ' ', source: 'host', baseRevision: 0 },
++      { id: 'invalid-source', source: 'invalid', baseRevision: 0 },
++      { id: 'invalid-revision', source: 'host', baseRevision: -1 },
++      { id: 'extra', source: 'host', baseRevision: 0, extra: true },
++      hostile,
++    ];
++
++    for (const input of cases) {
++      const result = undoSession(initial, input as SessionActionMeta);
++      expect(result.ok).toBe(false);
++      expect(result.session).toBe(initial);
++      if (!result.ok) {
++        expect(result.error.code).toBe('INVALID_COMMAND');
++        expect(JSON.stringify(result.error)).not.toContain('private history');
++      }
++    }
++  });
++
++  it('rejects invalid current and restored snapshots without partial history changes', () => {
++    const initial = session();
++    const moved = success(executeCommand(initial, move('move', 0, 'c', 0)));
++    const invalidView = { ...moved.viewSpec, rootOrder: ['a'] };
++    const invalidCurrent: EditorSession = { ...moved, viewSpec: invalidView };
++    const currentResult = undoSession(invalidCurrent, action('invalid-current', 1));
++    expect(currentResult.ok).toBe(false);
++    expect(currentResult.session).toBe(invalidCurrent);
++    if (!currentResult.ok) {
++      expect(currentResult.error.code).toBe('INVARIANT_VIOLATION');
++    }
++
++    const entry = moved.undoStack.at(-1);
++    expect(entry).toBeDefined();
++    if (entry === undefined) {
++      return;
++    }
++    const invalidEntry: HistoryEntry = { ...entry, before: invalidView };
++    const invalidSnapshot: EditorSession = { ...moved, undoStack: [invalidEntry] };
++    const snapshotResult = undoSession(invalidSnapshot, action('invalid-snapshot', 1));
++    expect(snapshotResult.ok).toBe(false);
++    expect(snapshotResult.session).toBe(invalidSnapshot);
++    if (!snapshotResult.ok) {
++      expect(snapshotResult.error.code).toBe('INVARIANT_VIOLATION');
++    }
++
++    const unreadableEntry: HistoryEntry = {
++      ...entry,
++      before: new Proxy(entry.before, {
++        get(target, property, receiver) {
++          if (property === 'groups') {
++            throw new Error('private snapshot');
++          }
++          return Reflect.get(target, property, receiver) as unknown;
++        },
++      }),
++    };
++    const unreadableSnapshot: EditorSession = { ...moved, undoStack: [unreadableEntry] };
++    const unreadableResult = undoSession(unreadableSnapshot, action('unreadable-snapshot', 1));
++    expect(unreadableResult.ok).toBe(false);
++    expect(unreadableResult.session).toBe(unreadableSnapshot);
++    if (!unreadableResult.ok) {
++      expect(JSON.stringify(unreadableResult.error)).not.toContain('private snapshot');
++    }
++  });
++});
++
++describe('bounded history', () => {
++  it('keeps only the newest entries and bounds redo independently', () => {
++    let current = session(2);
++    current = success(executeCommand(current, note('one', 0, 'one')));
++    current = success(executeCommand(current, note('two', 1, 'two')));
++    current = success(executeCommand(current, note('three', 2, 'three')));
++
++    expect(current.undoStack).toHaveLength(2);
++    const firstUndo = success(undoSession(current, action('undo-1', 3)));
++    const secondUndo = success(undoSession(firstUndo, action('undo-2', 4)));
++    expect(secondUndo.viewSpec.annotations['a']).toBe('one');
++    expect(secondUndo.redoStack).toHaveLength(2);
++
++    const exhausted = undoSession(secondUndo, action('undo-3', 5));
++    expect(exhausted.ok).toBe(false);
++    if (!exhausted.ok) {
++      expect(exhausted.error.code).toBe('HISTORY_EMPTY');
++    }
++  });
++
++  it('allows state changes with historyLimit zero and disables undo storage', () => {
++    const initial = session(0);
++    const moved = success(executeCommand(initial, move('move', 0, 'c', 0)));
++
++    expect(moved.viewSpec.revision).toBe(1);
++    expect(moved.undoStack).toEqual([]);
++    const result = undoSession(moved, action('undo', 1));
++    expect(result.ok).toBe(false);
++    if (!result.ok) {
++      expect(result.error.code).toBe('HISTORY_EMPTY');
++    }
++  });
++
++  it('does not store SourceData or sensitive command payloads in entries', () => {
++    const initial = session();
++    const annotated = success(
++      executeCommand(initial, note('private-note', 0, 'secret annotation')),
++    );
++    const entry = annotated.undoStack[0];
++
++    expect(entry).toBeDefined();
++    expect(entry).not.toHaveProperty('sourceData');
++    expect(entry).not.toHaveProperty('payload');
++    expect(entry).toMatchObject({
++      action: { id: 'private-note', type: 'setAnnotation', source: 'direct' },
++      affectedNodeIds: ['a'],
++    });
++    expect(JSON.stringify(entry?.action)).not.toContain('secret annotation');
++  });
++
++  it('rejects revision overflow for commands, undo and redo', () => {
++    const initial = session();
++    const overflow: EditorSession = {
++      ...initial,
++      viewSpec: { ...initial.viewSpec, revision: Number.MAX_SAFE_INTEGER },
++    };
++    const commandResult = executeCommand(
++      overflow,
++      pin('overflow-command', Number.MAX_SAFE_INTEGER, 'a'),
++    );
++    expect(commandResult.ok).toBe(false);
++    if (!commandResult.ok) {
++      expect(commandResult.error.code).toBe('REVISION_OVERFLOW');
++    }
++    const noOpAtLimit = executeCommand(
++      overflow,
++      move('overflow-noop', Number.MAX_SAFE_INTEGER, 'a', 0),
++    );
++    expect(noOpAtLimit.ok).toBe(true);
++    if (noOpAtLimit.ok) {
++      expect(noOpAtLimit.session.viewSpec).toBe(overflow.viewSpec);
++      expect(noOpAtLimit.session.viewSpec.revision).toBe(Number.MAX_SAFE_INTEGER);
++    }
++
++    const moved = success(executeCommand(initial, move('move', 0, 'c', 0)));
++    const undoOverflow: EditorSession = {
++      ...moved,
++      viewSpec: { ...moved.viewSpec, revision: Number.MAX_SAFE_INTEGER },
++    };
++    const undoResult = undoSession(undoOverflow, action('overflow-undo', Number.MAX_SAFE_INTEGER));
++    expect(undoResult.ok).toBe(false);
++    if (!undoResult.ok) {
++      expect(undoResult.error.code).toBe('REVISION_OVERFLOW');
++    }
++
++    const undone = success(undoSession(moved, action('undo', 1)));
++    const redoOverflow: EditorSession = {
++      ...undone,
++      viewSpec: { ...undone.viewSpec, revision: Number.MAX_SAFE_INTEGER },
++    };
++    const redoResult = redoSession(redoOverflow, action('overflow-redo', Number.MAX_SAFE_INTEGER));
++    expect(redoResult.ok).toBe(false);
++    if (!redoResult.ok) {
++      expect(redoResult.error.code).toBe('REVISION_OVERFLOW');
++    }
++  });
++});
+diff --git a/packages/editor/tests/domain/invariants.test.ts b/packages/editor/tests/domain/invariants.test.ts
+new file mode 100644
+index 0000000..8f22a4c
+--- /dev/null
++++ b/packages/editor/tests/domain/invariants.test.ts
+@@ -0,0 +1,152 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  executeCommand,
++  validateViewSpec,
++  type CommandResult,
++  type EditorSession,
++  type GroupId,
++  type MoveItemCommand,
++  type SourceItemId,
++  type ViewSpec,
++} from '../../src';
++import { validateEditorInvariants } from '../../src/domain/invariants';
++import { commandSourceData } from '../fixtures/commandSourceData';
++
++function session(): EditorSession {
++  const result = createEditorSession(commandSourceData);
++  if (!result.ok) {
++    throw new Error('Expected fixture session');
++  }
++  return result.value;
++}
++
++function move(id: string, baseRevision: number, itemId: string, index: number): MoveItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'moveItem',
++    source: 'direct',
++    baseRevision,
++    payload: { itemId, target: { containerId: 'root', index } },
++  };
++}
++
++function assertAtomicFailure(result: CommandResult, input: EditorSession): void {
++  expect(result.ok).toBe(false);
++  expect(result.session).toBe(input);
++  expect(result.session.viewSpec).toBe(input.viewSpec);
++  expect(result.session.undoStack).toBe(input.undoStack);
++  expect(result.session.redoStack).toBe(input.redoStack);
++  expect(result.session.processedActionIds).toBe(input.processedActionIds);
++}
++
++describe('editor invariant gate', () => {
++  it('accepts a valid view and reports the existing stable validation issues', () => {
++    const start = session();
++    const valid = validateEditorInvariants(start.sourceData, start.viewSpec);
++    expect(valid).toEqual({ ok: true, value: start.viewSpec, errors: [] });
++
++    const missing: ViewSpec = { ...start.viewSpec, rootOrder: ['a', 'b', 'c', 'd'] };
++    const result = validateEditorInvariants(start.sourceData, missing);
++    expect(result.ok).toBe(false);
++    if (!result.ok) {
++      expect(result.errors.some(issue => issue.reason === 'MISSING_SOURCE_REFERENCE')).toBe(true);
++    }
++  });
++
++  it.each([
++    {
++      name: 'duplicate root node',
++      change: (view: ViewSpec): ViewSpec => ({
++        ...view,
++        rootOrder: ['a', 'a', 'b', 'c', 'd', 'e'],
++      }),
++    },
++    {
++      name: 'cross-segment root order',
++      change: (view: ViewSpec): ViewSpec => ({ ...view, rootOrder: ['d', 'a', 'b', 'c', 'e'] }),
++    },
++    {
++      name: 'undersized group',
++      change: (view: ViewSpec): ViewSpec => ({
++        ...view,
++        rootOrder: ['group', 'b', 'c', 'd', 'e'],
++        groups: { group: { id: 'group', label: 'Group', childIds: ['a'] } },
++      }),
++    },
++    {
++      name: 'duplicate membership',
++      change: (view: ViewSpec): ViewSpec => ({
++        ...view,
++        rootOrder: ['group-1', 'group-2', 'c', 'd', 'e'],
++        groups: {
++          'group-1': { id: 'group-1', label: 'One', childIds: ['a', 'b'] },
++          'group-2': { id: 'group-2', label: 'Two', childIds: ['a', 'b'] },
++        },
++      }),
++    },
++  ])('rejects a tampered session before apply: $name', ({ change }) => {
++    const valid = session();
++    const tampered: EditorSession = { ...valid, viewSpec: change(valid.viewSpec) };
++    const result = executeCommand(tampered, move('attempt', 0, 'a', 0));
++
++    assertAtomicFailure(result, tampered);
++    if (!result.ok) {
++      expect(result.error.code).toBe('INVARIANT_VIOLATION');
++    }
++  });
++
++  it('reports a stale base revision before inspecting a tampered session view', () => {
++    const valid = session();
++    const tampered: EditorSession = {
++      ...valid,
++      viewSpec: { ...valid.viewSpec, rootOrder: ['a'] },
++    };
++    const result = executeCommand(tampered, move('stale-tampered', 99, 'a', 0));
++
++    assertAtomicFailure(result, tampered);
++    if (!result.ok) {
++      expect(result.error).toMatchObject({
++        code: 'REVISION_CONFLICT',
++        path: '/baseRevision',
++        details: { expectedRevision: 99, actualRevision: 0 },
++      });
++    }
++  });
++
++  it('keeps source identity, coverage and source-order amount conservation after success', () => {
++    const start = session();
++    const result = executeCommand(start, move('move', 0, 'c', 0));
++    expect(result.ok).toBe(true);
++    if (!result.ok) {
++      return;
++    }
++
++    expect(result.session.sourceData).toBe(start.sourceData);
++    expect(validateViewSpec(result.session.viewSpec, start.sourceData).ok).toBe(true);
++
++    const sourceAmounts = new Map(
++      start.sourceData.items
++        .filter(item => item.kind === 'contribution')
++        .map(item => [item.id, item.amount] as const),
++    );
++    const covered = result.session.viewSpec.rootOrder.flatMap(nodeId => {
++      const group = result.session.viewSpec.groups[nodeId as GroupId];
++      return group?.childIds ?? [nodeId as SourceItemId];
++    });
++    const total = start.sourceData.items
++      .filter(item => item.kind === 'contribution')
++      .reduce(
++        (sum, item) => sum + (covered.includes(item.id) ? (sourceAmounts.get(item.id) ?? 0) : 0),
++        0,
++      );
++    const expected = start.sourceData.items
++      .filter(item => item.kind === 'contribution')
++      .reduce((sum, item) => sum + item.amount, 0);
++
++    expect(new Set(covered)).toEqual(new Set(sourceAmounts.keys()));
++    expect(total).toBe(expected);
++  });
++});
+diff --git a/packages/editor/tests/domain/property-sequences.test.ts b/packages/editor/tests/domain/property-sequences.test.ts
+new file mode 100644
+index 0000000..67cd1cd
+--- /dev/null
++++ b/packages/editor/tests/domain/property-sequences.test.ts
+@@ -0,0 +1,154 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  executeCommand,
++  redoSession,
++  undoSession,
++  validateViewSpec,
++  type EditorCommand,
++  type EditorSession,
++  type GroupId,
++  type SessionActionMeta,
++} from '../../src';
++import { commandSourceData } from '../fixtures/commandSourceData';
++
++function prng(seed: number): () => number {
++  let state = seed >>> 0;
++  return () => {
++    state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
++    return state / 0x1_0000_0000;
++  };
++}
++
++function initialSession(): EditorSession {
++  const result = createEditorSession(commandSourceData, { historyLimit: 24 });
++  if (!result.ok) {
++    throw new Error('Expected property fixture session');
++  }
++  return result.value;
++}
++
++function sourceCoverage(session: EditorSession): readonly string[] {
++  const itemIds: string[] = [];
++  for (const nodeId of session.viewSpec.rootOrder) {
++    const group = session.viewSpec.groups[nodeId as GroupId];
++    if (group === undefined) {
++      itemIds.push(nodeId);
++    } else {
++      itemIds.push(...group.childIds);
++    }
++  }
++  return itemIds.sort();
++}
++
++function commandFor(step: number, session: EditorSession, random: () => number): EditorCommand {
++  const id = `command-${step}`;
++  const base = {
++    schemaVersion: '1.0.0' as const,
++    id,
++    source: 'host' as const,
++    baseRevision: session.viewSpec.revision,
++  };
++  const choice = Math.floor(random() * 8);
++  const group = session.viewSpec.groups['property-group'];
++
++  if (choice === 0) {
++    const firstSegment = ['a', 'b', 'c'];
++    const itemId = firstSegment[Math.floor(random() * firstSegment.length)] ?? 'a';
++    const index = Math.floor(random() * 4);
++    return {
++      ...base,
++      type: 'moveItem',
++      payload: { itemId, target: { containerId: 'root', index } },
++    };
++  }
++  if (choice === 1 && group === undefined) {
++    return {
++      ...base,
++      type: 'createGroup',
++      payload: { groupId: 'property-group', label: 'Property group', itemIds: ['a', 'b'] },
++    };
++  }
++  if (choice === 2 && group !== undefined) {
++    return { ...base, type: 'ungroup', payload: { groupId: 'property-group' } };
++  }
++  if (choice === 3 && group !== undefined) {
++    const collapsed = session.viewSpec.collapsedGroupIds.includes('property-group');
++    return {
++      ...base,
++      type: collapsed ? 'expandGroup' : 'collapseGroup',
++      payload: { groupId: 'property-group' },
++    };
++  }
++  if (choice === 4) {
++    return { ...base, type: 'pinItem', payload: { itemId: 'c' } };
++  }
++  if (choice === 5) {
++    return { ...base, type: 'unpinItem', payload: { itemId: 'c' } };
++  }
++  if (choice === 6) {
++    return {
++      ...base,
++      type: 'setAnnotation',
++      payload: { nodeId: 'a', text: step % 2 === 0 ? `note-${step}` : null },
++    };
++  }
++  return {
++    ...base,
++    type: 'moveItem',
++    payload: { itemId: 'd', target: { containerId: 'root', index: 0 } },
++  };
++}
++
++function historyAction(id: string, session: EditorSession): SessionActionMeta {
++  return { id, source: 'host', baseRevision: session.viewSpec.revision };
++}
++
++function runSeed(seed: number): EditorSession {
++  const random = prng(seed);
++  let current = initialSession();
++  const originalCoverage = sourceCoverage(current);
++  let previousRevision = current.viewSpec.revision;
++
++  for (let step = 0; step < 160; step += 1) {
++    const operation = Math.floor(random() * 12);
++    const before = current;
++    const result =
++      operation === 10
++        ? undoSession(current, historyAction(`undo-${step}`, current))
++        : operation === 11
++          ? redoSession(current, historyAction(`redo-${step}`, current))
++          : executeCommand(current, commandFor(step, current, random));
++
++    if (result.ok) {
++      current = result.session;
++      expect(current.viewSpec.revision).toBeGreaterThanOrEqual(previousRevision);
++      expect(JSON.stringify(result.event)).not.toContain('confidential');
++    } else {
++      expect(result.session).toBe(before);
++      expect(JSON.stringify(result.error)).not.toContain('confidential');
++    }
++
++    expect(current.sourceData).toBe(before.sourceData);
++    expect(validateViewSpec(current.viewSpec, current.sourceData).ok).toBe(true);
++    expect(sourceCoverage(current)).toEqual(originalCoverage);
++    previousRevision = current.viewSpec.revision;
++  }
++
++  return current;
++}
++
++describe('seeded command sequences', () => {
++  it('preserves source coverage, identity, monotonic revisions and deterministic replay', () => {
++    for (let seed = 1; seed <= 32; seed += 1) {
++      const first = runSeed(seed);
++      const second = runSeed(seed);
++
++      expect(second.viewSpec).toEqual(first.viewSpec);
++      expect(second.undoStack).toEqual(first.undoStack);
++      expect(second.redoStack).toEqual(first.redoStack);
++      expect(second.processedActionIds).toEqual(first.processedActionIds);
++    }
++  });
++});
+diff --git a/packages/editor/tests/fixtures/commandSourceData.ts b/packages/editor/tests/fixtures/commandSourceData.ts
+new file mode 100644
+index 0000000..c9c6f2f
+--- /dev/null
++++ b/packages/editor/tests/fixtures/commandSourceData.ts
+@@ -0,0 +1,17 @@
++import type { SourceData } from '../../src/domain/model';
++
++export const commandSourceData = {
++  schemaVersion: '1.0.0',
++  datasetId: 'command-fixture',
++  currency: 'CNY',
++  items: [
++    { id: 'start', label: 'Opening', amount: 10, kind: 'start' },
++    { id: 'a', label: 'Alpha confidential', amount: 1, kind: 'contribution' },
++    { id: 'b', label: 'Beta confidential', amount: 2, kind: 'contribution' },
++    { id: 'c', label: 'Gamma confidential', amount: 3, kind: 'contribution' },
++    { id: 'subtotal', label: 'Subtotal', amount: 16, kind: 'subtotal' },
++    { id: 'd', label: 'Delta confidential', amount: -4, kind: 'contribution' },
++    { id: 'e', label: 'Epsilon confidential', amount: 5, kind: 'contribution' },
++    { id: 'end', label: 'Ending', amount: 17, kind: 'end' },
++  ],
++} as const satisfies SourceData;

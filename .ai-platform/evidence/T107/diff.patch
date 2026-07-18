@@ -1,0 +1,2926 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index f4235d1..9063aae 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -9,7 +9,7 @@
+
+ ## Current State
+
+-仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器、T103 命令执行器/历史、T104 瀑布投影与 T105 React/G2 工作台已经验收。T106 排序、分组、折叠和键盘交互完成 TDD、真实浏览器、性能、axe、独立 review 与整行拖拽热区修复，处于 `Needs_Review`。持久化和导出仍未完成，因此当前不存在可发布产品制品。
++仓库处于瀑布图基础切片执行阶段。T101-T106 已验收；T107 已完成确定性 ViewSpec round-trip、当前视图 SVG/PNG 导出、有限公共 handle、可访问摘要和参考编辑器文件工作流，处于 `Needs_Review`。T108 尚未执行，因此当前不存在可发布产品制品。
+
+ ## Release Scope
+
+@@ -27,13 +27,13 @@
+ - T104 waterfall projection 通过 32 个目标测试、172 个全量测试、waterfall 四项 99%/100% coverage、独立 review、ESM/CJS/types/package 检查。
+ - T105 React/G2 工作台通过 22 个组件测试、194 个全量测试、Chromium 三视口 3/3、真实 Canvas 像素、构建、包消费与独立 engineering/test/visual review；无 Critical、High 或 Medium finding。
+ - T106 交互通过 70 个组件测试、242 个全量测试、21/21 real Chromium、5 个 axe 场景、200 项 30 样本 p95 30.0ms、同目标 root commit delta 0、构建与包消费；行正文拖拽取代 grip-only 命中，最终 review 无 Critical、High 或 Medium finding。
++- T107 通过 258 个 unit/component tests、92.22% statements coverage、11/11 selected Chromium、真实双密度 PNG、离屏 G2 SVG、JSON round-trip、axe、ESM/CJS/types package consumers 与桌面/移动视觉复审；无 Critical、High 或 Medium finding。
+
+ ## Known Blockers
+
+-- T106 排序、分组、折叠与键盘交互等待用户验收。
+-- T107 持久化、SVG/PNG 导出与可访问性闭环尚未验收。
++- T107 已进入 `Needs_Review`，仍需用户明确验收。
+ - T108 集成、性能、三浏览器、React 版本矩阵和视觉证据尚未完成。
+
+ ## Release Decision
+
+-结论：不可发布。T101-T105 已验收，T106 等待用户验收；T107-T108 尚未完成，不构成完整可操作或可发布产品。
++结论：不可发布。T101-T106 已验收；T107 等待用户验收，T108 尚未执行，不构成 release candidate。
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 2e02010..aa619ed 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -58,10 +58,10 @@
+ | T103 - 命令执行器与历史 | Accepted | 完成 |
+ | T104 - 瀑布投影 | Accepted | 完成 |
+ | T105 - React 工作台与 G2 渲染 | Accepted | 完成 |
+-| T106 - 排序、分组与折叠交互 | Needs_Review | 整行拖拽热区修复完成，等待用户复验 |
+-| T107 - 持久化、导出与可访问性闭环 | Draft | 依赖 T106 Accepted |
++| T106 - 排序、分组与折叠交互 | Accepted | 用户已完成整行拖拽热区复验 |
++| T107 - 持久化、导出与可访问性闭环 | Needs_Review | 实现与证据完整，等待用户验收 |
+ | T108 - 集成、包质量与视觉验收 | Draft | 依赖 T101-T107 |
+
+ ## Next Gate
+
+-T106 的实现、证据、独立 review 与整行拖拽热区 amendment 已满足 `Needs_Review`。用户明确接受 T106 后，T107 才进入执行；T107 与 T108 当前保持 Draft。
++T107 已完成确定性 ViewSpec round-trip、SVG/PNG 导出、有限公共 handle、可访问图表摘要和参考编辑器文件工作流，fresh unit、coverage、build、package、axe 与 Chromium 证据全绿。当前等待用户明确接受 T107；T108 保持 Draft。
+diff --git a/.ai-platform/evidence/T106/summary.md b/.ai-platform/evidence/T106/summary.md
+index 909c43d..490b31c 100644
+--- a/.ai-platform/evidence/T106/summary.md
++++ b/.ai-platform/evidence/T106/summary.md
+@@ -4,7 +4,7 @@
+
+ - Task: T106 - 实现排序、分组与折叠交互
+ - Attempt: T106-A001
+-- Status: Needs_Review
++- Status: Accepted
+ - Branch: `codex/reset`
+ - Date: 2026-07-16
+ - Execution: Codex TDD execution with delegated RED work、real Chromium validation、independent engineering/visual review and user-acceptance hit-target amendment
+@@ -79,7 +79,7 @@ Required captures:
+
+ - Engineering/spec/visual review 发现性能争用证据、跨 surface target、触摸多选、活动手势 stale state、modal focus、对比度、grip Tab 和 easing 等问题；最终 re-review 继续发现 dnd-kit stale command、残留 visual transform 与 passive-effect pointerup 竞态，每项均先补失败回归再修复。
+ - 原完整实现的 independent engineering/spec 与 visual/QA 复审无 Critical、High 或 Medium finding；整行热区 amendment 另经 targeted diff review，未改变 domain、projection、public API、键盘路径或触摸滚动边界，无新增 Critical、High 或 Medium finding。
+-- T106 满足 packet 的 `Needs_Review` 门槛，等待用户明确验收；T107、T108 保持 Draft。
++- 用户于 2026-07-16 完成整行拖拽热区复验并明确接受 T106；T107 已解锁，T108 继续等待 T107。
+
+ ## Residual Risk
+
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+index b6e4df9..08e8c04 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+@@ -8,7 +8,7 @@
+
+ ## Verdict
+
+-没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T105 已验收；T106 实现、TDD、真实 Chromium、性能、axe、包质量、独立 review 与整行拖拽热区修复证据完整，处于 `Needs_Review` 并等待用户验收。
++没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T106 已验收；T107 的持久化、导出、公共 handle、可访问摘要、文件工作流、TDD、真实 Chromium、axe、包质量与视觉证据完整，处于 `Needs_Review` 并等待用户验收。
+
+ ## Requirement Coverage
+
+@@ -58,7 +58,7 @@
+
+ T107 必须先用真实浏览器验证 G2 当前 export path。若无法满足一致性，采用同 projection 的离屏 SVG G2 chart。不得静默切换到手写 SVG renderer，因为这会产生第二套视觉逻辑。
+
+-Disposition: 已在 plan、research 和 T107 acceptance 中约束，不阻断技术方案评审。
++Disposition: T107 使用相同 projection 与 chart spec 的离屏 G2 SVG renderer 完成真实浏览器验证，清理与安全断言通过；不得使用手写第二 renderer 的约束保持满足。
+
+ ### Low L-001 多级分组不在当前数据模型
+
+@@ -90,4 +90,4 @@ Disposition: T106 packet 明确先把旧测试改成 RED，再实现单实例 la
+ - Constitution: Confirmed。
+ - Feature spec/plan/TDR/tasks: Confirmed。
+ - Checklist: Completed。
+-- Execute: T101-T105 Accepted；T106 Needs_Review；T107-T108 保持 Draft。
++- Execute: T101-T106 Accepted；T107 Needs_Review；T108 保持 Draft，等待用户明确接受 T107。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
+index aeb8fa2..28a003e 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
+@@ -18,12 +18,12 @@ governance_inputs:
+
+ execution_receipt:
+   attempt_id: "T106-A001"
+-  status: "Needs_Review"
++  status: "Accepted"
+   evidence_directory: ".ai-platform/evidence/T106"
+   final_validation: "component 70/70; unit 242/242; Chromium 21/21 after row-body drag amendment; recorded 200-item nearest-rank p95 30.0ms; same-target root commit delta 0; coverage/build/package/type/lint/format green"
+   independent_review: "original engineering/spec and visual/QA review plus targeted amendment diff review report no Critical, High or Medium finding"
+   review_amendment: "User acceptance testing found the 24x32 grip was only about 8% of a 267x36 row. TDD moved the PointerSensor activator to the full draggable row body, excluded checkbox/disclosure controls, retained a touch-safe grip and verified real Chromium row-body drag."
+-  user_acceptance: "Pending explicit acceptance of the row-body drag amendment before T107"
++  user_acceptance: "User explicitly accepted the row-body drag amendment and T106 on 2026-07-16."
+
+ work_unit:
+   title: "实现排序、分组与折叠交互"
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+index 0991f5a..d87ad2f 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+@@ -119,7 +119,7 @@
+
+ ## T106 - 实现排序、分组与折叠交互
+
+-- Status: Needs_Review
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: T103、T104、T105
+ - Blocks: T107、T108
+@@ -137,13 +137,13 @@
+ - Packet path: `.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml`
+ - Evidence required: RED/GREEN 输出、相同 command parity 证据、cancel state snapshots、performance trace、axe result、changed files、diff summary、residual risk。
+ - Review state: fresh engineering/spec 与 visual/QA review 无 Critical、High 或 Medium finding；整行拖拽热区 amendment 后 component 70/70、unit 242/242、Chromium 21/21、已记录 200-item p95 30.0ms 和 package/build gates 全绿。
+-- Acceptance authority: 等待用户明确接受 T106；T107 在此之前保持 Draft。
++- Acceptance authority: 用户于 2026-07-16 完成整行拖拽热区复验并明确接受 T106。
+
+ ### Story S3 - 可恢复与可交付
+
+ ## T107 - 实现持久化、导出与可访问性闭环
+
+-- Status: Draft
++- Status: Needs_Review
+ - Priority: P0
+ - Dependencies: T103、T104、T105、T106
+ - Blocks: T108
+@@ -151,7 +151,7 @@
+ - Parallel: 否
+ - Conflicts with: T105、T106、T108；共享 public API、toolbar、chart adapter 和 E2E
+ - Goal: 完成 ViewSpec 解析/序列化、SVG/PNG export、公共 handle、图表文本摘要和无障碍状态。
+-- Allowed files: `package.json`、`pnpm-lock.yaml`、`packages/editor/package.json`、`packages/editor/tsup.config.ts`、`packages/editor/src/domain/persistence.ts`、`packages/editor/src/export/**`、`packages/editor/src/components/FinancialChartEditor.tsx`、`packages/editor/src/components/EditorToolbar.tsx`、`packages/editor/src/components/WaterfallCanvas.tsx`、`packages/editor/src/components/AccessibleChartSummary.tsx`、`packages/editor/src/styles/**`、`packages/editor/src/index.ts`、`packages/editor/tests/domain/persistence.test.ts`、`packages/editor/tests/components/accessibility.test.tsx`、`packages/editor/tests/export/**`、`apps/playground/package.json`、`apps/playground/src/**`、`e2e/export.spec.ts`、`e2e/accessibility.spec.ts`
++- Allowed files: `package.json`、`pnpm-lock.yaml`、`packages/editor/package.json`、`packages/editor/tsup.config.ts`、`packages/editor/src/domain/persistence.ts`、`packages/editor/src/export/**`、`packages/editor/src/components/FinancialChartEditor.tsx`、`packages/editor/src/components/EditorToolbar.tsx`、`packages/editor/src/components/WaterfallCanvas.tsx`、`packages/editor/src/components/AccessibleChartSummary.tsx`、`packages/editor/src/components/editorMessages.ts`、`packages/editor/src/react/editorTypes.ts`、`packages/editor/src/styles/**`、`packages/editor/src/index.ts`、`packages/editor/tests/domain/persistence.test.ts`、`packages/editor/tests/components/accessibility.test.tsx`、`packages/editor/tests/export/**`、`packages/editor/tests/package/**`、`apps/playground/package.json`、`apps/playground/src/**`、`e2e/export.spec.ts`、`e2e/accessibility.spec.ts`
+ - Test targets: `packages/editor/tests/domain/persistence.test.ts`、`packages/editor/tests/components/accessibility.test.tsx`、`packages/editor/tests/export/**`、`e2e/export.spec.ts`、`e2e/accessibility.spec.ts`
+ - Deliverables: parse/serialize、export handle、SVG/PNG results、download example、summary/live region/focus closure。
+ - Acceptance criteria: round-trip 保持规范化 ViewSpec；不兼容 schema/source 明确拒绝；SVG/PNG 非空且匹配当前顺序；axe gate 通过。
+@@ -160,6 +160,7 @@
+ - TDD plan: RED：先写 persistence conflict、export blob、focus/summary tests；GREEN：实现 public APIs 和 adapters；REFACTOR：统一 structured errors 与 cleanup。
+ - Packet path: `.ai-platform/specs/001-waterfall-editor-foundation/packets/T107.yaml`
+ - Evidence required: RED/GREEN 输出、round-trip fixtures、export metadata/pixel evidence、axe report、changed files、diff summary、residual risk。
++- Review state: ViewSpec round-trip、当前视图 SVG/PNG、有限 public handle、可访问摘要、文件工作流和 cleanup 已完成；unit 258/258、selected Chromium 11/11、coverage/build/package/type/lint/format 全绿，三类复审无 Critical、High 或 Medium finding，等待用户验收。
+
+ ## T108 - 完成集成、包质量与视觉验收
+
+diff --git a/apps/playground/package.json b/apps/playground/package.json
+index 8dc3012..109c353 100644
+--- a/apps/playground/package.json
++++ b/apps/playground/package.json
+@@ -11,6 +11,7 @@
+   "dependencies": {
+     "@antv/g2": "5.4.8",
+     "@g2touch/editor": "workspace:*",
++    "lucide-react": "1.24.0",
+     "react": "19.2.7",
+     "react-dom": "19.2.7"
+   }
+diff --git a/apps/playground/src/App.tsx b/apps/playground/src/App.tsx
+index f1c7435..6871767 100644
+--- a/apps/playground/src/App.tsx
++++ b/apps/playground/src/App.tsx
+@@ -1,13 +1,273 @@
+-import { FinancialChartEditor } from '@g2touch/editor';
++import {
++  FinancialChartEditor,
++  createInitialViewSpec,
++  parseViewSpec,
++  serializeViewSpec,
++  type ExportError,
++  type FinancialChartEditorHandle,
++  type ViewSpec,
++} from '@g2touch/editor';
++import { Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
++import { useEffect, useMemo, useRef, useState } from 'react';
+
+ import { getPlaygroundFixture } from './fixtures';
+
+ export function App(): React.JSX.Element {
+-  const sourceData = getPlaygroundFixture(window.location.search);
++  const sourceData = useMemo(() => getPlaygroundFixture(window.location.search), []);
++  const initialView = useMemo(() => createInitialViewSpec(sourceData), [sourceData]);
++  const [viewSpec, setViewSpec] = useState<ViewSpec | undefined>(() =>
++    initialView.ok ? initialView.value : undefined,
++  );
++  const [exportOpen, setExportOpen] = useState(false);
++  const [busy, setBusy] = useState<'svg' | 'png' | 'json' | 'import' | null>(null);
++  const [fileStatus, setFileStatus] = useState({
++    code: 'FILE_READY',
++    message: '文件操作已就绪',
++    tone: 'neutral' as 'neutral' | 'success' | 'error',
++  });
++  const editorRef = useRef<FinancialChartEditorHandle>(null);
++  const exportButtonRef = useRef<HTMLButtonElement>(null);
++  const exportControlRef = useRef<HTMLDivElement>(null);
++  const exportMenuRef = useRef<HTMLDivElement>(null);
++  const importInputRef = useRef<HTMLInputElement>(null);
++
++  useEffect(() => {
++    if (!exportOpen) {
++      return undefined;
++    }
++    const closeWithKeyboard = (event: KeyboardEvent): void => {
++      if (event.key === 'Escape') {
++        setExportOpen(false);
++        exportButtonRef.current?.focus();
++      }
++    };
++    const closeOutside = (event: PointerEvent): void => {
++      if (event.target instanceof Node && !exportControlRef.current?.contains(event.target)) {
++        setExportOpen(false);
++      }
++    };
++    document.addEventListener('keydown', closeWithKeyboard);
++    document.addEventListener('pointerdown', closeOutside);
++    window.requestAnimationFrame(() => {
++      exportMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
++    });
++    return () => {
++      document.removeEventListener('keydown', closeWithKeyboard);
++      document.removeEventListener('pointerdown', closeOutside);
++    };
++  }, [exportOpen]);
++
++  const navigateExportMenu = (event: React.KeyboardEvent<HTMLDivElement>): void => {
++    const items = [
++      ...(exportMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []),
++    ];
++    if (items.length === 0) {
++      return;
++    }
++    const current = items.indexOf(document.activeElement as HTMLButtonElement);
++    let target: number;
++    if (event.key === 'ArrowDown') {
++      target = (current + 1) % items.length;
++    } else if (event.key === 'ArrowUp') {
++      target = (current - 1 + items.length) % items.length;
++    } else if (event.key === 'Home') {
++      target = 0;
++    } else if (event.key === 'End') {
++      target = items.length - 1;
++    } else {
++      return;
++    }
++    event.preventDefault();
++    items[target]?.focus();
++  };
++
++  const downloadBlob = (blob: Blob, filename: string): void => {
++    const url = URL.createObjectURL(blob);
++    const anchor = document.createElement('a');
++    anchor.href = url;
++    anchor.download = filename;
++    anchor.style.display = 'none';
++    document.body.append(anchor);
++    anchor.click();
++    anchor.remove();
++    window.setTimeout(() => URL.revokeObjectURL(url), 0);
++  };
++
++  const exportFailure = (error: unknown): void => {
++    const structured = error as Partial<ExportError>;
++    setFileStatus({
++      code: typeof structured.code === 'string' ? structured.code : 'EXPORT_FAILED',
++      message: typeof structured.path === 'string' ? structured.path : '/export',
++      tone: 'error',
++    });
++  };
++
++  const exportImage = async (format: 'svg' | 'png'): Promise<void> => {
++    setExportOpen(false);
++    setBusy(format);
++    setFileStatus({
++      code: 'EXPORTING',
++      message: `正在生成 ${format.toUpperCase()}`,
++      tone: 'neutral',
++    });
++    try {
++      const result = await editorRef.current?.exportImage({
++        format,
++        filename: sourceData.datasetId,
++        ...(format === 'png' ? { pixelRatio: 2 } : {}),
++      });
++      if (result === undefined) {
++        throw new Error('EXPORT_UNAVAILABLE');
++      }
++      downloadBlob(result.blob, result.suggestedFilename);
++      setFileStatus({
++        code: `${format.toUpperCase()}_EXPORTED`,
++        message: `${result.width} x ${result.height}`,
++        tone: 'success',
++      });
++    } catch (error) {
++      exportFailure(error);
++    } finally {
++      setBusy(null);
++    }
++  };
++
++  const exportJson = (): void => {
++    setExportOpen(false);
++    if (viewSpec === undefined) {
++      setFileStatus({ code: 'EXPORT_UNAVAILABLE', message: '/viewSpec', tone: 'error' });
++      return;
++    }
++    setBusy('json');
++    const blob = new Blob([serializeViewSpec(viewSpec)], { type: 'application/json' });
++    downloadBlob(blob, `${sourceData.datasetId}-view.json`);
++    setFileStatus({
++      code: 'JSON_EXPORTED',
++      message: `revision ${viewSpec.revision}`,
++      tone: 'success',
++    });
++    setBusy(null);
++  };
++
++  const importJson = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
++    const file = event.currentTarget.files?.[0];
++    event.currentTarget.value = '';
++    if (file === undefined) {
++      return;
++    }
++    setBusy('import');
++    setFileStatus({ code: 'IMPORTING', message: '正在校验 ViewSpec', tone: 'neutral' });
++    try {
++      const parsed = parseViewSpec(await file.text(), sourceData);
++      if (!parsed.ok) {
++        const issue = parsed.errors[0];
++        setFileStatus({
++          code: issue?.code ?? 'INVALID_VIEW_SPEC',
++          message: issue?.path ?? '/',
++          tone: 'error',
++        });
++        return;
++      }
++      setViewSpec(parsed.value);
++      setFileStatus({
++        code: 'VIEW_IMPORTED',
++        message: `revision ${parsed.value.revision}`,
++        tone: 'success',
++      });
++    } catch {
++      setFileStatus({ code: 'INVALID_VIEW_SPEC', message: '/', tone: 'error' });
++    } finally {
++      setBusy(null);
++    }
++  };
+
+   return (
+     <main className="playground" aria-label="g2touch 参考编辑器">
+-      <FinancialChartEditor sourceData={sourceData} height="100dvh" locale="zh-CN" />
++      <header className="playground-filebar" aria-label="文件与导出">
++        <div className="playground-filebar__actions">
++          <button
++            className="playground-tool-button"
++            type="button"
++            aria-label="导入 ViewSpec"
++            title="导入 ViewSpec"
++            disabled={busy !== null}
++            onClick={() => importInputRef.current?.click()}
++          >
++            <FileUp size={17} aria-hidden="true" />
++            <span>导入</span>
++          </button>
++          <input
++            ref={importInputRef}
++            className="playground-visually-hidden"
++            type="file"
++            accept="application/json,.json"
++            aria-label="导入 ViewSpec 文件"
++            onChange={event => void importJson(event)}
++          />
++          <div className="playground-export-control" ref={exportControlRef}>
++            <button
++              ref={exportButtonRef}
++              className="playground-tool-button playground-tool-button--primary"
++              type="button"
++              aria-label="导出"
++              aria-haspopup="menu"
++              aria-expanded={exportOpen}
++              disabled={busy !== null || viewSpec === undefined}
++              onClick={() => setExportOpen(open => !open)}
++            >
++              {busy === null ? (
++                <Download size={17} aria-hidden="true" />
++              ) : (
++                <LoaderCircle className="playground-spin" size={17} aria-hidden="true" />
++              )}
++              <span>导出</span>
++            </button>
++            {exportOpen ? (
++              <div
++                className="playground-export-menu"
++                ref={exportMenuRef}
++                role="menu"
++                aria-label="导出格式"
++                onKeyDown={navigateExportMenu}
++              >
++                <button type="button" role="menuitem" onClick={() => void exportImage('svg')}>
++                  <Image size={16} aria-hidden="true" />
++                  <span>SVG 图像</span>
++                </button>
++                <button type="button" role="menuitem" onClick={() => void exportImage('png')}>
++                  <Image size={16} aria-hidden="true" />
++                  <span>PNG 图像</span>
++                </button>
++                <button type="button" role="menuitem" onClick={exportJson}>
++                  <FileDown size={16} aria-hidden="true" />
++                  <span>ViewSpec JSON</span>
++                </button>
++              </div>
++            ) : null}
++          </div>
++        </div>
++        <div
++          className="playground-file-status"
++          data-tone={fileStatus.tone}
++          role="status"
++          aria-label="文件状态"
++          aria-live="polite"
++          aria-atomic="true"
++        >
++          <strong>{fileStatus.code}</strong>
++          <span>{fileStatus.message}</span>
++        </div>
++      </header>
++      <div className="playground-editor-surface">
++        <FinancialChartEditor
++          ref={editorRef}
++          sourceData={sourceData}
++          {...(viewSpec === undefined ? {} : { viewSpec })}
++          height="100%"
++          locale="zh-CN"
++          onViewSpecChange={setViewSpec}
++        />
++      </div>
+     </main>
+   );
+ }
+diff --git a/apps/playground/src/playground.css b/apps/playground/src/playground.css
+index a4ddebb..763c2c6 100644
+--- a/apps/playground/src/playground.css
++++ b/apps/playground/src/playground.css
+@@ -11,10 +11,183 @@ body,
+   width: 100%;
+   height: 100%;
+   margin: 0;
+-  overflow: hidden;
+ }
+
+ .playground {
++  display: grid;
++  grid-template-rows: 46px minmax(0, 1fr);
+   min-width: 0;
+   min-height: 0;
++  overflow: hidden;
++}
++
++.playground-filebar {
++  position: relative;
++  z-index: 50;
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  min-width: 0;
++  padding: 0 12px;
++  border-bottom: 1px solid #d8ddda;
++  background: #ffffff;
++}
++
++.playground-filebar__actions {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++}
++
++.playground-tool-button,
++.playground-export-menu button {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 7px;
++  min-height: 32px;
++  border: 1px solid #cbd2ce;
++  border-radius: 5px;
++  color: #23302a;
++  background: #ffffff;
++  font: inherit;
++  font-size: 13px;
++  line-height: 1;
++  cursor: pointer;
++}
++
++.playground-tool-button {
++  padding: 0 10px;
++}
++
++.playground-tool-button:hover:not(:disabled),
++.playground-export-menu button:hover {
++  border-color: #8f9b95;
++  background: #f2f5f3;
++}
++
++.playground-tool-button:focus-visible,
++.playground-export-menu button:focus-visible {
++  outline: 2px solid #236b8e;
++  outline-offset: 2px;
++}
++
++.playground-tool-button:disabled {
++  cursor: not-allowed;
++  opacity: 0.55;
++}
++
++.playground-tool-button--primary {
++  border-color: #126e57;
++  color: #ffffff;
++  background: #126e57;
++}
++
++.playground-tool-button--primary:hover:not(:disabled) {
++  border-color: #0d5946;
++  background: #0d5946;
++}
++
++.playground-export-control {
++  position: relative;
++}
++
++.playground-export-menu {
++  position: absolute;
++  top: calc(100% + 6px);
++  left: 0;
++  display: grid;
++  width: 174px;
++  padding: 5px;
++  border: 1px solid #cbd2ce;
++  border-radius: 6px;
++  background: #ffffff;
++  box-shadow: 0 10px 26px rgb(24 33 29 / 14%);
++}
++
++.playground-export-menu button {
++  justify-content: flex-start;
++  width: 100%;
++  padding: 0 10px;
++  border-color: transparent;
++}
++
++.playground-file-status {
++  display: flex;
++  min-width: 0;
++  align-items: center;
++  gap: 8px;
++  color: #53615a;
++  font-size: 12px;
++}
++
++.playground-file-status strong {
++  color: #34453d;
++  font-size: 11px;
++}
++
++.playground-file-status[data-tone='success'] strong {
++  color: #126e57;
++}
++
++.playground-file-status[data-tone='error'] strong {
++  color: #b13f39;
++}
++
++.playground-editor-surface {
++  min-width: 0;
++  min-height: 0;
++  overflow: hidden;
++}
++
++.playground-visually-hidden {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  padding: 0;
++  margin: -1px;
++  overflow: hidden;
++  clip: rect(0 0 0 0);
++  white-space: nowrap;
++  border: 0;
++}
++
++.playground-spin {
++  animation: playground-spin 900ms linear infinite;
++}
++
++@keyframes playground-spin {
++  to {
++    transform: rotate(360deg);
++  }
++}
++
++@media (max-width: 620px) {
++  .playground {
++    grid-template-rows: 44px minmax(0, 1fr);
++  }
++
++  .playground-filebar {
++    padding: 0 8px;
++  }
++
++  .playground-tool-button span,
++  .playground-file-status span {
++    display: none;
++  }
++
++  .playground-tool-button {
++    width: 34px;
++    padding: 0;
++  }
++
++  .playground-file-status {
++    gap: 0;
++  }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .playground-spin {
++    animation: none;
++  }
+ }
+diff --git a/e2e/accessibility.spec.ts b/e2e/accessibility.spec.ts
+index 23d0d8a..200a49d 100644
+--- a/e2e/accessibility.spec.ts
++++ b/e2e/accessibility.spec.ts
+@@ -71,11 +71,35 @@ test('ready workbench has no serious or critical violations and exposes a real m
+   expect(outline).not.toBe('none');
+ });
+
++test('export menu supports roving keyboard focus and returns focus on Escape', async ({ page }) => {
++  await openEditor(page);
++  const trigger = page.getByRole('button', { name: '导出' });
++  await trigger.focus();
++  await trigger.click();
++
++  const svg = page.getByRole('menuitem', { name: 'SVG 图像' });
++  const png = page.getByRole('menuitem', { name: 'PNG 图像' });
++  await expect(svg).toBeFocused();
++  await page.keyboard.press('ArrowDown');
++  await expect(png).toBeFocused();
++  await page.keyboard.press('End');
++  await expect(page.getByRole('menuitem', { name: 'ViewSpec JSON' })).toBeFocused();
++  await expectNoSeriousOrCritical(page, 'open export menu');
++
++  await page.keyboard.press('Escape');
++  await expect(page.getByRole('menu', { name: '导出格式' })).toBeHidden();
++  await expect(trigger).toBeFocused();
++});
++
+ test('active drag target keeps one accessible row and a polite live status', async ({ page }) => {
+   await openEditor(page);
+   await startOutlineDrag(page);
+   await expect(page.locator(COMMAND_FEEDBACK)).toContainText('正在移动');
+-  await expect(page.locator('[aria-live="polite"]')).toHaveCount(1);
++  await expect(page.locator(COMMAND_FEEDBACK)).toHaveAttribute('aria-live', 'polite');
++  await expect(page.getByRole('status', { name: '文件状态' })).toHaveAttribute(
++    'aria-live',
++    'polite',
++  );
+   await expect(page.getByRole('treeitem', { name: /销量增长/ })).toHaveCount(1);
+   await expectNoSeriousOrCritical(page, 'active drag');
+   await page.keyboard.press('Escape');
+@@ -112,12 +136,47 @@ test('inline rejection is announced without leaking source content', async ({ pa
+   await expect(status).toContainText('ITEM_LOCKED');
+   await expect(status).not.toContainText('期初营业利润');
+   await expect(status).not.toContainText('3,200');
+-  await expect(page.locator('[aria-live="polite"]')).toContainText('ITEM_LOCKED');
++  await expect(status).toHaveAttribute('aria-live', 'polite');
+   await expectNoSeriousOrCritical(page, 'inline rejection');
+ });
+
++test('invalid imported ViewSpec remains accessible and exposes only stable diagnostics', async ({
++  page,
++}) => {
++  await openEditor(page);
++  await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
++    name: 'invalid.json',
++    mimeType: 'application/json',
++    buffer: Buffer.from('{"schemaVersion":"2.0.0"}'),
++  });
++
++  const status = page.getByRole('status', { name: '文件状态' });
++  await expect(status).toContainText('UNSUPPORTED_SCHEMA_VERSION');
++  await expect(status).toContainText('/schemaVersion');
++  await expect(status).not.toContainText('销量增长');
++  await expectNoSeriousOrCritical(page, 'invalid ViewSpec import');
++});
++
+ test('mobile outline sheet keeps the interaction controls reachable', async ({ page }) => {
+   await openEditor(page, true);
++  const importButton = page.locator('button[aria-label="导入 ViewSpec"]');
++  const exportButton = page.getByRole('button', { name: '导出' });
++  for (const control of [importButton, exportButton]) {
++    const box = await control.boundingBox();
++    expect(box?.width ?? 0).toBeGreaterThanOrEqual(32);
++    expect(box?.height ?? 0).toBeGreaterThanOrEqual(32);
++  }
++  await exportButton.click();
++  const exportMenu = page.getByRole('menu', { name: '导出格式' });
++  const exportMenuBox = await exportMenu.boundingBox();
++  expect(exportMenuBox).not.toBeNull();
++  expect(exportMenuBox?.x ?? -1).toBeGreaterThanOrEqual(0);
++  expect(exportMenuBox?.y ?? -1).toBeGreaterThanOrEqual(0);
++  expect((exportMenuBox?.x ?? 0) + (exportMenuBox?.width ?? 0)).toBeLessThanOrEqual(390);
++  expect((exportMenuBox?.y ?? 0) + (exportMenuBox?.height ?? 0)).toBeLessThanOrEqual(844);
++  await expectNoSeriousOrCritical(page, 'mobile export menu');
++  await page.keyboard.press('Escape');
++
+   const outlineTrigger = page.getByRole('button', { name: '打开结构大纲' });
+   await outlineTrigger.click();
+   const outlineSheet = page.getByRole('dialog', { name: '结构大纲' });
+diff --git a/packages/editor/package.json b/packages/editor/package.json
+index c9e9496..78d8760 100644
+--- a/packages/editor/package.json
++++ b/packages/editor/package.json
+@@ -48,6 +48,7 @@
+     "access": "public"
+   },
+   "dependencies": {
++    "@antv/g-svg": "2.1.1",
+     "@dnd-kit/core": "6.3.1",
+     "@dnd-kit/sortable": "10.0.0",
+     "lucide-react": "1.24.0"
+diff --git a/packages/editor/src/components/EditorToolbar.tsx b/packages/editor/src/components/EditorToolbar.tsx
+index 6598e51..4e91a4e 100644
+--- a/packages/editor/src/components/EditorToolbar.tsx
++++ b/packages/editor/src/components/EditorToolbar.tsx
+@@ -1,12 +1,4 @@
+-import {
+-  Download,
+-  PanelLeft,
+-  PanelRight,
+-  Redo2,
+-  ShieldCheck,
+-  TriangleAlert,
+-  Undo2,
+-} from 'lucide-react';
++import { PanelLeft, PanelRight, Redo2, ShieldCheck, TriangleAlert, Undo2 } from 'lucide-react';
+
+ import type { EditorMessages } from './editorMessages';
+
+@@ -109,9 +101,6 @@ export function EditorToolbar({
+             <DisabledTool label={messages.redo} reason={messages.redoUnavailable}>
+               <Redo2 size={17} aria-hidden="true" />
+             </DisabledTool>
+-            <DisabledTool label={messages.export} reason={messages.exportUnavailable}>
+-              <Download size={17} aria-hidden="true" />
+-            </DisabledTool>
+           </>
+         ) : null}
+       </div>
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+index 4804fcb..58d8031 100644
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -1,11 +1,23 @@
+-import { useCallback, useMemo, useRef, useState } from 'react';
++import {
++  forwardRef,
++  useCallback,
++  useEffect,
++  useImperativeHandle,
++  useMemo,
++  useRef,
++  useState,
++} from 'react';
+
+ import type { EditorCommand } from '../domain/commands';
+ import type { ValidationIssue } from '../domain/errors';
+ import type { GroupId, SourceItemId } from '../domain/ids';
++import { exportError, type ExportOptions, type ExportResult } from '../export/exportTypes';
++import { normalizeExportOptions } from '../export/exportOptions';
++import { exportPngCanvas } from '../export/pngExport';
++import { exportSvgChart } from '../export/svgExport';
+ import { evaluateGroupSelection, type GroupSelectionResult } from '../interactions/groupSelection';
+ import { buildMoveItemCommand, type InteractionCommandSource } from '../interactions/moveTargets';
+-import type { FinancialChartEditorProps } from '../react/editorTypes';
++import type { FinancialChartEditorHandle, FinancialChartEditorProps } from '../react/editorTypes';
+ import { useEditorController } from '../react/useEditorController';
+ import { projectWaterfall } from '../waterfall/projectWaterfall';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+@@ -55,6 +67,8 @@ interface ScopedInteraction<T> {
+   readonly preview: T;
+ }
+
++const EMPTY_PROJECTION: WaterfallProjection = [];
++
+ function componentIssues(
+   invalidMode: boolean,
+   issues: readonly ValidationIssue[],
+@@ -138,7 +152,10 @@ function CommandFeedback({
+ }
+
+ /** Embeddable financial waterfall workbench with immutable source/view boundaries. */
+-export function FinancialChartEditor(props: FinancialChartEditorProps): React.JSX.Element {
++export const FinancialChartEditor = forwardRef<
++  FinancialChartEditorHandle,
++  FinancialChartEditorProps
++>(function FinancialChartEditor(props, forwardedRef): React.JSX.Element {
+   const controller = useEditorController(props);
+   const locale = props.locale ?? 'zh-CN';
+   const messages = editorMessages(locale);
+@@ -161,6 +178,7 @@ export function FinancialChartEditor(props: FinancialChartEditorProps): React.JS
+     ScopedInteraction<ChartInteractionPreview>
+   >({ scope: null, preview: { state: 'idle' } });
+   const rootRef = useRef<HTMLDivElement>(null);
++  const mountedRef = useRef(true);
+   const actionCounterRef = useRef(0);
+
+   const projectionResult = useMemo(() => {
+@@ -181,7 +199,7 @@ export function FinancialChartEditor(props: FinancialChartEditorProps): React.JS
+         : [],
+   );
+   const projection: WaterfallProjection =
+-    projectionResult !== null && projectionResult.ok ? projectionResult.value : [];
++    projectionResult !== null && projectionResult.ok ? projectionResult.value : EMPTY_PROJECTION;
+   const empty = !invalid && !props.sourceData.items.some(item => item.kind === 'contribution');
+   const editorState = invalid ? 'invalid' : empty ? 'empty' : 'ready';
+   const interactionScope = useMemo(
+@@ -215,6 +233,66 @@ export function FinancialChartEditor(props: FinancialChartEditorProps): React.JS
+       ? ({ preview: currentChartInteraction, source: 'direct' } as const)
+       : ({ preview: currentOutlineInteraction, source: 'outline' } as const);
+
++  useEffect(() => {
++    mountedRef.current = true;
++    return () => {
++      mountedRef.current = false;
++    };
++  }, []);
++
++  const exportImage = useCallback(
++    async (options: ExportOptions): Promise<ExportResult> => {
++      const normalized = normalizeExportOptions(options);
++      const root = rootRef.current;
++      if (
++        !mountedRef.current ||
++        invalid ||
++        controller.viewSpec === null ||
++        root === null ||
++        projection.length === 0
++      ) {
++        throw exportError('EXPORT_UNAVAILABLE', '/export');
++      }
++      const plot = root.querySelector<HTMLElement>('[data-testid="g2touch-chart"]');
++      const canvas = plot?.querySelector('canvas') ?? null;
++      if (plot === null || canvas === null) {
++        throw exportError('EXPORT_UNAVAILABLE', '/export');
++      }
++      if (normalized.format === 'png') {
++        return exportPngCanvas(canvas, normalized);
++      }
++      const bounds = plot.getBoundingClientRect();
++      return exportSvgChart({
++        ownerDocument: root.ownerDocument,
++        projection,
++        locale,
++        currency: props.sourceData.currency,
++        width: bounds.width > 0 ? bounds.width : canvas.width,
++        height: bounds.height > 0 ? bounds.height : canvas.height,
++        background: normalized.background,
++        suggestedFilename: normalized.suggestedFilename,
++      });
++    },
++    [controller.viewSpec, invalid, locale, projection, props.sourceData.currency],
++  );
++
++  useImperativeHandle(
++    forwardedRef,
++    () => ({
++      focus(): void {
++        rootRef.current?.focus();
++      },
++      exportImage,
++      getViewSpec() {
++        if (!mountedRef.current || controller.viewSpec === null) {
++          throw exportError('EXPORT_UNAVAILABLE', '/viewSpec');
++        }
++        return controller.viewSpec;
++      },
++    }),
++    [controller.viewSpec, exportImage],
++  );
++
+   const handleOutlineInteractionChange = useCallback(
+     (preview: OutlineInteractionPreview): void => {
+       setOutlineInteraction({ scope: interactionScope, preview });
+@@ -472,6 +550,7 @@ export function FinancialChartEditor(props: FinancialChartEditorProps): React.JS
+       data-read-only={props.readOnly === true ? 'true' : 'false'}
+       data-view-revision={controller.viewSpec?.revision ?? -1}
+       ref={rootRef}
++      tabIndex={-1}
+       style={{ height: editorHeight(props.height) }}
+     >
+       <EditorToolbar
+@@ -559,4 +638,6 @@ export function FinancialChartEditor(props: FinancialChartEditorProps): React.JS
+       ) : null}
+     </div>
+   );
+-}
++});
++
++FinancialChartEditor.displayName = 'FinancialChartEditor';
+diff --git a/packages/editor/src/components/WaterfallCanvas.tsx b/packages/editor/src/components/WaterfallCanvas.tsx
+index 04820b7..4637dde 100644
+--- a/packages/editor/src/components/WaterfallCanvas.tsx
++++ b/packages/editor/src/components/WaterfallCanvas.tsx
+@@ -3,6 +3,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+
+ import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
+ import type { ViewSpec } from '../domain/model';
++import { createWaterfallChartSpec } from '../export/waterfallChartSpec';
+ import {
+   readChartElementPointer,
+   readChartPointerPoint,
+@@ -10,27 +11,14 @@ import {
+   type ChartPointerPoint,
+ } from '../interactions/chartPointer';
+ import { resolvePointerMoveTarget, type MoveTargetEdge } from '../interactions/moveTargets';
+-import type {
+-  WaterfallDatum,
+-  WaterfallDatumKind,
+-  WaterfallProjection,
+-} from '../waterfall/waterfallTypes';
+-import { formatAmount, type EditorLocale } from './formatAmount';
++import type { WaterfallDatum, WaterfallProjection } from '../waterfall/waterfallTypes';
++import type { EditorLocale } from './formatAmount';
++import { AccessibleChartSummary } from './AccessibleChartSummary';
+
+ const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+ const MOBILE_VIEWPORT_QUERY = '(max-width: 759px)';
+ const MAX_CANVAS_VALUE_LABELS = 40;
+-const DENSE_CANVAS_THRESHOLD = 80;
+ const CHART_ERROR = { code: 'CHART_RENDER_ERROR', path: '/chart' } as const;
+-const COLOR_DOMAIN: readonly WaterfallDatumKind[] = [
+-  'start',
+-  'positive',
+-  'negative',
+-  'subtotal',
+-  'group',
+-  'end',
+-];
+-const COLOR_RANGE = ['#5F6B65', '#168363', '#D5524A', '#315C8C', '#A46812', '#315C8C'];
+
+ type G2ChartConstructor = typeof G2Chart;
+
+@@ -54,10 +42,7 @@ interface ChartCopy {
+   readonly eyebrow: string;
+   readonly title: string;
+   readonly empty: string;
+-  readonly summaryLabel: string;
+   readonly visibleNodes: (count: number) => string;
+-  readonly summaryIntro: (title: string, count: number) => string;
+-  readonly kindLabels: Readonly<Record<WaterfallDatumKind, string>>;
+ }
+
+ interface ChartRenderRequest {
+@@ -124,33 +109,13 @@ const CHART_COPY: Readonly<Record<EditorLocale, ChartCopy>> = {
+     eyebrow: '财务瀑布图',
+     title: '经营变动瀑布图',
+     empty: '暂无贡献项',
+-    summaryLabel: '图表摘要',
+     visibleNodes: count => `${count} 个可见节点`,
+-    summaryIntro: (title, count) => `${title}，共 ${count} 个可见节点。`,
+-    kindLabels: {
+-      start: '起点',
+-      positive: '正向贡献',
+-      negative: '负向贡献',
+-      subtotal: '小计',
+-      group: '分组',
+-      end: '终点',
+-    },
+   },
+   'en-US': {
+     eyebrow: 'Financial waterfall',
+     title: 'Operating bridge',
+     empty: 'No contribution items',
+-    summaryLabel: 'Chart summary',
+     visibleNodes: count => `${count} visible nodes`,
+-    summaryIntro: (title, count) => `${title}, ${count} visible nodes.`,
+-    kindLabels: {
+-      start: 'start',
+-      positive: 'positive contribution',
+-      negative: 'negative contribution',
+-      subtotal: 'subtotal',
+-      group: 'group',
+-      end: 'end',
+-    },
+   },
+ };
+
+@@ -175,106 +140,6 @@ export interface WaterfallCanvasProps {
+   readonly onCancel?: (reason: ChartCancelReason) => void;
+ }
+
+-function formatDatumAmount(datum: WaterfallDatum, locale: EditorLocale, currency?: string): string {
+-  const amount = formatAmount(datum.amount, locale, currency);
+-  const contribution =
+-    datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group';
+-  return contribution && datum.amount > 0 ? `+${amount}` : amount;
+-}
+-
+-function chartSpec(
+-  projection: WaterfallProjection,
+-  locale: EditorLocale,
+-  currency: string | undefined,
+-  reducedMotion: boolean,
+-  showValueLabels: boolean,
+-): G2Spec {
+-  const labelById = new Map(projection.map(datum => [datum.nodeId, datum.label]));
+-  const denseCanvas = projection.length > DENSE_CANVAS_THRESHOLD;
+-  const barInset = denseCanvas ? 0.5 : 3;
+-
+-  return {
+-    type: 'view',
+-    labelTransform: [{ type: 'overlapHide' }],
+-    children: [
+-      {
+-        type: 'interval',
+-        data: [...projection],
+-        encode: {
+-          x: 'nodeId',
+-          y: ['start', 'end'],
+-          color: 'kind',
+-          key: 'nodeId',
+-        },
+-        scale: {
+-          x: { type: 'band', padding: 0.24 },
+-          y: { type: 'linear', nice: true, zero: true },
+-          color: {
+-            type: 'ordinal',
+-            domain: [...COLOR_DOMAIN],
+-            range: COLOR_RANGE,
+-          },
+-        },
+-        axis: {
+-          x: {
+-            title: false,
+-            labelAutoHide: true,
+-            labelAutoRotate: false,
+-            labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
+-          },
+-          y: {
+-            title: false,
+-            labelFormatter: (value: unknown) => formatAmount(Number(value), locale, currency),
+-          },
+-        },
+-        legend: { color: false },
+-        labels: showValueLabels
+-          ? [
+-              {
+-                text: (datum: WaterfallDatum) => formatDatumAmount(datum, locale, currency),
+-                position: (datum: WaterfallDatum) => (datum.end >= datum.start ? 'top' : 'bottom'),
+-                style: {
+-                  fill: '#18211D',
+-                  fontSize: 11,
+-                  fontWeight: 600,
+-                  lineWidth: 3,
+-                  stroke: '#FFFFFF',
+-                },
+-              },
+-            ]
+-          : [],
+-        style: {
+-          fillOpacity: denseCanvas ? 1 : 0.96,
+-          insetLeft: barInset,
+-          insetRight: barInset,
+-          lineWidth: denseCanvas ? 0 : 1,
+-          stroke: denseCanvas ? 'transparent' : '#FFFFFF',
+-        },
+-        tooltip: false,
+-        animate: reducedMotion
+-          ? false
+-          : {
+-              enter: {
+-                type: 'growInY',
+-                duration: 160,
+-                easing: 'cubic-bezier(0.2, 0, 0, 1)',
+-              },
+-              update: {
+-                type: 'morphing',
+-                duration: 160,
+-                easing: 'cubic-bezier(0.2, 0, 0, 1)',
+-              },
+-              exit: {
+-                type: 'fadeOut',
+-                duration: 160,
+-                easing: 'cubic-bezier(0.2, 0, 0, 1)',
+-              },
+-            },
+-      },
+-    ],
+-  };
+-}
+-
+ function useMediaQuery(query: string): boolean {
+   const [matches, setMatches] = useState(() =>
+     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+@@ -893,13 +758,13 @@ export function WaterfallCanvas({
+     latestRequestRef.current = {
+       id: requestIdRef.current,
+       projection,
+-      spec: chartSpec(
++      spec: createWaterfallChartSpec({
+         projection,
+         locale,
+         currency,
+-        shouldReduceMotion,
+-        !mobileViewport && projection.length <= MAX_CANVAS_VALUE_LABELS,
+-      ),
++        reducedMotion: shouldReduceMotion,
++        showValueLabels: !mobileViewport && projection.length <= MAX_CANVAS_VALUE_LABELS,
++      }),
+     };
+     const chart = chartRef.current;
+     if (chart !== undefined) {
+@@ -1021,17 +886,12 @@ export function WaterfallCanvas({
+         </div>
+       ) : null}
+
+-      <section aria-label={copy.summaryLabel} className="gt-visually-hidden" role="region">
+-        <p>{copy.summaryIntro(visibleTitle, projection.length)}</p>
+-        <ol>
+-          {projection.map(datum => (
+-            <li key={datum.nodeId}>
+-              {datum.label}, {copy.kindLabels[datum.kind]},{' '}
+-              {formatDatumAmount(datum, locale, currency)}
+-            </li>
+-          ))}
+-        </ol>
+-      </section>
++      <AccessibleChartSummary
++        projection={projection}
++        title={visibleTitle}
++        locale={locale}
++        currency={currency}
++      />
+     </section>
+   );
+ }
+diff --git a/packages/editor/src/index.ts b/packages/editor/src/index.ts
+index c4f9cc9..58f74d8 100644
+--- a/packages/editor/src/index.ts
++++ b/packages/editor/src/index.ts
+@@ -3,6 +3,7 @@ export { createEditorSession } from './domain/session';
+ export { createInitialViewSpec } from './domain/createInitialViewSpec';
+ export { executeCommand } from './domain/executeCommand';
+ export { redoSession, undoSession } from './domain/history';
++export { parseViewSpec, serializeViewSpec } from './domain/persistence';
+ export { validateSourceData, validateViewSpec } from './domain/validation';
+
+ export type {
+@@ -45,6 +46,13 @@ export type {
+ } from './domain/model';
+ export type { EditorSession, EditorSessionOptions } from './domain/session';
+ export type {
++  ExportError,
++  ExportErrorCode,
++  ExportOptions,
++  ExportResult,
++} from './export/exportTypes';
++export type {
++  FinancialChartEditorHandle,
+   FinancialChartEditorPanels,
+   FinancialChartEditorProps,
+   SelectionState,
+diff --git a/packages/editor/src/react/editorTypes.ts b/packages/editor/src/react/editorTypes.ts
+index 4862236..f7d75bc 100644
+--- a/packages/editor/src/react/editorTypes.ts
++++ b/packages/editor/src/react/editorTypes.ts
+@@ -2,6 +2,7 @@ import type { CommandError } from '../domain/errors';
+ import type { CommandEvent } from '../domain/executeCommand';
+ import type { SourceItemId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewSpec } from '../domain/model';
++import type { ExportOptions, ExportResult } from '../export/exportTypes';
+
+ export interface SelectionState {
+   readonly nodeId: ViewNodeId;
+@@ -14,6 +15,12 @@ export interface FinancialChartEditorPanels {
+   readonly toolbar?: boolean;
+ }
+
++export interface FinancialChartEditorHandle {
++  focus(): void;
++  exportImage(options: ExportOptions): Promise<ExportResult>;
++  getViewSpec(): ViewSpec;
++}
++
+ export interface FinancialChartEditorProps {
+   readonly sourceData: SourceData;
+   readonly viewSpec?: ViewSpec;
+diff --git a/packages/editor/tests/components/states.test.tsx b/packages/editor/tests/components/states.test.tsx
+index 6457f5e..0590bcf 100644
+--- a/packages/editor/tests/components/states.test.tsx
++++ b/packages/editor/tests/components/states.test.tsx
+@@ -188,7 +188,7 @@ describe('FinancialChartEditor states', () => {
+     expect(screen.getByRole('button', { name: '撤销' }).getAttribute('title')).toBe(
+       '没有可撤销的修改',
+     );
+-    expect(screen.getByRole('button', { name: '导出' }).getAttribute('title')).toBe('导出尚不可用');
++    expect(screen.queryByRole('button', { name: '导出' })).toBeNull();
+     expect(screen.getByRole('tree', { name: '结构大纲' })).toBeTruthy();
+     expect(screen.getByTestId('g2touch-chart-stage')).toBeTruthy();
+     expect(screen.getByTestId('g2touch-chart')).toBeTruthy();
+diff --git a/packages/editor/tests/package/import-cjs.cjs b/packages/editor/tests/package/import-cjs.cjs
+index 5575dce..4fa13cd 100644
+--- a/packages/editor/tests/package/import-cjs.cjs
++++ b/packages/editor/tests/package/import-cjs.cjs
+@@ -8,14 +8,16 @@ const expected = [
+   'createEditorSession',
+   'createInitialViewSpec',
+   'executeCommand',
++  'parseViewSpec',
+   'redoSession',
++  'serializeViewSpec',
+   'undoSession',
+   'validateSourceData',
+   'validateViewSpec',
+ ];
+
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('CJS runtime API does not match the approved T105 surface');
++  throw new Error('CJS runtime API does not match the approved T107 surface');
+ }
+
+ const packageJson = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8'));
+diff --git a/packages/editor/tests/package/import-esm.mjs b/packages/editor/tests/package/import-esm.mjs
+index 8f150c1..d3aa578 100644
+--- a/packages/editor/tests/package/import-esm.mjs
++++ b/packages/editor/tests/package/import-esm.mjs
+@@ -7,14 +7,16 @@ const expected = [
+   'createEditorSession',
+   'createInitialViewSpec',
+   'executeCommand',
++  'parseViewSpec',
+   'redoSession',
++  'serializeViewSpec',
+   'undoSession',
+   'validateSourceData',
+   'validateViewSpec',
+ ];
+
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('ESM runtime API does not match the approved T105 surface');
++  throw new Error('ESM runtime API does not match the approved T107 surface');
+ }
+
+ const packageJson = JSON.parse(
+diff --git a/packages/editor/tests/package/public-api.test.ts b/packages/editor/tests/package/public-api.test.ts
+index 51edb14..e24e2a3 100644
+--- a/packages/editor/tests/package/public-api.test.ts
++++ b/packages/editor/tests/package/public-api.test.ts
+@@ -3,13 +3,15 @@ import { describe, expect, it } from 'vitest';
+ import * as editor from '../../src/index';
+
+ describe('@g2touch/editor public entry', () => {
+-  it('exposes only the approved T105 runtime API', () => {
++  it('exposes only the approved T107 runtime API', () => {
+     expect(Object.keys(editor).sort()).toEqual([
+       'FinancialChartEditor',
+       'createEditorSession',
+       'createInitialViewSpec',
+       'executeCommand',
++      'parseViewSpec',
+       'redoSession',
++      'serializeViewSpec',
+       'undoSession',
+       'validateSourceData',
+       'validateViewSpec',
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index bc8591f..41c2ff6 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -3,11 +3,16 @@ import {
+   createInitialViewSpec,
+   executeCommand,
+   FinancialChartEditor,
++  parseViewSpec,
+   redoSession,
++  serializeViewSpec,
+   undoSession,
+   type CommandResult,
+   type EditorCommand,
+   type EditorSession,
++  type ExportOptions,
++  type ExportResult,
++  type FinancialChartEditorHandle,
+   type FinancialChartEditorProps,
+   type SelectionState,
+   type SessionActionMeta,
+@@ -23,9 +28,16 @@ declare const view: ViewSpec;
+ declare const session: EditorSession;
+ declare const command: EditorCommand;
+ declare const historyAction: SessionActionMeta;
++declare const editorHandle: FinancialChartEditorHandle;
+
+ export const sourceValidation: ValidationResult<SourceData> = validateSourceData(source);
+ export const viewValidation: ValidationResult<ViewSpec> = validateViewSpec(view, source);
++export const serializedView: string = serializeViewSpec(view);
++export const parsedView: ValidationResult<ViewSpec> = parseViewSpec(serializedView, source);
++export const pngOptions: ExportOptions = { format: 'png', pixelRatio: 2 };
++export const exportedImage: Promise<ExportResult> = editorHandle.exportImage(pngOptions);
++export const currentView: ViewSpec = editorHandle.getViewSpec();
++export const focusEditor: () => void = editorHandle.focus.bind(editorHandle);
+ export const initialView: ValidationResult<ViewSpec> = createInitialViewSpec(source);
+ export const editorSession: ValidationResult<EditorSession> = createEditorSession(source, {
+   viewSpec: view,
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 560669a..05b4c39 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -86,6 +86,9 @@ importers:
+       '@g2touch/editor':
+         specifier: workspace:*
+         version: link:../../packages/editor
++      lucide-react:
++        specifier: 1.24.0
++        version: 1.24.0(react@19.2.7)
+       react:
+         specifier: 19.2.7
+         version: 19.2.7
+@@ -95,6 +98,9 @@ importers:
+
+   packages/editor:
+     dependencies:
++      '@antv/g-svg':
++        specifier: 2.1.1
++        version: 2.1.1
+       '@dnd-kit/core':
+         specifier: 6.3.1
+         version: 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+@@ -144,6 +150,9 @@ packages:
+   '@antv/g-plugin-dragndrop@2.1.1':
+     resolution: {integrity: sha512-+aesDUJVQDs6UJ2bOBbDlaGAPCfHmU0MbrMTlQlfpwNplWueqtgVAZ3L57oZ2ZGHRWUHiRwZGPjXMBM3O2LELw==}
+
++  '@antv/g-svg@2.1.1':
++    resolution: {integrity: sha512-gVzBkjqA8FzDTbkuIxj6L0Omz/X/hFbYLzK6alWr0sHTfywqP6czcjDUJU8DF2MRIY1Twy55uZYW4dqqLXOXXg==}
++
+   '@antv/g2@5.4.8':
+     resolution: {integrity: sha512-IvgIpwmT4M5/QAd3Mn2WiHIDeBqFJ4WA2gcZhRRSZuZ2KmgCqZWZwwIT0hc+kIGxwYeDoCQqf//t6FMVu3ryBg==}
+
+@@ -2529,6 +2538,14 @@ snapshots:
+       '@babel/runtime': 7.29.7
+       tslib: 2.8.1
+
++  '@antv/g-svg@2.1.1':
++    dependencies:
++      '@antv/g-lite': 2.7.0
++      '@antv/util': 3.3.11
++      '@babel/runtime': 7.29.7
++      gl-matrix: 3.4.4
++      tslib: 2.8.1
++
+   '@antv/g2@5.4.8':
+     dependencies:
+       '@antv/component': 2.1.9
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T107.yaml b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T107.yaml
+new file mode 100644
+index 0000000..2ee40a8
+--- /dev/null
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T107.yaml
+@@ -0,0 +1,190 @@
++schema_version: "1.0"
++packet_id: "001-waterfall-editor-foundation-T107-A001"
++task_id: "T107"
++feature_id: "001-waterfall-editor-foundation"
++mode: "direct_execute"
++
++governance_inputs:
++  constitution: ".ai-platform/memory/constitution.md"
++  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
++  checklist: ".ai-platform/specs/001-waterfall-editor-foundation/checklists/requirements.md"
++  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
++  design_contract: ".ai-platform/specs/001-waterfall-editor-foundation/design-contract.md"
++  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
++  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
++  analysis: ".ai-platform/specs/001-waterfall-editor-foundation/analysis.md"
++  approval: "User explicitly accepted T106 and asked to continue on 2026-07-16; the Confirmed T101-T108 work graph unlocks T107."
++
++execution_receipt:
++  attempt_id: "T107-A001"
++  status: "Needs_Review"
++  evidence_directory: ".ai-platform/evidence/T107"
++  final_validation: "unit 258/258; coverage 92.22% statements / 86.55% branches / 93.47% functions / 92.30% lines; selected Chromium 11/11; build/package/type/lint/format/diff green"
++  review: "Separate spec, engineering and visual/QA passes report no Critical, High or Medium finding; desktop/mobile menu clipping found during visual QA was fixed and locked by viewport-boundary regression."
++  user_acceptance: "Pending explicit T107 acceptance; T108 remains Draft."
++
++work_unit:
++  title: "实现持久化、导出与可访问性闭环"
++  goal: "提供确定性 ViewSpec round-trip、无隐式下载的 SVG/PNG export、有限公共 handle、可读图表摘要和可完成的参考编辑器文件工作流。"
++  requirement_mapping:
++    - "WF-US-004"
++    - "WF-US-005"
++    - "WF-FR-011"
++    - "WF-FR-012"
++    - "WF-FR-013"
++    - "WF-NFR-003"
++    - "WF-NFR-007"
++  dependencies:
++    - "T103 Accepted"
++    - "T104 Accepted"
++    - "T105 Accepted"
++    - "T106 Accepted"
++  blocks:
++    - "T108"
++  parallel: false
++
++codebase_context:
++  branch: "codex/reset"
++  current_state: "T106 exposes one immutable editor session, one projectWaterfall path, one persistent G2 Canvas chart, a structured outline, keyboard/direct manipulation and existing live feedback. The toolbar export action is intentionally disabled and the playground has no file workflow."
++  architectural_boundary:
++    - "serializeViewSpec and parseViewSpec are pure domain functions; parse delegates semantic truth to validateViewSpec and never reconciles or rewrites missing source references."
++    - "On-screen Canvas, PNG and SVG consume the same T104 projection and one shared G2 chart-spec builder; no handwritten second chart renderer or waterfall arithmetic is permitted."
++    - "FinancialChartEditorHandle exposes focus, exportImage and getViewSpec only; it does not expose dispatch, controller state, projection or G2 Chart."
++    - "The package export API returns a Blob and metadata or throws a structured privacy-safe export error; it never creates a download link or performs network access."
++    - "The playground owns explicit download links, JSON file import/export and object URL cleanup; it imports only the public package entry."
++
++locked_behavior:
++  persistence:
++    - "serializeViewSpec emits deterministic JSON for the current schema without mutating input or including SourceData values."
++    - "parseViewSpec accepts JSON text plus SourceData, rejects malformed/non-object input, unsupported major schema, dataset mismatch and missing or unresolved source references with existing stable ValidationIssue codes and paths."
++    - "A successful parse returns the validated plain ViewSpec with order, groups, collapse, pin, annotations, emphasis and revision preserved; it does not silently migrate or reconcile."
++  export:
++    - "ExportOptions supports svg/png, optional filename/background and PNG pixelRatio 1..4 with default 2; invalid options reject before render."
++    - "PNG uses the mounted real G2 canvas and produces a nonempty Blob at requested pixel density; SVG uses a supported offscreen G2 SVG renderer with the same projection/spec and cleans up chart, DOM and object resources on success or failure."
++    - "SVG contains no script, foreignObject, external URL, SourceData metadata, sourceRef or hidden financial payload; visible labels and current visible node order remain inspectable."
++    - "ExportResult contains blob, exact MIME type, safe suggested filename, width and height; methods never auto-download."
++    - "Export failure rejects a structured code/path error without labels, amounts, sourceRef, caller exception text or console leakage."
++  handle_and_accessibility:
++    - "focus moves focus to the editor root or its first meaningful control; getViewSpec returns the current visible ViewSpec and never stale initial props."
++    - "exportImage is unavailable for invalid/unmounted/no-canvas state with a structured error and always uses the current visible projection."
++    - "AccessibleChartSummary is a dedicated text equivalent with title, visible count, ordered labels, kind and formatted amount; collapsed groups summarize only the visible aggregate and expanded groups expose children."
++    - "Export progress/result/error and JSON import result use visible status plus a polite live region; focus remains visible and menus/file controls are keyboard reachable."
++  playground:
++    - "The reference editor provides ViewSpec JSON export/import and SVG/PNG actions using the public API only, without a second reducer or private package imports."
++    - "Import requires explicit file selection and applies only a successful parse; invalid files leave the current ViewSpec unchanged and show code/path only."
++    - "Download URLs are created only after an explicit user action and revoked after use or component cleanup."
++
++execution_constraints:
++  adapter: "Codex direct TDD execution because the active host policy does not authorize sub-agent delegation; review and evidence remain separate gates."
++  allowed_files:
++    - "package.json"
++    - "pnpm-lock.yaml"
++    - "packages/editor/package.json"
++    - "packages/editor/tsup.config.ts"
++    - "packages/editor/src/domain/persistence.ts"
++    - "packages/editor/src/export/**"
++    - "packages/editor/src/components/FinancialChartEditor.tsx"
++    - "packages/editor/src/components/EditorToolbar.tsx"
++    - "packages/editor/src/components/WaterfallCanvas.tsx"
++    - "packages/editor/src/components/AccessibleChartSummary.tsx"
++    - "packages/editor/src/components/editorMessages.ts"
++    - "packages/editor/src/react/editorTypes.ts"
++    - "packages/editor/src/styles/**"
++    - "packages/editor/src/index.ts"
++    - "packages/editor/tests/domain/persistence.test.ts"
++    - "packages/editor/tests/components/accessibility.test.tsx"
++    - "packages/editor/tests/export/**"
++    - "packages/editor/tests/package/**"
++    - "apps/playground/package.json"
++    - "apps/playground/src/**"
++    - "e2e/export.spec.ts"
++    - "e2e/accessibility.spec.ts"
++  dependency_changes:
++    - "@antv/g-svg 2.1.1 is the exact dependency used by the real-browser G2 SVG prototype and is retained only if output fidelity and cleanup pass."
++    - "The playground may declare the already-approved lucide-react 1.24.0 icon package directly instead of relying on a transitive editor dependency."
++    - "No raster/SVG conversion library, animation library, global store, file saver or second charting library may be added."
++  allowed_scope_correction: "T107 public handle types belong with existing public React types in packages/editor/src/react/editorTypes.ts, localized export status belongs in editorMessages.ts, and package consumer tests must lock the new surface. These files are added to the canonical allowed scope without changing product behavior."
++  forbidden_changes:
++    - "No SourceData mutation, migration engine, autosave, localStorage, backend, network, AI, routing, PowerPoint generation or new chart type."
++    - "No handwritten SVG waterfall renderer, Canvas geometry inference or duplicate chart-spec theme."
++    - "No public G2 instance, projection, controller or dispatch escape hatch."
++    - "No commit, push, PR, merge, publish or remote mutation."
++  worktree_ownership: "T101-T106 accepted reset work is staged on codex/reset. T107 may edit only its allowed implementation and governance/evidence paths and must not rewrite accepted behavior outside necessary shared adapters."
++  conflicts:
++    - "T108 must not execute concurrently because it owns the same E2E, package and playground surfaces."
++
++tdd_plan:
++  red:
++    - "Add persistence tests for deterministic round-trip, malformed JSON, unsupported major version, dataset mismatch, missing or unresolved source IDs, immutability and non-plain data."
++    - "Add export option/error/blob tests before export modules and public handle exist."
++    - "Add component tests for current-view handle, invalid/unmounted export, focus, ordered summary, collapsed/expanded summary and live export status."
++    - "Add real Chromium tests for nonempty PNG pixels, inspectable SVG order/text/safety, current reordered/collapsed state, explicit download and invalid JSON no-change."
++  green:
++    - "Implement pure persistence, shared G2 chart spec, PNG Canvas export, offscreen G2 SVG export, structured errors and exact cleanup."
++    - "Implement forwardRef handle, dedicated AccessibleChartSummary and keyboard-reachable export/file controls."
++    - "Implement controlled playground ViewSpec and public-only import/export/download workflow."
++  refactor:
++    - "Separate option validation, filename policy, Canvas/SVG adapters and component orchestration; keep shared visual spec single-source."
++    - "Inspect desktop/mobile export states and correct focus, overflow, progress, contrast and text-fit defects without adding decoration."
++
++validation_loop:
++  commands:
++    - "pnpm exec vitest run --project editor-unit packages/editor/tests/domain/persistence.test.ts"
++    - "pnpm exec vitest run --project editor-components packages/editor/tests/export packages/editor/tests/components/accessibility.test.tsx"
++    - "pnpm test:unit"
++    - "pnpm test:coverage"
++    - "pnpm typecheck"
++    - "pnpm lint"
++    - "pnpm format:check"
++    - "pnpm build"
++    - "pnpm test:package"
++    - "pnpm exec playwright test e2e/export.spec.ts e2e/accessibility.spec.ts --project=chromium"
++    - "git diff --check"
++    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T107"
++  expected_signals:
++    - "RED fails for missing persistence/export/handle/summary behavior rather than syntax or harness errors."
++    - "Round-trip preserves every ViewSpec field byte-for-byte after normalization; conflict fixtures return stable code/path and leave the editor unchanged."
++    - "Real Chromium PNG has requested dimensions and non-background pixels; SVG is nonempty, parseable, ordered, readable and free of prohibited content."
++    - "Axe reports zero serious/critical violations for ready, export progress/result/error, JSON import error and mobile file controls."
++    - "All unit/coverage/type/lint/format/build/package and selected real-browser commands exit 0 after GREEN."
++  retry_budget: 3
++  failure_policy: "Fix only T107 persistence/export/handle/accessibility/playground defects. Stop if G2 cannot produce safe matching SVG without a second renderer or if domain command semantics must change."
++
++evidence_contract:
++  directory: ".ai-platform/evidence/T107"
++  required_files:
++    - "summary.md"
++    - "test-results.md"
++    - "diff.patch"
++    - "screenshots/desktop-export-menu.png"
++    - "screenshots/svg-export-result.png"
++    - "screenshots/mobile-file-controls.png"
++  required_content:
++    - "RED/GREEN/REFACTOR commands and exit status."
++    - "Round-trip/conflict matrix, PNG dimensions/pixel evidence, SVG text/order/safety evidence and cleanup counts."
++    - "Handle/current-view, focus, live region, axe, changed files, diff summary, reviews and residual risks."
++
++review_contract:
++  spec_compliance:
++    - "Every T107 requirement has direct unit/component or real-browser evidence and the playground uses public APIs only."
++    - "Persistence does not reconcile; export reuses the accepted projection/chart spec and performs no implicit download/network."
++  engineering_quality:
++    - "Strict types, no any/ignore, deterministic JSON, structured privacy-safe errors, no input mutation and complete chart/DOM/object URL cleanup."
++    - "Package ESM/CJS/types/CSS consumers expose the exact handle, persistence and export surface without exposing internals."
++  visual_quality:
++    - "File/export controls remain a restrained operator surface with stable dimensions, visible progress/focus and no overlap at desktop/mobile targets."
++    - "Exported chart is presentation-ready, readable and faithful to current visible order/group/collapse state."
++  qa_acceptance:
++    - "Independent spec, engineering and visual/QA review has no remaining Critical/High/Medium finding."
++    - "T107 ends Needs_Review and awaits explicit user acceptance before T108."
++
++handoff:
++  on_success: "Attach evidence, mark T107 Needs_Review, keep T108 Draft, keep the local acceptance page running and request user validation of JSON/SVG/PNG workflows."
++  on_failure: "Keep T107 Running with an explicit blocker and failed evidence; do not advance T108."
++  remote_actions: "None authorized."
++
++stop_conditions:
++  - "Safe SVG matching the accepted G2 chart requires handwritten waterfall geometry or a second visualization engine."
++  - "Persistence requires silent reconciliation, schema migration or SourceData mutation."
++  - "Export can pass only by embedding a raster image in SVG, leaking source metadata or auto-downloading from the package API."
++  - "T107 requires changing command/invariant semantics or weakening accessibility/export assertions."
+diff --git a/e2e/export.spec.ts b/e2e/export.spec.ts
+new file mode 100644
+index 0000000..95a2fc8
+--- /dev/null
++++ b/e2e/export.spec.ts
+@@ -0,0 +1,167 @@
++import { readFile } from 'node:fs/promises';
++
++import { expect, test, type Download, type Page } from '@playwright/test';
++
++const EDITOR = '[data-g2touch="editor"]';
++const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
++  process.platform === 'darwin' ? 'Meta' : 'Control';
++
++async function openEditor(page: Page, mobile = false): Promise<void> {
++  await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
++  await page.goto('/');
++  await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
++  await expect(page.getByTestId('g2touch-chart').locator('canvas').first()).toBeVisible();
++}
++
++async function chooseExport(page: Page, name: 'SVG 图像' | 'PNG 图像' | 'ViewSpec JSON') {
++  await page.getByRole('button', { name: '导出' }).click();
++  const item = page.getByRole('menuitem', { name });
++  await expect(item).toBeVisible();
++  const downloadPromise = page.waitForEvent('download');
++  await item.click();
++  return downloadPromise;
++}
++
++async function readDownload(download: Download): Promise<Buffer> {
++  const path = await download.path();
++  expect(path).not.toBeNull();
++  if (path === null) {
++    throw new Error('Expected a local download path');
++  }
++  return readFile(path);
++}
++
++test('ViewSpec JSON export and import preserve the current controlled view', async ({ page }) => {
++  await openEditor(page);
++  const sales = page.getByRole('treeitem', { name: /销量增长/ });
++  await sales.focus();
++  await page.keyboard.press('Alt+ArrowDown');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++
++  const download = await chooseExport(page, 'ViewSpec JSON');
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('JSON_EXPORTED');
++  expect(download.suggestedFilename()).toBe('2026-h1-operating-profit-bridge-view.json');
++  const json = (await readDownload(download)).toString('utf8');
++  expect(json).toContain('"schemaVersion":"1.0.0"');
++  expect(json).not.toContain('sourceRef');
++  const exported = JSON.parse(json) as { readonly revision: number; readonly rootOrder: string[] };
++  expect(exported.revision).toBe(1);
++  expect(exported.rootOrder.slice(0, 2)).toEqual(['price-impact', 'sales-volume']);
++
++  await page.reload();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
++  await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
++    name: 'saved-view.json',
++    mimeType: 'application/json',
++    buffer: Buffer.from(json),
++  });
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('VIEW_IMPORTED');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++  const order = await page
++    .getByRole('tree', { name: '结构大纲' })
++    .locator('[role="treeitem"][aria-level="1"][data-node-id]')
++    .evaluateAll(rows => rows.map(row => row.getAttribute('data-node-id')));
++  expect(order.slice(1, 3)).toEqual(['price-impact', 'sales-volume']);
++});
++
++test('invalid ViewSpec import reports code and path without changing the current view', async ({
++  page,
++}) => {
++  await openEditor(page);
++  const before = await page.locator(EDITOR).getAttribute('data-view-revision');
++  await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
++    name: 'invalid.json',
++    mimeType: 'application/json',
++    buffer: Buffer.from('{"schemaVersion":"2.0.0"}'),
++  });
++
++  const status = page.getByRole('status', { name: '文件状态' });
++  await expect(status).toContainText('UNSUPPORTED_SCHEMA_VERSION');
++  await expect(status).toContainText('/schemaVersion');
++  await expect(status).not.toContainText('销量增长');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', before ?? '0');
++});
++
++test('PNG export is a nonempty double-density image and revokes its object URL', async ({
++  page,
++}) => {
++  await page.addInitScript(() => {
++    const original = URL.revokeObjectURL.bind(URL);
++    Object.defineProperty(window, '__g2touchRevokedUrls', { value: [], writable: false });
++    URL.revokeObjectURL = url => {
++      (window as Window & { readonly __g2touchRevokedUrls: string[] }).__g2touchRevokedUrls.push(
++        url,
++      );
++      original(url);
++    };
++  });
++  await openEditor(page);
++  const plotBox = await page.getByTestId('g2touch-chart').boundingBox();
++  expect(plotBox).not.toBeNull();
++  const download = await chooseExport(page, 'PNG 图像');
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('PNG_EXPORTED');
++  expect(download.suggestedFilename()).toBe('2026-h1-operating-profit-bridge.png');
++  const png = await readDownload(download);
++  expect(png.subarray(1, 4).toString('ascii')).toBe('PNG');
++
++  const pixels = await page.evaluate(async base64 => {
++    const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
++    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
++    const canvas = document.createElement('canvas');
++    canvas.width = bitmap.width;
++    canvas.height = bitmap.height;
++    const context = canvas.getContext('2d');
++    if (context === null) {
++      return { width: 0, height: 0, painted: 0 };
++    }
++    context.drawImage(bitmap, 0, 0);
++    const data = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
++    let painted = 0;
++    for (let offset = 0; offset < data.length; offset += 4) {
++      if ((data[offset + 3] ?? 0) > 20) {
++        painted += 1;
++      }
++    }
++    return { width: bitmap.width, height: bitmap.height, painted };
++  }, png.toString('base64'));
++  expect(pixels.width).toBeGreaterThanOrEqual(Math.floor((plotBox?.width ?? 1) * 1.9));
++  expect(pixels.height).toBeGreaterThanOrEqual(Math.floor((plotBox?.height ?? 1) * 1.9));
++  expect(pixels.painted).toBeGreaterThan(500);
++  await expect
++    .poll(() =>
++      page.evaluate(
++        () =>
++          (window as Window & { readonly __g2touchRevokedUrls: string[] }).__g2touchRevokedUrls
++            .length,
++      ),
++    )
++    .toBeGreaterThan(0);
++});
++
++test('SVG export reflects collapsed state and contains no executable or source metadata', async ({
++  page,
++}) => {
++  await openEditor(page);
++  await page.getByRole('treeitem', { name: /销量增长/ }).click();
++  await page
++    .getByRole('treeitem', { name: /价格提升/ })
++    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
++  await page.getByRole('button', { name: '创建分组' }).click();
++  await page.getByRole('button', { name: '折叠 增长驱动' }).click();
++
++  const download = await chooseExport(page, 'SVG 图像');
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('SVG_EXPORTED');
++  expect(download.suggestedFilename()).toBe('2026-h1-operating-profit-bridge.svg');
++  const svg = (await readDownload(download)).toString('utf8');
++  expect(svg).toContain('<svg');
++  expect(svg).toContain('增长驱动');
++  expect(svg).not.toContain('销量增长');
++  expect(svg).not.toContain('价格提升');
++  expect(svg).not.toMatch(
++    /<script|foreignObject|javascript:|(?:href|xlink:href)=["']https?:|url\(["']?https?:|sourceRef|ledger:/iu,
++  );
++  expect(svg.indexOf('期初营业利润')).toBeLessThan(svg.indexOf('增长驱动'));
++  expect(svg.indexOf('增长驱动')).toBeLessThan(svg.indexOf('期末净利润'));
++  await expect(page.locator('body > div[aria-hidden="true"][style*="-10000px"]')).toHaveCount(0);
++});
+diff --git a/packages/editor/src/components/AccessibleChartSummary.tsx b/packages/editor/src/components/AccessibleChartSummary.tsx
+new file mode 100644
+index 0000000..ec7e932
+--- /dev/null
++++ b/packages/editor/src/components/AccessibleChartSummary.tsx
+@@ -0,0 +1,66 @@
++import { formatWaterfallDatumAmount } from '../export/waterfallChartSpec';
++import type { WaterfallDatumKind, WaterfallProjection } from '../waterfall/waterfallTypes';
++import type { EditorLocale } from './formatAmount';
++
++interface AccessibleChartSummaryProps {
++  readonly projection: WaterfallProjection;
++  readonly title: string;
++  readonly locale: EditorLocale;
++  readonly currency?: string | undefined;
++}
++
++interface SummaryCopy {
++  readonly label: string;
++  readonly intro: (title: string, count: number) => string;
++  readonly kindLabels: Readonly<Record<WaterfallDatumKind, string>>;
++}
++
++const SUMMARY_COPY: Readonly<Record<EditorLocale, SummaryCopy>> = {
++  'zh-CN': {
++    label: '图表摘要',
++    intro: (title, count) => `${title}，共 ${count} 个可见节点。`,
++    kindLabels: {
++      start: '起点',
++      positive: '正向贡献',
++      negative: '负向贡献',
++      subtotal: '小计',
++      group: '分组',
++      end: '终点',
++    },
++  },
++  'en-US': {
++    label: 'Chart summary',
++    intro: (title, count) => `${title}, ${count} visible nodes.`,
++    kindLabels: {
++      start: 'start',
++      positive: 'positive contribution',
++      negative: 'negative contribution',
++      subtotal: 'subtotal',
++      group: 'group',
++      end: 'end',
++    },
++  },
++};
++
++/** Ordered text equivalent for the currently visible waterfall projection. */
++export function AccessibleChartSummary({
++  projection,
++  title,
++  locale,
++  currency,
++}: AccessibleChartSummaryProps): React.JSX.Element {
++  const copy = SUMMARY_COPY[locale];
++  return (
++    <section aria-label={copy.label} className="gt-visually-hidden" role="region">
++      <p>{copy.intro(title, projection.length)}</p>
++      <ol>
++        {projection.map(datum => (
++          <li key={datum.nodeId}>
++            {datum.label}, {copy.kindLabels[datum.kind]},{' '}
++            {formatWaterfallDatumAmount(datum, locale, currency)}
++          </li>
++        ))}
++      </ol>
++    </section>
++  );
++}
+diff --git a/packages/editor/src/domain/persistence.ts b/packages/editor/src/domain/persistence.ts
+new file mode 100644
+index 0000000..dd299a4
+--- /dev/null
++++ b/packages/editor/src/domain/persistence.ts
+@@ -0,0 +1,52 @@
++import { validationFailure, validationIssue, type ValidationResult } from './errors';
++import type { SourceData, ViewGroup, ViewSpec } from './model';
++import { validateViewSpec } from './validation';
++
++function sortedRecord<TValue>(
++  record: Readonly<Record<string, TValue>>,
++  mapValue: (value: TValue) => unknown = value => value,
++): Record<string, unknown> {
++  return Object.fromEntries(
++    Object.keys(record)
++      .sort((left, right) => left.localeCompare(right))
++      .map(key => [key, mapValue(record[key] as TValue)]),
++  );
++}
++
++function serializableGroup(group: ViewGroup): ViewGroup {
++  return {
++    id: group.id,
++    label: group.label,
++    childIds: [...group.childIds],
++  };
++}
++
++/** Serializes the supported ViewSpec fields as deterministic JSON. */
++export function serializeViewSpec(viewSpec: ViewSpec): string {
++  return JSON.stringify({
++    schemaVersion: viewSpec.schemaVersion,
++    datasetId: viewSpec.datasetId,
++    chartType: viewSpec.chartType,
++    revision: viewSpec.revision,
++    rootOrder: [...viewSpec.rootOrder],
++    groups: sortedRecord(viewSpec.groups, serializableGroup),
++    collapsedGroupIds: [...viewSpec.collapsedGroupIds],
++    pinnedItemIds: [...viewSpec.pinnedItemIds],
++    annotations: sortedRecord(viewSpec.annotations),
++    emphasis: sortedRecord(viewSpec.emphasis),
++  });
++}
++
++/** Parses JSON and validates it against the immutable source without reconciliation. */
++export function parseViewSpec(
++  serialized: string,
++  sourceData: SourceData,
++): ValidationResult<ViewSpec> {
++  let parsed: unknown;
++  try {
++    parsed = JSON.parse(serialized) as unknown;
++  } catch {
++    return validationFailure([validationIssue('INVALID_VIEW_SPEC', 'UNREADABLE_INPUT', '/')]);
++  }
++  return validateViewSpec(parsed, sourceData);
++}
+diff --git a/packages/editor/src/export/exportOptions.ts b/packages/editor/src/export/exportOptions.ts
+new file mode 100644
+index 0000000..d559f7c
+--- /dev/null
++++ b/packages/editor/src/export/exportOptions.ts
+@@ -0,0 +1,47 @@
++import { exportError, type ExportOptions, type NormalizedExportOptions } from './exportTypes';
++
++const DEFAULT_FILENAME = 'g2touch-waterfall';
++
++function safeFilename(filename: string | undefined, format: 'svg' | 'png'): string {
++  const raw = (filename ?? DEFAULT_FILENAME).trim();
++  const withoutExtension = raw.replace(/\.(?:svg|png)$/iu, '');
++  const safeBase = withoutExtension
++    .replace(/[\\/:]+/gu, '-')
++    .replace(/[\p{Cc}]+/gu, '-')
++    .replace(/\s+/gu, ' ')
++    .replace(/^-+|-+$/gu, '')
++    .trim();
++  return `${safeBase.length === 0 ? DEFAULT_FILENAME : safeBase}.${format}`;
++}
++
++function safeBackground(background: string | undefined): string | undefined {
++  if (background === undefined) {
++    return undefined;
++  }
++  const value = background.trim();
++  if (
++    value.length === 0 ||
++    value.length > 100 ||
++    /(?:url\s*\(|[<>]|javascript:|data:)/iu.test(value)
++  ) {
++    throw exportError('INVALID_EXPORT_OPTIONS', '/background');
++  }
++  return value;
++}
++
++export function normalizeExportOptions(options: ExportOptions): NormalizedExportOptions {
++  if (options.format !== 'png' && options.format !== 'svg') {
++    throw exportError('INVALID_EXPORT_OPTIONS', '/format');
++  }
++  const pixelRatio = options.pixelRatio ?? (options.format === 'png' ? 2 : 1);
++  if (!Number.isFinite(pixelRatio) || pixelRatio < 1 || pixelRatio > 4) {
++    throw exportError('INVALID_EXPORT_OPTIONS', '/pixelRatio');
++  }
++
++  return {
++    format: options.format,
++    pixelRatio: options.format === 'png' ? pixelRatio : 1,
++    background: safeBackground(options.background),
++    suggestedFilename: safeFilename(options.filename, options.format),
++  };
++}
+diff --git a/packages/editor/src/export/exportTypes.ts b/packages/editor/src/export/exportTypes.ts
+new file mode 100644
+index 0000000..1fc3755
+--- /dev/null
++++ b/packages/editor/src/export/exportTypes.ts
+@@ -0,0 +1,43 @@
++export interface ExportOptions {
++  readonly format: 'svg' | 'png';
++  readonly pixelRatio?: number;
++  readonly background?: string;
++  readonly filename?: string;
++}
++
++export interface ExportResult {
++  readonly blob: Blob;
++  readonly mimeType: 'image/svg+xml' | 'image/png';
++  readonly suggestedFilename: string;
++  readonly width: number;
++  readonly height: number;
++}
++
++export type ExportErrorCode = 'INVALID_EXPORT_OPTIONS' | 'EXPORT_UNAVAILABLE' | 'EXPORT_FAILED';
++
++export interface ExportError extends Error {
++  readonly name: 'G2TouchExportError';
++  readonly code: ExportErrorCode;
++  readonly path: string;
++}
++
++export interface NormalizedExportOptions {
++  readonly format: 'svg' | 'png';
++  readonly pixelRatio: number;
++  readonly background: string | undefined;
++  readonly suggestedFilename: string;
++}
++
++const ERROR_MESSAGES: Readonly<Record<ExportErrorCode, string>> = {
++  INVALID_EXPORT_OPTIONS: 'Export options are invalid.',
++  EXPORT_UNAVAILABLE: 'Image export is unavailable.',
++  EXPORT_FAILED: 'Image export failed.',
++};
++
++export function exportError(code: ExportErrorCode, path: string): ExportError {
++  return Object.assign(new Error(ERROR_MESSAGES[code]), {
++    name: 'G2TouchExportError' as const,
++    code,
++    path,
++  });
++}
+diff --git a/packages/editor/src/export/pngExport.ts b/packages/editor/src/export/pngExport.ts
+new file mode 100644
+index 0000000..dccd6e8
+--- /dev/null
++++ b/packages/editor/src/export/pngExport.ts
+@@ -0,0 +1,70 @@
++import { exportError, type ExportResult, type NormalizedExportOptions } from './exportTypes';
++
++function canvasLogicalSize(canvas: HTMLCanvasElement): {
++  readonly width: number;
++  readonly height: number;
++} {
++  const bounds = canvas.getBoundingClientRect();
++  return {
++    width: bounds.width > 0 ? bounds.width : canvas.width,
++    height: bounds.height > 0 ? bounds.height : canvas.height,
++  };
++}
++
++function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
++  return new Promise((resolve, reject) => {
++    try {
++      canvas.toBlob(blob => {
++        if (blob === null || blob.size === 0) {
++          reject(exportError('EXPORT_FAILED', '/export/png'));
++          return;
++        }
++        resolve(blob);
++      }, 'image/png');
++    } catch {
++      reject(exportError('EXPORT_FAILED', '/export/png'));
++    }
++  });
++}
++
++export async function exportPngCanvas(
++  sourceCanvas: HTMLCanvasElement,
++  options: NormalizedExportOptions,
++): Promise<ExportResult> {
++  const logical = canvasLogicalSize(sourceCanvas);
++  const width = Math.max(1, Math.round(logical.width * options.pixelRatio));
++  const height = Math.max(1, Math.round(logical.height * options.pixelRatio));
++  const output = sourceCanvas.ownerDocument.createElement('canvas');
++  output.width = width;
++  output.height = height;
++
++  try {
++    const context = output.getContext('2d');
++    if (context === null) {
++      throw exportError('EXPORT_FAILED', '/export/png');
++    }
++    if (options.background !== undefined) {
++      context.fillStyle = options.background;
++      context.fillRect(0, 0, width, height);
++    }
++    context.drawImage(sourceCanvas, 0, 0, width, height);
++    const blob = await encodePng(output);
++    return {
++      blob,
++      mimeType: 'image/png',
++      suggestedFilename: options.suggestedFilename,
++      width,
++      height,
++    };
++  } catch (error) {
++    if (
++      typeof error === 'object' &&
++      error !== null &&
++      'name' in error &&
++      error.name === 'G2TouchExportError'
++    ) {
++      throw error;
++    }
++    throw exportError('EXPORT_FAILED', '/export/png');
++  }
++}
+diff --git a/packages/editor/src/export/svgExport.ts b/packages/editor/src/export/svgExport.ts
+new file mode 100644
+index 0000000..ccd42b1
+--- /dev/null
++++ b/packages/editor/src/export/svgExport.ts
+@@ -0,0 +1,172 @@
++import type { Chart as G2Chart } from '@antv/g2';
++
++import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++import type { EditorLocale } from '../components/formatAmount';
++import { createWaterfallChartSpec } from './waterfallChartSpec';
++import { exportError, type ExportResult } from './exportTypes';
++
++interface SvgResultOptions {
++  readonly width: number;
++  readonly height: number;
++  readonly background: string | undefined;
++  readonly suggestedFilename: string;
++}
++
++interface SvgChartExportRequest {
++  readonly ownerDocument: Document;
++  readonly projection: WaterfallProjection;
++  readonly locale: EditorLocale;
++  readonly currency: string | undefined;
++  readonly width: number;
++  readonly height: number;
++  readonly background: string | undefined;
++  readonly suggestedFilename: string;
++}
++
++const REMOVED_ELEMENTS = 'script, foreignObject, iframe, object, embed, image, use';
++
++function sanitizeElement(element: Element): void {
++  for (const attribute of [...element.attributes]) {
++    const name = attribute.name.toLowerCase();
++    const value = attribute.value;
++    if (
++      name.startsWith('on') ||
++      name.startsWith('data-') ||
++      ((name === 'href' || name === 'xlink:href') && !value.startsWith('#')) ||
++      /(?:https?:|javascript:|data:|url\s*\(\s*['"]?https?:)/iu.test(value)
++    ) {
++      element.removeAttribute(attribute.name);
++    }
++  }
++}
++
++export function createSafeSvgResult(
++  sourceSvg: SVGSVGElement,
++  options: SvgResultOptions,
++): ExportResult {
++  if (
++    !Number.isFinite(options.width) ||
++    !Number.isFinite(options.height) ||
++    options.width <= 0 ||
++    options.height <= 0
++  ) {
++    throw exportError('EXPORT_FAILED', '/export/svg');
++  }
++  const clone = sourceSvg.cloneNode(true) as SVGSVGElement;
++  clone.querySelectorAll(REMOVED_ELEMENTS).forEach(element => element.remove());
++  sanitizeElement(clone);
++  clone.querySelectorAll('*').forEach(sanitizeElement);
++  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
++  clone.setAttribute('width', String(options.width));
++  clone.setAttribute('height', String(options.height));
++  clone.setAttribute('viewBox', `0 0 ${options.width} ${options.height}`);
++
++  if (options.background !== undefined) {
++    const background = clone.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'rect');
++    background.setAttribute('width', '100%');
++    background.setAttribute('height', '100%');
++    background.setAttribute('fill', options.background);
++    clone.insertBefore(background, clone.firstChild);
++  }
++
++  try {
++    const serialized = new XMLSerializer().serializeToString(clone);
++    const blob = new Blob([serialized], { type: 'image/svg+xml' });
++    if (blob.size === 0) {
++      throw exportError('EXPORT_FAILED', '/export/svg');
++    }
++    return {
++      blob,
++      mimeType: 'image/svg+xml',
++      suggestedFilename: options.suggestedFilename,
++      width: options.width,
++      height: options.height,
++    };
++  } catch (error) {
++    if (
++      typeof error === 'object' &&
++      error !== null &&
++      'name' in error &&
++      error.name === 'G2TouchExportError'
++    ) {
++      throw error;
++    }
++    throw exportError('EXPORT_FAILED', '/export/svg');
++  }
++}
++
++function isStructuredExportError(error: unknown): boolean {
++  return (
++    typeof error === 'object' &&
++    error !== null &&
++    'name' in error &&
++    error.name === 'G2TouchExportError'
++  );
++}
++
++export async function exportSvgChart(request: SvgChartExportRequest): Promise<ExportResult> {
++  const width = Math.max(1, Math.round(request.width));
++  const height = Math.max(1, Math.round(request.height));
++  const body = request.ownerDocument.body;
++  if (body === null) {
++    throw exportError('EXPORT_UNAVAILABLE', '/export/svg');
++  }
++
++  const host = request.ownerDocument.createElement('div');
++  host.setAttribute('aria-hidden', 'true');
++  host.style.position = 'fixed';
++  host.style.left = '-10000px';
++  host.style.top = '-10000px';
++  host.style.width = `${width}px`;
++  host.style.height = `${height}px`;
++  host.style.pointerEvents = 'none';
++  body.append(host);
++
++  let chart: G2Chart | undefined;
++  try {
++    const [{ Chart }, { Renderer }] = await Promise.all([
++      import('@antv/g2'),
++      import('@antv/g-svg'),
++    ]);
++    chart = new Chart({
++      container: host,
++      width,
++      height,
++      autoFit: false,
++      renderer: new Renderer(),
++    });
++    chart.options(
++      createWaterfallChartSpec({
++        projection: request.projection,
++        locale: request.locale,
++        currency: request.currency,
++        reducedMotion: true,
++        showValueLabels: true,
++      }),
++    );
++    await chart.render();
++    const svg = host.querySelector('svg');
++    const ownerWindow = request.ownerDocument.defaultView;
++    if (ownerWindow === null || !(svg instanceof ownerWindow.SVGSVGElement)) {
++      throw exportError('EXPORT_FAILED', '/export/svg');
++    }
++    return createSafeSvgResult(svg, {
++      width,
++      height,
++      background: request.background,
++      suggestedFilename: request.suggestedFilename,
++    });
++  } catch (error) {
++    if (isStructuredExportError(error)) {
++      throw error;
++    }
++    throw exportError('EXPORT_FAILED', '/export/svg');
++  } finally {
++    try {
++      chart?.destroy();
++    } catch {
++      // Cleanup failure must not expose renderer internals or financial data.
++    }
++    host.remove();
++  }
++}
+diff --git a/packages/editor/src/export/waterfallChartSpec.ts b/packages/editor/src/export/waterfallChartSpec.ts
+new file mode 100644
+index 0000000..d35ded9
+--- /dev/null
++++ b/packages/editor/src/export/waterfallChartSpec.ts
+@@ -0,0 +1,132 @@
++import type { G2Spec } from '@antv/g2';
++
++import type {
++  WaterfallDatum,
++  WaterfallDatumKind,
++  WaterfallProjection,
++} from '../waterfall/waterfallTypes';
++import { formatAmount, type EditorLocale } from '../components/formatAmount';
++
++const DENSE_CANVAS_THRESHOLD = 80;
++const COLOR_DOMAIN: readonly WaterfallDatumKind[] = [
++  'start',
++  'positive',
++  'negative',
++  'subtotal',
++  'group',
++  'end',
++];
++const COLOR_RANGE = ['#5F6B65', '#168363', '#D5524A', '#315C8C', '#A46812', '#315C8C'];
++
++interface WaterfallChartSpecOptions {
++  readonly projection: WaterfallProjection;
++  readonly locale: EditorLocale;
++  readonly currency: string | undefined;
++  readonly reducedMotion: boolean;
++  readonly showValueLabels: boolean;
++}
++
++export function formatWaterfallDatumAmount(
++  datum: WaterfallDatum,
++  locale: EditorLocale,
++  currency?: string,
++): string {
++  const amount = formatAmount(datum.amount, locale, currency);
++  const contribution =
++    datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group';
++  return contribution && datum.amount > 0 ? `+${amount}` : amount;
++}
++
++export function createWaterfallChartSpec({
++  projection,
++  locale,
++  currency,
++  reducedMotion,
++  showValueLabels,
++}: WaterfallChartSpecOptions): G2Spec {
++  const labelById = new Map(projection.map(datum => [datum.nodeId, datum.label]));
++  const denseCanvas = projection.length > DENSE_CANVAS_THRESHOLD;
++  const barInset = denseCanvas ? 0.5 : 3;
++
++  return {
++    type: 'view',
++    labelTransform: [{ type: 'overlapHide' }],
++    children: [
++      {
++        type: 'interval',
++        data: [...projection],
++        encode: {
++          x: 'nodeId',
++          y: ['start', 'end'],
++          color: 'kind',
++          key: 'nodeId',
++        },
++        scale: {
++          x: { type: 'band', padding: 0.24 },
++          y: { type: 'linear', nice: true, zero: true },
++          color: {
++            type: 'ordinal',
++            domain: [...COLOR_DOMAIN],
++            range: COLOR_RANGE,
++          },
++        },
++        axis: {
++          x: {
++            title: false,
++            labelAutoHide: true,
++            labelAutoRotate: false,
++            labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
++          },
++          y: {
++            title: false,
++            labelFormatter: (value: unknown) => formatAmount(Number(value), locale, currency),
++          },
++        },
++        legend: { color: false },
++        labels: showValueLabels
++          ? [
++              {
++                text: (datum: WaterfallDatum) =>
++                  formatWaterfallDatumAmount(datum, locale, currency),
++                position: (datum: WaterfallDatum) => (datum.end >= datum.start ? 'top' : 'bottom'),
++                style: {
++                  fill: '#18211D',
++                  fontSize: 11,
++                  fontWeight: 600,
++                  lineWidth: 3,
++                  stroke: '#FFFFFF',
++                },
++              },
++            ]
++          : [],
++        style: {
++          fillOpacity: denseCanvas ? 1 : 0.96,
++          insetLeft: barInset,
++          insetRight: barInset,
++          lineWidth: denseCanvas ? 0 : 1,
++          stroke: denseCanvas ? 'transparent' : '#FFFFFF',
++        },
++        tooltip: false,
++        animate: reducedMotion
++          ? false
++          : {
++              enter: {
++                type: 'growInY',
++                duration: 160,
++                easing: 'cubic-bezier(0.2, 0, 0, 1)',
++              },
++              update: {
++                type: 'morphing',
++                duration: 160,
++                easing: 'cubic-bezier(0.2, 0, 0, 1)',
++              },
++              exit: {
++                type: 'fadeOut',
++                duration: 160,
++                easing: 'cubic-bezier(0.2, 0, 0, 1)',
++              },
++            },
++      },
++    ],
++  };
++}
+diff --git a/packages/editor/tests/components/accessibility.test.tsx b/packages/editor/tests/components/accessibility.test.tsx
+new file mode 100644
+index 0000000..aec7e61
+--- /dev/null
++++ b/packages/editor/tests/components/accessibility.test.tsx
+@@ -0,0 +1,182 @@
++import { createRef, StrictMode } from 'react';
++import { render, screen, waitFor } from '@testing-library/react';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++
++import {
++  FinancialChartEditor,
++  createInitialViewSpec,
++  type FinancialChartEditorHandle,
++  type ViewSpec,
++} from '../../src';
++import { financialSourceData } from '../fixtures/financialSourceData';
++
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    readonly canvas: HTMLCanvasElement;
++    readonly options = vi.fn((): this => this);
++    readonly render = vi.fn((): Promise<void> => Promise.resolve());
++    readonly on = vi.fn((): this => this);
++    readonly off = vi.fn((): this => this);
++    readonly destroy = vi.fn((): void => undefined);
++    readonly getContext = vi.fn(() => ({ animations: [] }));
++
++    constructor(config: unknown) {
++      const { container } = config as { readonly container: HTMLElement };
++      this.canvas = container.ownerDocument.createElement('canvas');
++      this.canvas.width = 400;
++      this.canvas.height = 240;
++      container.append(this.canvas);
++    }
++  }
++  return { Chart };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
++vi.mock('@antv/g-svg', () => ({
++  Renderer: class Renderer {
++    readonly type = 'svg';
++  },
++}));
++
++function initialView(): ViewSpec {
++  const result = createInitialViewSpec(financialSourceData);
++  if (!result.ok) {
++    throw new Error('Expected a valid accessibility fixture');
++  }
++  return result.value;
++}
++
++beforeEach(() => {
++  const context = {
++    fillStyle: '',
++    fillRect: vi.fn(),
++    drawImage: vi.fn(),
++  } as unknown as CanvasRenderingContext2D;
++  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
++  Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
++    configurable: true,
++    value: vi.fn((callback: BlobCallback) => callback(new Blob(['png'], { type: 'image/png' }))),
++  });
++});
++
++afterEach(() => {
++  vi.restoreAllMocks();
++});
++
++describe('FinancialChartEditor public handle', () => {
++  it('focuses the workbench, returns the current controlled view and exports PNG without download', async () => {
++    const ref = createRef<FinancialChartEditorHandle>();
++    const first = initialView();
++    const { rerender } = render(
++      <StrictMode>
++        <FinancialChartEditor ref={ref} sourceData={financialSourceData} viewSpec={first} />
++      </StrictMode>,
++    );
++
++    await waitFor(() => expect(ref.current).not.toBeNull());
++    const next = { ...first, revision: 4 };
++    rerender(
++      <StrictMode>
++        <FinancialChartEditor ref={ref} sourceData={financialSourceData} viewSpec={next} />
++      </StrictMode>,
++    );
++
++    expect(ref.current?.getViewSpec()).toBe(next);
++    ref.current?.focus();
++    expect(document.activeElement).toBe(document.querySelector('[data-g2touch="editor"]'));
++
++    const result = await ref.current?.exportImage({ format: 'png', filename: 'bridge' });
++    expect(result).toMatchObject({
++      mimeType: 'image/png',
++      suggestedFilename: 'bridge.png',
++      width: 800,
++      height: 480,
++    });
++    expect(document.querySelector('a[download]')).toBeNull();
++  });
++
++  it('rejects invalid and unmounted export with privacy-safe structured errors', async () => {
++    const invalidRef = createRef<FinancialChartEditorHandle>();
++    render(
++      <FinancialChartEditor
++        ref={invalidRef}
++        sourceData={financialSourceData}
++        viewSpec={initialView()}
++        defaultViewSpec={initialView()}
++      />,
++    );
++    await waitFor(() => expect(invalidRef.current).not.toBeNull());
++    await expect(invalidRef.current?.exportImage({ format: 'png' })).rejects.toMatchObject({
++      code: 'EXPORT_UNAVAILABLE',
++      path: '/export',
++    });
++
++    const mountedRef = createRef<FinancialChartEditorHandle>();
++    const mounted = render(
++      <FinancialChartEditor ref={mountedRef} sourceData={financialSourceData} />,
++    );
++    await waitFor(() => expect(mountedRef.current).not.toBeNull());
++    const retained = mountedRef.current;
++    mounted.unmount();
++    await expect(retained?.exportImage({ format: 'png' })).rejects.toMatchObject({
++      code: 'EXPORT_UNAVAILABLE',
++      path: '/export',
++    });
++  });
++
++  it('cleans up the offscreen SVG renderer after a structured render failure', async () => {
++    const ref = createRef<FinancialChartEditorHandle>();
++    render(<FinancialChartEditor ref={ref} sourceData={financialSourceData} />);
++    await waitFor(() => expect(ref.current).not.toBeNull());
++
++    await expect(ref.current?.exportImage({ format: 'svg' })).rejects.toMatchObject({
++      code: 'EXPORT_FAILED',
++      path: '/export/svg',
++    });
++    expect(document.body.querySelector('[style*="-10000px"]')).toBeNull();
++  });
++
++  it('keeps an ordered text equivalent for every visible datum', async () => {
++    render(<FinancialChartEditor sourceData={financialSourceData} />);
++    const summary = await screen.findByRole('region', { name: '图表摘要' });
++    const items = [...summary.querySelectorAll('li')].map(item => item.textContent);
++    expect(items).toHaveLength(financialSourceData.items.length);
++    expect(items[0]).toContain('期初利润');
++    expect(items.at(-1)).toContain('期末利润');
++  });
++
++  it('summarizes only the visible aggregate when a group is collapsed', async () => {
++    const base = initialView();
++    const grouped: ViewSpec = {
++      ...base,
++      rootOrder: ['profit-drivers', 'tax-impact'],
++      groups: {
++        'profit-drivers': {
++          id: 'profit-drivers',
++          label: '经营驱动',
++          childIds: ['revenue-growth', 'cost-pressure'],
++        },
++      },
++      collapsedGroupIds: ['profit-drivers'],
++    };
++    const { rerender } = render(
++      <FinancialChartEditor sourceData={financialSourceData} viewSpec={grouped} />,
++    );
++
++    const collapsed = await screen.findByRole('region', { name: '图表摘要' });
++    expect(collapsed.textContent).toContain('经营驱动');
++    expect(collapsed.textContent).not.toContain('收入增长');
++    expect(collapsed.textContent).not.toContain('成本压力');
++
++    rerender(
++      <FinancialChartEditor
++        sourceData={financialSourceData}
++        viewSpec={{ ...grouped, collapsedGroupIds: [] }}
++      />,
++    );
++    const expanded = screen.getByRole('region', { name: '图表摘要' });
++    expect(expanded.textContent).not.toContain('经营驱动');
++    expect(expanded.textContent).toContain('收入增长');
++    expect(expanded.textContent).toContain('成本压力');
++  });
++});
+diff --git a/packages/editor/tests/domain/persistence.test.ts b/packages/editor/tests/domain/persistence.test.ts
+new file mode 100644
+index 0000000..4b20270
+--- /dev/null
++++ b/packages/editor/tests/domain/persistence.test.ts
+@@ -0,0 +1,149 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createInitialViewSpec,
++  parseViewSpec,
++  serializeViewSpec,
++  type ValidationResult,
++  type ViewSpec,
++} from '../../src';
++import { financialSourceData } from '../fixtures/financialSourceData';
++
++function initialView(): ViewSpec {
++  const result = createInitialViewSpec(financialSourceData);
++  if (!result.ok) {
++    throw new Error('Expected a valid persistence fixture');
++  }
++  return result.value;
++}
++
++function completeView(): ViewSpec {
++  return {
++    ...initialView(),
++    revision: 7,
++    rootOrder: ['profit-drivers', 'tax-impact'],
++    groups: {
++      'profit-drivers': {
++        id: 'profit-drivers',
++        label: '经营驱动',
++        childIds: ['revenue-growth', 'cost-pressure'],
++      },
++    },
++    collapsedGroupIds: ['profit-drivers'],
++    pinnedItemIds: ['tax-impact'],
++    annotations: {
++      'tax-impact': '税率变化',
++      'profit-drivers': '经营变化',
++    },
++    emphasis: {
++      'tax-impact': 'muted',
++      'profit-drivers': 'highlight',
++    },
++  };
++}
++
++function expectIssue(
++  result: ValidationResult<ViewSpec>,
++  expected: { readonly code: string; readonly reason: string; readonly path: string },
++): void {
++  expect(result.ok).toBe(false);
++  if (result.ok) {
++    throw new Error('Expected parse failure');
++  }
++  expect(result.errors).toEqual(expect.arrayContaining([expect.objectContaining(expected)]));
++}
++
++describe('ViewSpec persistence', () => {
++  it('serializes deterministically and round-trips every supported field', () => {
++    const view = completeView();
++    const snapshot = structuredClone(view);
++
++    const first = serializeViewSpec(view);
++    const reorderedRecords: ViewSpec = {
++      ...view,
++      groups: { ...view.groups },
++      annotations: {
++        'profit-drivers': '经营变化',
++        'tax-impact': '税率变化',
++      },
++      emphasis: {
++        'profit-drivers': 'highlight',
++        'tax-impact': 'muted',
++      },
++    };
++    const second = serializeViewSpec(reorderedRecords);
++
++    expect(first).toBe(second);
++    expect(first).not.toContain('ledger:');
++    expect(first).not.toContain('sourceRef');
++    expect(view).toEqual(snapshot);
++
++    const parsed = parseViewSpec(first, financialSourceData);
++    expect(parsed).toEqual({ ok: true, value: view, errors: [] });
++    if (parsed.ok) {
++      expect(parsed.value).not.toBe(view);
++      expect(parsed.value.groups).not.toBe(view.groups);
++    }
++  });
++
++  it('returns a stable unreadable-input issue for malformed JSON', () => {
++    expectIssue(parseViewSpec('{"schemaVersion":', financialSourceData), {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'UNREADABLE_INPUT',
++      path: '/',
++    });
++  });
++
++  it('rejects unsupported major schema versions without migration', () => {
++    const parsed = JSON.parse(serializeViewSpec(initialView())) as Record<string, unknown>;
++    parsed['schemaVersion'] = '2.0.0';
++
++    expectIssue(parseViewSpec(JSON.stringify(parsed), financialSourceData), {
++      code: 'UNSUPPORTED_SCHEMA_VERSION',
++      reason: 'UNSUPPORTED_SCHEMA_VERSION',
++      path: '/schemaVersion',
++    });
++  });
++
++  it('reports dataset and source-reference conflicts without reconciliation', () => {
++    const mismatched = { ...initialView(), datasetId: 'another-dataset' };
++    expectIssue(parseViewSpec(JSON.stringify(mismatched), financialSourceData), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'DATASET_ID_MISMATCH',
++      path: '/datasetId',
++    });
++
++    const missing = {
++      ...initialView(),
++      rootOrder: ['revenue-growth', 'cost-pressure'],
++    };
++    expectIssue(parseViewSpec(JSON.stringify(missing), financialSourceData), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'MISSING_SOURCE_REFERENCE',
++      path: '/rootOrder',
++    });
++
++    const unresolved = {
++      ...initialView(),
++      rootOrder: ['revenue-growth', 'cost-pressure', 'tax-impact', 'not-in-source'],
++    };
++    expectIssue(parseViewSpec(JSON.stringify(unresolved), financialSourceData), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'UNKNOWN_SOURCE_REFERENCE',
++      path: '/rootOrder/3',
++    });
++  });
++
++  it('rejects JSON values that are not ViewSpec objects', () => {
++    expectIssue(parseViewSpec('null', financialSourceData), {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'EXPECTED_OBJECT',
++      path: '/',
++    });
++    expectIssue(parseViewSpec('[]', financialSourceData), {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'EXPECTED_OBJECT',
++      path: '/',
++    });
++  });
++});
+diff --git a/packages/editor/tests/export/options.test.ts b/packages/editor/tests/export/options.test.ts
+new file mode 100644
+index 0000000..52d8d1f
+--- /dev/null
++++ b/packages/editor/tests/export/options.test.ts
+@@ -0,0 +1,66 @@
++import { describe, expect, it } from 'vitest';
++
++import type { ExportError, ExportOptions } from '../../src';
++import { normalizeExportOptions } from '../../src/export/exportOptions';
++
++function captureError(action: () => unknown): ExportError {
++  try {
++    action();
++  } catch (error) {
++    return error as ExportError;
++  }
++  throw new Error('Expected export option validation to fail');
++}
++
++describe('export options', () => {
++  it('applies stable defaults and a safe extension', () => {
++    expect(normalizeExportOptions({ format: 'png' })).toEqual({
++      format: 'png',
++      pixelRatio: 2,
++      background: undefined,
++      suggestedFilename: 'g2touch-waterfall.png',
++    });
++    expect(
++      normalizeExportOptions({
++        format: 'svg',
++        filename: ' Q1/利润桥.svg ',
++        background: '#ffffff',
++      }),
++    ).toEqual({
++      format: 'svg',
++      pixelRatio: 1,
++      background: '#ffffff',
++      suggestedFilename: 'Q1-利润桥.svg',
++    });
++  });
++
++  it('normalizes a mismatched or missing extension', () => {
++    expect(
++      normalizeExportOptions({ format: 'png', filename: 'bridge.svg' }).suggestedFilename,
++    ).toBe('bridge.png');
++    expect(normalizeExportOptions({ format: 'svg', filename: '.svg' }).suggestedFilename).toBe(
++      'g2touch-waterfall.svg',
++    );
++  });
++
++  it('rejects unsupported formats and invalid pixel ratios with structured errors', () => {
++    const formatError = captureError(() =>
++      normalizeExportOptions({ format: 'pdf' } as unknown as ExportOptions),
++    );
++    expect(formatError).toMatchObject({
++      name: 'G2TouchExportError',
++      code: 'INVALID_EXPORT_OPTIONS',
++      path: '/format',
++      message: 'Export options are invalid.',
++    });
++
++    for (const pixelRatio of [0, 4.1, Number.NaN, Number.POSITIVE_INFINITY]) {
++      expect(
++        captureError(() => normalizeExportOptions({ format: 'png', pixelRatio })),
++      ).toMatchObject({
++        code: 'INVALID_EXPORT_OPTIONS',
++        path: '/pixelRatio',
++      });
++    }
++  });
++});
+diff --git a/packages/editor/tests/export/png.test.ts b/packages/editor/tests/export/png.test.ts
+new file mode 100644
+index 0000000..9b87004
+--- /dev/null
++++ b/packages/editor/tests/export/png.test.ts
+@@ -0,0 +1,89 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++import { exportPngCanvas } from '../../src/export/pngExport';
++
++afterEach(() => {
++  vi.restoreAllMocks();
++});
++
++function rect(width: number, height: number): DOMRect {
++  return {
++    x: 0,
++    y: 0,
++    width,
++    height,
++    top: 0,
++    right: width,
++    bottom: height,
++    left: 0,
++    toJSON: () => ({}),
++  };
++}
++
++describe('PNG export adapter', () => {
++  it('renders a nonempty blob at the requested pixel density and background', async () => {
++    const input = document.createElement('canvas');
++    input.width = 400;
++    input.height = 240;
++    vi.spyOn(input, 'getBoundingClientRect').mockReturnValue(rect(400, 240));
++
++    const output = document.createElement('canvas');
++    const fillRect = vi.fn();
++    const drawImage = vi.fn();
++    const context = { fillStyle: '', fillRect, drawImage } as unknown as CanvasRenderingContext2D;
++    vi.spyOn(output, 'getContext').mockReturnValue(context);
++    Object.defineProperty(output, 'toBlob', {
++      configurable: true,
++      value: vi.fn((callback: BlobCallback) => callback(new Blob(['png'], { type: 'image/png' }))),
++    });
++
++    const createElement = document.createElement.bind(document);
++    vi.spyOn(document, 'createElement').mockImplementation(tagName =>
++      tagName.toLowerCase() === 'canvas' ? output : createElement(tagName),
++    );
++
++    const result = await exportPngCanvas(input, {
++      format: 'png',
++      pixelRatio: 2,
++      background: '#ffffff',
++      suggestedFilename: 'bridge.png',
++    });
++
++    expect(output.width).toBe(800);
++    expect(output.height).toBe(480);
++    expect(fillRect).toHaveBeenCalledWith(0, 0, 800, 480);
++    expect(drawImage).toHaveBeenCalledWith(input, 0, 0, 800, 480);
++    expect(result).toMatchObject({
++      mimeType: 'image/png',
++      suggestedFilename: 'bridge.png',
++      width: 800,
++      height: 480,
++    });
++    expect(result.blob.size).toBeGreaterThan(0);
++  });
++
++  it('rejects unavailable bitmap context and encoding without leaking browser errors', async () => {
++    const input = document.createElement('canvas');
++    vi.spyOn(input, 'getBoundingClientRect').mockReturnValue(rect(400, 240));
++    const output = document.createElement('canvas');
++    vi.spyOn(output, 'getContext').mockReturnValue(null);
++    const createElement = document.createElement.bind(document);
++    vi.spyOn(document, 'createElement').mockImplementation(tagName =>
++      tagName.toLowerCase() === 'canvas' ? output : createElement(tagName),
++    );
++
++    await expect(
++      exportPngCanvas(input, {
++        format: 'png',
++        pixelRatio: 2,
++        background: undefined,
++        suggestedFilename: 'bridge.png',
++      }),
++    ).rejects.toMatchObject({
++      name: 'G2TouchExportError',
++      code: 'EXPORT_FAILED',
++      path: '/export/png',
++      message: 'Image export failed.',
++    });
++  });
++});
+diff --git a/packages/editor/tests/export/svg.test.ts b/packages/editor/tests/export/svg.test.ts
+new file mode 100644
+index 0000000..9485c97
+--- /dev/null
++++ b/packages/editor/tests/export/svg.test.ts
+@@ -0,0 +1,38 @@
++import { describe, expect, it } from 'vitest';
++
++import { createSafeSvgResult } from '../../src/export/svgExport';
++
++describe('SVG export safety', () => {
++  it('keeps visible ordered text while removing scripts, external URLs and hidden metadata', async () => {
++    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
++    svg.innerHTML = [
++      '<script>alert(1)</script>',
++      '<foreignObject><div>private</div></foreignObject>',
++      '<a href="https://example.com/private"><text>external</text></a>',
++      '<g data-source-ref="ledger:private" data-node-id="first"><text>收入增长</text></g>',
++      '<g data-node-id="second"><text>成本压力</text></g>',
++    ].join('');
++
++    const result = createSafeSvgResult(svg, {
++      width: 640,
++      height: 360,
++      background: '#ffffff',
++      suggestedFilename: 'bridge.svg',
++    });
++    const text = await result.blob.text();
++
++    expect(result).toMatchObject({
++      mimeType: 'image/svg+xml',
++      suggestedFilename: 'bridge.svg',
++      width: 640,
++      height: 360,
++    });
++    expect(text.indexOf('收入增长')).toBeLessThan(text.indexOf('成本压力'));
++    expect(text).not.toContain('<script');
++    expect(text).not.toContain('foreignObject');
++    expect(text).not.toContain('https://');
++    expect(text).not.toContain('ledger:');
++    expect(text).not.toContain('data-source-ref');
++    expect(text).toContain('fill="#ffffff"');
++  });
++});

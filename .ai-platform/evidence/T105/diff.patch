@@ -1,0 +1,4271 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 4f8892d..d0869ea 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -9,7 +9,7 @@
+
+ ## Current State
+
+-仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器、T103 命令执行器/历史与 T104 瀑布投影已经验收；React/G2 图表、交互、持久化和导出仍未完成，因此当前不存在可发布产品制品。
++仓库处于瀑布图基础切片执行阶段。T101 workspace/质量工具链、T102 领域模型/验证器、T103 命令执行器/历史与 T104 瀑布投影已经验收。T105 React/G2 工作台已完成实现与独立 review，处于 `Needs_Review` 并等待用户可视化验收。交互、持久化和导出仍未完成，因此当前不存在可发布产品制品。
+
+ ## Release Scope
+
+@@ -25,14 +25,15 @@
+ - T102 domain model/validator 通过 97 tests 与四项 95% coverage 门槛。
+ - T103 command/session/history 通过 140 tests、四项 95% aggregate coverage、独立 review、ESM/CJS/types/package 检查。
+ - T104 waterfall projection 通过 32 个目标测试、172 个全量测试、waterfall 四项 99%/100% coverage、独立 review、ESM/CJS/types/package 检查。
++- T105 React/G2 工作台通过 22 个组件测试、194 个全量测试、Chromium 三视口 3/3、真实 Canvas 像素、构建、包消费与独立 engineering/test/visual review；无 Critical、High 或 Medium finding。
+
+ ## Known Blockers
+
+-- T105 React 工作台与真实 G2 渲染尚未验收。
++- T105 React 工作台与真实 G2 渲染等待用户可视化验收。
+ - T106 排序、分组、折叠与键盘交互尚未验收。
+ - T107 持久化、SVG/PNG 导出与可访问性闭环尚未验收。
+ - T108 集成、性能、三浏览器、React 版本矩阵和视觉证据尚未完成。
+
+ ## Release Decision
+
+-结论：不可发布。T101-T104 是已验收的领域与投影基础，不构成用户可操作或可发布产品。
++结论：不可发布。T101-T104 已验收，T105 是等待用户验收的工作台候选；T106-T108 尚未实现，不构成完整可操作或可发布产品。
+diff --git a/.ai-platform/evidence/T105/summary.md b/.ai-platform/evidence/T105/summary.md
+new file mode 100644
+index 0000000..5c3d970
+--- /dev/null
++++ b/.ai-platform/evidence/T105/summary.md
+@@ -0,0 +1,92 @@
++# T105 Evidence Summary
+
++## Metadata
+
++- Task: T105 - 实现 React 工作台与 G2 渲染
++- Attempt: T105-A001
++- Status: Needs_Review
++- Branch: `codex/reset`
++- Date: 2026-07-15
++- Execution: Codex direct TDD execution with delegated RED tests、independent engineering review and visual QA
+
++## Scope Result
+
++实现公共 `FinancialChartEditor`、受控/非受控 controller、toolbar/outline/chart/inspector 工作台、真实 G2 waterfall canvas、ready/empty/invalid/chart-error 状态和薄 playground。组件只消费 T104 `projectWaterfall` 结果，不复制瀑布累计逻辑；T106 交互和 T107 持久化/导出保持未实现。
+
++## Locked Behavior
+
++- `viewSpec` 为受控模式：命令 callback 可以产生候选视图，但宿主回传前可见视图不偏离 props。
++- `defaultViewSpec` 为非受控初始值：accepted command 立即提交；同一 React batch 的连续命令串行消费最新 session。
++- 同时提供两种 view props 进入确定性 `INVALID_CONFIGURATION /viewSpec` 状态，不创建 G2。
++- `readOnly` 阻止写命令，不触发 accepted/rejected host callback；选择仍可用。
++- accepted callback 顺序固定为 `onCommand` 后 `onViewSpecChange`；rejected 只触发 `onCommandRejected`。
++- 四类 host callback 异常均被隔离，日志只包含 callback identity，不包含调用方错误文本或财务值。
++- 每个有效 projection 只保留一个活动 Chart；projection 替换和卸载均 destroy exactly once，过期异步完成不更新或记录错误。
++- G2 使用 browser-only dynamic import，公共 ESM/CJS 包可在 Node 中安全导入，G2/React/React DOM 保持 peer external。
++- 1440px 使用 280px / flexible chart / 300px 三栏；1024px 使用 inspector drawer；390px 使用 outline/inspector 全屏 sheet。
++- 小于等于 759px 时隐藏 Canvas 内数值标签以避免拥挤，金额继续由 outline 和可访问摘要提供。
+
++## TDD Evidence
+
++RED:
+
++- controller mode/callback tests 在 controller/component 不存在时失败。
++- ready/empty/invalid/G2-error 和 lifecycle tests 在公共组件不存在时 7/7 失败。
++- Chromium rendering tests 在 ready editor root 和真实 canvas 不存在时 3/3 失败。
++- package runtime/type/CSS consumers 在 `FinancialChartEditor` 与 `styles.css` subpath 未导出时失败。
+
++GREEN:
+
++- 22 个 component tests 覆盖 mode lock、prop echo、连续 dispatch、readOnly、callback 顺序/隔离、selection copy、四种 editor state、i18n、mobile label policy、G2 failure/recovery 和 lifecycle。
++- Fresh 全量 194 tests 通过；aggregate statements 95.83%、branches 92.16%、functions 93.03%、lines 95.74%。
++- Chromium 真实 G2 三视口 3/3 通过；canvas painted pixels 为 desktop 76,185、compact 55,071、mobile 23,087。
++- build、strict project typecheck、ESLint、Prettier、publint、ATTW、ESM/CJS runtime、CSS consumer 和 declaration consumer 全部通过。
+
++## Visual QA
+
++| Dimension | Score / 2 | Evidence |
++| --- | ---: | --- |
++| Product fit and artifact primacy | 2.0 | 图表是主工作面，无 landing page、hero 或 card grid |
++| Composition and hierarchy | 2.0 | desktop 三栏、compact drawer、mobile sheets 均保持图表可见 |
++| Typography and density | 1.9 | 13px operator UI、tabular numbers、稳定 toolbar/panel hierarchy |
++| Color and state clarity | 1.8 | positive/negative/total/invalid 状态可区分；桌面柱内标签对比度仍有 Low 风险 |
++| Responsive and interaction safety | 2.0 | 三视口 overflow 0、Canvas 非空、移动端可见文字重叠 0 |
+
++Average: 1.94 / 2；核心维度无 0。
+
++Required captures:
+
++- `screenshots/desktop-ready.png`
++- `screenshots/compact-ready.png`
++- `screenshots/mobile-ready.png`
++- `screenshots/invalid-data.png`
+
++## Changed Files
+
++- Public/editor: `packages/editor/src/index.ts`、`src/react/**`、`src/components/**`、`src/styles/editor.css`
++- Build/package: `package.json`、`pnpm-lock.yaml`、`vitest.config.ts`、editor/playground manifests、tsconfig、tsup/Vite config
++- Tests: `packages/editor/tests/components/**`、`tests/setup.ts`、`tests/package/**`、`e2e/rendering.spec.ts`
++- Playground: `apps/playground/index.html`、`src/App.tsx`、`src/main.tsx`、`src/fixtures.ts`、`src/playground.css`
++- Governance/evidence: T105 packet、task/analysis/release state and `.ai-platform/evidence/T105/**`
+
++## Independent Review Verdict
+
++- Engineering review initially found two Medium issues: `readOnly` did not block dispatch and synchronous uncontrolled dispatch could overwrite an accepted command. Both received failing regression tests and implementation fixes.
++- Test review initially found five Medium coverage gaps: selection alias、all callback exception paths、pending unmount、async Chart timing and compact/mobile painted pixels. All are closed with observable assertions.
++- Final engineering re-review found one Low recovery issue where a successful same-projection retry retained an earlier render alert. A RED regression reproduced it; the current-generation success path now clears the issue, and the follow-up review reports Low 0.
++- Final engineering、test and visual reviews report no Critical、High or Medium finding.
++- T105 is ready for user visual acceptance and remains `Needs_Review`; T106 has not started.
+
++## Residual Risk
+
++- Desktop/compact Canvas value labels use a fixed dark fill and can have modest contrast on colored bars. Outline and text summary are redundant sources; T107 accessibility closure should apply a verified label contrast strategy.
++- CSS package consumers verify subpath、side effects、non-empty output、`.gt-editor` scope and absence of `:root/html/body`; they do not yet parse every selector to reject all possible future global selectors.
++- G2 5.4.8 transitive declarations conflict with TypeScript 6 DOM declarations. `skipLibCheck` is scoped to editor/playground projects; project source remains strict and packed declaration consumers pass.
++- Playground emits a roughly 1.3 MB lazy G2 chunk. The editor package keeps G2 external; bundle/performance budgets remain T108 scope.
+
++## Scope Confirmation
+
++- 未实现 drag/drop、reorder、group/collapse command controls、undo/redo UI、persistence、SVG/PNG export、AI、backend 或 network call。
++- 未暴露 controller、dispatch、projection 或 G2 instance。
++- 未新增动画库；DOM motion 为 scoped CSS，Canvas motion 由 G2 负责并遵循 reduced motion。
++- 未执行 commit、push、PR、merge、publish 或其他远端写操作。
+diff --git a/.ai-platform/evidence/T105/test-results.md b/.ai-platform/evidence/T105/test-results.md
+new file mode 100644
+index 0000000..d1061e1
+--- /dev/null
++++ b/.ai-platform/evidence/T105/test-results.md
+@@ -0,0 +1,71 @@
++# T105 Test Results
+
++## RED
+
++| Target | Exit | Expected signal |
++| --- | ---: | --- |
++| controller mode/callback tests before implementation | 1 | controller/component module 缺失 |
++| state/lifecycle tests before public component | 1 | 7 tests 因 `FinancialChartEditor` 缺失失败 |
++| Chromium rendering before workbench | 1 | 3 tests 因 ready root / chart stage 缺失失败 |
++| package consumers before public export | 1 | runtime/type/CSS surface 与批准合同不一致 |
+
++## GREEN And Fresh Validation
+
++| Command | Exit | Result |
++| --- | ---: | --- |
++| `pnpm exec vitest run --project editor-components` | 0 | 3 files、22 tests passed |
++| `pnpm test:unit` | 0 | 15 files、194 tests passed |
++| `pnpm test:coverage` | 0 | 194 tests passed；全部 coverage thresholds 通过 |
++| `pnpm typecheck` | 0 | editor 与 playground strict source typecheck 通过 |
++| `pnpm lint` | 0 | 0 warning/error |
++| `pnpm format:check` | 0 | 全部 matched files 通过 |
++| `pnpm build` | 0 | editor ESM/CJS/CSS/d.ts/d.cts 与 playground production build 成功 |
++| `pnpm test:package` | 0 | publint、ATTW、ESM/CJS、CSS 和 type consumers 通过 |
++| `pnpm exec playwright test e2e/rendering.spec.ts --project=chromium` | 0 | 3/3 real Chromium tests passed |
++| `git diff --check` / cached diff check | 0 | 无 whitespace error |
++| final independent reviews | 0 | engineering、test、visual 均无 Critical/High/Medium finding |
+
++## Coverage
+
++| Boundary | Statements | Branches | Functions | Lines |
++| --- | ---: | ---: | ---: | ---: |
++| Aggregate | 95.83% | 92.16% | 93.03% | 95.74% |
++| Domain | 97.87% | 95.26% | 100% | 97.82% |
++| Waterfall | 99.04% | 100% | 100% | 99.03% |
++| React controller | 93.82% | 86.07% | 100% | 93.67% |
+
++## Real Browser Evidence
+
++| Viewport | Canvas / layout signal | Painted pixels | Overflow |
++| --- | --- | ---: | ---: |
++| 1440x900 | outline + chart + inspector 同屏、pane bounds 不重叠 | 76,185 | x=0、y=0 |
++| 1024x768 | chart 保持可见、inspector drawer 可达 | 55,071 | x=0、y=0 |
++| 390x844 | canvas 370x716、outline/inspector sheets 均 390x844 | 23,087 | x=0、y=0 |
+
++所有视口 console warning/error=0、pageerror=0。Mobile Canvas 金额标签按安全策略隐藏，保留的 x 轴标签无重叠，outline 与 text summary 继续提供金额和顺序。
+
++## Component And Lifecycle Boundaries
+
++- Controlled visible ViewSpec 等待 host prop echo；pending 期间命令仍从可见 prop session 执行。
++- Uncontrolled default 只在首次使用；accepted command 立即提交，同 batch 连续命令保留完整 revision 链。
++- `readOnly` write dispatch 返回 null 且不触发 host callbacks。
++- Accepted callback 顺序、rejected-only callback、group selection deep copy 与四类 callback exception containment 均有直接测试。
++- Invalid source/config 不创建 G2；G2 rejection 只显示固定 code/path。
++- 同一 projection 的首次失败可在依赖变化后重试；只有当前 generation 成功才清除本地 issue 并通知宿主。
++- Projection replacement 和 unmount destroy exactly once；stale replacement/unmount rejection 不产生日志或状态更新。
++- Mobile media query listener、reduced-motion listener 和 Chart lifecycle 均有 cleanup path。
+
++## Package Boundaries
+
++- Runtime exports 精确匹配批准的 T105 surface。
++- `FinancialChartEditorProps`、`FinancialChartEditorPanels` 和 `SelectionState` 可被独立 type consumer 使用。
++- `./styles.css` subpath 存在、非空、标记 side effects 并保持 `.gt-editor` scope。
++- G2、React、React DOM 保持 peer external；公共 Node ESM/CJS import 不触发 browser-only G2 load。
+
++## Not Run
+
++- Firefox/WebKit、axe、drag performance、export pixel parity 和 React 18/19 matrix：分别属于 T106-T108，不作为 T105 假证据。
+
++## Validation Retry
+
++一次 coverage 运行与 reviewer 验证并发时，既有 T103 seeded property test 超过 5 秒默认 timeout；结束并发后立即 fresh rerun，15 files / 194 tests 与 coverage thresholds 全部通过。该次 timeout 不计作行为通过证据，运行时敏感性保留到 T108 全量稳定性门禁复核。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+index 0aad853..3777d56 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/analysis.md
+@@ -8,7 +8,7 @@
+
+ ## Verdict
+
+-没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T104 已验收，T105 是下一执行节点。
++没有 Critical 或 High finding。产品合同、章程、TDR、feature spec、设计合同、数据模型、公共 API 与任务图保持一致。T101-T104 已验收，T105 已完成实现与独立 review，处于 `Needs_Review` 并等待用户可视化验收。
+
+ ## Requirement Coverage
+
+@@ -71,4 +71,4 @@ Disposition: spec 的 Non-Goals 与 research 风险已经把本切片限制为
+ - Constitution: Confirmed。
+ - Feature spec/plan/TDR/tasks: Confirmed。
+ - Checklist: Completed。
+-- Execute: T101-T104 Accepted；T105-T108 保持 Draft。T102-T104 由 Codex 独立 review 并验收，T105 进入 Needs_Review 后请求用户可视化验收。
++- Execute: T101-T104 Accepted；T105 Needs_Review，等待用户可视化验收；T106-T108 保持 Draft。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/packets/T105.yaml b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T105.yaml
+new file mode 100644
+index 0000000..6f8f343
+--- /dev/null
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/packets/T105.yaml
+@@ -0,0 +1,178 @@
++schema_version: "1.0"
++packet_id: "001-waterfall-editor-foundation-T105-A001"
++task_id: "T105"
++feature_id: "001-waterfall-editor-foundation"
++mode: "direct_execute_with_user_visual_acceptance"
+
++governance_inputs:
++  constitution: ".ai-platform/memory/constitution.md"
++  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
++  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
++  design_contract: ".ai-platform/specs/001-waterfall-editor-foundation/design-contract.md"
++  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
++  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
++  approval: "T104 Accepted; user requires T105 completion before the next acceptance request."
+
++work_unit:
++  title: "实现 React 工作台与真实 G2 渲染"
++  goal: "交付可嵌入的 FinancialChartEditor、controlled/uncontrolled controller、真实 G2 waterfall canvas 与真实财务 playground。"
++  requirement_mapping:
++    - "WF-US-001"
++    - "WF-US-005"
++    - "WF-FR-010"
++    - "WF-FR-014"
++    - "WF-NFR-004"
++    - "WF-NFR-005"
++  dependencies:
++    - "T101 Accepted"
++    - "T102 Accepted"
++    - "T104 Accepted"
++  blocks:
++    - "T106"
++    - "T107"
++    - "T108"
+
++codebase_context:
++  branch: "codex/reset"
++  surface: "Ambitious operational product surface using the Scientific Atlas / Command Center pattern."
++  current_state: "T104 provides one Accepted package-internal waterfall projection; playground is a minimal shell."
++  design_thesis: "A calm financial analysis workbench where the chart is the primary artifact, the outline is precise structure, and the inspector exposes only current context."
++  signature_move: "Chart, compact structure outline, and validation rail share one stable three-pane analytical plane rather than card-based dashboard composition."
++  architectural_boundary:
++    - "FinancialChartEditor owns React UI/session adaptation; WaterfallCanvas alone owns G2 lifecycle."
++    - "The chart consumes projectWaterfall output and never reimplements waterfall arithmetic."
++    - "T105 establishes a package-internal execute path for T106 but does not expose dispatch or implement reorder/group commands in visible UI."
++    - "Selection is local non-domain UI state; SourceData and ViewSpec remain immutable."
+
++locked_contract:
++  component_modes:
++    - "viewSpec is controlled; accepted internal execution emits callbacks but visible ViewSpec does not diverge until the host echoes props."
++    - "defaultViewSpec is uncontrolled initial state; accepted internal execution commits immediately through the same controller path."
++    - "Providing both viewSpec and defaultViewSpec yields a deterministic invalid-configuration state without creating G2."
++  callbacks:
++    - "Accepted command emits onCommand then onViewSpecChange; rejected command emits onCommandRejected only."
++    - "Selection emits onSelectionChange with nodeId and copied sourceIds."
++    - "Host callback exceptions are contained and log only callback identity, never values, labels, source refs or caller error text."
++  states:
++    - "Ready renders outline, real G2 canvas, inspector and text summary."
++    - "Empty means a valid anchors-only source; anchors remain visible with a compact empty contribution message."
++    - "Invalid data/config blocks G2 and renders privacy-safe issue code/path summary in the same workbench skeleton."
++    - "G2 render rejection becomes a contained chart-error state and stale async completion cannot update an unmounted component."
++  lifecycle:
++    - "Each valid projection owns one Chart instance; dependency change and unmount call destroy exactly once."
++    - "Canvas renderer is real in browser E2E; component tests mock only the external G2 boundary."
++  visual:
++    - "Desktop 1440x900 uses 280px / flexible chart / 300px; chart remains unframed and central."
++    - "At 1024px inspector is an on-demand drawer; below 760px outline and inspector are full-height sheets and chart remains visible."
++    - "Only exact design-contract tokens, 4-6px radii, stable 32/36px controls, no gradients, nested cards, hero or decorative imagery."
++    - "CSS owns 100-180ms state motion and disables nonessential transitions for reduced motion; no animation library is added."
++  public_surface:
++    - "Add FinancialChartEditor and its props/selection types; keep projectWaterfall and controller internal."
++    - "Add package CSS subpath; React, React DOM and G2 remain external peer dependencies."
++    - "Persistence and SVG/PNG implementation remain T107; visible export control is disabled in T105."
+
++execution_constraints:
++  adapter: "Codex direct TDD execution with delegated RED test authorship and independent review."
++  allowed_files:
++    - "package.json"
++    - "pnpm-lock.yaml"
++    - "vitest.config.ts"
++    - "packages/editor/package.json"
++    - "packages/editor/tsconfig.json"
++    - "packages/editor/tsup.config.ts"
++    - "packages/editor/src/components/**"
++    - "packages/editor/src/styles/**"
++    - "packages/editor/src/react/**"
++    - "packages/editor/src/index.ts"
++    - "packages/editor/tests/setup.ts"
++    - "packages/editor/tests/components/**"
++    - "packages/editor/tests/package/**"
++    - "apps/playground/package.json"
++    - "apps/playground/tsconfig.json"
++    - "apps/playground/vite.config.ts"
++    - "apps/playground/src/**"
++    - "apps/playground/index.html"
++    - "e2e/fixtures/**"
++    - "e2e/rendering.spec.ts"
++  dependencies:
++    - "lucide-react is the only production UI dependency added."
++    - "Testing Library dependencies may be added as exact root devDependencies."
++  forbidden_changes:
++    - "No drag/drop, reorder, grouping command controls, persistence, active export, routing, backend, network call or AI feature."
++    - "No second projection/arithmetic path, handwritten SVG chart, animation library, global editor store or exposed G2 instance."
++    - "No commit, push, PR, merge or publish."
++  conflicts:
++    - "Do not execute T106 concurrently because it owns visible command interactions on the same components."
+
++tdd_plan:
++  red:
++    - "Add controlled/uncontrolled controller tests including prop echo, accepted/rejected callbacks and callback containment."
++    - "Add ready/empty/invalid/G2-error state tests and exact destroy-on-change/unmount assertions."
++    - "Add real Chromium render, nonblank canvas pixel, desktop/compact/mobile layout and sheet reachability tests."
++    - "Update package runtime/type/CSS export consumers before public component implementation."
++  green:
++    - "Implement typed props, controller, stable shell components and a single G2 lifecycle adapter."
++    - "Implement scoped CSS tokens/responsive panels and a public-entry playground with a real financial fixture."
++  refactor:
++    - "Keep layout, outline, chart and inspector ownership separate; reuse one formatter and projection result."
++    - "Run screenshot review and correct overflow, canvas framing, palette, typography and compact/mobile hierarchy."
+
++validation_loop:
++  commands:
++    - "pnpm exec vitest run packages/editor/tests/components"
++    - "pnpm test:unit"
++    - "pnpm test:coverage"
++    - "pnpm typecheck"
++    - "pnpm lint"
++    - "pnpm format:check"
++    - "pnpm build"
++    - "pnpm test:package"
++    - "pnpm exec playwright test e2e/rendering.spec.ts --project=chromium"
++    - "git diff --check"
++    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T105"
++  expected_signals:
++    - "All component, full unit, coverage, build, package and Chromium rendering commands exit 0 after GREEN."
++    - "A real canvas has stable dimensions and more than 500 non-background pixels."
++    - "1440x900, 1024x768 and 390x844 show no horizontal overflow, text/control overlap or blank chart."
++    - "Unmount and dependency replacement destroy every created Chart exactly once."
++  retry_budget: 3
++  failure_policy: "Fix only T105 component/render/lifecycle/visual failures; stop if projection or command semantics must materially change."
+
++evidence_contract:
++  directory: ".ai-platform/evidence/T105"
++  required_files:
++    - "summary.md"
++    - "test-results.md"
++    - "diff.patch"
++    - "screenshots/desktop-ready.png"
++    - "screenshots/compact-ready.png"
++    - "screenshots/mobile-ready.png"
++    - "screenshots/invalid-data.png"
++  required_content:
++    - "RED/GREEN, public surface, controlled/uncontrolled and G2 cleanup evidence."
++    - "Real canvas pixel count and desktop/compact/mobile bounding-box evidence."
++    - "Visual QA rubric result, changed files, diff summary and residual risk."
+
++review_contract:
++  spec_compliance:
++    - "Component props, modes, callbacks, states, G2 lifecycle and package/CSS exports have direct tests."
++    - "Visible UI does not implement T106/T107 behavior or expose internal controller/G2/projection APIs."
++  engineering_quality:
++    - "Strict types, no any/ignore, scoped cleanup, no input mutation and no financial-value logging."
++    - "React/G2 remain external; CSS has component scope and reduced-motion/mobile paths."
++  visual_quality:
++    - "Primary chart artifact is unmistakable in three seconds and no card-grid/marketing composition appears."
++    - "Design review scores at least 1.7 average with no zero in core dimensions."
++  qa_acceptance:
++    - "No Critical/High/Medium independent review finding remains."
++    - "T105 ends Needs_Review and waits for user visual acceptance before T106."
+
++handoff:
++  on_success: "Attach evidence, mark T105 Needs_Review, keep a local dev server running, show URL/screenshots and request user visual acceptance."
++  on_failure: "Keep T105 Running with explicit blocker; do not advance T106."
++  remote_actions: "None authorized."
+
++stop_conditions:
++  - "Real G2 cannot render the accepted projection without duplicating arithmetic."
++  - "Controlled mode requires a public dispatch escape hatch or hidden source mutation."
++  - "Responsive layout can only pass by removing required chart visibility or unreachable panels."
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+index 59b3f3e..20863f5 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/tasks.md
+@@ -98,7 +98,7 @@
+
+ ## T105 - 实现 React 工作台与 G2 渲染
+
+-- Status: Draft
++- Status: Needs_Review
+ - Priority: P0
+ - Dependencies: T101、T102、T104
+ - Blocks: T106、T107、T108
+@@ -106,7 +106,7 @@
+ - Parallel: 否
+ - Conflicts with: T101、T106、T107；共享 component/styles/playground files
+ - Goal: 建立符合设计合同的 React editor shell、受控/非受控 session adapter、真实 G2 瀑布图和薄 playground。
+-- Allowed files: `package.json`、`pnpm-lock.yaml`、`vitest.config.ts`、`packages/editor/package.json`、`packages/editor/tsup.config.ts`、`packages/editor/src/components/**`、`packages/editor/src/styles/**`、`packages/editor/src/react/**`、`packages/editor/src/index.ts`、`packages/editor/tests/setup.ts`、`packages/editor/tests/components/editor-modes.test.tsx`、`packages/editor/tests/components/states.test.tsx`、`packages/editor/tests/components/callbacks.test.tsx`、`apps/playground/package.json`、`apps/playground/src/**`、`apps/playground/index.html`、`e2e/fixtures/**`、`e2e/rendering.spec.ts`
++- Allowed files: `package.json`、`pnpm-lock.yaml`、`vitest.config.ts`、`packages/editor/package.json`、`packages/editor/tsconfig.json`、`packages/editor/tsup.config.ts`、`packages/editor/src/components/**`、`packages/editor/src/styles/**`、`packages/editor/src/react/**`、`packages/editor/src/index.ts`、`packages/editor/tests/setup.ts`、`packages/editor/tests/components/**`、`packages/editor/tests/package/**`、`apps/playground/package.json`、`apps/playground/tsconfig.json`、`apps/playground/vite.config.ts`、`apps/playground/src/**`、`apps/playground/index.html`、`e2e/fixtures/**`、`e2e/rendering.spec.ts`
+ - Test targets: `packages/editor/tests/components/editor-modes.test.tsx`、`packages/editor/tests/components/states.test.tsx`、`packages/editor/tests/components/callbacks.test.tsx`、`e2e/rendering.spec.ts`
+ - Deliverables: FinancialChartEditor、toolbar/outline/chart/inspector shell、G2 lifecycle adapter、ready/empty/invalid states、real fixture playground。
+ - Acceptance criteria: 受控与非受控行为一致；真实 G2 chart 非空；组件卸载无 listener/chart 泄漏；目标视口无重叠。
+@@ -115,6 +115,7 @@
+ - TDD plan: RED：先写模式、状态、callback component tests 和 nonblank browser assertion；GREEN：实现最小 shell 与 chart adapter；REFACTOR：拆分稳定 UI components 和 scoped styles。
+ - Packet path: `.ai-platform/specs/001-waterfall-editor-foundation/packets/T105.yaml`
+ - Evidence required: RED/GREEN 输出、desktop/compact/mobile screenshots、canvas pixel evidence、cleanup check、changed files、diff summary、residual risk。
++- Acceptance authority: T105 已完成 fresh engineering、test 与 visual review，无 Critical、High 或 Medium finding；按用户要求等待可视化验收。
+
+ ## T106 - 实现排序、分组与折叠交互
+
+diff --git a/apps/playground/index.html b/apps/playground/index.html
+index 23a9d94..f1d9478 100644
+--- a/apps/playground/index.html
++++ b/apps/playground/index.html
+@@ -3,7 +3,8 @@
+   <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <title>g2touch</title>
++    <meta name="theme-color" content="#f3f5f4" />
++    <title>g2touch | 经营利润桥接</title>
+   </head>
+   <body>
+     <div id="root"></div>
+diff --git a/apps/playground/src/App.tsx b/apps/playground/src/App.tsx
+index 3b99e74..f1c7435 100644
+--- a/apps/playground/src/App.tsx
++++ b/apps/playground/src/App.tsx
+@@ -1,10 +1,13 @@
+-import '@g2touch/editor';
++import { FinancialChartEditor } from '@g2touch/editor';
+
++import { getPlaygroundFixture } from './fixtures';
+
+ export function App(): React.JSX.Element {
++  const sourceData = getPlaygroundFixture(window.location.search);
+
+   return (
+-    <main aria-label="g2touch 参考编辑器">
+-      <h1>g2touch</h1>
+-      <p>瀑布图编辑器基础工作区</p>
++    <main className="playground" aria-label="g2touch 参考编辑器">
++      <FinancialChartEditor sourceData={sourceData} height="100dvh" locale="zh-CN" />
+     </main>
+   );
+ }
+diff --git a/apps/playground/src/fixtures.ts b/apps/playground/src/fixtures.ts
+new file mode 100644
+index 0000000..c2329c2
+--- /dev/null
++++ b/apps/playground/src/fixtures.ts
+@@ -0,0 +1,51 @@
++import type { SourceData } from '@g2touch/editor';
+
++const financialFixture = {
++  schemaVersion: '1.0.0',
++  datasetId: '2026-h1-operating-profit-bridge',
++  currency: 'CNY',
++  items: [
++    { id: 'opening-profit', label: '期初营业利润', amount: 3_200, kind: 'start' },
++    { id: 'sales-volume', label: '销量增长', amount: 860, kind: 'contribution' },
++    { id: 'price-impact', label: '价格提升', amount: 420, kind: 'contribution' },
++    { id: 'product-mix', label: '产品结构', amount: 160, kind: 'contribution' },
++    { id: 'material-cost', label: '原材料成本', amount: -510, kind: 'contribution' },
++    { id: 'freight-cost', label: '运输费用', amount: -180, kind: 'contribution' },
++    { id: 'labor-cost', label: '人工成本', amount: -260, kind: 'contribution' },
++    { id: 'operating-subtotal', label: '经营利润小计', amount: 3_690, kind: 'subtotal' },
++    { id: 'exchange-impact', label: '汇率影响', amount: -90, kind: 'contribution' },
++    { id: 'tax-impact', label: '所得税影响', amount: -240, kind: 'contribution' },
++    { id: 'one-off-income', label: '一次性收益', amount: 80, kind: 'contribution' },
++    { id: 'ending-profit', label: '期末净利润', amount: 3_440, kind: 'end' },
++  ],
++} as const satisfies SourceData;
+
++const emptyFixture = {
++  schemaVersion: '1.0.0',
++  datasetId: 'empty-profit-bridge',
++  currency: 'CNY',
++  items: [
++    { id: 'opening-profit', label: '期初利润', amount: 0, kind: 'start' },
++    { id: 'ending-profit', label: '期末利润', amount: 0, kind: 'end' },
++  ],
++} as const satisfies SourceData;
+
++const invalidFixture = {
++  ...financialFixture,
++  datasetId: 'invalid-profit-bridge',
++  items: financialFixture.items.map(item =>
++    item.id === 'material-cost' ? { ...item, amount: Number.POSITIVE_INFINITY } : item,
++  ),
++} satisfies SourceData;
+
++/** Resolves deterministic visual fixtures without adding playground-only editor state. */
++export function getPlaygroundFixture(search: string): SourceData {
++  const fixture = new URLSearchParams(search).get('fixture');
++  if (fixture === 'empty') {
++    return emptyFixture;
++  }
++  if (fixture === 'invalid') {
++    return invalidFixture;
++  }
++  return financialFixture;
++}
+diff --git a/apps/playground/src/main.tsx b/apps/playground/src/main.tsx
+index be6e1cc..b920362 100644
+--- a/apps/playground/src/main.tsx
++++ b/apps/playground/src/main.tsx
+@@ -1,7 +1,10 @@
+ import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+
++import '@g2touch/editor/styles.css';
+
+ import { App } from './App';
++import './playground.css';
+
+ const rootElement = document.querySelector('#root');
+
+diff --git a/apps/playground/src/playground.css b/apps/playground/src/playground.css
+new file mode 100644
+index 0000000..a4ddebb
+--- /dev/null
++++ b/apps/playground/src/playground.css
+@@ -0,0 +1,20 @@
++:root {
++  color: #18211d;
++  background: #f3f5f4;
++  font-family: Inter, 'Noto Sans SC', 'PingFang SC', system-ui, sans-serif;
++}
+
++html,
++body,
++#root,
++.playground {
++  width: 100%;
++  height: 100%;
++  margin: 0;
++  overflow: hidden;
++}
+
++.playground {
++  min-width: 0;
++  min-height: 0;
++}
+diff --git a/apps/playground/tsconfig.json b/apps/playground/tsconfig.json
+index d89e81f..757fd78 100644
+--- a/apps/playground/tsconfig.json
++++ b/apps/playground/tsconfig.json
+@@ -1,6 +1,7 @@
+ {
+   "extends": "../../tsconfig.base.json",
+   "compilerOptions": {
++    "skipLibCheck": true,
+     "types": ["node", "vite/client", "react", "react-dom"],
+     "paths": {
+       "@g2touch/editor": ["../../packages/editor/src/index.ts"]
+diff --git a/apps/playground/vite.config.ts b/apps/playground/vite.config.ts
+index fa901c4..bd22663 100644
+--- a/apps/playground/vite.config.ts
++++ b/apps/playground/vite.config.ts
+@@ -1,8 +1,23 @@
+ import react from '@vitejs/plugin-react';
++import { fileURLToPath } from 'node:url';
+ import { defineConfig } from 'vite';
+
+ export default defineConfig({
+   plugins: [react()],
++  resolve: {
++    alias: [
++      {
++        find: '@g2touch/editor/styles.css',
++        replacement: fileURLToPath(
++          new URL('../../packages/editor/src/styles/editor.css', import.meta.url),
++        ),
++      },
++      {
++        find: '@g2touch/editor',
++        replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
++      },
++    ],
++  },
+   server: {
+     port: 5173,
+   },
+diff --git a/e2e/rendering.spec.ts b/e2e/rendering.spec.ts
+new file mode 100644
+index 0000000..aa00b80
+--- /dev/null
++++ b/e2e/rendering.spec.ts
+@@ -0,0 +1,139 @@
++import { expect, test, type Locator, type Page } from '@playwright/test';
+
++interface Viewport {
++  readonly width: number;
++  readonly height: number;
++}
+
++const DESKTOP = { width: 1440, height: 900 } satisfies Viewport;
++const COMPACT = { width: 1024, height: 768 } satisfies Viewport;
++const MOBILE = { width: 390, height: 844 } satisfies Viewport;
+
++async function openReadyEditor(page: Page, viewport: Viewport): Promise<void> {
++  await page.setViewportSize(viewport);
++  await page.goto('/');
++  await expect(page.locator('[data-g2touch][data-editor-state="ready"]')).toBeVisible();
++  await expect(page.getByTestId('g2touch-chart-stage')).toBeVisible();
++}
+
++async function expectNoHorizontalOverflow(page: Page): Promise<void> {
++  const overflow = await page.evaluate(
++    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
++  );
++  expect(overflow).toBeLessThanOrEqual(1);
++}
+
++async function paintedPixelCount(canvas: Locator): Promise<number> {
++  return canvas.evaluate(element => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return 0;
++    }
++    const context = element.getContext('2d');
++    if (context === null || element.width === 0 || element.height === 0) {
++      return 0;
++    }
+
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    let painted = 0;
++    for (let offset = 0; offset < pixels.length; offset += 4) {
++      const red = pixels[offset] ?? 255;
++      const green = pixels[offset + 1] ?? 255;
++      const blue = pixels[offset + 2] ?? 255;
++      const alpha = pixels[offset + 3] ?? 0;
++      if (alpha > 20 && (red < 242 || green < 242 || blue < 242)) {
++        painted += 1;
++      }
++    }
++    return painted;
++  });
++}
+
++test('renders a real nonblank G2 canvas in the desktop analytical plane', async ({ page }) => {
++  await openReadyEditor(page, DESKTOP);
+
++  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
+
++  const canvasBox = await canvas.boundingBox();
++  expect(canvasBox).not.toBeNull();
++  expect(canvasBox?.width ?? 0).toBeGreaterThan(400);
++  expect(canvasBox?.height ?? 0).toBeGreaterThan(360);
+
++  const outlineBox = await page.getByRole('tree', { name: '结构大纲' }).boundingBox();
++  const chartBox = await page.getByTestId('g2touch-chart-stage').boundingBox();
++  const inspectorBox = await page.getByRole('complementary', { name: '检查器' }).boundingBox();
++  expect(outlineBox).not.toBeNull();
++  expect(chartBox).not.toBeNull();
++  expect(inspectorBox).not.toBeNull();
++  expect((outlineBox?.x ?? 0) + (outlineBox?.width ?? 0)).toBeLessThanOrEqual(
++    (chartBox?.x ?? 0) + 1,
++  );
++  expect((chartBox?.x ?? 0) + (chartBox?.width ?? 0)).toBeLessThanOrEqual(
++    (inspectorBox?.x ?? 0) + 1,
++  );
++  await expectNoHorizontalOverflow(page);
++});
+
++test('keeps the chart visible and exposes the inspector drawer at 1024px', async ({ page }) => {
++  await openReadyEditor(page, COMPACT);
+
++  const chartStage = page.getByTestId('g2touch-chart-stage');
++  const chartBox = await chartStage.boundingBox();
++  expect(chartBox).not.toBeNull();
++  expect(chartBox?.width ?? 0).toBeGreaterThan(500);
++  expect(chartBox?.height ?? 0).toBeGreaterThan(480);
++  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
++  const canvasBox = await canvas.boundingBox();
++  expect(canvasBox?.width ?? 0).toBeGreaterThan(500);
++  expect(canvasBox?.height ?? 0).toBeGreaterThan(430);
++  await expect(page.getByRole('tree', { name: '结构大纲' })).toBeVisible();
++  await expect(page.getByRole('complementary', { name: '检查器' })).toBeHidden();
+
++  await page.getByRole('button', { name: '打开检查器' }).click();
++  const drawer = page.getByRole('dialog', { name: '检查器' });
++  await expect(drawer).toBeVisible();
++  await expect(page.getByRole('button', { name: '关闭检查器' })).toBeVisible();
++  await expectNoHorizontalOverflow(page);
++});
+
++test('keeps the mobile chart visible with reachable outline and inspector sheets', async ({
++  page,
++}) => {
++  await openReadyEditor(page, MOBILE);
+
++  const chartBox = await page.getByTestId('g2touch-chart-stage').boundingBox();
++  expect(chartBox).not.toBeNull();
++  expect(chartBox?.width ?? 0).toBeGreaterThan(350);
++  expect(chartBox?.height ?? 0).toBeGreaterThan(420);
++  const canvas = page.getByTestId('g2touch-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
++  const canvasBox = await canvas.boundingBox();
++  expect(canvasBox?.width ?? 0).toBeGreaterThan(350);
++  expect(canvasBox?.height ?? 0).toBeGreaterThan(420);
++  await expectNoHorizontalOverflow(page);
+
++  await page.getByRole('button', { name: '打开结构大纲' }).click();
++  const outlineSheet = page.getByRole('dialog', { name: '结构大纲' });
++  await expect(outlineSheet).toBeVisible();
++  const outlineBox = await outlineSheet.boundingBox();
++  expect(outlineBox?.width ?? 0).toBeGreaterThanOrEqual(380);
++  expect(outlineBox?.height ?? 0).toBeGreaterThanOrEqual(800);
++  await page.getByRole('button', { name: '关闭结构大纲' }).click();
++  await expect(outlineSheet).toBeHidden();
+
++  await page.getByRole('button', { name: '打开检查器' }).click();
++  const inspectorSheet = page.getByRole('dialog', { name: '检查器' });
++  await expect(inspectorSheet).toBeVisible();
++  const inspectorBox = await inspectorSheet.boundingBox();
++  expect(inspectorBox?.width ?? 0).toBeGreaterThanOrEqual(380);
++  expect(inspectorBox?.height ?? 0).toBeGreaterThanOrEqual(800);
++  await page.getByRole('button', { name: '关闭检查器' }).click();
++  await expect(inspectorSheet).toBeHidden();
+
++  await expect(page.getByTestId('g2touch-chart-stage')).toBeVisible();
++  await expectNoHorizontalOverflow(page);
++});
+diff --git a/package.json b/package.json
+index 7829481..9f22afe 100644
+--- a/package.json
++++ b/package.json
+@@ -26,6 +26,9 @@
+     "@arethetypeswrong/cli": "0.18.5",
+     "@eslint/js": "10.0.1",
+     "@playwright/test": "1.61.1",
++    "@testing-library/dom": "10.4.1",
++    "@testing-library/react": "16.3.2",
++    "@testing-library/user-event": "14.6.1",
+     "@types/node": "22.20.1",
+     "@types/react": "19.2.17",
+     "@types/react-dom": "19.2.3",
+diff --git a/packages/editor/package.json b/packages/editor/package.json
+index 0f8daff..c951d0a 100644
+--- a/packages/editor/package.json
++++ b/packages/editor/package.json
+@@ -23,12 +23,13 @@
+         "default": "./dist/index.cjs"
+       }
+     },
++    "./styles.css": "./dist/styles.css",
+     "./package.json": "./package.json"
+   },
+   "scripts": {
+     "build": "tsup",
+     "typecheck": "tsc --noEmit -p tsconfig.json",
+-    "test:package": "publint && attw --pack . && node tests/package/import-esm.mjs && node tests/package/import-cjs.cjs && tsc -p tests/package/tsconfig.json"
++    "test:package": "publint && attw --pack . --exclude-entrypoints ./styles.css && node tests/package/import-esm.mjs && node tests/package/import-cjs.cjs && tsc -p tests/package/tsconfig.json"
+   },
+   "engines": {
+     "node": ">=22.13.0"
+@@ -45,5 +46,8 @@
+   },
+   "publishConfig": {
+     "access": "public"
++  },
++  "dependencies": {
++    "lucide-react": "1.24.0"
+   }
+ }
+diff --git a/packages/editor/src/components/EditorToolbar.tsx b/packages/editor/src/components/EditorToolbar.tsx
+new file mode 100644
+index 0000000..9aa55c7
+--- /dev/null
++++ b/packages/editor/src/components/EditorToolbar.tsx
+@@ -0,0 +1,120 @@
++import {
++  Download,
++  PanelLeft,
++  PanelRight,
++  Redo2,
++  ShieldCheck,
++  TriangleAlert,
++  Undo2,
++} from 'lucide-react';
+
++import type { EditorMessages } from './editorMessages';
+
++interface EditorToolbarProps {
++  readonly datasetId: string;
++  readonly messages: EditorMessages;
++  readonly valid: boolean;
++  readonly showOutline: boolean;
++  readonly showInspector: boolean;
++  readonly showToolbar: boolean;
++  readonly onOpenOutline: () => void;
++  readonly onOpenInspector: () => void;
++}
+
++function DisabledTool({
++  label,
++  reason,
++  children,
++}: {
++  readonly label: string;
++  readonly reason: string;
++  readonly children: React.ReactNode;
++}): React.JSX.Element {
++  return (
++    <button
++      className="gt-icon-button"
++      type="button"
++      aria-label={label}
++      aria-description={reason}
++      title={reason}
++      disabled
++    >
++      {children}
++    </button>
++  );
++}
+
++export function EditorToolbar({
++  datasetId,
++  messages,
++  valid,
++  showOutline,
++  showInspector,
++  showToolbar,
++  onOpenOutline,
++  onOpenInspector,
++}: EditorToolbarProps): React.JSX.Element {
++  const statusLabel = valid ? messages.validated : messages.invalidData;
+
++  return (
++    <header className="gt-toolbar" role="toolbar" aria-label={messages.toolbar}>
++      <div className="gt-brand-block">
++        <span className="gt-brand-mark" aria-label="g2touch">
++          g2touch
++        </span>
++        <span className="gt-toolbar-divider" aria-hidden="true" />
++        <span className="gt-dataset-title" title={datasetId}>
++          {datasetId}
++        </span>
++      </div>
+
++      <div className="gt-toolbar-status" data-valid={valid} aria-label={statusLabel}>
++        {valid ? (
++          <ShieldCheck size={15} aria-hidden="true" />
++        ) : (
++          <TriangleAlert size={15} aria-hidden="true" />
++        )}
++        <span>{statusLabel}</span>
++      </div>
+
++      <div className="gt-toolbar-actions">
++        {showOutline ? (
++          <button
++            className="gt-icon-button gt-outline-trigger"
++            type="button"
++            aria-label={messages.openOutline}
++            title={messages.openOutline}
++            onClick={onOpenOutline}
++          >
++            <PanelLeft size={17} aria-hidden="true" />
++          </button>
++        ) : null}
++        {showInspector ? (
++          <button
++            className="gt-icon-button gt-inspector-trigger"
++            type="button"
++            aria-label={messages.openInspector}
++            title={messages.openInspector}
++            onClick={onOpenInspector}
++          >
++            <PanelRight size={17} aria-hidden="true" />
++          </button>
++        ) : null}
++        {showToolbar ? (
++          <>
++            <span className="gt-action-divider" aria-hidden="true" />
++            <DisabledTool label={messages.undo} reason={messages.undoUnavailable}>
++              <Undo2 size={17} aria-hidden="true" />
++            </DisabledTool>
++            <DisabledTool label={messages.redo} reason={messages.redoUnavailable}>
++              <Redo2 size={17} aria-hidden="true" />
++            </DisabledTool>
++            <DisabledTool label={messages.export} reason={messages.exportUnavailable}>
++              <Download size={17} aria-hidden="true" />
++            </DisabledTool>
++          </>
++        ) : null}
++      </div>
++    </header>
++  );
++}
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+new file mode 100644
+index 0000000..46f29f2
+--- /dev/null
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -0,0 +1,195 @@
++import { useMemo, useState } from 'react';
+
++import type { ValidationIssue } from '../domain/errors';
++import { useEditorController } from '../react/useEditorController';
++import type { FinancialChartEditorProps } from '../react/editorTypes';
++import { projectWaterfall } from '../waterfall/projectWaterfall';
++import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++import { EditorToolbar } from './EditorToolbar';
++import { editorMessages } from './editorMessages';
++import { InspectorPanel } from './InspectorPanel';
++import { OutlinePanel } from './OutlinePanel';
++import { PanelOverlay } from './PanelOverlay';
++import { WaterfallCanvas } from './WaterfallCanvas';
+
++interface VisibleIssue {
++  readonly code: string;
++  readonly path: string;
++}
+
++function componentIssues(
++  invalidMode: boolean,
++  issues: readonly ValidationIssue[],
++): readonly VisibleIssue[] {
++  if (invalidMode) {
++    return [{ code: 'INVALID_CONFIGURATION', path: '/viewSpec' }];
++  }
++  return issues.map(issue => ({ code: issue.code, path: issue.path }));
++}
+
++function editorHeight(height: FinancialChartEditorProps['height']): number | string {
++  if (typeof height === 'number') {
++    return Math.max(480, height);
++  }
++  return height ?? 680;
++}
+
++function InvalidStage({
++  issues,
++  title,
++}: {
++  readonly issues: readonly VisibleIssue[];
++  readonly title: string;
++}): React.JSX.Element {
++  return (
++    <section className="gt-invalid-stage" role="alert">
++      <div className="gt-invalid-mark" aria-hidden="true">
++        !
++      </div>
++      <div>
++        <h2>{title}</h2>
++        <ul>
++          {issues.map((issue, index) => (
++            <li key={`${issue.code}:${issue.path}:${index}`}>
++              <strong>{issue.code}</strong>
++              <code>{issue.path}</code>
++            </li>
++          ))}
++        </ul>
++      </div>
++    </section>
++  );
++}
+
++/** Embeddable financial waterfall workbench with immutable source/view boundaries. */
++export function FinancialChartEditor(props: FinancialChartEditorProps): React.JSX.Element {
++  const controller = useEditorController(props);
++  const locale = props.locale ?? 'zh-CN';
++  const messages = editorMessages(locale);
++  const panels = {
++    outline: props.panels?.outline ?? true,
++    inspector: props.panels?.inspector ?? true,
++    toolbar: props.panels?.toolbar ?? true,
++  };
++  const [outlineOpen, setOutlineOpen] = useState(false);
++  const [inspectorOpen, setInspectorOpen] = useState(false);
+
++  const projectionResult = useMemo(() => {
++    if (controller.viewSpec === null) {
++      return null;
++    }
++    return projectWaterfall(props.sourceData, controller.viewSpec);
++  }, [controller.viewSpec, props.sourceData]);
+
++  const invalid =
++    controller.status === 'invalid' || projectionResult === null || !projectionResult.ok;
++  const visibleIssues = componentIssues(
++    controller.mode === 'invalid',
++    controller.status === 'invalid'
++      ? controller.issues
++      : projectionResult !== null && !projectionResult.ok
++        ? projectionResult.errors
++        : [],
++  );
++  const projection: WaterfallProjection =
++    projectionResult !== null && projectionResult.ok ? projectionResult.value : [];
++  const empty = !invalid && !props.sourceData.items.some(item => item.kind === 'contribution');
++  const editorState = invalid ? 'invalid' : empty ? 'empty' : 'ready';
+
++  const outline =
++    !invalid && controller.viewSpec !== null ? (
++      <OutlinePanel
++        sourceData={props.sourceData}
++        viewSpec={controller.viewSpec}
++        projection={projection}
++        locale={locale}
++        messages={messages}
++        selectedNodeId={controller.selection?.nodeId ?? null}
++        onSelect={controller.select}
++      />
++    ) : null;
++  const inspector =
++    !invalid && controller.viewSpec !== null ? (
++      <InspectorPanel
++        sourceData={props.sourceData}
++        viewSpec={controller.viewSpec}
++        projection={projection}
++        selection={controller.selection}
++        locale={locale}
++        messages={messages}
++      />
++    ) : null;
+
++  return (
++    <div
++      className="gt-editor"
++      data-g2touch="editor"
++      data-editor-state={editorState}
++      data-read-only={props.readOnly === true ? 'true' : 'false'}
++      data-view-revision={controller.viewSpec?.revision ?? -1}
++      style={{ height: editorHeight(props.height) }}
++    >
++      <EditorToolbar
++        datasetId={props.sourceData.datasetId}
++        messages={messages}
++        valid={!invalid}
++        showOutline={panels.outline}
++        showInspector={panels.inspector}
++        showToolbar={panels.toolbar}
++        onOpenOutline={() => setOutlineOpen(true)}
++        onOpenInspector={() => setInspectorOpen(true)}
++      />
+
++      {invalid ? (
++        <main className="gt-workbench gt-workbench-invalid">
++          <InvalidStage issues={visibleIssues} title={messages.invalidData} />
++        </main>
++      ) : (
++        <main className="gt-workbench">
++          {panels.outline ? (
++            <aside className="gt-static-panel gt-outline-static">{outline}</aside>
++          ) : null}
++          <WaterfallCanvas
++            projection={projection}
++            locale={locale}
++            currency={props.sourceData.currency}
++            empty={empty}
++            title={messages.waterfallTitle}
++          />
++          {panels.inspector ? (
++            <aside
++              className="gt-static-panel gt-inspector-static"
++              role="complementary"
++              aria-label={messages.inspector}
++            >
++              {inspector}
++            </aside>
++          ) : null}
++        </main>
++      )}
+
++      {!invalid && panels.outline && outlineOpen ? (
++        <PanelOverlay
++          label={messages.outline}
++          closeLabel={messages.closeOutline}
++          backdropLabel={messages.backdrop(messages.outline)}
++          side="left"
++          onClose={() => setOutlineOpen(false)}
++        >
++          {outline}
++        </PanelOverlay>
++      ) : null}
++      {!invalid && panels.inspector && inspectorOpen ? (
++        <PanelOverlay
++          label={messages.inspector}
++          closeLabel={messages.closeInspector}
++          backdropLabel={messages.backdrop(messages.inspector)}
++          side="right"
++          onClose={() => setInspectorOpen(false)}
++        >
++          {inspector}
++        </PanelOverlay>
++      ) : null}
++    </div>
++  );
++}
+diff --git a/packages/editor/src/components/InspectorPanel.tsx b/packages/editor/src/components/InspectorPanel.tsx
+new file mode 100644
+index 0000000..58dd67c
+--- /dev/null
++++ b/packages/editor/src/components/InspectorPanel.tsx
+@@ -0,0 +1,90 @@
++import { CheckCircle2, Database, LockKeyhole, MousePointer2 } from 'lucide-react';
+
++import type { SourceData, ViewSpec } from '../domain/model';
++import type { SelectionState } from '../react/editorTypes';
++import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++import type { EditorMessages } from './editorMessages';
++import { formatAmount, type EditorLocale } from './formatAmount';
+
++interface InspectorPanelProps {
++  readonly sourceData: SourceData;
++  readonly viewSpec: ViewSpec;
++  readonly projection: WaterfallProjection;
++  readonly selection: SelectionState | null;
++  readonly locale: EditorLocale;
++  readonly messages: EditorMessages;
++}
+
++export function InspectorPanel({
++  sourceData,
++  viewSpec,
++  projection,
++  selection,
++  locale,
++  messages,
++}: InspectorPanelProps): React.JSX.Element {
++  const selected =
++    selection === null ? undefined : projection.find(datum => datum.nodeId === selection.nodeId);
+
++  return (
++    <div className="gt-panel-body gt-inspector-body">
++      <div className="gt-panel-heading">
++        <h2>{messages.inspector}</h2>
++        <span className="gt-revision">R{viewSpec.revision}</span>
++      </div>
+
++      {selection === null ? (
++        <section className="gt-inspector-section gt-validation-section">
++          <div className="gt-section-kicker">
++            <CheckCircle2 size={15} aria-hidden="true" />
++            <span>{messages.validation}</span>
++          </div>
++          <strong>{messages.valid}</strong>
++          <dl className="gt-metric-list">
++            <div>
++              <dt>{messages.dataset}</dt>
++              <dd>{sourceData.datasetId}</dd>
++            </div>
++            <div>
++              <dt>{messages.sourceCount}</dt>
++              <dd>{sourceData.items.length}</dd>
++            </div>
++            <div>
++              <dt>{messages.revision}</dt>
++              <dd>{viewSpec.revision}</dd>
++            </div>
++          </dl>
++        </section>
++      ) : (
++        <section className="gt-inspector-section">
++          <div className="gt-section-kicker">
++            <MousePointer2 size={15} aria-hidden="true" />
++            <span>{messages.selectedItem}</span>
++          </div>
++          <strong>{selected?.label ?? selection.nodeId}</strong>
++          {selected === undefined ? null : (
++            <span className="gt-inspector-amount">
++              {formatAmount(selected.amount, locale, sourceData.currency)}
++            </span>
++          )}
++          <dl className="gt-metric-list">
++            <div>
++              <dt>{messages.sourceCount}</dt>
++              <dd>{selection.sourceIds.length}</dd>
++            </div>
++            <div>
++              <dt>{selected?.locked === true ? messages.locked : messages.editable}</dt>
++              <dd>
++                {selected?.locked === true ? (
++                  <LockKeyhole size={14} aria-hidden="true" />
++                ) : (
++                  <Database size={14} aria-hidden="true" />
++                )}
++              </dd>
++            </div>
++          </dl>
++        </section>
++      )}
++    </div>
++  );
++}
+diff --git a/packages/editor/src/components/OutlinePanel.tsx b/packages/editor/src/components/OutlinePanel.tsx
+new file mode 100644
+index 0000000..8f17487
+--- /dev/null
++++ b/packages/editor/src/components/OutlinePanel.tsx
+@@ -0,0 +1,167 @@
++import { ChevronDown, ChevronRight, GripVertical, LockKeyhole } from 'lucide-react';
+
++import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
++import type { SelectionState } from '../react/editorTypes';
++import type { WaterfallDatum, WaterfallProjection } from '../waterfall/waterfallTypes';
++import type { EditorMessages } from './editorMessages';
++import { formatAmount, type EditorLocale } from './formatAmount';
+
++interface OutlineEntry {
++  readonly nodeId: string;
++  readonly label: string;
++  readonly amount: number | null;
++  readonly sourceIds: readonly string[];
++  readonly locked: boolean;
++  readonly level: number;
++  readonly expanded?: boolean;
++  readonly groupSize?: number;
++}
+
++interface OutlinePanelProps {
++  readonly sourceData: SourceData;
++  readonly viewSpec: ViewSpec;
++  readonly projection: WaterfallProjection;
++  readonly locale: EditorLocale;
++  readonly messages: EditorMessages;
++  readonly selectedNodeId: string | null;
++  readonly onSelect: (selection: SelectionState) => void;
++}
+
++function ownGroup(viewSpec: ViewSpec, nodeId: string): ViewGroup | undefined {
++  const descriptor = Object.getOwnPropertyDescriptor(viewSpec.groups, nodeId);
++  return descriptor !== undefined && 'value' in descriptor
++    ? (descriptor.value as ViewGroup)
++    : undefined;
++}
+
++function contributionGroup(viewSpec: ViewSpec, nodeId: string): ViewGroup | undefined {
++  for (const group of Object.values(viewSpec.groups)) {
++    if (group.childIds.includes(nodeId)) {
++      return group;
++    }
++  }
++  return undefined;
++}
+
++function groupEntry(
++  group: ViewGroup,
++  datum: WaterfallDatum | undefined,
++  expanded: boolean,
++): OutlineEntry {
++  return {
++    nodeId: group.id,
++    label: group.label,
++    amount: datum?.amount ?? null,
++    sourceIds: [...group.childIds],
++    locked: datum?.locked ?? false,
++    level: 1,
++    expanded,
++    groupSize: group.childIds.length,
++  };
++}
+
++function outlineEntries(
++  viewSpec: ViewSpec,
++  projection: WaterfallProjection,
++): readonly OutlineEntry[] {
++  const entries: OutlineEntry[] = [];
++  const emittedGroups = new Set<string>();
+
++  for (const datum of projection) {
++    const own = ownGroup(viewSpec, datum.nodeId);
++    if (own !== undefined) {
++      emittedGroups.add(own.id);
++      entries.push(groupEntry(own, datum, false));
++      continue;
++    }
+
++    const parent = contributionGroup(viewSpec, datum.nodeId);
++    if (parent !== undefined && !emittedGroups.has(parent.id)) {
++      emittedGroups.add(parent.id);
++      entries.push(groupEntry(parent, undefined, true));
++    }
+
++    entries.push({
++      nodeId: datum.nodeId,
++      label: datum.label,
++      amount: datum.amount,
++      sourceIds: [...datum.sourceIds],
++      locked: datum.locked,
++      level: parent === undefined ? 1 : 2,
++    });
++  }
+
++  return entries;
++}
+
++export function OutlinePanel({
++  sourceData,
++  viewSpec,
++  projection,
++  locale,
++  messages,
++  selectedNodeId,
++  onSelect,
++}: OutlinePanelProps): React.JSX.Element {
++  const entries = outlineEntries(viewSpec, projection);
+
++  return (
++    <div className="gt-panel-body gt-outline-body">
++      <div className="gt-panel-heading">
++        <h2>{messages.outline}</h2>
++        <span>{entries.length}</span>
++      </div>
++      <div className="gt-outline-tree" role="tree" aria-label={messages.outline}>
++        {entries.map(entry => (
++          <div
++            className="gt-outline-row"
++            data-selected={entry.nodeId === selectedNodeId ? 'true' : 'false'}
++            data-level={entry.level}
++            role="treeitem"
++            aria-level={entry.level}
++            aria-selected={entry.nodeId === selectedNodeId}
++            aria-expanded={entry.expanded}
++            tabIndex={0}
++            key={entry.nodeId}
++            onClick={() => onSelect({ nodeId: entry.nodeId, sourceIds: [...entry.sourceIds] })}
++            onKeyDown={event => {
++              if (event.key === 'Enter' || event.key === ' ') {
++                event.preventDefault();
++                onSelect({ nodeId: entry.nodeId, sourceIds: [...entry.sourceIds] });
++              }
++            }}
++          >
++            <span className="gt-row-grip" aria-hidden="true">
++              <GripVertical size={14} />
++            </span>
++            <span className="gt-row-disclosure" aria-hidden="true">
++              {entry.expanded === true ? (
++                <ChevronDown size={15} />
++              ) : entry.expanded === false ? (
++                <ChevronRight size={15} />
++              ) : null}
++            </span>
++            <span className="gt-row-main">
++              <span className="gt-row-label">{entry.label}</span>
++              {entry.groupSize === undefined ? null : (
++                <span className="gt-row-meta">
++                  {entry.groupSize} {messages.groupedItems}
++                </span>
++              )}
++            </span>
++            <span className="gt-row-value">
++              {entry.amount === null
++                ? `${entry.sourceIds.length} ${messages.sourceItems}`
++                : formatAmount(entry.amount, locale, sourceData.currency)}
++            </span>
++            {entry.locked ? (
++              <LockKeyhole className="gt-row-lock" size={13} aria-label={messages.locked} />
++            ) : (
++              <span className="gt-row-lock-placeholder" aria-hidden="true" />
++            )}
++          </div>
++        ))}
++      </div>
++    </div>
++  );
++}
+diff --git a/packages/editor/src/components/PanelOverlay.tsx b/packages/editor/src/components/PanelOverlay.tsx
+new file mode 100644
+index 0000000..3d26d6f
+--- /dev/null
++++ b/packages/editor/src/components/PanelOverlay.tsx
+@@ -0,0 +1,42 @@
++import { X } from 'lucide-react';
+
++interface PanelOverlayProps {
++  readonly label: string;
++  readonly closeLabel: string;
++  readonly backdropLabel: string;
++  readonly side: 'left' | 'right';
++  readonly onClose: () => void;
++  readonly children: React.ReactNode;
++}
+
++export function PanelOverlay({
++  label,
++  closeLabel,
++  backdropLabel,
++  side,
++  onClose,
++  children,
++}: PanelOverlayProps): React.JSX.Element {
++  return (
++    <div className="gt-overlay-layer" data-side={side}>
++      <button
++        className="gt-overlay-scrim"
++        type="button"
++        aria-label={backdropLabel}
++        onClick={onClose}
++      />
++      <section className="gt-panel-overlay" role="dialog" aria-modal="true" aria-label={label}>
++        <button
++          className="gt-icon-button gt-overlay-close"
++          type="button"
++          aria-label={closeLabel}
++          title={closeLabel}
++          onClick={onClose}
++        >
++          <X size={17} aria-hidden="true" />
++        </button>
++        {children}
++      </section>
++    </div>
++  );
++}
+diff --git a/packages/editor/src/components/WaterfallCanvas.tsx b/packages/editor/src/components/WaterfallCanvas.tsx
+new file mode 100644
+index 0000000..3f76eb2
+--- /dev/null
++++ b/packages/editor/src/components/WaterfallCanvas.tsx
+@@ -0,0 +1,343 @@
++import type { Chart as G2Chart, G2Spec } from '@antv/g2';
++import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+
++import type {
++  WaterfallDatum,
++  WaterfallDatumKind,
++  WaterfallProjection,
++} from '../waterfall/waterfallTypes';
++import { formatAmount, type EditorLocale } from './formatAmount';
+
++const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
++const MOBILE_VIEWPORT_QUERY = '(max-width: 759px)';
++const CHART_ERROR = { code: 'CHART_RENDER_ERROR', path: '/chart' } as const;
++const COLOR_DOMAIN: readonly WaterfallDatumKind[] = [
++  'start',
++  'positive',
++  'negative',
++  'subtotal',
++  'group',
++  'end',
++];
++const COLOR_RANGE = ['#5F6B65', '#168363', '#D5524A', '#315C8C', '#A46812', '#315C8C'];
+
++interface ChartCopy {
++  readonly eyebrow: string;
++  readonly title: string;
++  readonly empty: string;
++  readonly summaryLabel: string;
++  readonly visibleNodes: (count: number) => string;
++  readonly summaryIntro: (title: string, count: number) => string;
++  readonly kindLabels: Readonly<Record<WaterfallDatumKind, string>>;
++}
+
++const CHART_COPY: Readonly<Record<EditorLocale, ChartCopy>> = {
++  'zh-CN': {
++    eyebrow: '财务瀑布图',
++    title: '经营变动瀑布图',
++    empty: '暂无贡献项',
++    summaryLabel: '图表摘要',
++    visibleNodes: count => `${count} 个可见节点`,
++    summaryIntro: (title, count) => `${title}，共 ${count} 个可见节点。`,
++    kindLabels: {
++      start: '起点',
++      positive: '正向贡献',
++      negative: '负向贡献',
++      subtotal: '小计',
++      group: '分组',
++      end: '终点',
++    },
++  },
++  'en-US': {
++    eyebrow: 'Financial waterfall',
++    title: 'Operating bridge',
++    empty: 'No contribution items',
++    summaryLabel: 'Chart summary',
++    visibleNodes: count => `${count} visible nodes`,
++    summaryIntro: (title, count) => `${title}, ${count} visible nodes.`,
++    kindLabels: {
++      start: 'start',
++      positive: 'positive contribution',
++      negative: 'negative contribution',
++      subtotal: 'subtotal',
++      group: 'group',
++      end: 'end',
++    },
++  },
++};
+
++export interface ChartRenderIssue {
++  readonly code: 'CHART_RENDER_ERROR';
++  readonly path: '/chart';
++}
+
++export interface WaterfallCanvasProps {
++  readonly projection: WaterfallProjection;
++  readonly title?: string;
++  readonly locale?: EditorLocale;
++  readonly currency?: string | undefined;
++  readonly empty?: boolean;
++  readonly reducedMotion?: boolean;
++  readonly onRenderError?: (issue: ChartRenderIssue | null) => void;
++}
+
++function formatDatumAmount(datum: WaterfallDatum, locale: EditorLocale, currency?: string): string {
++  const amount = formatAmount(datum.amount, locale, currency);
++  const contribution =
++    datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group';
++  return contribution && datum.amount > 0 ? `+${amount}` : amount;
++}
+
++function chartSpec(
++  projection: WaterfallProjection,
++  locale: EditorLocale,
++  currency: string | undefined,
++  reducedMotion: boolean,
++  showValueLabels: boolean,
++): G2Spec {
++  const labelById = new Map(projection.map(datum => [datum.nodeId, datum.label]));
+
++  return {
++    type: 'view',
++    labelTransform: [{ type: 'overlapHide' }],
++    children: [
++      {
++        type: 'interval',
++        data: [...projection],
++        encode: {
++          x: 'nodeId',
++          y: ['start', 'end'],
++          color: 'kind',
++          key: 'nodeId',
++        },
++        scale: {
++          x: { type: 'band', padding: 0.24 },
++          y: { type: 'linear', nice: true, zero: true },
++          color: {
++            type: 'ordinal',
++            domain: [...COLOR_DOMAIN],
++            range: COLOR_RANGE,
++          },
++        },
++        axis: {
++          x: {
++            title: false,
++            labelAutoHide: true,
++            labelAutoRotate: false,
++            labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
++          },
++          y: {
++            title: false,
++            labelFormatter: (value: unknown) => formatAmount(Number(value), locale, currency),
++          },
++        },
++        legend: { color: false },
++        labels: showValueLabels
++          ? [
++              {
++                text: (datum: WaterfallDatum) => formatDatumAmount(datum, locale, currency),
++                position: (datum: WaterfallDatum) => (datum.end >= datum.start ? 'top' : 'bottom'),
++                style: {
++                  fill: '#34403A',
++                  fontSize: 11,
++                  fontWeight: 600,
++                },
++              },
++            ]
++          : [],
++        style: {
++          fillOpacity: 0.96,
++          insetLeft: 3,
++          insetRight: 3,
++          lineWidth: 1,
++          stroke: '#FFFFFF',
++        },
++        tooltip: false,
++        animate: reducedMotion
++          ? false
++          : {
++              enter: { type: 'growInY', duration: 160, easing: 'ease-out' },
++              update: { type: 'morphing', duration: 160, easing: 'ease-out' },
++              exit: { type: 'fadeOut', duration: 120, easing: 'ease-out' },
++            },
++      },
++    ],
++  };
++}
+
++function useMediaQuery(query: string): boolean {
++  const [matches, setMatches] = useState(() =>
++    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
++      ? window.matchMedia(query).matches
++      : false,
++  );
+
++  useEffect(() => {
++    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
++      return undefined;
++    }
+
++    const mediaQuery = window.matchMedia(query);
++    const handleChange = (event: MediaQueryListEvent): void => {
++      setMatches(event.matches);
++    };
++    mediaQuery.addEventListener('change', handleChange);
+
++    return () => {
++      mediaQuery.removeEventListener('change', handleChange);
++    };
++  }, [query]);
+
++  return matches;
++}
+
++function notifyRenderIssue(
++  callback: WaterfallCanvasProps['onRenderError'],
++  issue: ChartRenderIssue | null,
++): void {
++  if (callback === undefined) {
++    return;
++  }
+
++  try {
++    callback(issue);
++  } catch {
++    console.error('g2touch callback failed: onRenderError');
++  }
++}
+
++/** Owns the real G2 canvas lifecycle for one immutable waterfall projection. */
++export function WaterfallCanvas({
++  projection,
++  title,
++  locale = 'zh-CN',
++  currency,
++  empty,
++  reducedMotion,
++  onRenderError,
++}: WaterfallCanvasProps): React.JSX.Element {
++  const hostRef = useRef<HTMLDivElement>(null);
++  const generationRef = useRef(0);
++  const onRenderErrorRef = useRef(onRenderError);
++  const [renderFailure, setRenderFailure] = useState<{
++    readonly projection: WaterfallProjection;
++    readonly issue: ChartRenderIssue;
++  } | null>(null);
++  const titleId = useId();
++  const systemReducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
++  const mobileViewport = useMediaQuery(MOBILE_VIEWPORT_QUERY);
++  const isEmpty =
++    empty ??
++    !projection.some(
++      datum => datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group',
++    );
++  const shouldReduceMotion = reducedMotion ?? systemReducedMotion;
++  const renderIssue = renderFailure?.projection === projection ? renderFailure.issue : null;
++  const copy = CHART_COPY[locale];
++  const visibleTitle = title ?? copy.title;
+
++  useLayoutEffect(() => {
++    onRenderErrorRef.current = onRenderError;
++  }, [onRenderError]);
+
++  useLayoutEffect(() => {
++    const generation = generationRef.current + 1;
++    generationRef.current = generation;
++    let chart: G2Chart | undefined;
++    let destroyed = false;
++    let disposed = false;
+
++    const destroyChart = (): void => {
++      if (chart === undefined || destroyed) {
++        return;
++      }
++      destroyed = true;
++      try {
++        chart.destroy();
++      } catch {
++        console.error('g2touch chart cleanup failed at /chart');
++      }
++    };
+
++    const reportFailure = (): void => {
++      if (disposed || generationRef.current !== generation) {
++        return;
++      }
++      destroyChart();
++      console.error('g2touch chart render failed: CHART_RENDER_ERROR /chart');
++      setRenderFailure({ projection, issue: CHART_ERROR });
++      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++    };
+
++    const initializeChart = async (): Promise<void> => {
++      const host = hostRef.current;
++      if (host === null) {
++        throw new Error('Chart host is unavailable');
++      }
+
++      const { Chart } = await import('@antv/g2');
++      if (disposed || generationRef.current !== generation) {
++        return;
++      }
+
++      chart = new Chart({ container: host, autoFit: true });
++      chart.options(chartSpec(projection, locale, currency, shouldReduceMotion, !mobileViewport));
++      await chart.render();
++      if (disposed || generationRef.current !== generation) {
++        return;
++      }
++      setRenderFailure(null);
++      notifyRenderIssue(onRenderErrorRef.current, null);
++    };
+
++    void initializeChart().catch(() => {
++      reportFailure();
++    });
+
++    return () => {
++      disposed = true;
++      destroyChart();
++    };
++  }, [currency, locale, mobileViewport, projection, shouldReduceMotion]);
+
++  return (
++    <section aria-labelledby={titleId} className="gt-chart-stage" data-testid="g2touch-chart-stage">
++      <header className="gt-chart-stage__header">
++        <div>
++          <p className="gt-chart-stage__eyebrow">{copy.eyebrow}</p>
++          <h2 className="gt-chart-stage__title" id={titleId}>
++            {visibleTitle}
++          </h2>
++        </div>
++        <span className="gt-chart-stage__count">{copy.visibleNodes(projection.length)}</span>
++      </header>
+
++      {isEmpty ? <p className="gt-chart-stage__empty">{copy.empty}</p> : null}
++      {renderIssue === null ? null : (
++        <div className="gt-chart-stage__error" role="alert">
++          <strong>{renderIssue.code}</strong>
++          <code>{renderIssue.path}</code>
++        </div>
++      )}
+
++      <div
++        aria-hidden="true"
++        className="gt-chart-stage__plot"
++        data-testid="g2touch-chart"
++        ref={hostRef}
++      />
+
++      <section aria-label={copy.summaryLabel} className="gt-visually-hidden" role="region">
++        <p>{copy.summaryIntro(visibleTitle, projection.length)}</p>
++        <ol>
++          {projection.map(datum => (
++            <li key={datum.nodeId}>
++              {datum.label}, {copy.kindLabels[datum.kind]},{' '}
++              {formatDatumAmount(datum, locale, currency)}
++            </li>
++          ))}
++        </ol>
++      </section>
++    </section>
++  );
++}
+diff --git a/packages/editor/src/components/editorMessages.ts b/packages/editor/src/components/editorMessages.ts
+new file mode 100644
+index 0000000..25abbef
+--- /dev/null
++++ b/packages/editor/src/components/editorMessages.ts
+@@ -0,0 +1,98 @@
++import type { EditorLocale } from './formatAmount';
+
++export interface EditorMessages {
++  readonly toolbar: string;
++  readonly outline: string;
++  readonly inspector: string;
++  readonly openOutline: string;
++  readonly closeOutline: string;
++  readonly openInspector: string;
++  readonly closeInspector: string;
++  readonly undo: string;
++  readonly undoUnavailable: string;
++  readonly redo: string;
++  readonly redoUnavailable: string;
++  readonly export: string;
++  readonly exportUnavailable: string;
++  readonly validated: string;
++  readonly validation: string;
++  readonly valid: string;
++  readonly invalidData: string;
++  readonly noSelection: string;
++  readonly selectedItem: string;
++  readonly sourceCount: string;
++  readonly sourceItems: string;
++  readonly revision: string;
++  readonly dataset: string;
++  readonly locked: string;
++  readonly editable: string;
++  readonly groupedItems: string;
++  readonly waterfallTitle: string;
++  readonly backdrop: (label: string) => string;
++}
+
++const ZH_CN: EditorMessages = {
++  toolbar: '编辑器工具栏',
++  outline: '结构大纲',
++  inspector: '检查器',
++  openOutline: '打开结构大纲',
++  closeOutline: '关闭结构大纲',
++  openInspector: '打开检查器',
++  closeInspector: '关闭检查器',
++  undo: '撤销',
++  undoUnavailable: '没有可撤销的修改',
++  redo: '重做',
++  redoUnavailable: '没有可重做的修改',
++  export: '导出',
++  exportUnavailable: '导出尚不可用',
++  validated: '已校验',
++  validation: '数据校验',
++  valid: '结构与金额锚点有效',
++  invalidData: '数据无法渲染',
++  noSelection: '未选择项目',
++  selectedItem: '当前选择',
++  sourceCount: '来源数量',
++  sourceItems: '项来源',
++  revision: '视图版本',
++  dataset: '数据集',
++  locked: '已锁定',
++  editable: '可编辑',
++  groupedItems: '项',
++  waterfallTitle: '经营变动瀑布图',
++  backdrop: label => `${label}背景层`,
++};
+
++const EN_US: EditorMessages = {
++  toolbar: 'Editor toolbar',
++  outline: 'Structure outline',
++  inspector: 'Inspector',
++  openOutline: 'Open structure outline',
++  closeOutline: 'Close structure outline',
++  openInspector: 'Open inspector',
++  closeInspector: 'Close inspector',
++  undo: 'Undo',
++  undoUnavailable: 'No changes to undo',
++  redo: 'Redo',
++  redoUnavailable: 'No changes to redo',
++  export: 'Export',
++  exportUnavailable: 'Export is not available',
++  validated: 'Validated',
++  validation: 'Data validation',
++  valid: 'Structure and amount anchors are valid',
++  invalidData: 'Data cannot be rendered',
++  noSelection: 'No item selected',
++  selectedItem: 'Current selection',
++  sourceCount: 'Source count',
++  sourceItems: 'sources',
++  revision: 'View revision',
++  dataset: 'Dataset',
++  locked: 'Locked',
++  editable: 'Editable',
++  groupedItems: 'items',
++  waterfallTitle: 'Operating bridge',
++  backdrop: label => `${label} backdrop`,
++};
+
++export function editorMessages(locale: EditorLocale): EditorMessages {
++  return locale === 'en-US' ? EN_US : ZH_CN;
++}
+diff --git a/packages/editor/src/components/formatAmount.ts b/packages/editor/src/components/formatAmount.ts
+new file mode 100644
+index 0000000..e48fdf7
+--- /dev/null
++++ b/packages/editor/src/components/formatAmount.ts
+@@ -0,0 +1,27 @@
++export type EditorLocale = 'zh-CN' | 'en-US';
+
++function decimalFormatter(locale: EditorLocale): Intl.NumberFormat {
++  return new Intl.NumberFormat(locale, {
++    maximumFractionDigits: 2,
++    minimumFractionDigits: 0,
++  });
++}
+
++/** Formats display values without changing domain arithmetic. */
++export function formatAmount(amount: number, locale: EditorLocale, currency?: string): string {
++  if (currency === undefined) {
++    return decimalFormatter(locale).format(amount);
++  }
+
++  try {
++    return new Intl.NumberFormat(locale, {
++      style: 'currency',
++      currency,
++      currencyDisplay: 'narrowSymbol',
++      maximumFractionDigits: 2,
++      minimumFractionDigits: 0,
++    }).format(amount);
++  } catch {
++    return decimalFormatter(locale).format(amount);
++  }
++}
+diff --git a/packages/editor/src/index.ts b/packages/editor/src/index.ts
+index 22c1e2b..c4f9cc9 100644
+--- a/packages/editor/src/index.ts
++++ b/packages/editor/src/index.ts
+@@ -1,3 +1,4 @@
++export { FinancialChartEditor } from './components/FinancialChartEditor';
+ export { createEditorSession } from './domain/session';
+ export { createInitialViewSpec } from './domain/createInitialViewSpec';
+ export { executeCommand } from './domain/executeCommand';
+@@ -43,3 +44,8 @@ export type {
+   ViewSpec,
+ } from './domain/model';
+ export type { EditorSession, EditorSessionOptions } from './domain/session';
++export type {
++  FinancialChartEditorPanels,
++  FinancialChartEditorProps,
++  SelectionState,
++} from './react/editorTypes';
+diff --git a/packages/editor/src/react/editorTypes.ts b/packages/editor/src/react/editorTypes.ts
+new file mode 100644
+index 0000000..4862236
+--- /dev/null
++++ b/packages/editor/src/react/editorTypes.ts
+@@ -0,0 +1,30 @@
++import type { CommandError } from '../domain/errors';
++import type { CommandEvent } from '../domain/executeCommand';
++import type { SourceItemId, ViewNodeId } from '../domain/ids';
++import type { SourceData, ViewSpec } from '../domain/model';
+
++export interface SelectionState {
++  readonly nodeId: ViewNodeId;
++  readonly sourceIds: readonly SourceItemId[];
++}
+
++export interface FinancialChartEditorPanels {
++  readonly outline?: boolean;
++  readonly inspector?: boolean;
++  readonly toolbar?: boolean;
++}
+
++export interface FinancialChartEditorProps {
++  readonly sourceData: SourceData;
++  readonly viewSpec?: ViewSpec;
++  readonly defaultViewSpec?: ViewSpec;
++  readonly historyLimit?: number;
++  readonly locale?: 'zh-CN' | 'en-US';
++  readonly readOnly?: boolean;
++  readonly height?: number | string;
++  readonly panels?: FinancialChartEditorPanels;
++  readonly onViewSpecChange?: (next: ViewSpec, event: CommandEvent) => void;
++  readonly onCommand?: (event: CommandEvent) => void;
++  readonly onCommandRejected?: (error: CommandError) => void;
++  readonly onSelectionChange?: (selection: SelectionState) => void;
++}
+diff --git a/packages/editor/src/react/useEditorController.ts b/packages/editor/src/react/useEditorController.ts
+new file mode 100644
+index 0000000..21de5c7
+--- /dev/null
++++ b/packages/editor/src/react/useEditorController.ts
+@@ -0,0 +1,282 @@
++import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+
++import type { EditorCommand } from '../domain/commands';
++import { validationIssue, type ValidationIssue } from '../domain/errors';
++import { executeCommand, type CommandResult } from '../domain/executeCommand';
++import type { SourceData, ViewSpec } from '../domain/model';
++import {
++  createEditorSession,
++  type EditorSession,
++  type EditorSessionOptions,
++} from '../domain/session';
++import type { FinancialChartEditorProps, SelectionState } from './editorTypes';
+
++export type EditorControllerMode = 'controlled' | 'uncontrolled' | 'invalid';
++export type EditorControllerStatus = 'ready' | 'invalid';
+
++export interface EditorController {
++  readonly mode: EditorControllerMode;
++  readonly status: EditorControllerStatus;
++  readonly session: EditorSession | null;
++  readonly viewSpec: ViewSpec | null;
++  readonly issues: readonly ValidationIssue[];
++  readonly selection: SelectionState | null;
++  readonly dispatch: (command: EditorCommand) => CommandResult | null;
++  readonly select: (selection: SelectionState) => void;
++}
+
++interface ControllerState {
++  readonly session: EditorSession | null;
++  readonly issues: readonly ValidationIssue[];
++  readonly sourceData: SourceData;
++  readonly historyLimitInput: number | undefined;
++  readonly controlledViewSpec: ViewSpec | undefined;
++}
+
++type CallbackIdentity =
++  'onCommand' | 'onViewSpecChange' | 'onCommandRejected' | 'onSelectionChange';
+
++const INVALID_MODE_ISSUE = validationIssue('INVALID_VIEW_SPEC', 'INVALID_TYPE', '/viewSpec', {
++  configuration: 'mutually-exclusive-view-props',
++});
+
++function initialMode(props: FinancialChartEditorProps): EditorControllerMode {
++  if (props.viewSpec !== undefined && props.defaultViewSpec !== undefined) {
++    return 'invalid';
++  }
++  return props.viewSpec === undefined ? 'uncontrolled' : 'controlled';
++}
+
++function currentMode(
++  lockedMode: EditorControllerMode,
++  props: FinancialChartEditorProps,
++): EditorControllerMode {
++  if (lockedMode === 'invalid') {
++    return 'invalid';
++  }
++  if (props.viewSpec !== undefined && props.defaultViewSpec !== undefined) {
++    return 'invalid';
++  }
++  if (lockedMode === 'controlled' && props.viewSpec === undefined) {
++    return 'invalid';
++  }
++  if (lockedMode === 'uncontrolled' && props.viewSpec !== undefined) {
++    return 'invalid';
++  }
++  return lockedMode;
++}
+
++function sessionOptions(
++  viewSpec: ViewSpec | undefined,
++  historyLimit: number | undefined,
++): EditorSessionOptions {
++  return {
++    ...(viewSpec === undefined ? {} : { viewSpec }),
++    ...(historyLimit === undefined ? {} : { historyLimit }),
++  };
++}
+
++function createState(
++  sourceData: SourceData,
++  viewSpec: ViewSpec | undefined,
++  historyLimit: number | undefined,
++  controlledViewSpec: ViewSpec | undefined,
++): ControllerState {
++  const result = createEditorSession(sourceData, sessionOptions(viewSpec, historyLimit));
++  const context = {
++    sourceData,
++    historyLimitInput: historyLimit,
++    controlledViewSpec,
++  };
++  return result.ok
++    ? { ...context, session: result.value, issues: [] }
++    : { ...context, session: null, issues: result.errors };
++}
+
++function invalidState(props: FinancialChartEditorProps): ControllerState {
++  return {
++    session: null,
++    issues: [INVALID_MODE_ISSUE],
++    sourceData: props.sourceData,
++    historyLimitInput: props.historyLimit,
++    controlledViewSpec: props.viewSpec,
++  };
++}
+
++function initialState(
++  props: FinancialChartEditorProps,
++  mode: EditorControllerMode,
++): ControllerState {
++  if (mode === 'invalid') {
++    return invalidState(props);
++  }
++  const viewSpec = mode === 'controlled' ? props.viewSpec : props.defaultViewSpec;
++  return createState(
++    props.sourceData,
++    viewSpec,
++    props.historyLimit,
++    mode === 'controlled' ? props.viewSpec : undefined,
++  );
++}
+
++function reconcileState(
++  state: ControllerState,
++  mode: EditorControllerMode,
++  sourceData: SourceData,
++  controlledViewSpec: ViewSpec | undefined,
++  historyLimit: number | undefined,
++): ControllerState {
++  if (mode === 'invalid') {
++    return {
++      session: null,
++      issues: [INVALID_MODE_ISSUE],
++      sourceData,
++      historyLimitInput: historyLimit,
++      controlledViewSpec,
++    };
++  }
+
++  const sameSourceAndHistory =
++    state.sourceData === sourceData && Object.is(state.historyLimitInput, historyLimit);
++  if (mode === 'controlled') {
++    const sameControlledView =
++      state.controlledViewSpec === controlledViewSpec ||
++      state.session?.viewSpec === controlledViewSpec;
++    return sameSourceAndHistory && sameControlledView
++      ? state
++      : createState(sourceData, controlledViewSpec, historyLimit, controlledViewSpec);
++  }
+
++  if (sameSourceAndHistory) {
++    return state;
++  }
++  const retainedViewSpec = state.sourceData === sourceData ? state.session?.viewSpec : undefined;
++  return createState(sourceData, retainedViewSpec, historyLimit, undefined);
++}
+
++function callbackFailure(identity: CallbackIdentity): void {
++  try {
++    console.error(`[g2touch] Host callback failed: ${identity}`);
++  } catch {
++    return;
++  }
++}
+
++function invokeCallback(identity: CallbackIdentity, callback: (() => void) | undefined): void {
++  if (callback === undefined) {
++    return;
++  }
++  try {
++    callback();
++  } catch {
++    callbackFailure(identity);
++  }
++}
+
++/** Adapts controlled and uncontrolled React props to the immutable domain command session. */
++export function useEditorController(props: FinancialChartEditorProps): EditorController {
++  const [lockedMode] = useState<EditorControllerMode>(() => initialMode(props));
++  const mode = currentMode(lockedMode, props);
++  const [state, setState] = useState<ControllerState>(() => initialState(props, lockedMode));
++  const [selection, setSelection] = useState<SelectionState | null>(null);
++  const activeState = useMemo(
++    () => reconcileState(state, mode, props.sourceData, props.viewSpec, props.historyLimit),
++    [mode, props.historyLimit, props.sourceData, props.viewSpec, state],
++  );
++  const commandSessionRef = useRef(activeState.session);
+
++  useLayoutEffect(() => {
++    commandSessionRef.current = activeState.session;
++  }, [activeState.session]);
+
++  const dispatch = useCallback(
++    (command: EditorCommand): CommandResult | null => {
++      const commandSession = commandSessionRef.current;
++      if (props.readOnly === true || mode === 'invalid' || commandSession === null) {
++        return null;
++      }
+
++      const result = executeCommand(commandSession, command);
++      if (!result.ok) {
++        const callback = props.onCommandRejected;
++        invokeCallback(
++          'onCommandRejected',
++          callback === undefined ? undefined : () => callback(result.error),
++        );
++        return result;
++      }
+
++      if (mode === 'uncontrolled') {
++        commandSessionRef.current = result.session;
++        setState({ ...activeState, session: result.session, issues: [] });
++      }
++      const onCommand = props.onCommand;
++      invokeCallback(
++        'onCommand',
++        onCommand === undefined ? undefined : () => onCommand(result.event),
++      );
++      const onViewSpecChange = props.onViewSpecChange;
++      invokeCallback(
++        'onViewSpecChange',
++        onViewSpecChange === undefined
++          ? undefined
++          : () => onViewSpecChange(result.viewSpec, result.event),
++      );
++      return result;
++    },
++    [
++      activeState,
++      mode,
++      props.onCommand,
++      props.onCommandRejected,
++      props.onViewSpecChange,
++      props.readOnly,
++    ],
++  );
+
++  const select = useCallback(
++    (nextSelection: SelectionState): void => {
++      const copiedSelection: SelectionState = {
++        nodeId: nextSelection.nodeId,
++        sourceIds: [...nextSelection.sourceIds],
++      };
++      setSelection(copiedSelection);
++      const callback = props.onSelectionChange;
++      invokeCallback(
++        'onSelectionChange',
++        callback === undefined ? undefined : () => callback(copiedSelection),
++      );
++    },
++    [props.onSelectionChange],
++  );
+
++  if (mode === 'invalid') {
++    return {
++      mode,
++      status: 'invalid',
++      session: null,
++      viewSpec: null,
++      issues: [INVALID_MODE_ISSUE],
++      selection,
++      dispatch,
++      select,
++    };
++  }
+
++  const visibleViewSpec =
++    mode === 'controlled'
++      ? activeState.session === null
++        ? null
++        : (props.viewSpec ?? null)
++      : (activeState.session?.viewSpec ?? null);
++  return {
++    mode,
++    status: activeState.session === null ? 'invalid' : 'ready',
++    session: activeState.session,
++    viewSpec: visibleViewSpec,
++    issues: activeState.issues,
++    selection,
++    dispatch,
++    select,
++  };
++}
+diff --git a/packages/editor/src/styles/editor.css b/packages/editor/src/styles/editor.css
+new file mode 100644
+index 0000000..2fa1c79
+--- /dev/null
++++ b/packages/editor/src/styles/editor.css
+@@ -0,0 +1,691 @@
++.gt-editor,
++.gt-editor * {
++  box-sizing: border-box;
++}
+
++.gt-editor {
++  --gt-bg: #f3f5f4;
++  --gt-surface: #ffffff;
++  --gt-surface-subtle: #eaeeec;
++  --gt-text: #18211d;
++  --gt-text-muted: #5f6b65;
++  --gt-border: #d5dbd7;
++  --gt-border-strong: #aab5af;
++  --gt-accent: #126e57;
++  --gt-accent-hover: #0e5b48;
++  --gt-accent-soft: #dcefe8;
++  --gt-positive: #168363;
++  --gt-negative: #d5524a;
++  --gt-total: #315c8c;
++  --gt-warning: #a46812;
++  --gt-danger: #b93832;
++  --gt-focus: #0d66d0;
++  position: relative;
++  isolation: isolate;
++  display: grid;
++  grid-template-rows: 52px minmax(0, 1fr);
++  width: 100%;
++  min-width: 0;
++  min-height: 480px;
++  overflow: hidden;
++  color: var(--gt-text);
++  background: var(--gt-bg);
++  border: 1px solid var(--gt-border);
++  border-radius: 6px;
++  font-family: Inter, 'Noto Sans SC', 'PingFang SC', system-ui, sans-serif;
++  font-size: 13px;
++  line-height: 20px;
++  letter-spacing: 0;
++  text-rendering: optimizeLegibility;
++}
+
++.gt-editor button,
++.gt-editor input,
++.gt-editor textarea {
++  color: inherit;
++  font: inherit;
++  letter-spacing: 0;
++}
+
++.gt-editor button:focus-visible,
++.gt-editor [tabindex]:focus-visible {
++  outline: 2px solid var(--gt-focus);
++  outline-offset: 2px;
++}
+
++.gt-toolbar {
++  position: relative;
++  z-index: 10;
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) auto auto;
++  align-items: center;
++  min-width: 0;
++  height: 52px;
++  padding: 0 10px 0 14px;
++  background: var(--gt-surface);
++  border-bottom: 1px solid var(--gt-border);
++}
+
++.gt-brand-block,
++.gt-toolbar-actions,
++.gt-toolbar-status {
++  display: flex;
++  align-items: center;
++}
+
++.gt-toolbar-status[data-valid='false'] {
++  color: var(--gt-danger);
++  background: #fff1f0;
++}
+
++.gt-brand-block {
++  min-width: 0;
++  gap: 10px;
++}
+
++.gt-brand-mark {
++  flex: 0 0 auto;
++  color: var(--gt-text);
++  font-size: 15px;
++  font-weight: 750;
++}
+
++.gt-toolbar-divider,
++.gt-action-divider {
++  display: block;
++  width: 1px;
++  height: 20px;
++  background: var(--gt-border);
++}
+
++.gt-dataset-title {
++  min-width: 0;
++  overflow: hidden;
++  color: var(--gt-text-muted);
++  font-size: 12px;
++  line-height: 16px;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
+
++.gt-toolbar-status {
++  height: 28px;
++  margin-right: 8px;
++  padding: 0 9px;
++  gap: 5px;
++  color: var(--gt-accent);
++  background: var(--gt-accent-soft);
++  border-radius: 4px;
++  font-size: 12px;
++  font-weight: 600;
++  line-height: 16px;
++}
+
++.gt-toolbar-actions {
++  gap: 4px;
++}
+
++.gt-action-divider {
++  margin: 0 3px;
++}
+
++.gt-icon-button {
++  display: inline-flex;
++  flex: 0 0 32px;
++  align-items: center;
++  justify-content: center;
++  width: 32px;
++  height: 32px;
++  padding: 0;
++  color: var(--gt-text-muted);
++  background: transparent;
++  border: 1px solid transparent;
++  border-radius: 5px;
++  cursor: pointer;
++  transition:
++    color 100ms ease-out,
++    background-color 100ms ease-out,
++    border-color 100ms ease-out;
++}
+
++.gt-icon-button:hover:not(:disabled) {
++  color: var(--gt-text);
++  background: var(--gt-surface-subtle);
++}
+
++.gt-icon-button:active:not(:disabled) {
++  background: var(--gt-border);
++}
+
++.gt-icon-button:disabled {
++  color: var(--gt-border-strong);
++  cursor: not-allowed;
++  opacity: 0.58;
++}
+
++.gt-outline-trigger,
++.gt-inspector-trigger {
++  display: none;
++}
+
++.gt-workbench {
++  position: relative;
++  display: grid;
++  grid-template-columns: 280px minmax(0, 1fr) 300px;
++  min-width: 0;
++  min-height: 0;
++  overflow: hidden;
++}
+
++.gt-static-panel {
++  min-width: 0;
++  min-height: 0;
++  overflow: hidden;
++  background: var(--gt-surface);
++}
+
++.gt-outline-static {
++  border-right: 1px solid var(--gt-border);
++}
+
++.gt-inspector-static {
++  border-left: 1px solid var(--gt-border);
++}
+
++.gt-panel-body {
++  display: grid;
++  grid-template-rows: 45px minmax(0, 1fr);
++  width: 100%;
++  height: 100%;
++  min-height: 0;
++}
+
++.gt-panel-heading {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  height: 45px;
++  padding: 0 12px;
++  border-bottom: 1px solid var(--gt-border);
++}
+
++.gt-panel-heading h2 {
++  margin: 0;
++  font-size: 14px;
++  font-weight: 650;
++  line-height: 20px;
++}
+
++.gt-panel-heading > span {
++  color: var(--gt-text-muted);
++  font-size: 11px;
++  font-variant-numeric: tabular-nums;
++}
+
++.gt-outline-tree {
++  min-height: 0;
++  padding: 6px;
++  overflow: auto;
++}
+
++.gt-outline-row {
++  display: grid;
++  grid-template-columns: 16px 16px minmax(0, 1fr) auto 14px;
++  align-items: center;
++  min-width: 0;
++  height: 38px;
++  padding: 0 6px;
++  column-gap: 4px;
++  border: 1px solid transparent;
++  border-radius: 4px;
++  cursor: default;
++  transition:
++    color 100ms ease-out,
++    background-color 100ms ease-out,
++    border-color 100ms ease-out;
++}
+
++.gt-outline-row[data-level='2'] {
++  padding-left: 22px;
++}
+
++.gt-outline-row:hover {
++  background: var(--gt-surface-subtle);
++}
+
++.gt-outline-row[data-selected='true'] {
++  background: var(--gt-accent-soft);
++  border-color: #b9dacd;
++}
+
++.gt-row-grip,
++.gt-row-disclosure,
++.gt-row-lock,
++.gt-row-lock-placeholder {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  color: var(--gt-text-muted);
++}
+
++.gt-row-grip {
++  opacity: 0.5;
++}
+
++.gt-row-main {
++  display: flex;
++  min-width: 0;
++  flex-direction: column;
++  justify-content: center;
++}
+
++.gt-row-label {
++  min-width: 0;
++  overflow: hidden;
++  color: var(--gt-text);
++  font-size: 12px;
++  font-weight: 560;
++  line-height: 16px;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
+
++.gt-row-meta {
++  color: var(--gt-text-muted);
++  font-size: 10px;
++  line-height: 12px;
++}
+
++.gt-row-value {
++  max-width: 88px;
++  overflow: hidden;
++  color: var(--gt-text-muted);
++  font-size: 11px;
++  line-height: 16px;
++  text-align: right;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++  font-variant-numeric: tabular-nums;
++}
+
++.gt-inspector-body {
++  grid-template-rows: 45px minmax(0, 1fr);
++}
+
++.gt-inspector-section {
++  min-height: 0;
++  padding: 16px 14px;
++  overflow: auto;
++}
+
++.gt-section-kicker {
++  display: flex;
++  align-items: center;
++  margin-bottom: 8px;
++  gap: 6px;
++  color: var(--gt-accent);
++  font-size: 11px;
++  font-weight: 650;
++  line-height: 16px;
++}
+
++.gt-inspector-section > strong {
++  display: block;
++  margin-bottom: 4px;
++  overflow-wrap: anywhere;
++  font-size: 14px;
++  line-height: 20px;
++}
+
++.gt-inspector-amount {
++  display: block;
++  margin-top: 8px;
++  color: var(--gt-total);
++  font-size: 22px;
++  font-weight: 650;
++  line-height: 28px;
++  font-variant-numeric: tabular-nums;
++}
+
++.gt-metric-list {
++  display: grid;
++  margin: 18px 0 0;
++  border-top: 1px solid var(--gt-border);
++}
+
++.gt-metric-list > div {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) auto;
++  align-items: center;
++  min-height: 40px;
++  padding: 7px 0;
++  gap: 12px;
++  border-bottom: 1px solid var(--gt-border);
++}
+
++.gt-metric-list dt,
++.gt-metric-list dd {
++  margin: 0;
++}
+
++.gt-metric-list dt {
++  color: var(--gt-text-muted);
++  font-size: 11px;
++}
+
++.gt-metric-list dd {
++  max-width: 150px;
++  overflow-wrap: anywhere;
++  text-align: right;
++  font-size: 12px;
++  font-weight: 600;
++  font-variant-numeric: tabular-nums;
++}
+
++.gt-chart-stage {
++  position: relative;
++  display: grid;
++  grid-template-rows: auto minmax(0, 1fr);
++  min-width: 0;
++  min-height: 0;
++  padding: 20px 24px 16px;
++  overflow: hidden;
++  background: var(--gt-surface);
++}
+
++.gt-chart-stage__header {
++  display: flex;
++  align-items: flex-start;
++  justify-content: space-between;
++  min-width: 0;
++  padding: 0 0 12px;
++  gap: 16px;
++}
+
++.gt-chart-stage__eyebrow {
++  margin: 0 0 2px;
++  color: var(--gt-accent);
++  font-size: 10px;
++  font-weight: 700;
++  line-height: 14px;
++  text-transform: uppercase;
++}
+
++.gt-chart-stage__title {
++  margin: 0;
++  font-size: 18px;
++  font-weight: 680;
++  line-height: 26px;
++}
+
++.gt-chart-stage__count {
++  flex: 0 0 auto;
++  color: var(--gt-text-muted);
++  font-size: 11px;
++  line-height: 20px;
++  font-variant-numeric: tabular-nums;
++}
+
++.gt-chart-stage__plot {
++  width: 100%;
++  height: 100%;
++  min-height: 390px;
++  overflow: hidden;
++}
+
++.gt-chart-stage__plot canvas,
++.gt-chart-stage__plot svg {
++  display: block;
++}
+
++.gt-chart-stage__empty,
++.gt-chart-stage__error {
++  position: absolute;
++  z-index: 2;
++  top: 72px;
++  left: 50%;
++  transform: translateX(-50%);
++}
+
++.gt-chart-stage__empty {
++  margin: 0;
++  padding: 6px 9px;
++  color: var(--gt-text-muted);
++  background: rgb(255 255 255 / 92%);
++  border: 1px solid var(--gt-border);
++  border-radius: 4px;
++  font-size: 11px;
++}
+
++.gt-chart-stage__error {
++  display: flex;
++  align-items: center;
++  padding: 8px 10px;
++  gap: 8px;
++  color: var(--gt-danger);
++  background: #fff5f4;
++  border: 1px solid #e8b9b5;
++  border-radius: 5px;
++}
+
++.gt-chart-stage__error code,
++.gt-invalid-stage code {
++  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
++  font-size: 11px;
++}
+
++.gt-visually-hidden {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  padding: 0;
++  margin: -1px;
++  overflow: hidden;
++  clip: rect(0 0 0 0);
++  white-space: nowrap;
++  border: 0;
++}
+
++.gt-workbench-invalid {
++  grid-template-columns: minmax(0, 1fr);
++}
+
++.gt-invalid-stage {
++  display: flex;
++  align-items: flex-start;
++  justify-content: center;
++  min-width: 0;
++  padding: 72px 24px;
++  gap: 14px;
++  background: var(--gt-surface);
++}
+
++.gt-invalid-mark {
++  display: flex;
++  flex: 0 0 28px;
++  align-items: center;
++  justify-content: center;
++  width: 28px;
++  height: 28px;
++  color: var(--gt-danger);
++  background: #fff1f0;
++  border: 1px solid #e4aaa5;
++  border-radius: 50%;
++  font-weight: 750;
++}
+
++.gt-invalid-stage h2 {
++  margin: 2px 0 12px;
++  font-size: 16px;
++  line-height: 22px;
++}
+
++.gt-invalid-stage ul {
++  display: grid;
++  min-width: min(460px, 70vw);
++  margin: 0;
++  padding: 0;
++  gap: 6px;
++  list-style: none;
++}
+
++.gt-invalid-stage li {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) auto;
++  align-items: center;
++  padding: 8px 10px;
++  gap: 16px;
++  background: #fff8f7;
++  border-left: 3px solid var(--gt-danger);
++}
+
++.gt-invalid-stage li strong {
++  overflow-wrap: anywhere;
++  font-size: 11px;
++}
+
++.gt-overlay-layer {
++  position: absolute;
++  z-index: 50;
++  inset: 0;
++}
+
++.gt-overlay-scrim {
++  position: absolute;
++  z-index: 0;
++  inset: 0;
++  width: 100%;
++  height: 100%;
++  padding: 0;
++  background: rgb(24 33 29 / 24%);
++  border: 0;
++  cursor: default;
++}
+
++.gt-panel-overlay {
++  position: absolute;
++  z-index: 1;
++  top: 0;
++  bottom: 0;
++  width: min(360px, 100%);
++  min-width: 0;
++  overflow: hidden;
++  background: var(--gt-surface);
++  box-shadow: 0 10px 30px rgb(24 33 29 / 18%);
++  animation: gt-panel-enter 180ms cubic-bezier(0.2, 0, 0, 1);
++}
+
++.gt-overlay-layer[data-side='left'] .gt-panel-overlay {
++  --gt-panel-enter-x: -12px;
++  left: 0;
++}
+
++.gt-overlay-layer[data-side='right'] .gt-panel-overlay {
++  --gt-panel-enter-x: 12px;
++  right: 0;
++}
+
++.gt-overlay-close {
++  position: absolute;
++  z-index: 3;
++  top: 7px;
++  right: 7px;
++  background: var(--gt-surface);
++  border-color: var(--gt-border);
++}
+
++@keyframes gt-panel-enter {
++  from {
++    opacity: 0;
++    transform: translateX(var(--gt-panel-enter-x));
++  }
+
++  to {
++    opacity: 1;
++    transform: translateX(0);
++  }
++}
+
++@media (max-width: 1179px) {
++  .gt-workbench {
++    grid-template-columns: 248px minmax(0, 1fr);
++  }
+
++  .gt-inspector-static {
++    display: none;
++  }
+
++  .gt-inspector-trigger {
++    display: inline-flex;
++  }
++}
+
++@media (max-width: 759px) {
++  .gt-editor {
++    border: 0;
++    border-radius: 0;
++  }
+
++  .gt-toolbar {
++    padding-left: 10px;
++  }
+
++  .gt-toolbar-status span,
++  .gt-toolbar-divider,
++  .gt-action-divider {
++    display: none;
++  }
+
++  .gt-toolbar-status {
++    width: 28px;
++    padding: 0;
++    justify-content: center;
++  }
+
++  .gt-dataset-title {
++    max-width: 110px;
++  }
+
++  .gt-outline-trigger {
++    display: inline-flex;
++  }
+
++  .gt-workbench {
++    grid-template-columns: minmax(0, 1fr);
++  }
+
++  .gt-outline-static {
++    display: none;
++  }
+
++  .gt-chart-stage {
++    padding: 16px 10px 10px;
++  }
+
++  .gt-chart-stage__header {
++    padding: 0 4px 8px;
++  }
+
++  .gt-chart-stage__count {
++    display: none;
++  }
+
++  .gt-chart-stage__plot {
++    min-height: 420px;
++  }
+
++  .gt-panel-overlay {
++    width: 100%;
++    box-shadow: none;
++  }
++}
+
++@media (prefers-reduced-motion: reduce) {
++  .gt-editor *,
++  .gt-editor *::before,
++  .gt-editor *::after {
++    scroll-behavior: auto !important;
++    transition-duration: 0ms !important;
++    animation-duration: 0ms !important;
++  }
++}
+diff --git a/packages/editor/tests/components/callbacks.test.tsx b/packages/editor/tests/components/callbacks.test.tsx
+new file mode 100644
+index 0000000..10ffa29
+--- /dev/null
++++ b/packages/editor/tests/components/callbacks.test.tsx
+@@ -0,0 +1,226 @@
++import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
++import { describe, expect, it, vi } from 'vitest';
+
++import { FinancialChartEditor } from '../../src/components/FinancialChartEditor';
++import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
++import type { PinItemCommand } from '../../src/domain/commands';
++import type { CommandEvent, CommandResult } from '../../src/domain/executeCommand';
++import type { ViewSpec } from '../../src/domain/model';
++import type { SelectionState } from '../../src/react/editorTypes';
++import { useEditorController } from '../../src/react/useEditorController';
++import { commandSourceData } from '../fixtures/commandSourceData';
+
++vi.mock('@antv/g2', () => ({
++  Chart: class ChartMock {
++    options(): this {
++      return this;
++    }
+
++    render(): Promise<void> {
++      return Promise.resolve();
++    }
+
++    destroy(): void {
++      return;
++    }
++  },
++}));
+
++function initialView() {
++  const result = createInitialViewSpec(commandSourceData);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected a valid initial view');
++  }
+
++  return result.value;
++}
+
++function groupedView(): { readonly viewSpec: ViewSpec; readonly childIds: string[] } {
++  const viewSpec = initialView();
++  const childIds = ['a', 'b'];
++  const groupId = 'group-ab';
+
++  return {
++    childIds,
++    viewSpec: {
++      ...viewSpec,
++      rootOrder: [groupId, ...viewSpec.rootOrder.filter(id => !childIds.includes(id))],
++      groups: {
++        [groupId]: {
++          id: groupId,
++          label: 'Grouped confidential',
++          childIds,
++        },
++      },
++    },
++  };
++}
+
++function pinCommand(id: string, baseRevision = 0): PinItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'pinItem',
++    source: 'host',
++    baseRevision,
++    payload: { itemId: 'a' },
++  };
++}
+
++describe('FinancialChartEditor callbacks', () => {
++  it('emits onCommand before onViewSpecChange for an accepted command', () => {
++    const calls: string[] = [];
++    const onCommand = vi.fn<(event: CommandEvent) => void>(() => {
++      calls.push('command');
++    });
++    const onViewSpecChange = vi.fn<(next: ViewSpec, event: CommandEvent) => void>(() => {
++      calls.push('view');
++    });
++    const onCommandRejected = vi.fn(() => calls.push('rejected'));
++    const { result } = renderHook(() =>
++      useEditorController({
++        sourceData: commandSourceData,
++        viewSpec: initialView(),
++        onCommand,
++        onViewSpecChange,
++        onCommandRejected,
++      }),
++    );
+
++    let commandResult: CommandResult | null | undefined;
++    act(() => {
++      commandResult = result.current.dispatch(pinCommand('accepted-order'));
++    });
+
++    expect(commandResult?.ok).toBe(true);
++    expect(calls).toEqual(['command', 'view']);
++    expect(onCommand).toHaveBeenCalledTimes(1);
++    expect(onViewSpecChange).toHaveBeenCalledTimes(1);
++    expect(onCommandRejected).not.toHaveBeenCalled();
++    expect(onViewSpecChange.mock.calls[0]?.[1]).toBe(onCommand.mock.calls[0]?.[0]);
++  });
+
++  it('emits only onCommandRejected when command execution is rejected', () => {
++    const calls: string[] = [];
++    const onCommand = vi.fn(() => calls.push('command'));
++    const onViewSpecChange = vi.fn(() => calls.push('view'));
++    const onCommandRejected = vi.fn(() => calls.push('rejected'));
++    const viewSpec = initialView();
++    const { result } = renderHook(() =>
++      useEditorController({
++        sourceData: commandSourceData,
++        defaultViewSpec: viewSpec,
++        onCommand,
++        onViewSpecChange,
++        onCommandRejected,
++      }),
++    );
+
++    let commandResult: CommandResult | null | undefined;
++    act(() => {
++      commandResult = result.current.dispatch(pinCommand('rejected-order', 99));
++    });
+
++    expect(commandResult?.ok).toBe(false);
++    expect(calls).toEqual(['rejected']);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewSpecChange).not.toHaveBeenCalled();
++    expect(onCommandRejected).toHaveBeenCalledTimes(1);
++    expect(result.current.viewSpec).toBe(viewSpec);
++  });
+
++  it('emits a copied ID-based selection from an outline row', () => {
++    const onSelectionChange = vi.fn<(selection: SelectionState) => void>();
++    const { viewSpec, childIds } = groupedView();
+
++    render(
++      <FinancialChartEditor
++        sourceData={commandSourceData}
++        defaultViewSpec={viewSpec}
++        onSelectionChange={onSelectionChange}
++      />,
++    );
+
++    fireEvent.click(screen.getByRole('treeitem', { name: /Grouped confidential/ }));
+
++    expect(onSelectionChange).toHaveBeenCalledTimes(1);
++    expect(onSelectionChange).toHaveBeenCalledWith({
++      nodeId: 'group-ab',
++      sourceIds: ['a', 'b'],
++    });
++    const selection = onSelectionChange.mock.calls[0]?.[0];
++    expect(selection?.sourceIds).not.toBe(childIds);
++    childIds.push('c');
++    expect(selection?.sourceIds).toEqual(['a', 'b']);
++  });
+
++  it('contains every host callback exception and logs only callback identity', () => {
++    const privateErrorText = 'caller-secret: Alpha confidential amount=123456';
++    const calls: string[] = [];
++    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
++    const onCommand = vi.fn(() => {
++      calls.push('command');
++      throw new Error(privateErrorText);
++    });
++    const onViewSpecChange = vi.fn(() => {
++      calls.push('view');
++      throw new Error(privateErrorText);
++    });
++    const onCommandRejected = vi.fn(() => {
++      calls.push('rejected');
++      throw new Error(privateErrorText);
++    });
++    const onSelectionChange = vi.fn(() => {
++      calls.push('selection');
++      throw new Error(privateErrorText);
++    });
++    const { result } = renderHook(() =>
++      useEditorController({
++        sourceData: commandSourceData,
++        defaultViewSpec: initialView(),
++        onCommand,
++        onViewSpecChange,
++        onCommandRejected,
++        onSelectionChange,
++      }),
++    );
+
++    expect(() => {
++      act(() => {
++        result.current.dispatch(pinCommand('contained-callback'));
++      });
++    }).not.toThrow();
++    expect(() => {
++      act(() => {
++        result.current.dispatch(pinCommand('contained-rejection', 99));
++      });
++    }).not.toThrow();
++    expect(() => {
++      act(() => {
++        result.current.select({ nodeId: 'a', sourceIds: ['a'] });
++      });
++    }).not.toThrow();
+
++    expect(calls).toEqual(['command', 'view', 'rejected', 'selection']);
++    expect(onViewSpecChange).toHaveBeenCalledTimes(1);
++    expect(onCommandRejected).toHaveBeenCalledTimes(1);
++    expect(onSelectionChange).toHaveBeenCalledTimes(1);
++    expect(consoleError).toHaveBeenCalledTimes(4);
+
++    const logged = consoleError.mock.calls
++      .flatMap(call => call.map(value => String(value)))
++      .join(' ');
++    for (const identity of [
++      'onCommand',
++      'onViewSpecChange',
++      'onCommandRejected',
++      'onSelectionChange',
++    ]) {
++      expect(logged).toContain(identity);
++    }
++    expect(logged).not.toContain(privateErrorText);
++    expect(logged).not.toContain('Alpha confidential');
++    expect(logged).not.toContain('123456');
++  });
++});
+diff --git a/packages/editor/tests/components/editor-modes.test.tsx b/packages/editor/tests/components/editor-modes.test.tsx
+new file mode 100644
+index 0000000..4b6b491
+--- /dev/null
++++ b/packages/editor/tests/components/editor-modes.test.tsx
+@@ -0,0 +1,202 @@
++import { act, renderHook } from '@testing-library/react';
++import { describe, expect, it, vi } from 'vitest';
+
++import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
++import type { PinItemCommand } from '../../src/domain/commands';
++import type { CommandResult } from '../../src/domain/executeCommand';
++import type { ViewSpec } from '../../src/domain/model';
++import { useEditorController } from '../../src/react/useEditorController';
++import { commandSourceData } from '../fixtures/commandSourceData';
+
++function initialView(): ViewSpec {
++  const result = createInitialViewSpec(commandSourceData);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error('Expected a valid initial view');
++  }
+
++  return result.value;
++}
+
++function pinCommand(id: string, baseRevision = 0, itemId = 'a'): PinItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'pinItem',
++    source: 'host',
++    baseRevision,
++    payload: { itemId },
++  };
++}
+
++function expectAccepted(result: CommandResult | null | undefined): ViewSpec {
++  expect(result?.ok).toBe(true);
++  if (result === null || result === undefined || !result.ok) {
++    throw new Error('Expected an accepted controller command');
++  }
+
++  return result.viewSpec;
++}
+
++describe('useEditorController modes', () => {
++  it('locks uncontrolled mode to its initial default and commits accepted commands immediately', () => {
++    const defaultViewSpec = initialView();
++    const laterDefault: ViewSpec = {
++      ...defaultViewSpec,
++      revision: 1,
++      pinnedItemIds: ['b'],
++    };
++    const { result, rerender } = renderHook(
++      ({ currentDefault }: { readonly currentDefault: ViewSpec }) =>
++        useEditorController({
++          sourceData: commandSourceData,
++          defaultViewSpec: currentDefault,
++        }),
++      { initialProps: { currentDefault: defaultViewSpec } },
++    );
+
++    expect(result.current.mode).toBe('uncontrolled');
++    expect(result.current.status).toBe('ready');
++    expect(result.current.viewSpec).toBe(defaultViewSpec);
+
++    let commandResult: CommandResult | null | undefined;
++    act(() => {
++      commandResult = result.current.dispatch(pinCommand('uncontrolled-pin'));
++    });
+
++    const committedView = expectAccepted(commandResult);
++    expect(result.current.viewSpec).toBe(committedView);
++    expect(result.current.viewSpec?.revision).toBe(1);
++    expect(result.current.viewSpec?.pinnedItemIds).toEqual(['a']);
+
++    rerender({ currentDefault: laterDefault });
+
++    expect(result.current.mode).toBe('uncontrolled');
++    expect(result.current.viewSpec).toBe(committedView);
++    expect(result.current.viewSpec?.pinnedItemIds).toEqual(['a']);
++  });
+
++  it('serializes synchronous uncontrolled commands against the latest accepted session', () => {
++    const { result } = renderHook(() =>
++      useEditorController({
++        sourceData: commandSourceData,
++        defaultViewSpec: initialView(),
++      }),
++    );
+
++    let firstResult: CommandResult | null | undefined;
++    let secondResult: CommandResult | null | undefined;
++    act(() => {
++      firstResult = result.current.dispatch(pinCommand('uncontrolled-first', 0, 'a'));
++      secondResult = result.current.dispatch(pinCommand('uncontrolled-second', 1, 'b'));
++    });
+
++    expect(expectAccepted(firstResult).revision).toBe(1);
++    expect(expectAccepted(secondResult).revision).toBe(2);
++    expect(result.current.viewSpec?.revision).toBe(2);
++    expect(result.current.viewSpec?.pinnedItemIds).toEqual(['a', 'b']);
++  });
+
++  it('keeps controlled rendering on props until the host echoes an accepted view', () => {
++    const viewSpec = initialView();
++    const { result, rerender } = renderHook(
++      ({ currentView }: { readonly currentView: ViewSpec }) =>
++        useEditorController({
++          sourceData: commandSourceData,
++          viewSpec: currentView,
++        }),
++      { initialProps: { currentView: viewSpec } },
++    );
+
++    expect(result.current.mode).toBe('controlled');
++    expect(result.current.viewSpec).toBe(viewSpec);
+
++    let commandResult: CommandResult | null | undefined;
++    act(() => {
++      commandResult = result.current.dispatch(pinCommand('controlled-pin'));
++    });
++    const emittedView = expectAccepted(commandResult);
+
++    expect(emittedView.revision).toBe(1);
++    expect(emittedView.pinnedItemIds).toEqual(['a']);
++    expect(result.current.viewSpec).toBe(viewSpec);
++    expect(result.current.viewSpec?.revision).toBe(0);
++    expect(result.current.viewSpec?.pinnedItemIds).toEqual([]);
+
++    rerender({ currentView: emittedView });
+
++    expect(result.current.mode).toBe('controlled');
++    expect(result.current.viewSpec).toBe(emittedView);
++    expect(result.current.viewSpec?.pinnedItemIds).toEqual(['a']);
++  });
+
++  it('executes each controlled command from the visible prop while an echo is pending', () => {
++    const viewSpec = initialView();
++    const { result } = renderHook(() =>
++      useEditorController({
++        sourceData: commandSourceData,
++        viewSpec,
++      }),
++    );
+
++    let firstResult: CommandResult | null | undefined;
++    let secondResult: CommandResult | null | undefined;
++    act(() => {
++      firstResult = result.current.dispatch(pinCommand('controlled-first', 0, 'a'));
++    });
++    act(() => {
++      secondResult = result.current.dispatch(pinCommand('controlled-second', 0, 'b'));
++    });
+
++    expect(expectAccepted(firstResult).pinnedItemIds).toEqual(['a']);
++    expect(expectAccepted(secondResult).pinnedItemIds).toEqual(['b']);
++    expect(result.current.viewSpec).toBe(viewSpec);
++    expect(result.current.session?.viewSpec).toBe(viewSpec);
++  });
+
++  it('returns a deterministic invalid controller when both controlled props are provided', () => {
++    const viewSpec = initialView();
++    const { result } = renderHook(() =>
++      useEditorController({
++        sourceData: commandSourceData,
++        viewSpec,
++        defaultViewSpec: viewSpec,
++      }),
++    );
+
++    expect(result.current.mode).toBe('invalid');
++    expect(result.current.status).toBe('invalid');
++    expect(result.current.session).toBeNull();
++    expect(result.current.viewSpec).toBeNull();
++    expect(result.current.issues.length).toBeGreaterThan(0);
++  });
+
++  it('blocks write commands in read-only mode without emitting host callbacks', () => {
++    const onCommand = vi.fn();
++    const onViewSpecChange = vi.fn();
++    const onCommandRejected = vi.fn();
++    const viewSpec = initialView();
++    const { result } = renderHook(() =>
++      useEditorController({
++        sourceData: commandSourceData,
++        defaultViewSpec: viewSpec,
++        readOnly: true,
++        onCommand,
++        onViewSpecChange,
++        onCommandRejected,
++      }),
++    );
+
++    let commandResult: CommandResult | null | undefined;
++    act(() => {
++      commandResult = result.current.dispatch(pinCommand('read-only-pin'));
++    });
+
++    expect(commandResult).toBeNull();
++    expect(result.current.viewSpec).toBe(viewSpec);
++    expect(result.current.session?.viewSpec).toBe(viewSpec);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewSpecChange).not.toHaveBeenCalled();
++    expect(onCommandRejected).not.toHaveBeenCalled();
++  });
++});
+diff --git a/packages/editor/tests/components/states.test.tsx b/packages/editor/tests/components/states.test.tsx
+new file mode 100644
+index 0000000..6f51319
+--- /dev/null
++++ b/packages/editor/tests/components/states.test.tsx
+@@ -0,0 +1,335 @@
++import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
++import {
++  FinancialChartEditor,
++  createInitialViewSpec,
++  type SourceData,
++  type ViewSpec,
++} from '../../src';
++import { anchorsOnlySourceData, financialSourceData } from '../fixtures/financialSourceData';
+
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    static instances: Chart[] = [];
++    static renderQueue: (() => Promise<void>)[] = [];
+
++    static reset(): void {
++      Chart.instances = [];
++      Chart.renderQueue = [];
++    }
+
++    readonly options = vi.fn((options: unknown): this => {
++      void options;
++      return this;
++    });
++    readonly render = vi.fn(
++      (): Promise<void> => Chart.renderQueue.shift()?.() ?? Promise.resolve(),
++    );
++    readonly destroy = vi.fn((): void => undefined);
+
++    constructor(readonly config: unknown) {
++      Chart.instances.push(this);
++    }
++  }
+
++  return { Chart };
++});
+
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
+
++interface Deferred {
++  readonly promise: Promise<void>;
++  readonly resolve: () => void;
++  readonly reject: (reason?: unknown) => void;
++}
+
++function deferred(): Deferred {
++  let resolve: () => void = () => undefined;
++  let reject: (reason?: unknown) => void = () => undefined;
++  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
++    resolve = () => resolvePromise();
++    reject = rejectPromise;
++  });
++  return { promise, resolve, reject };
++}
+
++function initialView(sourceData: SourceData = financialSourceData): ViewSpec {
++  const result = createInitialViewSpec(sourceData);
++  if (!result.ok) {
++    throw new Error('Expected a valid component test fixture');
++  }
++  return result.value;
++}
+
++function editorState(): string | null {
++  return document.querySelector('[data-g2touch]')?.getAttribute('data-editor-state') ?? null;
++}
+
++beforeEach(() => {
++  g2Mock.Chart.reset();
++});
+
++afterEach(() => {
++  cleanup();
++  vi.restoreAllMocks();
++  vi.unstubAllGlobals();
++  g2Mock.Chart.reset();
++});
+
++describe('FinancialChartEditor states', () => {
++  it('renders the complete ready workbench and a privacy-safe text equivalent', async () => {
++    render(<FinancialChartEditor sourceData={financialSourceData} />);
+
++    await waitFor(() => expect(editorState()).toBe('ready'));
++    expect(screen.getByRole('toolbar', { name: '编辑器工具栏' })).toBeTruthy();
++    expect(screen.getByRole('button', { name: '撤销' }).getAttribute('title')).toBe(
++      '没有可撤销的修改',
++    );
++    expect(screen.getByRole('button', { name: '导出' }).getAttribute('title')).toBe('导出尚不可用');
++    expect(screen.getByRole('tree', { name: '结构大纲' })).toBeTruthy();
++    expect(screen.getByTestId('g2touch-chart-stage')).toBeTruthy();
++    expect(screen.getByTestId('g2touch-chart')).toBeTruthy();
++    expect(screen.getByRole('complementary', { name: '检查器' })).toBeTruthy();
+
++    const summary = screen.getByRole('region', { name: '图表摘要' });
++    expect(summary.textContent).toContain('收入增长');
++    expect(summary.textContent).toContain('成本压力');
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    await waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++    expect(g2Mock.Chart.instances[0]?.options).toHaveBeenCalledWith(
++      expect.objectContaining({ labelTransform: [{ type: 'overlapHide' }] }),
++    );
++  });
+
++  it('keeps both anchors visible in the compact empty state', async () => {
++    render(<FinancialChartEditor sourceData={anchorsOnlySourceData} />);
+
++    await waitFor(() => expect(editorState()).toBe('empty'));
++    expect(screen.getByText('暂无贡献项')).toBeTruthy();
++    const outline = screen.getByRole('tree', { name: '结构大纲' });
++    expect(within(outline).getByText('起点')).toBeTruthy();
++    expect(within(outline).getByText('终点')).toBeTruthy();
++    expect(screen.getByTestId('g2touch-chart')).toBeTruthy();
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    await waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++  });
+
++  it('blocks G2 and exposes only stable code and path for invalid source data', async () => {
++    const invalidSourceData: SourceData = {
++      ...financialSourceData,
++      items: financialSourceData.items.map(item =>
++        item.id === 'cost-pressure'
++          ? {
++              ...item,
++              label: '机密成本项目',
++              amount: Number.POSITIVE_INFINITY,
++              sourceRef: 'private:ledger:cost',
++            }
++          : item,
++      ),
++    };
+
++    render(<FinancialChartEditor sourceData={invalidSourceData} />);
+
++    await waitFor(() => expect(editorState()).toBe('invalid'));
++    const alert = screen.getByRole('alert');
++    expect(alert.textContent).toContain('INVALID_SOURCE_DATA');
++    expect(alert.textContent).toContain('/items/2/amount');
++    expect(alert.textContent).not.toContain('机密成本项目');
++    expect(alert.textContent).not.toContain('private:ledger:cost');
++    expect(g2Mock.Chart.instances).toHaveLength(0);
++    expect(screen.getByRole('toolbar', { name: '编辑器工具栏' })).toBeTruthy();
++  });
+
++  it('renders a deterministic invalid configuration state without creating G2', async () => {
++    const viewSpec = initialView();
+
++    render(
++      <FinancialChartEditor
++        sourceData={financialSourceData}
++        viewSpec={viewSpec}
++        defaultViewSpec={viewSpec}
++      />,
++    );
+
++    await waitFor(() => expect(editorState()).toBe('invalid'));
++    const alert = screen.getByRole('alert');
++    expect(alert.textContent).toContain('INVALID_CONFIGURATION');
++    expect(alert.textContent).toContain('/viewSpec');
++    expect(g2Mock.Chart.instances).toHaveLength(0);
++  });
+
++  it('localizes editor chrome and reports invalid status truthfully', async () => {
++    const viewSpec = initialView();
+
++    render(
++      <FinancialChartEditor
++        locale="en-US"
++        sourceData={financialSourceData}
++        viewSpec={viewSpec}
++        defaultViewSpec={viewSpec}
++      />,
++    );
+
++    await waitFor(() => expect(editorState()).toBe('invalid'));
++    expect(screen.getByRole('toolbar', { name: 'Editor toolbar' })).toBeTruthy();
++    expect(screen.getAllByText('Data cannot be rendered').length).toBeGreaterThan(0);
++    expect(screen.queryByText('已校验')).toBeNull();
++    expect(screen.queryByText('数据无法渲染')).toBeNull();
++  });
+
++  it('localizes chart chrome while preserving source labels', async () => {
++    render(<FinancialChartEditor locale="en-US" sourceData={financialSourceData} />);
+
++    await waitFor(() => expect(editorState()).toBe('ready'));
++    expect(screen.getByText('Financial waterfall')).toBeTruthy();
++    expect(screen.getByText('Operating bridge')).toBeTruthy();
++    const summary = screen.getByRole('region', { name: 'Chart summary' });
++    expect(summary.textContent).toContain('收入增长');
++    expect(summary.textContent).toContain('positive contribution');
++    expect(summary.textContent).not.toContain('正向贡献');
++  });
+
++  it('omits crowded canvas value labels in the mobile safety viewport', async () => {
++    vi.stubGlobal(
++      'matchMedia',
++      vi.fn(
++        (query: string): MediaQueryList =>
++          ({
++            matches: query === '(max-width: 759px)',
++            media: query,
++            onchange: null,
++            addListener: vi.fn(),
++            removeListener: vi.fn(),
++            addEventListener: vi.fn(),
++            removeEventListener: vi.fn(),
++            dispatchEvent: vi.fn(() => true),
++          }) as unknown as MediaQueryList,
++      ),
++    );
+
++    render(<FinancialChartEditor sourceData={financialSourceData} />);
+
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    expect(g2Mock.Chart.instances[0]?.options).toHaveBeenCalledWith(
++      expect.objectContaining({
++        children: [expect.objectContaining({ labels: [] })],
++      }),
++    );
++    expect(screen.getByRole('region', { name: '图表摘要' }).textContent).toContain('收入增长');
++  });
+
++  it('contains a G2 render rejection without leaking the external error', async () => {
++    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
++    g2Mock.Chart.renderQueue.push(() =>
++      Promise.reject(new Error('private renderer failure with financial context')),
++    );
++    const { unmount } = render(<FinancialChartEditor sourceData={financialSourceData} />);
+
++    const alert = await screen.findByRole('alert');
++    expect(alert.textContent).toContain('CHART_RENDER_ERROR');
++    expect(alert.textContent).toContain('/chart');
++    expect(alert.textContent).not.toContain('private renderer failure');
++    expect(JSON.stringify(consoleError.mock.calls)).not.toContain('private renderer failure');
++    expect(g2Mock.Chart.instances).toHaveLength(1);
+
++    unmount();
++    expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
++  });
+
++  it('clears a prior render issue after the same projection renders successfully', async () => {
++    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
++    g2Mock.Chart.renderQueue.push(
++      () => Promise.reject(new Error('first render failure')),
++      () => Promise.resolve(),
++    );
++    const { rerender } = render(
++      <FinancialChartEditor locale="zh-CN" sourceData={financialSourceData} />,
++    );
+
++    await screen.findByText('CHART_RENDER_ERROR');
++    rerender(<FinancialChartEditor locale="en-US" sourceData={financialSourceData} />);
+
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
++    await waitFor(() => expect(screen.queryByText('CHART_RENDER_ERROR')).toBeNull());
++    expect(consoleError).toHaveBeenCalledTimes(1);
++  });
++});
+
++describe('G2 lifecycle', () => {
++  it('creates one chart per projection and destroys each instance exactly once', async () => {
++    const viewSpec = initialView();
++    const reorderedView: ViewSpec = {
++      ...viewSpec,
++      revision: 1,
++      rootOrder: ['cost-pressure', 'revenue-growth', 'tax-impact'],
++    };
++    const { rerender, unmount } = render(
++      <FinancialChartEditor sourceData={financialSourceData} viewSpec={viewSpec} />,
++    );
+
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    const first = g2Mock.Chart.instances[0];
++    rerender(<FinancialChartEditor sourceData={financialSourceData} viewSpec={reorderedView} />);
+
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
++    expect(first?.destroy).toHaveBeenCalledOnce();
++    const second = g2Mock.Chart.instances[1];
+
++    unmount();
++    expect(first?.destroy).toHaveBeenCalledOnce();
++    expect(second?.destroy).toHaveBeenCalledOnce();
++  });
+
++  it('ignores stale asynchronous render failures after a projection is replaced', async () => {
++    const pending = deferred();
++    g2Mock.Chart.renderQueue.push(
++      () => pending.promise,
++      () => Promise.resolve(),
++    );
++    const viewSpec = initialView();
++    const reorderedView: ViewSpec = {
++      ...viewSpec,
++      revision: 1,
++      rootOrder: ['cost-pressure', 'revenue-growth', 'tax-impact'],
++    };
++    const { rerender } = render(
++      <FinancialChartEditor sourceData={financialSourceData} viewSpec={viewSpec} />,
++    );
+
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    rerender(<FinancialChartEditor sourceData={financialSourceData} viewSpec={reorderedView} />);
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
++    await waitFor(() => expect(editorState()).toBe('ready'));
+
++    await act(async () => {
++      pending.reject(new Error('stale private renderer failure'));
++      await Promise.resolve();
++    });
+
++    expect(screen.queryByText('CHART_RENDER_ERROR')).toBeNull();
++    expect(editorState()).toBe('ready');
++    expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
++  });
+
++  it('ignores a pending render failure after unmount and destroys the chart once', async () => {
++    const pending = deferred();
++    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
++    g2Mock.Chart.renderQueue.push(() => pending.promise);
++    const { unmount } = render(<FinancialChartEditor sourceData={financialSourceData} />);
+
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    const chart = g2Mock.Chart.instances[0];
++    unmount();
++    expect(chart?.destroy).toHaveBeenCalledOnce();
+
++    await act(async () => {
++      pending.reject(new Error('private failure after unmount'));
++      await Promise.resolve();
++    });
+
++    expect(chart?.destroy).toHaveBeenCalledOnce();
++    expect(consoleError).not.toHaveBeenCalled();
++  });
++});
+diff --git a/packages/editor/tests/package/import-cjs.cjs b/packages/editor/tests/package/import-cjs.cjs
+index b0a218c..5575dce 100644
+--- a/packages/editor/tests/package/import-cjs.cjs
++++ b/packages/editor/tests/package/import-cjs.cjs
+@@ -1,6 +1,10 @@
++const { readFileSync } = require('node:fs');
++const { resolve } = require('node:path');
+
+ const editor = require('../../dist/index.cjs');
+
+ const expected = [
++  'FinancialChartEditor',
+   'createEditorSession',
+   'createInitialViewSpec',
+   'executeCommand',
+@@ -11,5 +15,24 @@ const expected = [
+ ];
+
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('CJS runtime API does not match the approved T103 surface');
++  throw new Error('CJS runtime API does not match the approved T105 surface');
++}
+
++const packageJson = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8'));
++if (packageJson.exports?.['./styles.css'] !== './dist/styles.css') {
++  throw new Error('CJS package does not expose the approved styles.css subpath');
++}
++if (!Array.isArray(packageJson.sideEffects) || !packageJson.sideEffects.includes('**/*.css')) {
++  throw new Error('CJS package does not preserve stylesheet side effects');
++}
+
++const stylesheet = readFileSync(resolve(__dirname, '../../dist/styles.css'), 'utf8');
++if (stylesheet.trim().length === 0) {
++  throw new Error('CJS package styles.css export is empty');
++}
++if (!stylesheet.includes('.gt-editor')) {
++  throw new Error('CJS package stylesheet is missing the editor scope');
++}
++if (/^\s*(?::root|html|body)\b/m.test(stylesheet)) {
++  throw new Error('CJS package stylesheet contains an unscoped document selector');
+ }
+diff --git a/packages/editor/tests/package/import-esm.mjs b/packages/editor/tests/package/import-esm.mjs
+index eb8dbd6..8f150c1 100644
+--- a/packages/editor/tests/package/import-esm.mjs
++++ b/packages/editor/tests/package/import-esm.mjs
+@@ -1,6 +1,9 @@
++import { readFile } from 'node:fs/promises';
+
+ const editor = await import('../../dist/index.js');
+
+ const expected = [
++  'FinancialChartEditor',
+   'createEditorSession',
+   'createInitialViewSpec',
+   'executeCommand',
+@@ -11,5 +14,26 @@ const expected = [
+ ];
+
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('ESM runtime API does not match the approved T103 surface');
++  throw new Error('ESM runtime API does not match the approved T105 surface');
++}
+
++const packageJson = JSON.parse(
++  await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
++);
++if (packageJson.exports?.['./styles.css'] !== './dist/styles.css') {
++  throw new Error('ESM package does not expose the approved styles.css subpath');
++}
++if (!Array.isArray(packageJson.sideEffects) || !packageJson.sideEffects.includes('**/*.css')) {
++  throw new Error('ESM package does not preserve stylesheet side effects');
++}
+
++const stylesheet = await readFile(new URL('../../dist/styles.css', import.meta.url), 'utf8');
++if (stylesheet.trim().length === 0) {
++  throw new Error('ESM package styles.css export is empty');
++}
++if (!stylesheet.includes('.gt-editor')) {
++  throw new Error('ESM package stylesheet is missing the editor scope');
++}
++if (/^\s*(?::root|html|body)\b/m.test(stylesheet)) {
++  throw new Error('ESM package stylesheet contains an unscoped document selector');
+ }
+diff --git a/packages/editor/tests/package/public-api.test.ts b/packages/editor/tests/package/public-api.test.ts
+index b942ab9..51edb14 100644
+--- a/packages/editor/tests/package/public-api.test.ts
++++ b/packages/editor/tests/package/public-api.test.ts
+@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
+ import * as editor from '../../src/index';
+
+ describe('@g2touch/editor public entry', () => {
+-  it('exposes only the approved T103 runtime API', () => {
++  it('exposes only the approved T105 runtime API', () => {
+     expect(Object.keys(editor).sort()).toEqual([
++      'FinancialChartEditor',
+       'createEditorSession',
+       'createInitialViewSpec',
+       'executeCommand',
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index 596cbc3..bc8591f 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -2,11 +2,14 @@ import {
+   createEditorSession,
+   createInitialViewSpec,
+   executeCommand,
++  FinancialChartEditor,
+   redoSession,
+   undoSession,
+   type CommandResult,
+   type EditorCommand,
+   type EditorSession,
++  type FinancialChartEditorProps,
++  type SelectionState,
+   type SessionActionMeta,
+   validateSourceData,
+   validateViewSpec,
+@@ -31,3 +34,16 @@ export const editorSession: ValidationResult<EditorSession> = createEditorSessio
+ export const commandResult: CommandResult = executeCommand(session, command);
+ export const undoResult: CommandResult = undoSession(session, historyAction);
+ export const redoResult: CommandResult = redoSession(session, historyAction);
+
++export const editorComponent: typeof FinancialChartEditor = FinancialChartEditor;
++export const editorSelection: SelectionState = { nodeId: 'selection-node', sourceIds: ['source'] };
++export const editorProps: FinancialChartEditorProps = {
++  sourceData: source,
++  viewSpec: view,
++  locale: 'zh-CN',
++  height: 680,
++  onSelectionChange(selection) {
++    const selectedNode: string = selection.nodeId;
++    void selectedNode;
++  },
++};
+diff --git a/packages/editor/tests/setup.ts b/packages/editor/tests/setup.ts
+new file mode 100644
+index 0000000..e42051f
+--- /dev/null
++++ b/packages/editor/tests/setup.ts
+@@ -0,0 +1,6 @@
++import { cleanup } from '@testing-library/react';
++import { afterEach } from 'vitest';
+
++afterEach(() => {
++  cleanup();
++});
+diff --git a/packages/editor/tsconfig.json b/packages/editor/tsconfig.json
+index 078bc65..300a8dc 100644
+--- a/packages/editor/tsconfig.json
++++ b/packages/editor/tsconfig.json
+@@ -1,6 +1,7 @@
+ {
+   "extends": "../../tsconfig.base.json",
+   "compilerOptions": {
++    "skipLibCheck": true,
+     "types": ["node", "react", "react-dom"]
+   },
+   "include": ["src", "tests/**/*.test.ts", "tests/**/*.test.tsx"]
+diff --git a/packages/editor/tsup.config.ts b/packages/editor/tsup.config.ts
+index 417270f..ef5b7a9 100644
+--- a/packages/editor/tsup.config.ts
++++ b/packages/editor/tsup.config.ts
+@@ -1,7 +1,10 @@
+ import { defineConfig } from 'tsup';
+
+ export default defineConfig({
+-  entry: ['src/index.ts'],
++  entry: {
++    index: 'src/index.ts',
++    styles: 'src/styles/editor.css',
++  },
+   format: ['esm', 'cjs'],
+   dts: true,
+   clean: true,
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index c3373b3..f65e468 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -17,6 +17,15 @@ importers:
+       '@playwright/test':
+         specifier: 1.61.1
+         version: 1.61.1
++      '@testing-library/dom':
++        specifier: 10.4.1
++        version: 10.4.1
++      '@testing-library/react':
++        specifier: 16.3.2
++        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
++      '@testing-library/user-event':
++        specifier: 14.6.1
++        version: 14.6.1(@testing-library/dom@10.4.1)
+       '@types/node':
+         specifier: 22.20.1
+         version: 22.20.1
+@@ -82,6 +91,10 @@ importers:
+         version: 19.2.7(react@19.2.7)
+
+   packages/editor:
++    dependencies:
++      lucide-react:
++        specifier: 1.24.0
++        version: 1.24.0(react@19.2.7)
+     devDependencies:
+       '@antv/g2':
+         specifier: 5.4.8
+@@ -529,6 +542,10 @@ packages:
+     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
+     engines: {node: '>=12'}
+
++  '@jest/types@27.0.2':
++    resolution: {integrity: sha512-XpjCtJ/99HB4PmyJ2vgmN7vT+JLP7RW1FBT9RgnMFS4Dt7cvIyBee8O3/j98aUZ34ZpenPZFqmaaObWSeL65dg==}
++    engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
+
+   '@jridgewell/gen-mapping@0.3.12':
+     resolution: {integrity: sha512-OuLGC46TjB5BbN1dH8JULVVZY4WTdkF7tV9Ys6wLL1rubZnCMstOhNHueU5bLCrnRuDhKPDM4g6sw4Bel5Gzqg==}
+
+@@ -834,9 +851,37 @@ packages:
+   '@standard-schema/spec@1.1.0':
+     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
++  '@testing-library/dom@10.4.1':
++    resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
++    engines: {node: '>=18'}
+
++  '@testing-library/react@16.3.2':
++    resolution: {integrity: sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g==}
++    engines: {node: '>=18'}
++    peerDependencies:
++      '@testing-library/dom': ^10.0.0
++      '@types/react': ^18.0.0 || ^19.0.0
++      '@types/react-dom': ^18.0.0 || ^19.0.0
++      react: ^18.0.0 || ^19.0.0
++      react-dom: ^18.0.0 || ^19.0.0
++    peerDependenciesMeta:
++      '@types/react':
++        optional: true
++      '@types/react-dom':
++        optional: true
+
++  '@testing-library/user-event@14.6.1':
++    resolution: {integrity: sha512-vq7fv0rnt+QTXgPxr5Hjc210p6YKq2kmdziLgnsZGgLJ9e6VAShx1pACLuRjd/AS/sr7phAR58OIIpf0LlmQNw==}
++    engines: {node: '>=12', npm: '>=6'}
++    peerDependencies:
++      '@testing-library/dom': '>=7.21.4'
+
+   '@tybys/wasm-util@0.10.3':
+     resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
+
++  '@types/aria-query@5.0.4':
++    resolution: {integrity: sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==}
+
+   '@types/chai@5.2.3':
+     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
+
+@@ -909,6 +954,15 @@ packages:
+   '@types/geojson@7946.0.16':
+     resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
+
++  '@types/istanbul-lib-coverage@2.0.6':
++    resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
+
++  '@types/istanbul-lib-report@3.0.3':
++    resolution: {integrity: sha512-NQn7AHQnk/RSLOxrBbGyJM/aVQ+pjj5HCgasFxc0K/KhoATfQ/47AyUl15I2yBUpihjmas+a+VJBOqecrFH+uA==}
+
++  '@types/istanbul-reports@3.0.4':
++    resolution: {integrity: sha512-pk2B1NWalF9toCRu6gjBzR69syFjP4Od8WRAX+0mmf9lAjCRicLOWc+ZrxZHx/0XRjotgkF9t6iaMJ+aXcOdZQ==}
+
+   '@types/json-schema@7.0.15':
+     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+@@ -923,6 +977,12 @@ packages:
+   '@types/react@19.2.17':
+     resolution: {integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==}
+
++  '@types/yargs-parser@21.0.3':
++    resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
+
++  '@types/yargs@16.0.11':
++    resolution: {integrity: sha512-sbtvk8wDN+JvEdabmZExoW/HNr1cB7D/j4LT08rMiuikfA7m/JNJg7ATQcgzs34zHnoScDkY0ZRSl29Fkmk36g==}
+
+   '@typescript-eslint/eslint-plugin@8.64.0':
+     resolution: {integrity: sha512-CGvQPBxN3wZLu6Rz2kFUpZeoCm78xUic92ck39KPePkO1NPOwjCqdQnm5Q87tpWw9vcBvW8XLrDXjH9PWYtJ3Q==}
+     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+@@ -1062,6 +1122,10 @@ packages:
+     resolution: {integrity: sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==}
+     engines: {node: '>=8'}
+
++  ansi-styles@5.2.0:
++    resolution: {integrity: sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA==}
++    engines: {node: '>=10'}
+
+   ansi-styles@6.2.3:
+     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
+     engines: {node: '>=12'}
+@@ -1069,6 +1133,9 @@ packages:
+   any-promise@1.3.0:
+     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
+
++  aria-query@5.3.0:
++    resolution: {integrity: sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A==}
+
+   assertion-error@2.0.1:
+     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
+     engines: {node: '>=12'}
+@@ -1322,10 +1389,17 @@ packages:
+   deep-is@0.1.4:
+     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
+
++  dequal@2.0.3:
++    resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
++    engines: {node: '>=6'}
+
+   detect-libc@2.1.2:
+     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
+     engines: {node: '>=8'}
+
++  dom-accessibility-api@0.5.16:
++    resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
+
+   eastasianwidth@0.2.0:
+     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
+
+@@ -1733,6 +1807,15 @@ packages:
+   lru-cache@5.1.1:
+     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
++  lucide-react@1.24.0:
++    resolution: {integrity: sha512-YT6mBD8lGKkg4nM39enlm94/sfJIiW0YKUT60fBy4YK8tai31ylg1VhGNWxkpSKHo9UagfnZqwIff3HTDQwXeA==}
++    peerDependencies:
++      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
++  lz-string@1.5.0:
++    resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
++    hasBin: true
+
+   magic-string@0.30.21:
+     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
+
+@@ -1913,6 +1996,10 @@ packages:
+     engines: {node: '>=14'}
+     hasBin: true
+
++  pretty-format@27.0.2:
++    resolution: {integrity: sha512-mXKbbBPnYTG7Yra9qFBtqj+IXcsvxsvOBco3QHxtxTl+hHKq6QdzMZ+q0CtL4ORHZgwGImRr2XZUX2EWzORxig==}
++    engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
+
+   publint@0.3.21:
+     resolution: {integrity: sha512-OqejcnMV6E9zel2oCrUOJEiiFkGiAAni0A6ibfQNh1k9Gu5z4F+Yso8lllam7AzmV6Do0vp7u3UpZNRBwuXaHQ==}
+     engines: {node: '>=18'}
+@@ -1927,6 +2014,9 @@ packages:
+     peerDependencies:
+       react: ^19.2.7
+
++  react-is@17.0.1:
++    resolution: {integrity: sha512-NAnt2iGDXohE5LI7uBnLnqvLQMtzhkiAOLXTmv+qnF9Ky7xAPcX8Up/xWIhxvLVGJvuLiNc4xQLtuqDRzb4fSA==}
+
+   react@19.2.7:
+     resolution: {integrity: sha512-HNe9WslTbXmFK8o8cmwgAeJFSBvt1bPdHCVKtaaV+WlAN36mpT4hcRpwbf3fY56ar2oIXzsBpOAiIRHAdY0OlQ==}
+     engines: {node: '>=0.10.0'}
+@@ -2827,6 +2917,14 @@ snapshots:
+       wrap-ansi: 8.1.0
+       wrap-ansi-cjs: wrap-ansi@7.0.0
+
++  '@jest/types@27.0.2':
++    dependencies:
++      '@types/istanbul-lib-coverage': 2.0.6
++      '@types/istanbul-reports': 3.0.4
++      '@types/node': 22.20.1
++      '@types/yargs': 16.0.11
++      chalk: 4.1.2
+
+   '@jridgewell/gen-mapping@0.3.12':
+     dependencies:
+       '@jridgewell/sourcemap-codec': 1.5.0
+@@ -3020,11 +3118,38 @@ snapshots:
+
+   '@standard-schema/spec@1.1.0': {}
+
++  '@testing-library/dom@10.4.1':
++    dependencies:
++      '@babel/code-frame': 7.29.7
++      '@babel/runtime': 7.29.7
++      '@types/aria-query': 5.0.4
++      aria-query: 5.3.0
++      dom-accessibility-api: 0.5.16
++      lz-string: 1.5.0
++      picocolors: 1.1.1
++      pretty-format: 27.0.2
+
++  '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
++    dependencies:
++      '@babel/runtime': 7.29.7
++      '@testing-library/dom': 10.4.1
++      react: 19.2.7
++      react-dom: 19.2.7(react@19.2.7)
++    optionalDependencies:
++      '@types/react': 19.2.17
++      '@types/react-dom': 19.2.3(@types/react@19.2.17)
+
++  '@testing-library/user-event@14.6.1(@testing-library/dom@10.4.1)':
++    dependencies:
++      '@testing-library/dom': 10.4.1
+
+   '@tybys/wasm-util@0.10.3':
+     dependencies:
+       tslib: 2.8.1
+     optional: true
+
++  '@types/aria-query@5.0.4': {}
+
+   '@types/chai@5.2.3':
+     dependencies:
+       '@types/deep-eql': 4.0.2
+@@ -3086,6 +3211,16 @@ snapshots:
+
+   '@types/geojson@7946.0.16': {}
+
++  '@types/istanbul-lib-coverage@2.0.6': {}
+
++  '@types/istanbul-lib-report@3.0.3':
++    dependencies:
++      '@types/istanbul-lib-coverage': 2.0.6
+
++  '@types/istanbul-reports@3.0.4':
++    dependencies:
++      '@types/istanbul-lib-report': 3.0.3
+
+   '@types/json-schema@7.0.15': {}
+
+   '@types/node@22.20.1':
+@@ -3100,6 +3235,12 @@ snapshots:
+     dependencies:
+       csstype: 3.2.3
+
++  '@types/yargs-parser@21.0.3': {}
+
++  '@types/yargs@16.0.11':
++    dependencies:
++      '@types/yargs-parser': 21.0.3
+
+   '@typescript-eslint/eslint-plugin@8.64.0(@typescript-eslint/parser@8.64.0(eslint@10.7.0)(typescript@6.0.3))(eslint@10.7.0)(typescript@6.0.3)':
+     dependencies:
+       '@eslint-community/regexpp': 4.12.2
+@@ -3276,10 +3417,16 @@ snapshots:
+     dependencies:
+       color-convert: 2.0.1
+
++  ansi-styles@5.2.0: {}
+
+   ansi-styles@6.2.3: {}
+
+   any-promise@1.3.0: {}
+
++  aria-query@5.3.0:
++    dependencies:
++      dequal: 2.0.3
+
+   assertion-error@2.0.1: {}
+
+   ast-v8-to-istanbul@1.0.4:
+@@ -3513,8 +3660,12 @@ snapshots:
+
+   deep-is@0.1.4: {}
+
++  dequal@2.0.3: {}
+
+   detect-libc@2.1.2: {}
+
++  dom-accessibility-api@0.5.16: {}
+
+   eastasianwidth@0.2.0: {}
+
+   electron-to-chromium@1.5.389: {}
+@@ -3904,6 +4055,12 @@ snapshots:
+     dependencies:
+       yallist: 3.1.1
+
++  lucide-react@1.24.0(react@19.2.7):
++    dependencies:
++      react: 19.2.7
+
++  lz-string@1.5.0: {}
+
+   magic-string@0.30.21:
+     dependencies:
+       '@jridgewell/sourcemap-codec': 1.5.5
+@@ -4061,6 +4218,13 @@ snapshots:
+
+   prettier@3.9.5: {}
+
++  pretty-format@27.0.2:
++    dependencies:
++      '@jest/types': 27.0.2
++      ansi-regex: 5.0.1
++      ansi-styles: 5.2.0
++      react-is: 17.0.1
+
+   publint@0.3.21:
+     dependencies:
+       '@publint/pack': 0.1.5
+@@ -4075,6 +4239,8 @@ snapshots:
+       react: 19.2.7
+       scheduler: 0.27.0
+
++  react-is@17.0.1: {}
+
+   react@19.2.7: {}
+
+   readdirp@4.1.2: {}
+diff --git a/vitest.config.ts b/vitest.config.ts
+index bb158af..2d090b9 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -22,6 +22,7 @@ export default defineConfig({
+             'packages/editor/tests/export/**/*.test.{ts,tsx}',
+           ],
+           environment: 'jsdom',
++          setupFiles: ['packages/editor/tests/setup.ts'],
+           passWithNoTests: true,
+         },
+       },

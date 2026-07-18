@@ -1,0 +1,127 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T102-A001"
+task_id: "T102"
+feature_id: "001-waterfall-editor-foundation"
+mode: "direct_execute_with_independent_review"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  product_contract: ".ai-platform/docs/product-design.md"
+  tdr: ".ai-platform/docs/technology-decision-record.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  data_model: ".ai-platform/specs/001-waterfall-editor-foundation/data-model.md"
+  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  approval: "T101 accepted; user authorized Codex to review and accept T102-T104 on 2026-07-15."
+
+work_unit:
+  title: "实现 SourceData、ViewSpec 与验证器"
+  goal: "建立无 React/G2 依赖的不可变 plain-data 模型、初始 ViewSpec 与结构化验证结果。"
+  requirement_mapping:
+    - "WF-US-001"
+    - "WF-FR-001"
+    - "WF-FR-002"
+    - "WF-FR-003"
+    - "WF-NFR-001"
+    - "WF-NFR-007"
+  dependencies:
+    - "T101 Accepted"
+  blocks:
+    - "T103"
+    - "T104"
+    - "T105"
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "T101 workspace, package entry and quality toolchain are Accepted; no domain, chart or interaction runtime existed before T102."
+  architectural_boundary:
+    - "SourceData is immutable caller-owned plain data."
+    - "ViewSpec contains only deterministic JSON-compatible presentation state."
+    - "T102 validates structure and references; command mutation begins in T103 and waterfall arithmetic begins in T104."
+  public_runtime_surface:
+    - "createInitialViewSpec"
+    - "validateSourceData"
+    - "validateViewSpec"
+
+execution_constraints:
+  adapter: "Codex direct execution; independent sub-agent review is read-only."
+  allowed_files:
+    - "packages/editor/src/domain/model.ts"
+    - "packages/editor/src/domain/ids.ts"
+    - "packages/editor/src/domain/errors.ts"
+    - "packages/editor/src/domain/validation.ts"
+    - "packages/editor/src/domain/createInitialViewSpec.ts"
+    - "packages/editor/src/index.ts"
+    - "packages/editor/tests/domain/model.test.ts"
+    - "packages/editor/tests/domain/validation.test.ts"
+    - "packages/editor/tests/domain/immutability.test.ts"
+    - "packages/editor/tests/fixtures/**"
+    - "packages/editor/tests/package/**"
+  forbidden_changes:
+    - "No React, G2, DOM, command executor, history, projection, persistence, or interaction implementation."
+    - "No input mutation, class instance, Map, Set, function, or runtime dependency."
+    - "No push, PR, merge, or publish."
+  conflicts:
+    - "Do not execute T103 or T104 concurrently because they share domain contracts."
+
+tdd_plan:
+  red:
+    - "Add public model/factory tests and confirm missing domain exports fail."
+    - "Add validation matrix tests for duplicate IDs, non-finite amounts, anchors, groups, references, schema and source mismatch."
+    - "Add deep immutability tests for source and view inputs."
+    - "Update T101's empty public-entry smoke assertions for the approved T102 exports."
+  green:
+    - "Implement minimal branded IDs, JSON-compatible readonly model types, stable validation issues and validators."
+    - "Implement createInitialViewSpec from contribution source order without mutating SourceData."
+  refactor:
+    - "Share path/error/reference helpers while keeping validation deterministic and public errors free of financial values."
+    - "Run coverage and the full T102 validation set."
+
+validation_loop:
+  commands:
+    - "pnpm test:unit -- packages/editor/tests/domain/model.test.ts packages/editor/tests/domain/validation.test.ts packages/editor/tests/domain/immutability.test.ts"
+    - "pnpm test:coverage"
+    - "pnpm typecheck"
+    - "pnpm lint"
+    - "pnpm format:check"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T102"
+  expected_signals:
+    - "All commands exit 0 after GREEN."
+    - "Domain statement, branch, function and line coverage are each at least 95%."
+    - "Domain source contains no React or G2 import."
+  retry_budget: 2
+  failure_policy: "Fix only T102 contract failures; stop if the confirmed data model or public API must materially change."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T102"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+  required_content:
+    - "Expected RED and verified GREEN output."
+    - "Validation error matrix and coverage totals."
+    - "Changed files, diff summary, skipped checks and residual risk."
+
+review_contract:
+  spec_compliance:
+    - "All T102 requirements and acceptance cases have direct tests."
+    - "Only approved T102 source/test files changed outside governance and evidence."
+  engineering_quality:
+    - "Strict TypeScript and deterministic plain-data validation without runtime dependencies."
+    - "Stable error codes and paths reveal no amount, label, sourceRef or metadata values."
+  qa_acceptance:
+    - "Invalid inputs return complete structured issues and never throw unexpectedly."
+    - "Factory and validators do not mutate nested caller data."
+
+handoff:
+  on_success: "Attach evidence, complete independent review, mark T102 Accepted under the user's delegated authority, then prepare T103."
+  on_failure: "Keep T102 Running and document a bounded retry; do not advance T103."
+  remote_actions: "None authorized."
+
+stop_conditions:
+  - "T102 requires React, G2, DOM or a new runtime dependency."
+  - "A validation failure can only be solved by weakening a confirmed invariant."
+  - "Unrelated user changes appear in an allowed file and cannot be preserved."

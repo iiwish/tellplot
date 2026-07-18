@@ -1,0 +1,208 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T106-A001"
+task_id: "T106"
+feature_id: "001-waterfall-editor-foundation"
+mode: "delegated_execute"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  checklist: ".ai-platform/specs/001-waterfall-editor-foundation/checklists/requirements.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  design_contract: ".ai-platform/specs/001-waterfall-editor-foundation/design-contract.md"
+  command_contract: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md"
+  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  analysis: ".ai-platform/specs/001-waterfall-editor-foundation/analysis.md"
+  approval: "User explicitly accepted T105 on 2026-07-15; the T101-T108 work graph remains Confirmed."
+
+execution_receipt:
+  attempt_id: "T106-A001"
+  status: "Accepted"
+  evidence_directory: ".ai-platform/evidence/T106"
+  final_validation: "component 70/70; unit 242/242; Chromium 21/21 after row-body drag amendment; recorded 200-item nearest-rank p95 30.0ms; same-target root commit delta 0; coverage/build/package/type/lint/format green"
+  independent_review: "original engineering/spec and visual/QA review plus targeted amendment diff review report no Critical, High or Medium finding"
+  review_amendment: "User acceptance testing found the 24x32 grip was only about 8% of a 267x36 row. TDD moved the PointerSensor activator to the full draggable row body, excluded checkbox/disclosure controls, retained a touch-safe grip and verified real Chromium row-body drag."
+  user_acceptance: "User explicitly accepted the row-body drag amendment and T106 on 2026-07-16."
+
+work_unit:
+  title: "实现排序、分组与折叠交互"
+  goal: "让 chart、outline 与 keyboard 通过同一 executeCommand path 完成可信 move、group、collapse/expand，并提供取消、拒绝、live feedback、accessibility 与 200-item performance evidence。"
+  requirement_mapping:
+    - "WF-US-002"
+    - "WF-US-003"
+    - "WF-FR-007"
+    - "WF-FR-008"
+    - "WF-NFR-002"
+    - "WF-NFR-003"
+    - "WF-NFR-004"
+  dependencies:
+    - "T103 Accepted"
+    - "T104 Accepted"
+    - "T105 Accepted"
+  blocks:
+    - "T107"
+    - "T108"
+  parallel: false
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "T105 exposes one FinancialChartEditor root with a package-internal controller dispatch, real G2 WaterfallCanvas, structured outline, inspector, responsive panels and scoped CSS. T103 already implements immutable moveItem/createGroup/ungroup/collapseGroup/expandGroup commands and history; T104 provides the only waterfall projection."
+  design_thesis: "Operational calm plus financial annotation: direct manipulation feels immediate, while exact structure, validation state and financial invariants remain continuously visible."
+  signature_interaction: "Chart and outline present the same target and command result; the pointer follows directly, a non-layout-shifting drop indicator names the target, and committed structure settles within 160ms."
+  architectural_boundary:
+    - "All surfaces build EditorCommand values and call the existing controller dispatch; no surface mutates ViewSpec, SourceData or projection directly."
+    - "packages/editor/src/interactions contains UI adapters and pure target/command builders only; it must not duplicate domain validation or waterfall arithmetic."
+    - "WaterfallCanvas derives chart source/target identity from G2 element events and scene bounds; bar width or category identity must not be guessed from raw canvas width."
+    - "WaterfallCanvas keeps one mounted Chart instance across projection/view updates and applies options/render updates to that instance; replacement renders do not destroy/recreate the chart."
+    - "Pointer coordinates, active drag and per-frame visual movement live in refs/direct DOM or dnd-kit state; React state changes only on semantic target/state transitions and command commit."
+    - "G2 owns canvas mark animation; CSS/dnd-kit owns DOM transform/opacity. Motion or another animation library is not added."
+
+locked_behavior:
+  move_parity:
+    - "Chart pointer drag, outline pointer drag and keyboard reorder create equivalent moveItem target semantics and source values direct/outline/keyboard."
+    - "Target index is calculated after removing the active item, exactly matching the confirmed command schema."
+    - "Root/group moves may be attempted only through moveItem; the domain executor remains the final authority for segment, lock and minimum-group rules."
+  cancel_and_reject:
+    - "Escape, window blur, pointer cancellation, pointer release without a semantic target and dnd-kit cancel leave revision/ViewSpec identity unchanged."
+    - "Invalid targets and fixed items produce privacy-safe inline feedback and aria-live output; no amount, label, sourceRef or caller exception is logged."
+    - "A new pointer or keyboard action can interrupt any prior 160ms committed transition."
+  grouping:
+    - "Contiguous direct-root, unpinned contributions can be multi-selected and grouped with an explicit non-empty label."
+    - "Selected group supports collapse, expand and ungroup through the same command dispatch; collapsed projection value and sourceIds come only from T104."
+    - "Group disclosure communicates expanded state and is a real button with an accessible name; group actions expose disabled reasons when unavailable."
+  outline_and_keyboard:
+    - "Outline retains tree/treeitem semantics, 36px stable rows, amount/source count, lock and expanded state."
+    - "Mouse and pen can start sorting from the full draggable row body; checkbox and disclosure controls are excluded, while the grip remains a touch-action none target so vertical list scrolling is preserved."
+    - "dnd-kit core/sortable provides pointer sorting and drag overlay; explicit keyboard operations cover move before/after and supported move into/out paths without requiring pointer simulation."
+    - "Keyboard before/after moves one semantic sibling position using post-removal indices. Out inserts the child immediately after its root group; into appends to an immediately preceding group or prepends to an immediately following group."
+    - "Focus remains visible and returns to a meaningful row/action after commit, cancel, collapse or ungroup."
+  feedback_and_motion:
+    - "CommandFeedback is an inline status strip plus polite live region, never a blocking toast."
+    - "Drop indicator opacity changes in 80ms without affecting layout; committed row/bar reorder uses 160ms cubic-bezier(0.2, 0, 0, 1)."
+    - "prefers-reduced-motion removes nonessential durations while retaining target, selection, focus and validation information."
+  g2_lifecycle:
+    - "Initial valid mount creates one Chart; accepted move/group/collapse and locale/motion changes update that instance and preserve G2 update animation."
+    - "Unmount destroys the instance exactly once; event handlers, window blur/Escape/pointer listeners and pending renders cannot update after disposal."
+    - "A stale render rejection is ignored when a newer requested view succeeds; only the latest active failure can surface CHART_RENDER_ERROR."
+  performance:
+    - "At 200 visible contributions in desktop Chromium, drag pointer feedback does not set React state on every pointermove."
+    - "Measured command commit to visible revision/order update start has p95 <=150ms across at least 30 full drag samples, using one performance.now clock and nearest-rank p95; evidence records every sample and confirms exactly 200 visible contributions with nonblank real G2."
+    - "A render/Profiler signal proves repeated pointermove events within one semantic target add zero FinancialChartEditor React commits; target transitions may commit at most once per semantic target change."
+
+execution_constraints:
+  adapter: "Codex delegated TDD attempt with main-agent preflight, diff review, validation and evidence integration."
+  allowed_files:
+    - "package.json"
+    - "pnpm-lock.yaml"
+    - "packages/editor/package.json"
+    - "packages/editor/src/components/**"
+    - "packages/editor/src/interactions/**"
+    - "packages/editor/src/styles/**"
+    - "packages/editor/tests/setup.ts"
+    - "packages/editor/tests/components/**"
+    - "apps/playground/src/fixtures.ts"
+    - "e2e/waterfall-editor.spec.ts"
+    - "e2e/interaction-cancel.spec.ts"
+    - "e2e/accessibility.spec.ts"
+    - "e2e/performance.spec.ts"
+  dependency_changes:
+    - "Add exact @dnd-kit/core 6.3.1 and @dnd-kit/sortable 10.0.0 runtime dependencies to @tellplot/editor."
+    - "Add exact @axe-core/playwright 4.12.1 root devDependency for the approved accessibility gate."
+    - "Do not add Motion, Framer Motion, GSAP, a global store or another chart renderer."
+  allowed_scope_correction: "T106 component wiring requires FinancialChartEditor and editorMessages, existing G2 mocks require tests/setup, and the approved 200-item browser gate requires one deterministic playground fixture. The canonical allowed scope therefore uses components/**, tests/components/** and apps/playground/src/fixtures.ts without changing product behavior or public API."
+  forbidden_changes:
+    - "No new domain command, changed command semantics, second projection path, amount editing, nested group, moveGroup or setSort."
+    - "No persistence, active export, annotation editor, public dispatch handle, AI, backend, network call or routing."
+    - "No public G2 instance, internal controller, interaction adapter or projection export."
+    - "No commit, push, PR, merge, publish or remote mutation."
+  worktree_ownership: "T101-T105 accepted reset work is staged on codex/reset. T106 owns only the allowed unstaged paths; do not revert or rewrite accepted staged work outside those paths."
+  conflicts:
+    - "T107 must not execute concurrently because it owns the same root, toolbar, canvas and styles."
+
+tdd_plan:
+  red:
+    - "Add outline tests for pointer target mapping, sortable disabled/locked rows, selection and source/order conservation."
+    - "Add keyboard tests for before/after, supported into/out moves, focus continuity, fixed-item rejection and cancel/no-change."
+    - "Add group action tests for contiguous selection, label validation, create, collapse, expand, ungroup and aggregated source/amount projection."
+    - "Add real Chromium chart/outline parity and invalid/cancel/blur tests before interaction implementation."
+    - "Add axe and 200-item p95 tests before dependencies/fixture/implementation exist."
+    - "Replace the T105 recreate-per-projection lifecycle expectation with a failing persistent-Chart update test covering latest-wins async render, listener cleanup and destroy exactly once."
+  green:
+    - "Implement pure interaction target/command builders, dnd-kit outline, chart G2 event adapter, shared semantic preview and inline CommandFeedback."
+    - "Wire the existing controller dispatch through FinancialChartEditor to outline/chart/inspector without widening the public surface."
+    - "Implement exact dependency additions, accessibility semantics, reduced-motion CSS and deterministic 200-item fixture."
+  refactor:
+    - "Keep command construction, target mapping, G2 pointer lifecycle and React presentation in separate focused modules."
+    - "Remove duplicate surface-specific move rules; the same pure target builder must serve chart, outline and keyboard."
+    - "Inspect drag target, collapsed group, reduced-motion, desktop and mobile screenshots and correct overlap, focus and contrast defects."
+
+validation_loop:
+  commands:
+    - "pnpm exec vitest run --project editor-components packages/editor/tests/components/outline.test.tsx packages/editor/tests/components/keyboard.test.tsx packages/editor/tests/components/group-actions.test.tsx"
+    - "pnpm test:unit"
+    - "pnpm test:coverage"
+    - "pnpm typecheck"
+    - "pnpm lint"
+    - "pnpm format:check"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "pnpm exec playwright test e2e/waterfall-editor.spec.ts e2e/interaction-cancel.spec.ts --project=chromium"
+    - "pnpm test:a11y -- --project=chromium"
+    - "pnpm test:performance -- --project=chromium"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T106"
+  expected_signals:
+    - "RED commands fail for missing T106 behavior or dependencies, not syntax/test-harness errors."
+    - "All component/full/coverage/type/lint/format/build/package commands exit 0 after GREEN."
+    - "Real Chromium proves chart drag, outline drag, keyboard move, group/collapse, Escape/blur/invalid cancellation and unchanged financial totals."
+    - "Axe reports zero serious/critical violations after core interactions."
+    - "Exactly 200 visible contributions render in nonblank real G2; at least 30 drag samples produce nearest-rank p95 commit-to-visible-start <=150ms, and same-target pointermove produces zero root React commit increase."
+  retry_budget: 3
+  failure_policy: "Fix only T106 interaction/component/fixture/test defects. Stop if domain semantics, public API or T107 scope must change."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T106"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+    - "hit-target-fix.patch"
+    - "screenshots/desktop-drag-target.png"
+    - "screenshots/collapsed-group.png"
+    - "screenshots/mobile-group-actions.png"
+    - "screenshots/reduced-motion.png"
+  required_content:
+    - "RED/GREEN/REFACTOR commands with exit status and expected failure signal."
+    - "Chart/outline/keyboard parity snapshots, cancel identity/revision evidence and fixed-item rejection."
+    - "Group create/collapse/expand/ungroup projection evidence with amount/source conservation."
+    - "Axe result, performance samples/p95, listener cleanup, changed files, diff summary and residual risks."
+
+review_contract:
+  spec_compliance:
+    - "Every T106 requirement and locked behavior has direct component or real-browser evidence."
+    - "All state changes use executeCommand; domain/projection/public API/T107 boundaries remain unchanged."
+    - "Changed files stay within the corrected canonical allowed scope."
+  engineering_quality:
+    - "Strict types, no any/ignore, input immutability, listener/pointer-capture/chart cleanup and privacy-safe failures."
+    - "No per-frame React state for chart pointer motion; semantic target updates are bounded."
+    - "dnd-kit and axe are exact, justified dependencies; package runtime remains consumable."
+    - "Projection commits update one live G2 instance rather than paying destroy/import/create on each command."
+  visual_quality:
+    - "Drop target and selection are legible without covering data; row dimensions and workbench hierarchy stay stable."
+    - "Desktop, compact and mobile surfaces have no overlap/overflow; reduced-motion retains full state clarity."
+    - "Standard operational design review average >=1.7 with no zero in core dimensions."
+  qa_acceptance:
+    - "Independent spec, engineering and visual/QA reviews have no remaining Critical/High/Medium finding."
+    - "T106 ends Needs_Review and awaits explicit user acceptance before T107."
+
+handoff:
+  on_success: "Attach evidence, mark T106 Needs_Review, keep T107-T108 Draft, run a local acceptance server and show interaction-focused URL/screenshots."
+  on_failure: "Keep T106 Running with an explicit blocker and failed evidence; do not advance T107."
+  remote_actions: "None authorized."
+
+stop_conditions:
+  - "Equivalent chart/outline/keyboard move cannot use the existing moveItem contract."
+  - "Real G2 element events cannot provide semantic datum identity and bounds without exposing or guessing chart internals."
+  - "T106 requires a domain/public API semantic change, nested groups, persistence or export implementation."
+  - "200-item or axe gates can pass only by weakening the approved assertions or hiding required UI."

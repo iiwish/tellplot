@@ -1,0 +1,146 @@
+schema_version: "1.0"
+packet_id: "001-waterfall-editor-foundation-T103-A001"
+task_id: "T103"
+feature_id: "001-waterfall-editor-foundation"
+mode: "direct_execute_with_independent_review"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/001-waterfall-editor-foundation/spec.md"
+  plan: ".ai-platform/specs/001-waterfall-editor-foundation/plan.md"
+  data_model: ".ai-platform/specs/001-waterfall-editor-foundation/data-model.md"
+  command_contract: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md"
+  public_api: ".ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md"
+  work_graph: ".ai-platform/specs/001-waterfall-editor-foundation/tasks.md"
+  approval: "T102 accepted; user authorized Codex to review and accept T102-T104 on 2026-07-15."
+
+work_unit:
+  title: "实现命令执行器与历史"
+  goal: "用单一纯函数路径实现类型化命令、原子校验、revision、undo/redo 与 privacy-safe events。"
+  requirement_mapping:
+    - "WF-US-002"
+    - "WF-US-003"
+    - "WF-US-004"
+    - "WF-FR-004"
+    - "WF-FR-005"
+    - "WF-FR-009"
+    - "WF-FR-013"
+  dependencies:
+    - "T102 Accepted"
+  blocks:
+    - "T104"
+    - "T106"
+    - "T107"
+
+codebase_context:
+  branch: "codex/reset"
+  current_state: "T102 provides Accepted immutable source/view types, closed-schema validators and initial ViewSpec factory."
+  architectural_boundary:
+    - "executeCommand is the only ViewSpec mutation entry."
+    - "All expected failures return structured CommandError and preserve caller session identity."
+    - "T103 preserves source identity and validates candidate ViewSpec before commit."
+    - "Waterfall arithmetic and end-anchor calculation remain in T104."
+    - "This waterfall slice excludes moveGroup and setSort; createGroup only accepts contiguous direct-root contributions."
+  public_runtime_surface:
+    - "createEditorSession"
+    - "executeCommand"
+    - "undoSession"
+    - "redoSession"
+
+locked_contract:
+  result_shape: "Success returns session, viewSpec and event; failure returns the identical input session and CommandError."
+  action_ids: "Accepted writes, no-ops, undo and redo consume unique IDs; duplicate accepted IDs reject before revision checks; rejected IDs remain reusable."
+  no_op: "ViewSpec revision and both history stack identities stay unchanged; processedActionIds alone is appended and redo is preserved."
+  history: "Default 100; non-negative safe integer; zero disables storage; undo/redo restore content with current revision plus one."
+  grouping: "Single-level only; createGroup selects contiguous direct-root contribution nodes; moving out of a two-child group rejects rather than auto-ungrouping."
+  ungroup_cleanup: "Reject groups containing pinned children; otherwise delete group annotation, emphasis and collapsed reference; event affects group and children."
+  fingerprint: "Canonical source FNV-1a 64-bit hex with fnv1a64 prefix; deterministic identity hint, not a security hash."
+  runtime_validation: "Closed-schema descriptor-safe command parsing; hostile reflection maps to privacy-safe INVALID_COMMAND."
+  overflow: "State-changing action at Number.MAX_SAFE_INTEGER rejects with REVISION_OVERFLOW."
+
+execution_constraints:
+  adapter: "Codex direct TDD execution; independent sub-agent review is read-only."
+  allowed_files:
+    - "packages/editor/src/domain/commands.ts"
+    - "packages/editor/src/domain/session.ts"
+    - "packages/editor/src/domain/executeCommand.ts"
+    - "packages/editor/src/domain/history.ts"
+    - "packages/editor/src/domain/invariants.ts"
+    - "packages/editor/src/domain/errors.ts"
+    - "packages/editor/src/index.ts"
+    - "packages/editor/tests/domain/commands.test.ts"
+    - "packages/editor/tests/domain/history.test.ts"
+    - "packages/editor/tests/domain/invariants.test.ts"
+    - "packages/editor/tests/domain/property-sequences.test.ts"
+    - "packages/editor/tests/fixtures/commandSourceData.ts"
+    - "packages/editor/tests/package/**"
+  forbidden_changes:
+    - "No React, G2, DOM, persistence, projection, export or interaction implementation."
+    - "No source mutation, expected-error throw, amount/label/annotation text in events or errors."
+    - "No new runtime dependency, push, PR, merge or publish."
+  conflicts:
+    - "Do not execute T104 or T106 concurrently because they consume command/session contracts."
+
+tdd_plan:
+  red:
+    - "Add session creation and invariant tests."
+    - "Add move, group, ungroup, collapse/expand, pin/unpin and annotation success/rejection/no-op tests."
+    - "Add revision, duplicate action ID, atomic failure, undo/redo cap/branch and seeded property-sequence tests."
+  green:
+    - "Implement typed command/session/event/error contracts and deterministic source fingerprint."
+    - "Implement immutable command handlers through validate-apply-validate-commit."
+    - "Implement bounded snapshot history with monotonic revision and explicit history actions."
+  refactor:
+    - "Share container lookup, immutable collection updates, error/event creation and invariant gates."
+    - "Run full domain coverage, package consumers and privacy scans."
+
+validation_loop:
+  commands:
+    - "pnpm test:unit -- packages/editor/tests/domain/commands.test.ts packages/editor/tests/domain/history.test.ts packages/editor/tests/domain/invariants.test.ts packages/editor/tests/domain/property-sequences.test.ts"
+    - "pnpm test:coverage"
+    - "pnpm typecheck"
+    - "pnpm lint"
+    - "pnpm format:check"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T103"
+  expected_signals:
+    - "All commands exit 0 after GREEN."
+    - "Domain statement, branch, function and line coverage are each at least 95%."
+    - "Rejected commands preserve session identity; successful writes increment revision exactly once."
+    - "Seeded legal sequences preserve source identity, source coverage and valid ViewSpec."
+  retry_budget: 2
+  failure_policy: "Fix only T103 contract failures; stop if the confirmed ViewSpec or command schema must materially change."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T103"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+  required_content:
+    - "Per-command RED/GREEN results."
+    - "History branch/cap and property-sequence seed evidence."
+    - "Coverage, privacy checks, changed files, diff summary and residual risk."
+
+review_contract:
+  spec_compliance:
+    - "Every approved command, history action, rejection and no-op rule has a direct test."
+    - "Only approved T103 source/test files changed outside governance and evidence."
+  engineering_quality:
+    - "Pure immutable updates, exhaustive command switch and one post-apply invariant gate."
+    - "Events/errors contain IDs and structural metadata only, never financial or annotation content."
+  qa_acceptance:
+    - "Failure preserves input session identity and history; undo/redo revisions are monotonic."
+    - "Random legal sequences remain valid and source-conserving."
+
+handoff:
+  on_success: "Attach evidence, complete independent review, mark T103 Accepted under delegated authority, then prepare T104."
+  on_failure: "Keep T103 Running and document a bounded retry; do not advance T104."
+  remote_actions: "None authorized."
+
+stop_conditions:
+  - "A command requires mutating SourceData or bypassing validate-apply-validate-commit."
+  - "History requires storing source data in each entry or exposing sensitive event payloads."
+  - "A validation failure can only be solved by weakening T102 invariants."
