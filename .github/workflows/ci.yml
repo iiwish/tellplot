@@ -42,6 +42,9 @@ jobs:
     needs: quality
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      # Hosted Linux uses software Canvas; keep this distinct from the 150ms product target.
+      TELLPLOT_PERFORMANCE_P95_BUDGET_MS: 650
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

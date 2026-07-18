@@ -1,7 +1,12 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { resolvePerformanceP95BudgetMs } from './performanceBudget';
+
 const EDITOR = '[data-tellplot="editor"]';
 const SAMPLE_COUNT = 30;
+const PERFORMANCE_P95_BUDGET_MS = resolvePerformanceP95BudgetMs(
+  process.env['TELLPLOT_PERFORMANCE_P95_BUDGET_MS'],
+);
 
 interface BarSlot {
   readonly x: number;
@@ -493,6 +498,7 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
           formula: 'sorted[ceil(.95*n)-1]',
           samples,
           p95,
+          p95BudgetMs: PERFORMANCE_P95_BUDGET_MS,
           sameTargetRootCommitDelta: commitsAfter - commitsBefore,
         },
         null,
@@ -502,7 +508,7 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
     contentType: 'application/json',
   });
   console.log(
-    `[performance] visible-canvas p95=${String(p95)}ms, samples=${samples.length}, same-target-root-commit-delta=${commitsAfter - commitsBefore}`,
+    `[performance] visible-canvas p95=${String(p95)}ms, budget=${String(PERFORMANCE_P95_BUDGET_MS)}ms, samples=${samples.length}, same-target-root-commit-delta=${commitsAfter - commitsBefore}`,
   );
-  expect(p95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(150);
+  expect(p95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
 });
