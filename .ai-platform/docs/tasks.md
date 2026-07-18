@@ -3,7 +3,7 @@
 ## Metadata
 
 - Version: 0.5.0
-- Status: Execution_In_Progress
+- Status: Review_Gate
 - Last updated: 2026-07-18
 - Scope: 瀑布图基础切片已验收；TellPlot 品牌与独立仓库迁移按 T109 执行
 
@@ -65,10 +65,10 @@
 
 ## T109 - TellPlot 品牌与独立仓库迁移
 
-- Status: In_Progress
+- Status: Needs_Review
 - Priority: P0
 - Dependencies: T108
-- Blocks: 首次远程 CI、仓库保护与公开发布准备
+- Blocks: 旧仓库处置决策与公开发布准备
 - Story / Requirement: CD-004、TDR-011
 - Parallel: 否
 - Conflicts with: 归档、改名或删除旧 GitHub 仓库；npm publish；修改产品行为
@@ -78,7 +78,7 @@
 - Test targets: 品牌残留、格式、lint、类型、单元/coverage、构建、包消费、React/浏览器兼容、E2E、可访问性、性能、artifact validator、远程 CI
 - Deliverables: 独立 TellPlot 仓库、规范 `main` 根提交、通过的本地与远程验证、迁移 evidence
 - Acceptance criteria: 当前源码与规范不含旧品牌标识；`@tellplot/editor` 可构建和消费；GitHub CI 通过；旧远端保持不变。
-- Definition of Done: 新仓库可从干净 clone 安装和验证，`main` 已推送并受保护，旧仓库处理仍处于单独后续闸门。
+- Definition of Done: 新仓库可从干净 clone 安装和验证，`main` 已推送且远程 CI 通过；仓库规则能力已审计，外部计划限制有明确证据；旧仓库处理仍处于单独后续闸门。
 - Validation commands: `pnpm install --frozen-lockfile`；`pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:browser-previous`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；brand residue audit；artifact validator；GitHub Actions
 - TDD plan: RED：先证明当前命名残留扫描会发现旧品牌；GREEN：完成包、公共标识、文档和配置的最小一致迁移；REFACTOR：统一公开 namespace 并保持历史 evidence patch 不变。迁移不改变产品行为。
 - Packet path: `.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml`
@@ -86,4 +86,4 @@
 
 ## Next Gate
 
-T109 完成后进入旧仓库归档决策。npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。
+T109 的实现与验证已进入用户验收闸门。用户明确接受后，才进入旧仓库归档决策；npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。

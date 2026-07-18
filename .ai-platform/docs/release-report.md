@@ -9,7 +9,7 @@
 
 ## Current State
 
-瀑布图基础切片的实现、本地 release validation、final evidence 与独立复审已完成。T101-T108 与 T106-CR001 已全部验收，形成可发布候选。T109 正在把该候选迁入独立 TellPlot 仓库；npm publish 与正式版本发布不在本次迁移范围。
+瀑布图基础切片的实现、本地 release validation、final evidence 与独立复审已完成。T101-T108 与 T106-CR001 已全部验收，形成可发布候选。T109 已建立独立 TellPlot 私有仓库并通过本地、干净 clone 与 GitHub-hosted CI 验证，当前等待用户验收；npm publish 与正式版本发布不在本次迁移范围。
 
 ## Release Scope
 
@@ -30,11 +30,13 @@
 - T106-CR001 通过 292 个 unit/component tests、32/32 production Chromium、7/7 axe、200 项 p95 26.4ms、递归不变量、真实柱宽 X-only 排序、锁定锚点与包质量门禁；用户已验收。
 - T107 通过 295 个 unit/component tests、90.30% statements coverage、13/13 selected Chromium、真实双密度 PNG、离屏 G2 SVG、递归 JSON round-trip、真实 SVG highlight/muted 样式、活动手势一致性门禁、axe、ESM/CJS/types package consumers 与独立复审；无未解决 Critical、High 或 Medium finding。
 - T108 的 314/314 unit/coverage、current Playwright non-performance 108/108、isolated performance 1/1、previous compatibility 144/144、React 18.3/19.2 真实 tarball consumers（均绘制 88,744 pixels 并 clean unmount）、21/21 axe、200 项 30 样本 raw p95 77.20000004768372ms、package/build/static、canonical annotation/export/import/keyboard quickstart、四张原始截图、final evidence 与独立复审全部通过。
+- T109 在 `@tellplot/editor` 身份下通过 321/321 tests、四项 coverage、package consumers、React 18/19、108 current-browser、144 previous-browser、21 axe、产品 profile p95 79.2ms、GitHub-hosted software-Canvas p95 292.4ms、Node 22/24 CI 和干净 clone 验证；旧远端 refs 与仓库状态保持不变。
 
-## Known Blockers
+## Known Limitations
 
-- GitHub-hosted Ubuntu workflow 将在 T109 首次推送后执行。Actions 使用 major tags，完整 commit SHA pinning 属于后续 supply-chain hardening。
+- 当前 GitHub 计划不支持私有仓库的 branch protection/rulesets，API 返回 HTTP 403；仓库保持私有，`main` 暂时无法在服务端强制 required checks。
+- Actions 使用 major tags 且 GitHub 提示这些版本仍以已弃用的 Node 20 为目标；完整 commit SHA pinning 与 action major 升级属于后续 supply-chain hardening。
 
 ## Release Decision
 
-结论：本地 release candidate 已具备。T109 负责建立新远端并验证 GitHub-hosted CI；npm publish 与正式版本发布必须获得单独授权。
+结论：独立 TellPlot release candidate 已具备并进入 T109 用户验收。npm publish、正式版本发布以及旧仓库处置必须获得单独授权。

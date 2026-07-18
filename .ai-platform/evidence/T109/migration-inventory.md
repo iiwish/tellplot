@@ -18,10 +18,14 @@
 
 - Working tree: `/Users/iiwish/self/tellplot`
 - Git history: independent repository initialized with `main` and no inherited commits
+- Root commit: `fd31094c09f0989b3fb6f05a673ff77c25bdb534`
+- Validated implementation commit: `6bbce676e68736e78b645eb6a246e7fc64393cd1`
+- Private remote: `https://github.com/iiwish/tellplot`
 - Initial copy audit: `rsync -ani --delete` returned no differences after excluding `.git`, dependencies, build, coverage and browser-result directories
 - Existing T101-T108 evidence comparison: `diff -qr` returned no differences before T109 evidence was added
 - Repository input: 195 non-ignored files after migration artifacts; no file exceeds 5 MiB
+- Clean clone at the validated implementation commit passed frozen install, build and package-consumer verification
 
 ## Remote Boundary
 
-The old GitHub repository was only read through `ls-remote` and mirror clone. It was not renamed, archived, deleted, pushed or otherwise modified during T109.
+The old GitHub repository was only read through `ls-remote`, repository metadata and mirror clone. The post-delivery check confirmed unchanged `main` and `dev` refs, private visibility, unarchived state and `main` default branch. It was not renamed, archived, deleted, pushed or otherwise modified during T109.
