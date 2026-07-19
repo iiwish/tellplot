@@ -14,6 +14,8 @@ import {
   type ExportResult,
   type FinancialChartEditorHandle,
   type FinancialChartEditorProps,
+  type FinancialChartAppearance,
+  type FinancialChartPalette,
   type SelectionState,
   type SessionActionMeta,
   validateSourceData,
@@ -58,8 +60,31 @@ export const editorProps: FinancialChartEditorProps = {
   viewSpec: view,
   locale: 'zh-CN',
   height: 680,
+  chartAppearance: {
+    title: 'Operating bridge',
+    palette: { positive: '#00875A', negative: '#D14343' },
+    axis: { x: true, y: false },
+    valueLabels: 'auto',
+    tooltip: false,
+    animation: { enabled: true, duration: 160 },
+    numberFormat: {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+      currencyDisplay: 'narrowSymbol',
+    },
+  },
   onSelectionChange(selection) {
     const selectedNode: string = selection.nodeId;
     void selectedNode;
   },
 };
+
+export const palette: FinancialChartPalette = {
+  start: '#5F6B65',
+  positive: '#168363',
+  negative: '#D5524A',
+  subtotal: '#315C8C',
+  group: '#A46812',
+  end: '#315C8C',
+};
+export const chartAppearance: FinancialChartAppearance = editorProps.chartAppearance ?? {};

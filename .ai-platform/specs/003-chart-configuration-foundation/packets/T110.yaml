@@ -1,0 +1,113 @@
+schema_version: "1.0"
+packet_id: "003-chart-configuration-foundation-T110-A001"
+task_id: "T110"
+feature_id: "003-chart-configuration-foundation"
+mode: "direct_execute"
+
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  product_contract: ".ai-platform/docs/product-design.md"
+  tdr: ".ai-platform/docs/technology-decision-record.md"
+  spec: ".ai-platform/specs/003-chart-configuration-foundation/spec.md"
+  checklist: ".ai-platform/specs/003-chart-configuration-foundation/checklists/requirements.md"
+  plan: ".ai-platform/specs/003-chart-configuration-foundation/plan.md"
+  work_graph: ".ai-platform/specs/003-chart-configuration-foundation/tasks.md"
+  analysis: ".ai-platform/specs/003-chart-configuration-foundation/analysis.md"
+  approval: "User explicitly approved the safe semantic configuration and documentation direction on 2026-07-19."
+
+work_unit:
+  title: "建立 TellPlot 长期文档与安全图表配置层"
+  goal: "Expose bounded financial chart appearance controls without exposing G2 internals or changing domain behavior."
+  requirement_mapping:
+    - "FR-013"
+    - "CD-006"
+    - "TDR-012"
+  dependencies:
+    - "T108 Accepted"
+    - "TellPlot independent repository established"
+  parallel: false
+
+codebase_context:
+  branch: "codex/chart-configuration-docs"
+  current_state: "The accepted waterfall editor uses an internal G2Spec with fixed appearance and exposes no raw chart configuration."
+  reusable_boundaries:
+    - "createWaterfallChartSpec is shared by screen, SVG and PNG rendering."
+    - "FinancialChartEditorProps is the stable React host contract."
+    - "AccessibleChartSummary uses the same projected waterfall data."
+  forbidden_changes:
+    - "Do not change SourceData, ViewSpec, commands, projection or drag/group behavior."
+    - "Do not expose G2Spec, chart instances or arbitrary callbacks."
+
+execution_constraints:
+  adapter: "Codex direct execution; multi-agent delegation is not authorized for this task."
+  allowed_files:
+    - "docs/**"
+    - "README.md"
+    - "AGENTS.md"
+    - ".ai-platform/**"
+    - "packages/editor/src/config/**"
+    - "packages/editor/src/components/**"
+    - "packages/editor/src/export/**"
+    - "packages/editor/src/react/**"
+    - "packages/editor/src/index.ts"
+    - "packages/editor/tests/**"
+    - "e2e/**"
+  forbidden_changes:
+    - "Do not modify SourceData, ViewSpec, commands, financial projection or interaction semantics."
+    - "Do not expose G2Spec, chart instances or arbitrary spec transforms."
+    - "Do not add dependencies, publish, push or modify the predecessor repository."
+
+tdd_plan:
+  red:
+    - "Add failing tests for public types, runtime normalization, G2 mapping, rerender and export parity."
+  green:
+    - "Implement the minimal typed configuration module and pass it through screen, export and accessibility paths."
+  refactor:
+    - "Centralize defaults and retain byte-equivalent semantic defaults for existing consumers."
+
+validation_loop:
+  commands:
+    - "pnpm format:check"
+    - "pnpm lint"
+    - "pnpm typecheck"
+    - "pnpm test:coverage"
+    - "pnpm build"
+    - "pnpm test:package"
+    - "pnpm test:e2e"
+    - "pnpm test:a11y"
+    - "pnpm test:performance"
+    - "git diff --check"
+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 003-chart-configuration-foundation --task-id T110 --strict"
+  expected_signals:
+    - "Existing calls without chartAppearance retain current behavior."
+    - "Approved appearance fields map deterministically to shared G2 specs."
+    - "No public raw G2 configuration escape hatch exists."
+  retry_budget: 3
+  failure_policy: "Fix only T110 configuration or documentation defects; stop for domain, schema, interaction or dependency changes."
+
+evidence_contract:
+  directory: ".ai-platform/evidence/T110"
+  required_files:
+    - "summary.md"
+    - "test-results.md"
+    - "diff.patch"
+  required_content:
+    - "RED receipt, changed files, validation results, API boundary review and residual risks."
+
+review_contract:
+  spec_compliance:
+    - "Map every supported appearance field to tests and screen/export/accessibility behavior."
+  engineering_quality:
+    - "Review runtime normalization, immutable defaults, strict types, rerender behavior and absence of G2 escape hatches."
+  qa_acceptance:
+    - "No unresolved Critical, High or Medium finding before user acceptance."
+
+stop_conditions:
+  - "A configuration requires changing ViewSpec or SourceData."
+  - "A test can pass only by exposing raw G2 internals or weakening interaction assertions."
+  - "Any new runtime dependency is required."
+
+handoff:
+  task_status: "Accepted"
+  next_gate: "Design the category bar and column validation slice under a new approved feature task."
+  remote_actions: "Commit, push, pull request and merge to main are authorized on 2026-07-19; publish and deployment remain unauthorized."

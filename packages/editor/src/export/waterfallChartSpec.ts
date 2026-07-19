@@ -1,5 +1,11 @@
 import type { G2Spec } from '@antv/g2';
 
+import {
+  DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
+  resolveFinancialChartAppearance,
+  type FinancialChartAppearance,
+  type ResolvedFinancialChartNumberFormat,
+} from '../config/chartAppearance';
 import type { ViewNodeId } from '../domain/ids';
 import type { Annotation, Emphasis } from '../domain/model';
 import type {
@@ -19,8 +25,6 @@ const COLOR_DOMAIN: readonly WaterfallDatumKind[] = [
   'group',
   'end',
 ];
-const COLOR_RANGE = ['#5F6B65', '#168363', '#D5524A', '#315C8C', '#A46812', '#315C8C'];
-
 interface WaterfallChartSpecOptions {
   readonly projection: WaterfallProjection;
   readonly title?: string;
@@ -30,6 +34,7 @@ interface WaterfallChartSpecOptions {
   readonly showValueLabels: boolean;
   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+  readonly appearance?: FinancialChartAppearance | undefined;
 }
 
 export function visibleWaterfallAnnotation(
@@ -48,8 +53,9 @@ export function formatWaterfallDatumAmount(
   datum: WaterfallDatum,
   locale: EditorLocale,
   currency?: string,
+  numberFormat: ResolvedFinancialChartNumberFormat = DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
 ): string {
-  const amount = formatAmount(datum.amount, locale, currency);
+  const amount = formatAmount(datum.amount, locale, currency, numberFormat);
   const contribution =
     datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group';
   return contribution && datum.amount > 0 ? `+${amount}` : amount;
@@ -64,7 +70,9 @@ export function createWaterfallChartSpec({
   showValueLabels,
   annotations,
   emphasis,
+  appearance,
 }: WaterfallChartSpecOptions): G2Spec {
+  const resolvedAppearance = resolveFinancialChartAppearance(appearance, title ?? '');
   const labelById = new Map(projection.map(datum => [datum.nodeId, datum.label]));
   const denseCanvas = projection.length > DENSE_CANVAS_THRESHOLD;
   const barInset = denseCanvas ? 0.5 : 3;
@@ -74,6 +82,9 @@ export function createWaterfallChartSpec({
   const hasVisibleAnnotations = projection.some(
     datum => visibleWaterfallAnnotation(annotations, datum.nodeId) !== '',
   );
+  const displayValueLabels =
+    resolvedAppearance.valueLabels === 'always' ||
+    (resolvedAppearance.valueLabels === 'auto' && showValueLabels);
   const annotationLabel = {
     text: (datum: WaterfallDatum) => visibleWaterfallAnnotation(annotations, datum.nodeId),
     position: 'inside',
@@ -97,7 +108,7 @@ export function createWaterfallChartSpec({
       ? {}
       : {
           title: {
-            title,
+            title: resolvedAppearance.title,
             size: 40,
             align: 'left',
             titleFill: '#18211D',
@@ -122,30 +133,40 @@ export function createWaterfallChartSpec({
           color: {
             type: 'ordinal',
             domain: [...COLOR_DOMAIN],
-            range: COLOR_RANGE,
+            range: COLOR_DOMAIN.map(kind => resolvedAppearance.palette[kind]),
           },
         },
         axis: {
-          x: {
-            title: false,
-            labelFill: '#5F6B65',
-            labelAutoHide: true,
-            labelAutoRotate: false,
-            labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
-          },
-          y: {
-            title: false,
-            labelFill: '#5F6B65',
-            labelFormatter: (value: unknown) => formatAmount(Number(value), locale, currency),
-          },
+          x: resolvedAppearance.axis.x
+            ? {
+                title: false,
+                labelFill: '#5F6B65',
+                labelAutoHide: true,
+                labelAutoRotate: false,
+                labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
+              }
+            : false,
+          y: resolvedAppearance.axis.y
+            ? {
+                title: false,
+                labelFill: '#5F6B65',
+                labelFormatter: (value: unknown) =>
+                  formatAmount(Number(value), locale, currency, resolvedAppearance.numberFormat),
+              }
+            : false,
         },
         legend: { color: false },
         labels: [
-          ...(showValueLabels
+          ...(displayValueLabels
             ? [
                 {
                   text: (datum: WaterfallDatum) =>
-                    formatWaterfallDatumAmount(datum, locale, currency),
+                    formatWaterfallDatumAmount(
+                      datum,
+                      locale,
+                      currency,
+                      resolvedAppearance.numberFormat,
+                    ),
                   position: (datum: WaterfallDatum) =>
                     datum.end >= datum.start ? 'top' : 'bottom',
                   style: {
@@ -174,24 +195,24 @@ export function createWaterfallChartSpec({
           stroke: (datum: WaterfallDatum) =>
             emphasis[datum.nodeId] === 'highlight' ? '#18211D' : baseStroke,
         },
-        tooltip: false,
+        tooltip: resolvedAppearance.tooltip,
         animate:
-          reducedMotion || denseCanvas
+          reducedMotion || denseCanvas || !resolvedAppearance.animation.enabled
             ? false
             : {
                 enter: {
                   type: 'growInY',
-                  duration: 160,
+                  duration: resolvedAppearance.animation.duration,
                   easing: 'cubic-bezier(0.2, 0, 0, 1)',
                 },
                 update: {
                   type: 'morphing',
-                  duration: 160,
+                  duration: resolvedAppearance.animation.duration,
                   easing: 'cubic-bezier(0.2, 0, 0, 1)',
                 },
                 exit: {
                   type: 'fadeOut',
-                  duration: 160,
+                  duration: resolvedAppearance.animation.duration,
                   easing: 'cubic-bezier(0.2, 0, 0, 1)',
                 },
               },

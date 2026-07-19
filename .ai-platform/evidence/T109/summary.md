@@ -2,7 +2,7 @@
 
 ## Status
 
-Needs review. The independent TellPlot repository, public namespace migration, local regression suite, clean-clone verification and hosted CI are complete. User acceptance is the remaining T109 gate.
+Accepted on 2026-07-19. The independent TellPlot repository, public namespace migration, local regression suite, clean-clone verification and hosted CI are complete. Legacy-repository disposition remains outside T109.
 
 ## Completed
 

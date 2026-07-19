@@ -2,6 +2,10 @@ import type { Chart as G2Chart, G2Spec } from '@antv/g2';
 import { FoldVertical, Ungroup, UnfoldVertical } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
+import {
+  resolveFinancialChartAppearance,
+  type FinancialChartAppearance,
+} from '../config/chartAppearance';
 import type { GroupId, ViewNodeId } from '../domain/ids';
 import type { Annotation, Emphasis, ViewSpec } from '../domain/model';
 import { locateViewNode, ownGroup } from '../domain/viewTree';
@@ -197,6 +201,7 @@ export interface WaterfallCanvasProps {
   readonly currency?: string | undefined;
   readonly empty?: boolean;
   readonly reducedMotion?: boolean;
+  readonly appearance?: FinancialChartAppearance | undefined;
   readonly externalPreview?: ChartInteractionPreview;
   readonly onRenderError?: (issue: ChartRenderIssue | null) => void;
   readonly onMove?: (nodeId: ViewNodeId, target: ChartMoveTarget, source: 'direct') => boolean;
@@ -393,6 +398,7 @@ export function WaterfallCanvas({
   currency,
   empty,
   reducedMotion,
+  appearance,
   externalPreview = { state: 'idle' },
   onRenderError,
   onMove,
@@ -453,7 +459,8 @@ export function WaterfallCanvas({
   const annotations = viewSpec?.annotations ?? EMPTY_ANNOTATIONS;
   const renderIssue = renderFailure?.projection === projection ? renderFailure.issue : null;
   const copy = CHART_COPY[locale];
-  const visibleTitle = title ?? copy.title;
+  const resolvedAppearance = resolveFinancialChartAppearance(appearance, title ?? copy.title);
+  const visibleTitle = resolvedAppearance.title;
 
   const interactionTarget = interaction.state === 'dragging' ? interaction.target : null;
 
@@ -1308,6 +1315,7 @@ export function WaterfallCanvas({
         showValueLabels: shouldShowWaterfallValueLabels(projection),
         annotations,
         emphasis,
+        appearance,
       }),
     };
     const chart = chartRef.current;
@@ -1336,7 +1344,7 @@ export function WaterfallCanvas({
         queueMicrotask(flushLatest);
       }
     }
-  }, [annotations, currency, emphasis, locale, projection, shouldReduceMotion]);
+  }, [annotations, appearance, currency, emphasis, locale, projection, shouldReduceMotion]);
 
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -1514,6 +1522,7 @@ export function WaterfallCanvas({
         title={visibleTitle}
         locale={locale}
         currency={currency}
+        numberFormat={resolvedAppearance.numberFormat}
       />
     </section>
   );

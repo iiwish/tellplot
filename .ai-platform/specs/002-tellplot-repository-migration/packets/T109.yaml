@@ -104,6 +104,6 @@ stop_conditions:
   - "Any operation targeting the old GitHub repository."
 
 handoff:
-  task_status: "Needs_Review"
-  next_gate: "Request user acceptance before any legacy-repository action. Branch protection remains unavailable for this private repository under the current GitHub plan and is recorded as an external limitation."
+  task_status: "Accepted"
+  next_gate: "Legacy-repository disposition remains a separately authorized action. Branch protection remains unavailable for this private repository under the current GitHub plan and is recorded as an external limitation."
   remote_actions: "Creating and pushing iiwish/tellplot is authorized; npm publish and old-repository changes are not authorized."

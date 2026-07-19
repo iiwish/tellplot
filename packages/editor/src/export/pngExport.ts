@@ -1,5 +1,6 @@
 import type { Chart as G2Chart } from '@antv/g2';
 
+import type { FinancialChartAppearance } from '../config/chartAppearance';
 import type { ViewNodeId } from '../domain/ids';
 import type { Annotation, Emphasis } from '../domain/model';
 import type { WaterfallProjection } from '../waterfall/waterfallTypes';
@@ -17,6 +18,7 @@ interface PngChartExportRequest {
   readonly height: number;
   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+  readonly appearance?: FinancialChartAppearance | undefined;
 }
 
 function canvasLogicalSize(canvas: HTMLCanvasElement): {
@@ -132,6 +134,7 @@ export async function exportPngChart(
         showValueLabels: shouldShowWaterfallValueLabels(request.projection),
         annotations: request.annotations,
         emphasis: request.emphasis,
+        appearance: request.appearance,
       }),
     );
     await chart.render();

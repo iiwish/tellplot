@@ -23,14 +23,41 @@ if (!(host instanceof HTMLElement)) {
 }
 
 const root = createRoot(host);
-root.render(
-  React.createElement(FinancialChartEditor, {
-    sourceData,
-    height: 680,
-  }),
-);
+const renderEditor = chartAppearance => {
+  root.render(
+    React.createElement(FinancialChartEditor, {
+      chartAppearance,
+      height: 680,
+      sourceData,
+    }),
+  );
+};
+
+renderEditor();
 
 globalThis.__tellplotReactMatrix = {
+  configure() {
+    renderEditor({
+      title: 'Configured bridge',
+      palette: {
+        start: '#d946ef',
+        positive: '#d946ef',
+        negative: '#d946ef',
+        subtotal: '#d946ef',
+        group: '#d946ef',
+        end: '#d946ef',
+      },
+      axis: { x: false, y: true },
+      valueLabels: 'never',
+      tooltip: true,
+      animation: { enabled: false, duration: 0 },
+      numberFormat: {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+        currencyDisplay: 'code',
+      },
+    });
+  },
   reactVersion: React.version,
   unmount() {
     root.unmount();

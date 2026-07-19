@@ -350,6 +350,7 @@ export const FinancialChartEditor = forwardRef<
             height,
             annotations: controller.viewSpec.annotations,
             emphasis: controller.viewSpec.emphasis,
+            appearance: props.chartAppearance,
           },
           normalized,
         );
@@ -366,6 +367,7 @@ export const FinancialChartEditor = forwardRef<
         suggestedFilename: normalized.suggestedFilename,
         annotations: controller.viewSpec.annotations,
         emphasis: controller.viewSpec.emphasis,
+        appearance: props.chartAppearance,
       });
     },
     [
@@ -375,6 +377,7 @@ export const FinancialChartEditor = forwardRef<
       locale,
       messages.waterfallTitle,
       props.sourceData.currency,
+      props.chartAppearance,
     ],
   );
 
@@ -868,6 +871,7 @@ export const FinancialChartEditor = forwardRef<
             currency={props.sourceData.currency}
             empty={empty}
             title={messages.waterfallTitle}
+            appearance={props.chartAppearance}
             externalPreview={currentOutlineInteraction}
             onMove={handleMove}
             onMarqueeSelection={handleMarqueeSelection}

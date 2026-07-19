@@ -97,6 +97,112 @@ describe('waterfall chart emphasis', () => {
   });
 });
 
+describe('waterfall chart appearance', () => {
+  it('maps only the bounded semantic configuration onto the shared G2 spec', () => {
+    const view = createInitialViewSpec(financialSourceData);
+    if (!view.ok) {
+      throw new Error('Expected a valid appearance fixture');
+    }
+    const projection = projectWaterfall(financialSourceData, view.value);
+    if (!projection.ok) {
+      throw new Error('Expected a valid appearance projection');
+    }
+
+    const spec = createWaterfallChartSpec({
+      projection: projection.value,
+      title: 'Default title',
+      locale: 'en-US',
+      currency: 'USD',
+      reducedMotion: false,
+      showValueLabels: true,
+      annotations: {},
+      emphasis: {},
+      appearance: {
+        title: 'Configured bridge',
+        palette: { positive: '#00A36C', negative: '#D23B3B' },
+        axis: { x: false, y: true },
+        valueLabels: 'never',
+        tooltip: true,
+        animation: { enabled: true, duration: 240 },
+        numberFormat: {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+          currencyDisplay: 'code',
+        },
+      },
+    });
+    const typedSpec = spec as {
+      readonly title?: { readonly title?: string };
+      readonly children?: readonly {
+        readonly scale?: { readonly color?: { readonly range?: readonly string[] } };
+        readonly axis?: {
+          readonly x?: false | Readonly<Record<string, unknown>>;
+          readonly y?: false | Readonly<Record<string, unknown>>;
+        };
+        readonly labels?: readonly unknown[];
+        readonly tooltip?: unknown;
+        readonly animate?: {
+          readonly enter?: { readonly duration?: number };
+          readonly update?: { readonly duration?: number };
+          readonly exit?: { readonly duration?: number };
+        };
+      }[];
+    };
+    const child = typedSpec.children?.[0];
+
+    expect(typedSpec.title?.title).toBe('Configured bridge');
+    expect(child?.scale?.color?.range).toEqual([
+      '#5F6B65',
+      '#00A36C',
+      '#D23B3B',
+      '#315C8C',
+      '#A46812',
+      '#315C8C',
+    ]);
+    expect(child?.axis?.x).toBe(false);
+    expect(child?.axis?.y).toEqual(expect.objectContaining({ labelFill: '#5F6B65' }));
+    expect(child?.labels).toEqual([]);
+    expect(child?.tooltip).toBe(true);
+    expect(child?.animate?.enter?.duration).toBe(240);
+    expect(child?.animate?.update?.duration).toBe(240);
+    expect(child?.animate?.exit?.duration).toBe(240);
+
+    const yFormatter = (child?.axis?.y as Readonly<Record<string, unknown>> | undefined)?.[
+      'labelFormatter'
+    ];
+    if (typeof yFormatter !== 'function') {
+      throw new Error('Expected the configured y-axis formatter');
+    }
+    expect((yFormatter as (value: unknown) => string)(1234.5)).toContain('USD');
+  });
+
+  it('lets reduced motion override an enabled custom animation', () => {
+    const view = createInitialViewSpec(financialSourceData);
+    if (!view.ok) {
+      throw new Error('Expected a valid reduced-motion fixture');
+    }
+    const projection = projectWaterfall(financialSourceData, view.value);
+    if (!projection.ok) {
+      throw new Error('Expected a valid reduced-motion projection');
+    }
+
+    const spec = createWaterfallChartSpec({
+      projection: projection.value,
+      locale: 'zh-CN',
+      currency: financialSourceData.currency,
+      reducedMotion: true,
+      showValueLabels: true,
+      annotations: {},
+      emphasis: {},
+      appearance: { animation: { enabled: true, duration: 800 } },
+    });
+    const child = (spec as { readonly children?: readonly { readonly animate?: unknown }[] })
+      .children?.[0];
+
+    expect(child?.animate).toBe(false);
+  });
+});
+
 describe('waterfall chart annotations', () => {
   it('renders only non-empty annotations for visible projection nodes inside their bars', () => {
     const view = createInitialViewSpec(financialSourceData);

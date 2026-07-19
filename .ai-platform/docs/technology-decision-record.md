@@ -2,10 +2,10 @@
 
 ## Metadata
 
-- Version: 0.4.0
+- Version: 0.5.0
 - Status: Confirmed
-- Last updated: 2026-07-18
-- Approval: 用户于 2026-07-18 明确批准 TellPlot 品牌与独立仓库迁移方案
+- Last updated: 2026-07-19
+- Approval: 用户于 2026-07-19 明确批准长期文档与安全语义图表配置方向
 
 ## Decision Context
 
@@ -13,7 +13,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-001 图表渲染引擎
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: 第一阶段仅使用 AntV G2 渲染瀑布图、分类条形图和分类柱状图。
 - Rationale: G2 已提供图形事件、状态以及 enter/update/exit 动画；单引擎可以减少命中测试、坐标映射、导出和动画状态的重复实现。
 - Alternatives: ECharts、Vega、D3、自研 Canvas 渲染层。
@@ -22,7 +22,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-002 编辑状态与命令模型
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: 原始 `SourceData`、可编辑 `ViewSpec` 和可重放 `CommandLog` 分离；所有编辑入口调用同一套类型化命令。
 - Rationale: 该模型同时支持直接操作、结构大纲、键盘和 AI，并让财务不变量、撤销重做、审计和冲突处理拥有单一执行边界。
 - Alternatives: 直接修改 G2 options、各交互入口维护独立状态、AI 直接生成完整图表配置。
@@ -31,7 +31,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-003 UI 动画依赖
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: G2 负责图表画布内的图形过渡；拖拽期间位置直接跟随指针。Phase 1A 不引入 Motion，简单 DOM 反馈使用 CSS transition；只有后续原型证明复杂布局连续性需要它时才单独引入。
 - Rationale: 图表动画和 DOM 布局动画属于不同渲染树。由 Motion 接管 G2 Canvas 会形成双状态源，而完全手写 DOM 重排动画会增加中断、reduced motion 和布局测量成本。
 - Alternatives: 只使用 CSS/Web Animations API、Motion 同时负责图表与 UI、自建 `AnimationEngine`。
@@ -41,7 +41,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-004 仓库与包边界
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: 使用 pnpm workspace。`packages/editor` 是唯一产品包，内部按 `domain`、`waterfall`、`components` 和 `styles` 分层；`apps/playground` 是薄参考编辑器；`e2e` 保存跨包浏览器测试。
 - Rationale: 单产品包避免在只有一个图表切片时过早抽取公共 core，同时让领域逻辑保持纯 TypeScript、可独立测试。参考编辑器不复制业务逻辑。
 - Alternatives: 单应用仓库、`core` 与 `react` 多包、通用插件式图表框架。
@@ -49,7 +49,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-005 状态与 React 集成
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: 领域命令执行器是纯函数；React 组件通过 reducer 持有 `EditorSession`。G2 生命周期封装在单独 adapter 组件内，不把 G2 chart instance 写入领域状态。
 - Rationale: 纯领域状态便于 TDD、重放、序列化和 AI 命令复用；命令历史不依赖 React 或 G2。
 - Alternatives: 全局状态库、直接修改 G2 options、每个组件维护局部业务状态。
@@ -57,7 +57,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-006 拖拽与键盘排序
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: 图表拖拽使用 Pointer Events 与 G2 命中信息；结构大纲使用稳定版 `@dnd-kit/core` 和 `@dnd-kit/sortable`，同时提供键盘排序按钮与快捷操作。
 - Rationale: 图表拖拽必须理解坐标轴和锁定项，通用 DOM 拖拽库不能代替；结构大纲需要成熟的传感器、碰撞检测和键盘能力。
 - Alternatives: HTML Drag and Drop、Motion Reorder、完全手写 DOM 拖拽。
@@ -65,7 +65,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-007 工具链与质量门槛
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: 使用 Node 22.13+、pnpm 11、TypeScript 6、React 19、Vite 8、Vitest 4、Playwright 1.61、ESLint 10 和 Prettier 3。包构建采用 tsup，应用构建采用 Vite。
 - Rationale: 这些版本在 2026-07-15 的 npm registry 中互相兼容，并支持严格类型、现代 ESM、快速单测与真实浏览器验证。
 - Alternatives: 单一 Vite 构建所有目标、Rollup 手工配置、Jest、仅浏览器手工测试。
@@ -73,7 +73,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-008 测试分层
 
-- Status: Proposed
+- Status: Confirmed
 - Decision: 领域和投影逻辑使用 Vitest TDD；React 行为使用 Testing Library；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；公共包通过 build、publint 和类型消费示例验证。
 - Rationale: Mock 无法证明 Canvas 命中、拖拽、导出或真实布局正确，纯 E2E 又无法高效覆盖不变量组合。
 - Alternatives: 只做单元测试、只做 E2E、截图代替行为断言。
@@ -103,6 +103,16 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 - Public identity: React 包为 `@tellplot/editor`；DOM scope 使用 `[data-tellplot]`；CSS 使用 `.tp-` / `--tp-` 前缀；运行时错误类型使用 `TellPlot*`；环境变量使用 `TELLPLOT_*`。
 - Historical boundary: `.ai-platform/evidence/**` 中的既有 patch 是不可变验收记录，可以保留交付时使用的旧标识；当前源码、配置和规范文档不得继续暴露旧命名空间。
 - Consequences: 首次远程提交前必须完成全量品牌残留扫描、包消费测试、浏览器矩阵和干净安装验证。
+
+## TDR-012 安全图表配置层
+
+- Status: Confirmed
+- Decision: `FinancialChartEditor` 通过有限、类型化的 `chartAppearance` 控制标题、财务语义色、坐标轴、数值标签、Tooltip、数字格式和动画。内部解析器生成确定的默认值并映射为屏幕与导出共享的 `G2Spec`。
+- Rationale: 宿主需要常见呈现配置，但任意 G2Spec merge 会破坏稳定编码、拖拽命中、导出一致性和公共 API 可演进性。
+- Ownership: G2 `data`、transform、encode、key、band geometry、chart instance、renderer、事件和交互状态由内部 adapter 独占。
+- Persistence: `chartAppearance` 是宿主级配置，不进入 `ViewSpec`；需要持久化的呈现语义必须通过单独 schema 版本决策。
+- Runtime safety: 无效数字和空字符串回退到安全默认值；动画时长和小数位被限制在文档范围；reduced motion 始终优先。
+- Rejected alternatives: 原始 `G2Spec` prop、任意 spec transform、chart instance ref、深度 merge G2 options。
 
 ## Approval Gate
 

@@ -1,5 +1,6 @@
 import type { ViewNodeId } from '../domain/ids';
 import type { Annotation } from '../domain/model';
+import type { ResolvedFinancialChartNumberFormat } from '../config/chartAppearance';
 import {
   formatWaterfallDatumAmount,
   visibleWaterfallAnnotation,
@@ -13,6 +14,7 @@ interface AccessibleChartSummaryProps {
   readonly title: string;
   readonly locale: EditorLocale;
   readonly currency?: string | undefined;
+  readonly numberFormat?: ResolvedFinancialChartNumberFormat;
 }
 
 interface SummaryCopy {
@@ -58,6 +60,7 @@ export function AccessibleChartSummary({
   title,
   locale,
   currency,
+  numberFormat,
 }: AccessibleChartSummaryProps): React.JSX.Element {
   const copy = SUMMARY_COPY[locale];
   return (
@@ -69,7 +72,7 @@ export function AccessibleChartSummary({
           return (
             <li key={datum.nodeId}>
               {datum.label}, {copy.kindLabels[datum.kind]},{' '}
-              {formatWaterfallDatumAmount(datum, locale, currency)}
+              {formatWaterfallDatumAmount(datum, locale, currency, numberFormat)}
               {annotation === '' ? null : `, ${copy.annotation}: ${annotation}`}
             </li>
           );

@@ -8,6 +8,7 @@
 - 项目原则：`.ai-platform/memory/constitution.md`。
 - 技术决策：`.ai-platform/docs/technology-decision-record.md`。
 - 当前任务图：`.ai-platform/docs/tasks.md`。
+- 长期文档入口：`docs/README.md`。
 
 任何实现、技术选型或任务拆分开始前，必须先读取上述文档以及当前 feature 目录。新增产品范围、架构决策和 feature task graph 未经用户明确批准并标记为 `Confirmed` 前不得执行。
 

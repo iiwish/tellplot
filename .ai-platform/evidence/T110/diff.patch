@@ -1,0 +1,2167 @@
+diff --git a/.ai-platform/docs/product-design.md b/.ai-platform/docs/product-design.md
+index 6d46736..fad6cdb 100644
+--- a/.ai-platform/docs/product-design.md
++++ b/.ai-platform/docs/product-design.md
+@@ -2,11 +2,11 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.4.0
++- Version: 0.5.0
+ - Status: Confirmed
+ - Source: 真实财务分析与 PPT 汇报工作流；已上线的瀑布图可拖拽组件实践；2026-07-15 产品讨论
+-- Last updated: 2026-07-18
+-- Approval: 用户于 2026-07-18 明确批准 `TellPlot` 品牌名与独立仓库迁移方案
++- Last updated: 2026-07-19
++- Approval: 用户于 2026-07-19 明确批准长期文档与安全语义图表配置方向
+ 
+ ## Product Positioning
+ 
+@@ -157,6 +157,10 @@ AI 只能返回受 schema 约束的候选命令。系统必须展示受影响对
+ 
+ 第一阶段必须支持高质量 SVG 和 PNG 导出。导出结果必须与当前可见图表一致，并保留标题、标签、注释、顺序和折叠状态。
+ 
++### FR-013 安全图表配置
++
++宿主可以通过 TellPlot 语义配置调整标题、财务语义色、坐标轴、数值标签、Tooltip、数字格式和动画。配置不得覆盖 G2 数据、编码、稳定 ID、场景命中、事件注册或拖拽状态机；屏幕、导出和无障碍摘要必须共享一致的显示语义。
++
+ ## Non-Functional Requirements
+ 
+ ### NFR-001 正确性
+@@ -299,6 +303,7 @@ Phase 1A 按两个可验收切片推进：
+ - AC-005：撤销和重做恢复完全一致的顺序、分组、折叠和注释状态。
+ - AC-006：导出 SVG 与当前可见图表的顺序、标签、折叠和强调状态一致。
+ - AC-007：AI 候选命令在用户确认前不改变当前图表。
++- AC-008：宿主可以调整批准的图表呈现字段，默认调用保持当前视觉和交互；公共 API 不暴露原始 `G2Spec` 或 chart instance。
+ 
+ ## Clarifications
+ 
+@@ -330,3 +335,10 @@ Phase 1A 只提供确定性命令接口，不连接外部 AI provider。Phase 1B
+ ### CD-005 递归分组与画布直接操作
+ 
+ `ViewSpec` 使用规范化递归分组树。图表通过柱子拖动、空白框选和临时 DOM 操作按钮完成同父级编排；跨层级移入和移出由结构大纲完成。交互预览不写入命令历史，松开或确认时只提交一个确定性命令。
++
++### CD-006 图表配置边界
++
++- 公共配置使用 TellPlot 语义类型，不透传任意 G2 options。
++- `chartAppearance` 属于宿主呈现配置，不写入 `ViewSpec`。
++- G2 adapter 独占数据、编码、稳定 key、比例尺几何、事件与交互状态。
++- 配置扩展以真实财务图表需求为依据，并保持屏幕、导出和无障碍一致。
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index a71c86f..e358037 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -2,14 +2,14 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.3.0
++- Version: 0.4.0
+ - Status: Not_Released
+-- Last updated: 2026-07-18
++- Last updated: 2026-07-19
+ - Branch: `main`
+ 
+ ## Current State
+ 
+-瀑布图基础切片的实现、本地 release validation、final evidence 与独立复审已完成。T101-T108 与 T106-CR001 已全部验收，形成可发布候选。T109 已建立独立 TellPlot 私有仓库并通过本地、干净 clone 与 GitHub-hosted CI 验证，当前等待用户验收；npm publish 与正式版本发布不在本次迁移范围。
++TellPlot 是面向财务分析与汇报场景的可编辑叙事图表基础设施。瀑布图基础切片 T101-T108、独立仓库迁移 T109 和安全图表配置层 T110 均已验收。当前仓库提供长期产品/架构/配置文档，以及不暴露 G2 内部实现的 `FinancialChartAppearance` 公共契约。npm publish、正式版本发布和旧仓库处置不在当前授权范围。
+ 
+ ## Release Scope
+ 
+@@ -31,6 +31,7 @@
+ - T107 通过 295 个 unit/component tests、90.30% statements coverage、13/13 selected Chromium、真实双密度 PNG、离屏 G2 SVG、递归 JSON round-trip、真实 SVG highlight/muted 样式、活动手势一致性门禁、axe、ESM/CJS/types package consumers 与独立复审；无未解决 Critical、High 或 Medium finding。
+ - T108 的 314/314 unit/coverage、current Playwright non-performance 108/108、isolated performance 1/1、previous compatibility 144/144、React 18.3/19.2 真实 tarball consumers（均绘制 88,744 pixels 并 clean unmount）、21/21 axe、200 项 30 样本 raw p95 77.20000004768372ms、package/build/static、canonical annotation/export/import/keyboard quickstart、四张原始截图、final evidence 与独立复审全部通过。
+ - T109 在 `@tellplot/editor` 身份下通过 321/321 tests、四项 coverage、package consumers、React 18/19、108 current-browser、144 previous-browser、21 axe、产品 profile p95 79.2ms、GitHub-hosted software-Canvas p95 292.4ms、Node 22/24 CI 和干净 clone 验证；旧远端 refs 与仓库状态保持不变。
++- T110 通过 330/330 unit/component tests、配置模块四项 100% coverage、React 18.3/19.2 + G2 5.4.8 真实 tarball 配置重绘、108/108 current-browser、21/21 axe、package/build/static checks 和 200 项 30 样本 p95 71.1ms；公共入口只导出类型化语义配置，不导出 G2Spec、chart instance 或内部解析器。
+ 
+ ## Known Limitations
+ 
+@@ -39,4 +40,4 @@
+ 
+ ## Release Decision
+ 
+-结论：独立 TellPlot release candidate 已具备并进入 T109 用户验收。npm publish、正式版本发布以及旧仓库处置必须获得单独授权。
++结论：TellPlot release candidate 具备已验收的瀑布图编辑、独立仓库和安全宿主配置基础。下一产品切片进入分类条形图与柱状图设计；npm publish、正式版本发布以及旧仓库处置必须获得单独授权。
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index aea0546..f84e49d 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.5.0
+-- Status: Review_Gate
+-- Last updated: 2026-07-18
+-- Scope: 瀑布图基础切片已验收；TellPlot 品牌与独立仓库迁移按 T109 执行
++- Version: 0.7.0
++- Status: Active
++- Last updated: 2026-07-19
++- Scope: T101-T110 已验收；下一阶段进入分类条形图与柱状图验证切片
+ 
+ ## T001 - 确认产品设计与项目章程
+ 
+@@ -65,7 +65,7 @@
+ 
+ ## T109 - TellPlot 品牌与独立仓库迁移
+ 
+-- Status: Needs_Review
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: T108
+ - Blocks: 旧仓库处置决策与公开发布准备
+@@ -84,6 +84,26 @@
+ - Packet path: `.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml`
+ - Evidence required: 源/目标清单、旧历史镜像校验、品牌扫描、本地验证、GitHub CI、仓库设置与旧远端不变证明。
+ 
++## T110 - 长期文档与安全图表配置层
++
++- Status: Accepted
++- Priority: P0
++- Dependencies: T108；TellPlot 独立仓库已建立
++- Blocks: 分类图验证切片与稳定公共配置文档
++- Story / Requirement: FR-013、CD-006、TDR-012
++- Parallel: 否
++- Conflicts with: 新图表类型、ViewSpec schema 修改、任意 G2Spec 透传、旧仓库操作
++- Goal: 提供长期文档入口与有限、类型化、屏幕/导出一致的 `FinancialChartAppearance`。
++- Allowed files: `docs/**`、`README.md`、`AGENTS.md`、`.ai-platform/**`、editor 配置/组件/导出/react/公共入口、相关 tests/e2e
++- Test targets: 配置解析、G2 spec、组件 rerender、导出、公共类型、package、E2E、a11y、performance
++- Deliverables: roadmap、architecture、configuration 文档；安全公共配置 API；T110 evidence
++- Acceptance criteria: 默认行为不变；批准配置映射确定；无原始 G2 escape hatch；全量验证通过。
++- Definition of Done: TDD、全量验证、review、evidence 与用户验收全部完成。
++- Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；artifact validator；`git diff --check`
++- TDD plan: RED 配置/映射/一致性测试；GREEN 最小配置层；REFACTOR 统一默认值与 screen/export spec。
++- Packet path: `.ai-platform/specs/003-chart-configuration-foundation/packets/T110.yaml`
++- Evidence required: RED receipt、测试结果、API 边界 review、最终 diff 与残余风险。
++
+ ## Next Gate
+ 
+-T109 的实现与验证已进入用户验收闸门。用户明确接受后，才进入旧仓库归档决策；npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。
++分类条形图与柱状图验证切片进入 feature 设计。旧仓库归档、npm publish 和正式版本发布保持独立授权闸门。
+diff --git a/.ai-platform/docs/technology-decision-record.md b/.ai-platform/docs/technology-decision-record.md
+index 7868485..66f0b67 100644
+--- a/.ai-platform/docs/technology-decision-record.md
++++ b/.ai-platform/docs/technology-decision-record.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.4.0
++- Version: 0.5.0
+ - Status: Confirmed
+-- Last updated: 2026-07-18
+-- Approval: 用户于 2026-07-18 明确批准 TellPlot 品牌与独立仓库迁移方案
++- Last updated: 2026-07-19
++- Approval: 用户于 2026-07-19 明确批准长期文档与安全语义图表配置方向
+ 
+ ## Decision Context
+ 
+@@ -13,7 +13,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-001 图表渲染引擎
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: 第一阶段仅使用 AntV G2 渲染瀑布图、分类条形图和分类柱状图。
+ - Rationale: G2 已提供图形事件、状态以及 enter/update/exit 动画；单引擎可以减少命中测试、坐标映射、导出和动画状态的重复实现。
+ - Alternatives: ECharts、Vega、D3、自研 Canvas 渲染层。
+@@ -22,7 +22,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-002 编辑状态与命令模型
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: 原始 `SourceData`、可编辑 `ViewSpec` 和可重放 `CommandLog` 分离；所有编辑入口调用同一套类型化命令。
+ - Rationale: 该模型同时支持直接操作、结构大纲、键盘和 AI，并让财务不变量、撤销重做、审计和冲突处理拥有单一执行边界。
+ - Alternatives: 直接修改 G2 options、各交互入口维护独立状态、AI 直接生成完整图表配置。
+@@ -31,7 +31,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-003 UI 动画依赖
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: G2 负责图表画布内的图形过渡；拖拽期间位置直接跟随指针。Phase 1A 不引入 Motion，简单 DOM 反馈使用 CSS transition；只有后续原型证明复杂布局连续性需要它时才单独引入。
+ - Rationale: 图表动画和 DOM 布局动画属于不同渲染树。由 Motion 接管 G2 Canvas 会形成双状态源，而完全手写 DOM 重排动画会增加中断、reduced motion 和布局测量成本。
+ - Alternatives: 只使用 CSS/Web Animations API、Motion 同时负责图表与 UI、自建 `AnimationEngine`。
+@@ -41,7 +41,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-004 仓库与包边界
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: 使用 pnpm workspace。`packages/editor` 是唯一产品包，内部按 `domain`、`waterfall`、`components` 和 `styles` 分层；`apps/playground` 是薄参考编辑器；`e2e` 保存跨包浏览器测试。
+ - Rationale: 单产品包避免在只有一个图表切片时过早抽取公共 core，同时让领域逻辑保持纯 TypeScript、可独立测试。参考编辑器不复制业务逻辑。
+ - Alternatives: 单应用仓库、`core` 与 `react` 多包、通用插件式图表框架。
+@@ -49,7 +49,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-005 状态与 React 集成
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: 领域命令执行器是纯函数；React 组件通过 reducer 持有 `EditorSession`。G2 生命周期封装在单独 adapter 组件内，不把 G2 chart instance 写入领域状态。
+ - Rationale: 纯领域状态便于 TDD、重放、序列化和 AI 命令复用；命令历史不依赖 React 或 G2。
+ - Alternatives: 全局状态库、直接修改 G2 options、每个组件维护局部业务状态。
+@@ -57,7 +57,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-006 拖拽与键盘排序
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: 图表拖拽使用 Pointer Events 与 G2 命中信息；结构大纲使用稳定版 `@dnd-kit/core` 和 `@dnd-kit/sortable`，同时提供键盘排序按钮与快捷操作。
+ - Rationale: 图表拖拽必须理解坐标轴和锁定项，通用 DOM 拖拽库不能代替；结构大纲需要成熟的传感器、碰撞检测和键盘能力。
+ - Alternatives: HTML Drag and Drop、Motion Reorder、完全手写 DOM 拖拽。
+@@ -65,7 +65,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-007 工具链与质量门槛
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: 使用 Node 22.13+、pnpm 11、TypeScript 6、React 19、Vite 8、Vitest 4、Playwright 1.61、ESLint 10 和 Prettier 3。包构建采用 tsup，应用构建采用 Vite。
+ - Rationale: 这些版本在 2026-07-15 的 npm registry 中互相兼容，并支持严格类型、现代 ESM、快速单测与真实浏览器验证。
+ - Alternatives: 单一 Vite 构建所有目标、Rollup 手工配置、Jest、仅浏览器手工测试。
+@@ -73,7 +73,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ ## TDR-008 测试分层
+ 
+-- Status: Proposed
++- Status: Confirmed
+ - Decision: 领域和投影逻辑使用 Vitest TDD；React 行为使用 Testing Library；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；公共包通过 build、publint 和类型消费示例验证。
+ - Rationale: Mock 无法证明 Canvas 命中、拖拽、导出或真实布局正确，纯 E2E 又无法高效覆盖不变量组合。
+ - Alternatives: 只做单元测试、只做 E2E、截图代替行为断言。
+@@ -104,6 +104,16 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ - Historical boundary: `.ai-platform/evidence/**` 中的既有 patch 是不可变验收记录，可以保留交付时使用的旧标识；当前源码、配置和规范文档不得继续暴露旧命名空间。
+ - Consequences: 首次远程提交前必须完成全量品牌残留扫描、包消费测试、浏览器矩阵和干净安装验证。
+ 
++## TDR-012 安全图表配置层
++
++- Status: Confirmed
++- Decision: `FinancialChartEditor` 通过有限、类型化的 `chartAppearance` 控制标题、财务语义色、坐标轴、数值标签、Tooltip、数字格式和动画。内部解析器生成确定的默认值并映射为屏幕与导出共享的 `G2Spec`。
++- Rationale: 宿主需要常见呈现配置，但任意 G2Spec merge 会破坏稳定编码、拖拽命中、导出一致性和公共 API 可演进性。
++- Ownership: G2 `data`、transform、encode、key、band geometry、chart instance、renderer、事件和交互状态由内部 adapter 独占。
++- Persistence: `chartAppearance` 是宿主级配置，不进入 `ViewSpec`；需要持久化的呈现语义必须通过单独 schema 版本决策。
++- Runtime safety: 无效数字和空字符串回退到安全默认值；动画时长和小数位被限制在文档范围；reduced motion 始终优先。
++- Rejected alternatives: 原始 `G2Spec` prop、任意 spec transform、chart instance ref、深度 merge G2 options。
++
+ ## Approval Gate
+ 
+ 用户批准本记录与 `001-waterfall-editor-foundation` 任务图后，任务状态才能从 `Draft` 转为 `Ready` 并生成执行包。任何依赖变化必须重新运行兼容性、许可证和包边界检查。
+diff --git a/.ai-platform/evidence/T109/summary.md b/.ai-platform/evidence/T109/summary.md
+index 51d3cbc..fd86e17 100644
+--- a/.ai-platform/evidence/T109/summary.md
++++ b/.ai-platform/evidence/T109/summary.md
+@@ -2,7 +2,7 @@
+ 
+ ## Status
+ 
+-Needs review. The independent TellPlot repository, public namespace migration, local regression suite, clean-clone verification and hosted CI are complete. User acceptance is the remaining T109 gate.
++Accepted on 2026-07-19. The independent TellPlot repository, public namespace migration, local regression suite, clean-clone verification and hosted CI are complete. Legacy-repository disposition remains outside T109.
+ 
+ ## Completed
+ 
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+index bbfdc21..3fb17d7 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+@@ -2,7 +2,7 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.3.0
++- Version: 0.4.0
+ - Status: Confirmed
+ - Package: `@tellplot/editor`
+ 
+@@ -21,6 +21,7 @@
+ - `validateSourceData`
+ - `validateViewSpec`
+ - 公共 props、data、view、command、result、error 与 export 类型
++- `FinancialChartAppearance` 及其语义配置类型
+ - `@tellplot/editor/styles.css`
+ 
+ 不导出 G2 chart instance、内部 reducer、DOM components、dnd-kit adapter 或 projection cache。
+@@ -62,6 +63,7 @@ interface FinancialChartEditorProps {
+   readonly locale?: 'zh-CN' | 'en-US';
+   readonly readOnly?: boolean;
+   readonly height?: number | string;
++  readonly chartAppearance?: FinancialChartAppearance;
+   readonly panels?: {
+     readonly outline?: boolean;
+     readonly inspector?: boolean;
+@@ -73,6 +75,20 @@ interface FinancialChartEditorProps {
+   readonly onSelectionChange?: (selection: SelectionState) => void;
+ }
+ 
++interface FinancialChartAppearance {
++  readonly title?: string;
++  readonly palette?: Partial<FinancialChartPalette>;
++  readonly axis?: { readonly x?: boolean; readonly y?: boolean };
++  readonly valueLabels?: 'auto' | 'always' | 'never';
++  readonly tooltip?: boolean;
++  readonly animation?: { readonly enabled?: boolean; readonly duration?: number };
++  readonly numberFormat?: {
++    readonly minimumFractionDigits?: number;
++    readonly maximumFractionDigits?: number;
++    readonly currencyDisplay?: 'symbol' | 'narrowSymbol' | 'code' | 'name';
++  };
++}
++
+ interface SelectionState {
+   readonly nodeId: ViewNodeId;
+   readonly nodeIds: readonly ViewNodeId[];
+@@ -88,6 +104,10 @@ Rules:
+ - `SelectionState.nodeIds` 保留同父级直接选择，`sourceIds` 是递归展开后的叶子来源集合。
+ - 公共 command 类型包含 `MoveGroupCommand`；直接操作、大纲、宿主与 AI 使用同一 `executeCommand` 语义。
+ - `height` 默认 680px，最小 480px；组件宽度由宿主容器决定。
++- `chartAppearance` 是宿主级呈现配置，不写入 `ViewSpec`；无效运行时值收敛到安全默认值。
++- `chartAppearance` 不接受原始 `G2Spec`、chart instance、data transform 或编码覆盖。
++- 屏幕、SVG/PNG 导出和无障碍摘要共享标题、语义颜色与数字格式；交互 Tooltip 只存在于屏幕图表。
++- 动画 `duration` 收敛到 0 至 1000 毫秒；reduced motion 优先于宿主动画配置。
+ - 回调执行异常不得破坏内部 chart cleanup；开发环境记录不含数据值的 contextual error。
+ 
+ ## Imperative Handle
+diff --git a/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml b/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml
+index dd0cf4e..172eb25 100644
+--- a/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml
++++ b/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml
+@@ -104,6 +104,6 @@ stop_conditions:
+   - "Any operation targeting the old GitHub repository."
+ 
+ handoff:
+-  task_status: "Needs_Review"
+-  next_gate: "Request user acceptance before any legacy-repository action. Branch protection remains unavailable for this private repository under the current GitHub plan and is recorded as an external limitation."
++  task_status: "Accepted"
++  next_gate: "Legacy-repository disposition remains a separately authorized action. Branch protection remains unavailable for this private repository under the current GitHub plan and is recorded as an external limitation."
+   remote_actions: "Creating and pushing iiwish/tellplot is authorized; npm publish and old-repository changes are not authorized."
+diff --git a/.ai-platform/specs/002-tellplot-repository-migration/tasks.md b/.ai-platform/specs/002-tellplot-repository-migration/tasks.md
+index c3a753b..2510123 100644
+--- a/.ai-platform/specs/002-tellplot-repository-migration/tasks.md
++++ b/.ai-platform/specs/002-tellplot-repository-migration/tasks.md
+@@ -2,7 +2,7 @@
+ 
+ ## T109
+ 
+-- Status: Needs_Review
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: T108 Accepted
+ - Blocks: 旧仓库处置决策与公开发布准备
+@@ -16,7 +16,7 @@
+ - Test targets: 品牌残留、静态质量、单元/coverage、package、React/browser matrix、E2E、a11y、performance、artifact validator、GitHub Actions
+ - Deliverables: TellPlot 独立仓库、根提交、远程 CI、仓库规则能力审计和 T109 evidence
+ - Acceptance criteria: 当前源码/规范无旧 namespace；全量验证与远程 CI 通过；旧远端引用不变。
+-- Definition of Done: 品牌残留审计、本地全量验证、干净根提交、远程 CI、仓库规则能力审计和旧远端不变证明全部完成；任务进入 `Needs_Review`，等待用户验收。
++- Definition of Done: 品牌残留审计、本地全量验证、干净根提交、远程 CI、仓库规则能力审计、旧远端不变证明和用户验收全部完成。
+ - Validation commands: `pnpm install --frozen-lockfile`；`pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:browser-previous`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；artifact validator；GitHub Actions
+ - TDD plan: RED brand audit；GREEN namespace migration；REFACTOR canonical documentation；不修改产品行为。
+ - Packet path: `packets/T109.yaml`
+diff --git a/AGENTS.md b/AGENTS.md
+index e368897..0b1b047 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -8,6 +8,7 @@
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+ - 技术决策：`.ai-platform/docs/technology-decision-record.md`。
+ - 当前任务图：`.ai-platform/docs/tasks.md`。
++- 长期文档入口：`docs/README.md`。
+ 
+ 任何实现、技术选型或任务拆分开始前，必须先读取上述文档以及当前 feature 目录。新增产品范围、架构决策和 feature task graph 未经用户明确批准并标记为 `Confirmed` 前不得执行。
+ 
+diff --git a/README.md b/README.md
+index 96d0c41..4932566 100644
+--- a/README.md
++++ b/README.md
+@@ -4,7 +4,7 @@ TellPlot 是面向财务分析与汇报场景的可编辑叙事图表项目。
+ 
+ ## 当前状态
+ 
+-产品设计、技术方案以及 T101-T108 任务图均已确认并完成验收。仓库包含可嵌入的 `@tellplot/editor` React 组件包、薄参考编辑器、完整测试分层和本地发布候选证据；npm publish 与正式版本发布尚未执行。
++产品设计、技术方案以及 T101-T110 均已确认并完成验收。仓库包含可嵌入的 `@tellplot/editor` React 组件包、薄参考编辑器、安全图表配置层、完整测试分层和发布候选证据；npm publish 与正式版本发布尚未执行。
+ 
+ ## 本地开发
+ 
+@@ -26,6 +26,10 @@ pnpm test:package
+ 
+ ## 当前文档
+ 
++- [文档入口](docs/README.md)
++- [产品路线图](docs/roadmap.md)
++- [架构概览](docs/architecture.md)
++- [图表配置边界](docs/configuration.md)
+ - [产品设计 SSOT](.ai-platform/docs/product-design.md)
+ - [项目章程](.ai-platform/memory/constitution.md)
+ - [技术决策记录](.ai-platform/docs/technology-decision-record.md)
+@@ -46,3 +50,4 @@ pnpm test:package
+ - [实现计划](.ai-platform/specs/001-waterfall-editor-foundation/plan.md)
+ - [设计合同](.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md)
+ - [任务图](.ai-platform/specs/001-waterfall-editor-foundation/tasks.md)
++- [安全图表配置](.ai-platform/specs/003-chart-configuration-foundation/spec.md)
+diff --git a/packages/editor/src/components/AccessibleChartSummary.tsx b/packages/editor/src/components/AccessibleChartSummary.tsx
+index 01035d9..932b0c6 100644
+--- a/packages/editor/src/components/AccessibleChartSummary.tsx
++++ b/packages/editor/src/components/AccessibleChartSummary.tsx
+@@ -1,5 +1,6 @@
+ import type { ViewNodeId } from '../domain/ids';
+ import type { Annotation } from '../domain/model';
++import type { ResolvedFinancialChartNumberFormat } from '../config/chartAppearance';
+ import {
+   formatWaterfallDatumAmount,
+   visibleWaterfallAnnotation,
+@@ -13,6 +14,7 @@ interface AccessibleChartSummaryProps {
+   readonly title: string;
+   readonly locale: EditorLocale;
+   readonly currency?: string | undefined;
++  readonly numberFormat?: ResolvedFinancialChartNumberFormat;
+ }
+ 
+ interface SummaryCopy {
+@@ -58,6 +60,7 @@ export function AccessibleChartSummary({
+   title,
+   locale,
+   currency,
++  numberFormat,
+ }: AccessibleChartSummaryProps): React.JSX.Element {
+   const copy = SUMMARY_COPY[locale];
+   return (
+@@ -69,7 +72,7 @@ export function AccessibleChartSummary({
+           return (
+             <li key={datum.nodeId}>
+               {datum.label}, {copy.kindLabels[datum.kind]},{' '}
+-              {formatWaterfallDatumAmount(datum, locale, currency)}
++              {formatWaterfallDatumAmount(datum, locale, currency, numberFormat)}
+               {annotation === '' ? null : `, ${copy.annotation}: ${annotation}`}
+             </li>
+           );
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+index 12274b9..edd3fc8 100644
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -350,6 +350,7 @@ export const FinancialChartEditor = forwardRef<
+             height,
+             annotations: controller.viewSpec.annotations,
+             emphasis: controller.viewSpec.emphasis,
++            appearance: props.chartAppearance,
+           },
+           normalized,
+         );
+@@ -366,6 +367,7 @@ export const FinancialChartEditor = forwardRef<
+         suggestedFilename: normalized.suggestedFilename,
+         annotations: controller.viewSpec.annotations,
+         emphasis: controller.viewSpec.emphasis,
++        appearance: props.chartAppearance,
+       });
+     },
+     [
+@@ -375,6 +377,7 @@ export const FinancialChartEditor = forwardRef<
+       locale,
+       messages.waterfallTitle,
+       props.sourceData.currency,
++      props.chartAppearance,
+     ],
+   );
+ 
+@@ -868,6 +871,7 @@ export const FinancialChartEditor = forwardRef<
+             currency={props.sourceData.currency}
+             empty={empty}
+             title={messages.waterfallTitle}
++            appearance={props.chartAppearance}
+             externalPreview={currentOutlineInteraction}
+             onMove={handleMove}
+             onMarqueeSelection={handleMarqueeSelection}
+diff --git a/packages/editor/src/components/WaterfallCanvas.tsx b/packages/editor/src/components/WaterfallCanvas.tsx
+index 1ad9383..18b3150 100644
+--- a/packages/editor/src/components/WaterfallCanvas.tsx
++++ b/packages/editor/src/components/WaterfallCanvas.tsx
+@@ -2,6 +2,10 @@ import type { Chart as G2Chart, G2Spec } from '@antv/g2';
+ import { FoldVertical, Ungroup, UnfoldVertical } from 'lucide-react';
+ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+ 
++import {
++  resolveFinancialChartAppearance,
++  type FinancialChartAppearance,
++} from '../config/chartAppearance';
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+ import type { Annotation, Emphasis, ViewSpec } from '../domain/model';
+ import { locateViewNode, ownGroup } from '../domain/viewTree';
+@@ -197,6 +201,7 @@ export interface WaterfallCanvasProps {
+   readonly currency?: string | undefined;
+   readonly empty?: boolean;
+   readonly reducedMotion?: boolean;
++  readonly appearance?: FinancialChartAppearance | undefined;
+   readonly externalPreview?: ChartInteractionPreview;
+   readonly onRenderError?: (issue: ChartRenderIssue | null) => void;
+   readonly onMove?: (nodeId: ViewNodeId, target: ChartMoveTarget, source: 'direct') => boolean;
+@@ -393,6 +398,7 @@ export function WaterfallCanvas({
+   currency,
+   empty,
+   reducedMotion,
++  appearance,
+   externalPreview = { state: 'idle' },
+   onRenderError,
+   onMove,
+@@ -453,7 +459,8 @@ export function WaterfallCanvas({
+   const annotations = viewSpec?.annotations ?? EMPTY_ANNOTATIONS;
+   const renderIssue = renderFailure?.projection === projection ? renderFailure.issue : null;
+   const copy = CHART_COPY[locale];
+-  const visibleTitle = title ?? copy.title;
++  const resolvedAppearance = resolveFinancialChartAppearance(appearance, title ?? copy.title);
++  const visibleTitle = resolvedAppearance.title;
+ 
+   const interactionTarget = interaction.state === 'dragging' ? interaction.target : null;
+ 
+@@ -1308,6 +1315,7 @@ export function WaterfallCanvas({
+         showValueLabels: shouldShowWaterfallValueLabels(projection),
+         annotations,
+         emphasis,
++        appearance,
+       }),
+     };
+     const chart = chartRef.current;
+@@ -1336,7 +1344,7 @@ export function WaterfallCanvas({
+         queueMicrotask(flushLatest);
+       }
+     }
+-  }, [annotations, currency, emphasis, locale, projection, shouldReduceMotion]);
++  }, [annotations, appearance, currency, emphasis, locale, projection, shouldReduceMotion]);
+ 
+   useLayoutEffect(() => {
+     const host = hostRef.current;
+@@ -1514,6 +1522,7 @@ export function WaterfallCanvas({
+         title={visibleTitle}
+         locale={locale}
+         currency={currency}
++        numberFormat={resolvedAppearance.numberFormat}
+       />
+     </section>
+   );
+diff --git a/packages/editor/src/components/formatAmount.ts b/packages/editor/src/components/formatAmount.ts
+index e48fdf7..d59455a 100644
+--- a/packages/editor/src/components/formatAmount.ts
++++ b/packages/editor/src/components/formatAmount.ts
+@@ -1,27 +1,40 @@
++import {
++  DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
++  type ResolvedFinancialChartNumberFormat,
++} from '../config/chartAppearance';
++
+ export type EditorLocale = 'zh-CN' | 'en-US';
+ 
+-function decimalFormatter(locale: EditorLocale): Intl.NumberFormat {
++function decimalFormatter(
++  locale: EditorLocale,
++  numberFormat: ResolvedFinancialChartNumberFormat,
++): Intl.NumberFormat {
+   return new Intl.NumberFormat(locale, {
+-    maximumFractionDigits: 2,
+-    minimumFractionDigits: 0,
++    maximumFractionDigits: numberFormat.maximumFractionDigits,
++    minimumFractionDigits: numberFormat.minimumFractionDigits,
+   });
+ }
+ 
+ /** Formats display values without changing domain arithmetic. */
+-export function formatAmount(amount: number, locale: EditorLocale, currency?: string): string {
++export function formatAmount(
++  amount: number,
++  locale: EditorLocale,
++  currency?: string,
++  numberFormat: ResolvedFinancialChartNumberFormat = DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
++): string {
+   if (currency === undefined) {
+-    return decimalFormatter(locale).format(amount);
++    return decimalFormatter(locale, numberFormat).format(amount);
+   }
+ 
+   try {
+     return new Intl.NumberFormat(locale, {
+       style: 'currency',
+       currency,
+-      currencyDisplay: 'narrowSymbol',
+-      maximumFractionDigits: 2,
+-      minimumFractionDigits: 0,
++      currencyDisplay: numberFormat.currencyDisplay,
++      maximumFractionDigits: numberFormat.maximumFractionDigits,
++      minimumFractionDigits: numberFormat.minimumFractionDigits,
+     }).format(amount);
+   } catch {
+-    return decimalFormatter(locale).format(amount);
++    return decimalFormatter(locale, numberFormat).format(amount);
+   }
+ }
+diff --git a/packages/editor/src/export/pngExport.ts b/packages/editor/src/export/pngExport.ts
+index fac2479..aefacec 100644
+--- a/packages/editor/src/export/pngExport.ts
++++ b/packages/editor/src/export/pngExport.ts
+@@ -1,5 +1,6 @@
+ import type { Chart as G2Chart } from '@antv/g2';
+ 
++import type { FinancialChartAppearance } from '../config/chartAppearance';
+ import type { ViewNodeId } from '../domain/ids';
+ import type { Annotation, Emphasis } from '../domain/model';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+@@ -17,6 +18,7 @@ interface PngChartExportRequest {
+   readonly height: number;
+   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
+   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
++  readonly appearance?: FinancialChartAppearance | undefined;
+ }
+ 
+ function canvasLogicalSize(canvas: HTMLCanvasElement): {
+@@ -132,6 +134,7 @@ export async function exportPngChart(
+         showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+         annotations: request.annotations,
+         emphasis: request.emphasis,
++        appearance: request.appearance,
+       }),
+     );
+     await chart.render();
+diff --git a/packages/editor/src/export/svgExport.ts b/packages/editor/src/export/svgExport.ts
+index 2b9e988..623f42d 100644
+--- a/packages/editor/src/export/svgExport.ts
++++ b/packages/editor/src/export/svgExport.ts
+@@ -1,5 +1,6 @@
+ import type { Chart as G2Chart } from '@antv/g2';
+ 
++import type { FinancialChartAppearance } from '../config/chartAppearance';
+ import type { ViewNodeId } from '../domain/ids';
+ import type { Annotation, Emphasis } from '../domain/model';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+@@ -26,6 +27,7 @@ interface SvgChartExportRequest {
+   readonly suggestedFilename: string;
+   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
+   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
++  readonly appearance?: FinancialChartAppearance | undefined;
+ }
+ 
+ const REMOVED_ELEMENTS = 'script, foreignObject, iframe, object, embed, image, use';
+@@ -150,6 +152,7 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
+         showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+         annotations: request.annotations,
+         emphasis: request.emphasis,
++        appearance: request.appearance,
+       }),
+     );
+     await chart.render();
+diff --git a/packages/editor/src/export/waterfallChartSpec.ts b/packages/editor/src/export/waterfallChartSpec.ts
+index 0c7fe79..9188c6c 100644
+--- a/packages/editor/src/export/waterfallChartSpec.ts
++++ b/packages/editor/src/export/waterfallChartSpec.ts
+@@ -1,5 +1,11 @@
+ import type { G2Spec } from '@antv/g2';
+ 
++import {
++  DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
++  resolveFinancialChartAppearance,
++  type FinancialChartAppearance,
++  type ResolvedFinancialChartNumberFormat,
++} from '../config/chartAppearance';
+ import type { ViewNodeId } from '../domain/ids';
+ import type { Annotation, Emphasis } from '../domain/model';
+ import type {
+@@ -19,8 +25,6 @@ const COLOR_DOMAIN: readonly WaterfallDatumKind[] = [
+   'group',
+   'end',
+ ];
+-const COLOR_RANGE = ['#5F6B65', '#168363', '#D5524A', '#315C8C', '#A46812', '#315C8C'];
+-
+ interface WaterfallChartSpecOptions {
+   readonly projection: WaterfallProjection;
+   readonly title?: string;
+@@ -30,6 +34,7 @@ interface WaterfallChartSpecOptions {
+   readonly showValueLabels: boolean;
+   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
+   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
++  readonly appearance?: FinancialChartAppearance | undefined;
+ }
+ 
+ export function visibleWaterfallAnnotation(
+@@ -48,8 +53,9 @@ export function formatWaterfallDatumAmount(
+   datum: WaterfallDatum,
+   locale: EditorLocale,
+   currency?: string,
++  numberFormat: ResolvedFinancialChartNumberFormat = DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
+ ): string {
+-  const amount = formatAmount(datum.amount, locale, currency);
++  const amount = formatAmount(datum.amount, locale, currency, numberFormat);
+   const contribution =
+     datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group';
+   return contribution && datum.amount > 0 ? `+${amount}` : amount;
+@@ -64,7 +70,9 @@ export function createWaterfallChartSpec({
+   showValueLabels,
+   annotations,
+   emphasis,
++  appearance,
+ }: WaterfallChartSpecOptions): G2Spec {
++  const resolvedAppearance = resolveFinancialChartAppearance(appearance, title ?? '');
+   const labelById = new Map(projection.map(datum => [datum.nodeId, datum.label]));
+   const denseCanvas = projection.length > DENSE_CANVAS_THRESHOLD;
+   const barInset = denseCanvas ? 0.5 : 3;
+@@ -74,6 +82,9 @@ export function createWaterfallChartSpec({
+   const hasVisibleAnnotations = projection.some(
+     datum => visibleWaterfallAnnotation(annotations, datum.nodeId) !== '',
+   );
++  const displayValueLabels =
++    resolvedAppearance.valueLabels === 'always' ||
++    (resolvedAppearance.valueLabels === 'auto' && showValueLabels);
+   const annotationLabel = {
+     text: (datum: WaterfallDatum) => visibleWaterfallAnnotation(annotations, datum.nodeId),
+     position: 'inside',
+@@ -97,7 +108,7 @@ export function createWaterfallChartSpec({
+       ? {}
+       : {
+           title: {
+-            title,
++            title: resolvedAppearance.title,
+             size: 40,
+             align: 'left',
+             titleFill: '#18211D',
+@@ -122,30 +133,40 @@ export function createWaterfallChartSpec({
+           color: {
+             type: 'ordinal',
+             domain: [...COLOR_DOMAIN],
+-            range: COLOR_RANGE,
++            range: COLOR_DOMAIN.map(kind => resolvedAppearance.palette[kind]),
+           },
+         },
+         axis: {
+-          x: {
+-            title: false,
+-            labelFill: '#5F6B65',
+-            labelAutoHide: true,
+-            labelAutoRotate: false,
+-            labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
+-          },
+-          y: {
+-            title: false,
+-            labelFill: '#5F6B65',
+-            labelFormatter: (value: unknown) => formatAmount(Number(value), locale, currency),
+-          },
++          x: resolvedAppearance.axis.x
++            ? {
++                title: false,
++                labelFill: '#5F6B65',
++                labelAutoHide: true,
++                labelAutoRotate: false,
++                labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
++              }
++            : false,
++          y: resolvedAppearance.axis.y
++            ? {
++                title: false,
++                labelFill: '#5F6B65',
++                labelFormatter: (value: unknown) =>
++                  formatAmount(Number(value), locale, currency, resolvedAppearance.numberFormat),
++              }
++            : false,
+         },
+         legend: { color: false },
+         labels: [
+-          ...(showValueLabels
++          ...(displayValueLabels
+             ? [
+                 {
+                   text: (datum: WaterfallDatum) =>
+-                    formatWaterfallDatumAmount(datum, locale, currency),
++                    formatWaterfallDatumAmount(
++                      datum,
++                      locale,
++                      currency,
++                      resolvedAppearance.numberFormat,
++                    ),
+                   position: (datum: WaterfallDatum) =>
+                     datum.end >= datum.start ? 'top' : 'bottom',
+                   style: {
+@@ -174,24 +195,24 @@ export function createWaterfallChartSpec({
+           stroke: (datum: WaterfallDatum) =>
+             emphasis[datum.nodeId] === 'highlight' ? '#18211D' : baseStroke,
+         },
+-        tooltip: false,
++        tooltip: resolvedAppearance.tooltip,
+         animate:
+-          reducedMotion || denseCanvas
++          reducedMotion || denseCanvas || !resolvedAppearance.animation.enabled
+             ? false
+             : {
+                 enter: {
+                   type: 'growInY',
+-                  duration: 160,
++                  duration: resolvedAppearance.animation.duration,
+                   easing: 'cubic-bezier(0.2, 0, 0, 1)',
+                 },
+                 update: {
+                   type: 'morphing',
+-                  duration: 160,
++                  duration: resolvedAppearance.animation.duration,
+                   easing: 'cubic-bezier(0.2, 0, 0, 1)',
+                 },
+                 exit: {
+                   type: 'fadeOut',
+-                  duration: 160,
++                  duration: resolvedAppearance.animation.duration,
+                   easing: 'cubic-bezier(0.2, 0, 0, 1)',
+                 },
+               },
+diff --git a/packages/editor/src/index.ts b/packages/editor/src/index.ts
+index d25013c..6b49796 100644
+--- a/packages/editor/src/index.ts
++++ b/packages/editor/src/index.ts
+@@ -6,6 +6,15 @@ export { redoSession, undoSession } from './domain/history';
+ export { parseViewSpec, serializeViewSpec } from './domain/persistence';
+ export { validateSourceData, validateViewSpec } from './domain/validation';
+ 
++export type {
++  ChartCurrencyDisplay,
++  ChartValueLabelMode,
++  FinancialChartAnimationAppearance,
++  FinancialChartAppearance,
++  FinancialChartAxisAppearance,
++  FinancialChartNumberFormat,
++  FinancialChartPalette,
++} from './config/chartAppearance';
+ export type {
+   CollapseGroupCommand,
+   CommandEnvelope,
+diff --git a/packages/editor/src/react/editorTypes.ts b/packages/editor/src/react/editorTypes.ts
+index a1984e7..39e301b 100644
+--- a/packages/editor/src/react/editorTypes.ts
++++ b/packages/editor/src/react/editorTypes.ts
+@@ -1,4 +1,5 @@
+ import type { CommandError } from '../domain/errors';
++import type { FinancialChartAppearance } from '../config/chartAppearance';
+ import type { CommandEvent } from '../domain/executeCommand';
+ import type { SourceItemId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewSpec } from '../domain/model';
+@@ -31,6 +32,7 @@ export interface FinancialChartEditorProps {
+   readonly readOnly?: boolean;
+   readonly height?: number | string;
+   readonly panels?: FinancialChartEditorPanels;
++  readonly chartAppearance?: FinancialChartAppearance;
+   readonly onViewSpecChange?: (next: ViewSpec, event: CommandEvent) => void;
+   readonly onCommand?: (event: CommandEvent) => void;
+   readonly onCommandRejected?: (error: CommandError) => void;
+diff --git a/packages/editor/tests/components/accessibility.test.tsx b/packages/editor/tests/components/accessibility.test.tsx
+index bed80c5..6871f2f 100644
+--- a/packages/editor/tests/components/accessibility.test.tsx
++++ b/packages/editor/tests/components/accessibility.test.tsx
+@@ -411,3 +411,27 @@ describe('FinancialChartEditor public handle', () => {
+     expect(summary.textContent).not.toContain('Outer');
+   });
+ });
++
++describe('FinancialChartEditor chart appearance accessibility', () => {
++  it('uses the configured title and number format in the ordered text equivalent', async () => {
++    render(
++      <FinancialChartEditor
++        chartAppearance={{
++          title: 'Board bridge',
++          numberFormat: {
++            minimumFractionDigits: 1,
++            maximumFractionDigits: 1,
++            currencyDisplay: 'code',
++          },
++        }}
++        locale="en-US"
++        sourceData={financialSourceData}
++      />,
++    );
++
++    const summary = await screen.findByRole('region', { name: 'Chart summary' });
++    expect(summary.querySelector('p')?.textContent).toContain('Board bridge');
++    expect(summary.textContent).toContain('CNY');
++    expect(summary.textContent).toContain('1,000.0');
++  });
++});
+diff --git a/packages/editor/tests/components/states.test.tsx b/packages/editor/tests/components/states.test.tsx
+index 6f9f7fb..4bc8104 100644
+--- a/packages/editor/tests/components/states.test.tsx
++++ b/packages/editor/tests/components/states.test.tsx
+@@ -770,6 +770,58 @@ describe('G2 lifecycle', () => {
+     expect(chart?.destroy).toHaveBeenCalledOnce();
+   });
+ 
++  it('updates the bounded public chart appearance on one G2 instance', async () => {
++    const { rerender } = render(
++      <FinancialChartEditor
++        chartAppearance={{
++          title: 'Configured bridge',
++          palette: { positive: '#00A36C' },
++          axis: { x: false },
++          valueLabels: 'never',
++          tooltip: true,
++          animation: { duration: 220 },
++          numberFormat: { maximumFractionDigits: 1 },
++        }}
++        sourceData={financialSourceData}
++      />,
++    );
++
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    const chart = g2Mock.Chart.instances[0];
++    await waitFor(() => expect(chart?.render).toHaveBeenCalledOnce());
++    expect(screen.getByRole('heading', { name: 'Configured bridge' })).toBeTruthy();
++    expect(chart?.options).toHaveBeenLastCalledWith(
++      expect.objectContaining({
++        children: [
++          expect.objectContaining({
++            axis: expect.objectContaining({ x: false }),
++            labels: [],
++            tooltip: true,
++          }),
++        ],
++      }),
++    );
++    const firstScreenSpec = chart?.options.mock.calls.at(-1)?.[0] as
++      { readonly title?: unknown } | undefined;
++    expect(firstScreenSpec?.title).toBeUndefined();
++
++    rerender(
++      <FinancialChartEditor
++        chartAppearance={{ title: 'Second bridge', valueLabels: 'always' }}
++        sourceData={financialSourceData}
++      />,
++    );
++
++    await waitFor(() => expect(chart?.render).toHaveBeenCalledTimes(2));
++    expect(g2Mock.Chart.instances).toHaveLength(1);
++    expect(screen.getByRole('heading', { name: 'Second bridge' })).toBeTruthy();
++    expect(chart?.options).toHaveBeenLastCalledWith(
++      expect.objectContaining({
++        children: [expect.objectContaining({ labels: [expect.objectContaining({})] })],
++      }),
++    );
++  });
++
+   it('does not report a pending render rejection after disposal', async () => {
+     const pending = deferred();
+     const onRenderError = vi.fn();
+diff --git a/packages/editor/tests/export/chart-spec.test.ts b/packages/editor/tests/export/chart-spec.test.ts
+index 8643740..e40f18a 100644
+--- a/packages/editor/tests/export/chart-spec.test.ts
++++ b/packages/editor/tests/export/chart-spec.test.ts
+@@ -97,6 +97,112 @@ describe('waterfall chart emphasis', () => {
+   });
+ });
+ 
++describe('waterfall chart appearance', () => {
++  it('maps only the bounded semantic configuration onto the shared G2 spec', () => {
++    const view = createInitialViewSpec(financialSourceData);
++    if (!view.ok) {
++      throw new Error('Expected a valid appearance fixture');
++    }
++    const projection = projectWaterfall(financialSourceData, view.value);
++    if (!projection.ok) {
++      throw new Error('Expected a valid appearance projection');
++    }
++
++    const spec = createWaterfallChartSpec({
++      projection: projection.value,
++      title: 'Default title',
++      locale: 'en-US',
++      currency: 'USD',
++      reducedMotion: false,
++      showValueLabels: true,
++      annotations: {},
++      emphasis: {},
++      appearance: {
++        title: 'Configured bridge',
++        palette: { positive: '#00A36C', negative: '#D23B3B' },
++        axis: { x: false, y: true },
++        valueLabels: 'never',
++        tooltip: true,
++        animation: { enabled: true, duration: 240 },
++        numberFormat: {
++          minimumFractionDigits: 1,
++          maximumFractionDigits: 1,
++          currencyDisplay: 'code',
++        },
++      },
++    });
++    const typedSpec = spec as {
++      readonly title?: { readonly title?: string };
++      readonly children?: readonly {
++        readonly scale?: { readonly color?: { readonly range?: readonly string[] } };
++        readonly axis?: {
++          readonly x?: false | Readonly<Record<string, unknown>>;
++          readonly y?: false | Readonly<Record<string, unknown>>;
++        };
++        readonly labels?: readonly unknown[];
++        readonly tooltip?: unknown;
++        readonly animate?: {
++          readonly enter?: { readonly duration?: number };
++          readonly update?: { readonly duration?: number };
++          readonly exit?: { readonly duration?: number };
++        };
++      }[];
++    };
++    const child = typedSpec.children?.[0];
++
++    expect(typedSpec.title?.title).toBe('Configured bridge');
++    expect(child?.scale?.color?.range).toEqual([
++      '#5F6B65',
++      '#00A36C',
++      '#D23B3B',
++      '#315C8C',
++      '#A46812',
++      '#315C8C',
++    ]);
++    expect(child?.axis?.x).toBe(false);
++    expect(child?.axis?.y).toEqual(expect.objectContaining({ labelFill: '#5F6B65' }));
++    expect(child?.labels).toEqual([]);
++    expect(child?.tooltip).toBe(true);
++    expect(child?.animate?.enter?.duration).toBe(240);
++    expect(child?.animate?.update?.duration).toBe(240);
++    expect(child?.animate?.exit?.duration).toBe(240);
++
++    const yFormatter = (child?.axis?.y as Readonly<Record<string, unknown>> | undefined)?.[
++      'labelFormatter'
++    ];
++    if (typeof yFormatter !== 'function') {
++      throw new Error('Expected the configured y-axis formatter');
++    }
++    expect((yFormatter as (value: unknown) => string)(1234.5)).toContain('USD');
++  });
++
++  it('lets reduced motion override an enabled custom animation', () => {
++    const view = createInitialViewSpec(financialSourceData);
++    if (!view.ok) {
++      throw new Error('Expected a valid reduced-motion fixture');
++    }
++    const projection = projectWaterfall(financialSourceData, view.value);
++    if (!projection.ok) {
++      throw new Error('Expected a valid reduced-motion projection');
++    }
++
++    const spec = createWaterfallChartSpec({
++      projection: projection.value,
++      locale: 'zh-CN',
++      currency: financialSourceData.currency,
++      reducedMotion: true,
++      showValueLabels: true,
++      annotations: {},
++      emphasis: {},
++      appearance: { animation: { enabled: true, duration: 800 } },
++    });
++    const child = (spec as { readonly children?: readonly { readonly animate?: unknown }[] })
++      .children?.[0];
++
++    expect(child?.animate).toBe(false);
++  });
++});
++
+ describe('waterfall chart annotations', () => {
+   it('renders only non-empty annotations for visible projection nodes inside their bars', () => {
+     const view = createInitialViewSpec(financialSourceData);
+diff --git a/packages/editor/tests/export/svg.test.ts b/packages/editor/tests/export/svg.test.ts
+index 16e1d4f..e759edc 100644
+--- a/packages/editor/tests/export/svg.test.ts
++++ b/packages/editor/tests/export/svg.test.ts
+@@ -189,4 +189,50 @@ describe('SVG export safety', () => {
+       { readonly children?: readonly { readonly labels?: readonly unknown[] }[] } | undefined;
+     expect(spec?.children?.[0]?.labels).toEqual([]);
+   });
++
++  it('uses the same bounded appearance for exported title, palette, axes and labels', async () => {
++    const view = createInitialViewSpec(financialSourceData);
++    if (!view.ok) {
++      throw new Error('Expected a valid SVG appearance fixture');
++    }
++    const projection = projectWaterfall(financialSourceData, view.value);
++    if (!projection.ok) {
++      throw new Error('Expected a valid SVG appearance projection');
++    }
++
++    await exportSvgChart({
++      ownerDocument: document,
++      projection: projection.value,
++      title: 'Default bridge',
++      locale: 'en-US',
++      currency: 'USD',
++      width: 960,
++      height: 520,
++      background: '#ffffff',
++      suggestedFilename: 'bridge.svg',
++      annotations: {},
++      emphasis: {},
++      appearance: {
++        title: 'Exported bridge',
++        palette: { positive: '#00A36C' },
++        axis: { y: false },
++        valueLabels: 'never',
++      },
++    });
++
++    const spec = svgG2Mock.Chart.specs.at(-1) as
++      | {
++          readonly title?: { readonly title?: string };
++          readonly children?: readonly {
++            readonly scale?: { readonly color?: { readonly range?: readonly string[] } };
++            readonly axis?: { readonly y?: unknown };
++            readonly labels?: readonly unknown[];
++          }[];
++        }
++      | undefined;
++    expect(spec?.title?.title).toBe('Exported bridge');
++    expect(spec?.children?.[0]?.scale?.color?.range?.[1]).toBe('#00A36C');
++    expect(spec?.children?.[0]?.axis?.y).toBe(false);
++    expect(spec?.children?.[0]?.labels).toEqual([]);
++  });
+ });
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index e5c3cad..6e86b32 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -14,6 +14,8 @@ import {
+   type ExportResult,
+   type FinancialChartEditorHandle,
+   type FinancialChartEditorProps,
++  type FinancialChartAppearance,
++  type FinancialChartPalette,
+   type SelectionState,
+   type SessionActionMeta,
+   validateSourceData,
+@@ -58,8 +60,31 @@ export const editorProps: FinancialChartEditorProps = {
+   viewSpec: view,
+   locale: 'zh-CN',
+   height: 680,
++  chartAppearance: {
++    title: 'Operating bridge',
++    palette: { positive: '#00875A', negative: '#D14343' },
++    axis: { x: true, y: false },
++    valueLabels: 'auto',
++    tooltip: false,
++    animation: { enabled: true, duration: 160 },
++    numberFormat: {
++      minimumFractionDigits: 0,
++      maximumFractionDigits: 2,
++      currencyDisplay: 'narrowSymbol',
++    },
++  },
+   onSelectionChange(selection) {
+     const selectedNode: string = selection.nodeId;
+     void selectedNode;
+   },
+ };
++
++export const palette: FinancialChartPalette = {
++  start: '#5F6B65',
++  positive: '#168363',
++  negative: '#D5524A',
++  subtotal: '#315C8C',
++  group: '#A46812',
++  end: '#315C8C',
++};
++export const chartAppearance: FinancialChartAppearance = editorProps.chartAppearance ?? {};
+diff --git a/packages/editor/tests/react-matrix/consumer/src/main.mjs b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+index e8de8a0..e3c52e2 100644
+--- a/packages/editor/tests/react-matrix/consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+@@ -23,14 +23,41 @@ if (!(host instanceof HTMLElement)) {
+ }
+ 
+ const root = createRoot(host);
+-root.render(
+-  React.createElement(FinancialChartEditor, {
+-    sourceData,
+-    height: 680,
+-  }),
+-);
++const renderEditor = chartAppearance => {
++  root.render(
++    React.createElement(FinancialChartEditor, {
++      chartAppearance,
++      height: 680,
++      sourceData,
++    }),
++  );
++};
++
++renderEditor();
+ 
+ globalThis.__tellplotReactMatrix = {
++  configure() {
++    renderEditor({
++      title: 'Configured bridge',
++      palette: {
++        start: '#d946ef',
++        positive: '#d946ef',
++        negative: '#d946ef',
++        subtotal: '#d946ef',
++        group: '#d946ef',
++        end: '#d946ef',
++      },
++      axis: { x: false, y: true },
++      valueLabels: 'never',
++      tooltip: true,
++      animation: { enabled: false, duration: 0 },
++      numberFormat: {
++        minimumFractionDigits: 1,
++        maximumFractionDigits: 1,
++        currencyDisplay: 'code',
++      },
++    });
++  },
+   reactVersion: React.version,
+   unmount() {
+     root.unmount();
+diff --git a/packages/editor/tests/react-matrix/run-react-matrix.mjs b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+index 16568d0..d0975ab 100644
+--- a/packages/editor/tests/react-matrix/run-react-matrix.mjs
++++ b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+@@ -151,6 +151,31 @@ async function paintedPixelCount(canvas) {
+   });
+ }
+ 
++async function canvasPixelSignature(canvas) {
++  return canvas.evaluate(element => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return 0;
++    }
++    const context = element.getContext('2d');
++    if (context === null || element.width === 0 || element.height === 0) {
++      return 0;
++    }
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    let signature = 2_166_136_261;
++    for (let offset = 0; offset < pixels.length; offset += 16) {
++      signature ^= pixels[offset] ?? 0;
++      signature = Math.imul(signature, 16_777_619);
++      signature ^= pixels[offset + 1] ?? 0;
++      signature = Math.imul(signature, 16_777_619);
++      signature ^= pixels[offset + 2] ?? 0;
++      signature = Math.imul(signature, 16_777_619);
++      signature ^= pixels[offset + 3] ?? 0;
++      signature = Math.imul(signature, 16_777_619);
++    }
++    return signature >>> 0;
++  });
++}
++
+ async function verifyConsumer(browser, consumer, directory) {
+   const port = await availablePort();
+   const url = `http://127.0.0.1:${port}`;
+@@ -218,13 +243,38 @@ async function verifyConsumer(browser, consumer, directory) {
+       assert.equal(runtime.background, 'rgb(243, 245, 244)');
+       assert.equal(runtime.accent.toLowerCase(), '#126e57');
+ 
++      const defaultSignature = await canvasPixelSignature(canvas);
++      await page.evaluate(() => globalThis.__tellplotReactMatrix?.configure());
++      await page.waitForFunction(
++        () => document.querySelector('.tp-chart-stage__title')?.textContent === 'Configured bridge',
++      );
++
++      const configuredDeadline = Date.now() + 30_000;
++      let configuredPainted = 0;
++      let configuredSignature = defaultSignature;
++      while (Date.now() < configuredDeadline) {
++        configuredPainted = await paintedPixelCount(canvas);
++        configuredSignature = await canvasPixelSignature(canvas);
++        if (configuredPainted > 500 && configuredSignature !== defaultSignature) {
++          break;
++        }
++        await page.waitForTimeout(100);
++      }
++      assert.ok(configuredPainted > 500, `${consumer.id} configured canvas must remain nonblank`);
++      assert.notEqual(
++        configuredSignature,
++        defaultSignature,
++        `${consumer.id} chartAppearance must update the real G2 canvas`,
++      );
++      assert.equal(await page.locator('[data-tellplot="editor"]').count(), 1);
++
+       await page.evaluate(() => globalThis.__tellplotReactMatrix?.unmount());
+       await page.locator('#root[data-unmounted="true"]').waitFor({ state: 'attached' });
+       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 0);
+       await page.waitForTimeout(50);
+       assert.deepEqual(runtimeErrors, []);
+       console.log(
+-        `[react-matrix:${consumer.id}] React ${runtime.reactVersion}, painted pixels ${painted}, clean unmount`,
++        `[react-matrix:${consumer.id}] React ${runtime.reactVersion}, configured G2 canvas ${configuredPainted} painted pixels, clean unmount`,
+       );
+     } finally {
+       await page.close();
+
+diff --git a/.ai-platform/evidence/T110/summary.md b/.ai-platform/evidence/T110/summary.md
+new file mode 100644
+index 0000000..d2b3267
+--- /dev/null
++++ b/.ai-platform/evidence/T110/summary.md
+@@ -0,0 +1,28 @@
++# T110 交付摘要
++
++## 状态
++
++`Accepted`。用户于 2026-07-19 接受 T110，并授权提交、推送及合并到 `main`。
++
++## 交付范围
++
++- 建立 `docs/` 长期入口、产品路线图、架构和图表配置边界文档。
++- 提供有限、类型化的 `FinancialChartAppearance` 公共 API。
++- 统一屏幕 G2、SVG/PNG 导出和无障碍摘要的标题、语义颜色与数字格式。
++- 支持 X/Y 轴、数值标签、Tooltip 和服从 reduced motion 的有界动画配置。
++- 保持 SourceData、ViewSpec、命令、投影和拖拽/分组交互不变。
++
++## API 边界复审
++
++- 公共入口只导出语义配置类型；内部解析器、默认值、`G2Spec` 和 chart instance 均未导出。
++- 颜色限定为可独立导出的具体十六进制值；数值配置收敛到文档化范围。
++- 配置读取不执行 accessor，Proxy 反射异常不会传播，解析结果不可变。
++- 屏幕和导出继续复用唯一的 `createWaterfallChartSpec` adapter。
++- 未新增运行时依赖，未修改持久化 schema 或领域不变量。
++
++## 复审结论
++
++- Critical: 0
++- High: 0
++- Medium: 0
++- Residual risk: 当前不提供可视化配置面板，宿主通过 React prop 使用配置；这是 T110 的明确非目标。
+
+diff --git a/.ai-platform/evidence/T110/test-results.md b/.ai-platform/evidence/T110/test-results.md
+new file mode 100644
+index 0000000..4a089fc
+--- /dev/null
++++ b/.ai-platform/evidence/T110/test-results.md
+@@ -0,0 +1,35 @@
++# T110 测试结果
++
++## 治理预检
++
++- 修改前已检查工作树，分支从干净的 `main` 建立。
++- 用户批准记录在 Confirmed spec 和 execution packet。
++- Requirements checklist 与 cross-artifact analysis 无 Critical、High 或 Medium finding。
++
++## TDD
++
++### RED
++
++- 聚焦 Vitest 共运行 67 个既有测试：63 passed、4 failed；新增配置 suite 因模块尚不存在无法加载。
++- 失败覆盖预期缺口：配置模块缺失；标题和无障碍摘要忽略 `chartAppearance`；共享 G2 spec 与 SVG 导出仍使用固定标题。
++- RED receipt 生成前没有修改 production source。
++
++### GREEN
++
++- 配置解析、G2 映射、组件 rerender、无障碍和 SVG parity 聚焦测试 70/70 通过。
++- 最终全量 unit/component tests 330/330 通过。
++- `chartAppearance.ts` statements、branches、functions、lines 均为 100%。
++
++## 全量验证
++
++- `pnpm format:check`: passed。
++- `pnpm lint`: passed，0 warnings。
++- `pnpm typecheck`: editor 与 playground passed。
++- `pnpm test:coverage`: 32 files、330 tests passed；aggregate statements 90.68%、branches 84.63%、functions 93.90%、lines 90.77%。
++- `pnpm build`: editor ESM/CJS/types/styles 与 playground production build passed。
++- `pnpm test:package`: publint、Are The Types Wrong、ESM/CJS import 和 public type consumer passed。
++- `pnpm test:react-matrix`: React 18.3.1 与 19.2.7、G2 5.4.8 真实 tarball consumer passed；配置重绘后分别为 87,405 与 88,744 painted pixels，clean unmount，0 runtime error。
++- `pnpm test:e2e`: Chromium、Firefox、WebKit 108/108 passed。
++- `pnpm test:a11y`: Chromium、Firefox、WebKit 21/21 passed。
++- `pnpm test:performance`: 200 项、30 samples，visible-canvas p95 71.1ms，budget 150ms，same-target root commit delta 0。
++- `git diff --check`: passed。
+
+diff --git a/.ai-platform/specs/003-chart-configuration-foundation/analysis.md b/.ai-platform/specs/003-chart-configuration-foundation/analysis.md
+new file mode 100644
+index 0000000..65f12b3
+--- /dev/null
++++ b/.ai-platform/specs/003-chart-configuration-foundation/analysis.md
+@@ -0,0 +1,9 @@
++# T110 Cross-Artifact Analysis
++
++## Result
++
++- Critical: 0
++- High: 0
++- Medium: 0
++
++T110 符合产品 SSOT、项目章程和单 G2 adapter 决策。配置层只扩展呈现契约，不进入 SourceData、ViewSpec 或命令执行器；原始 G2 配置继续由内部 adapter 所有。屏幕、导出和无障碍共享显示语义，避免出现多套配置状态源。
+
+diff --git a/.ai-platform/specs/003-chart-configuration-foundation/checklists/requirements.md b/.ai-platform/specs/003-chart-configuration-foundation/checklists/requirements.md
+new file mode 100644
+index 0000000..5b50907
+--- /dev/null
++++ b/.ai-platform/specs/003-chart-configuration-foundation/checklists/requirements.md
+@@ -0,0 +1,10 @@
++# T110 Requirements Checklist
++
++- [x] 用户明确批准安全语义配置层和长期文档方向。
++- [x] 配置字段与非目标明确。
++- [x] 原始 G2Spec、chart instance 和 spec transform 被排除。
++- [x] 默认视觉与交互保持不变。
++- [x] 屏幕、导出和无障碍一致性要求明确。
++- [x] reduced motion 优先级明确。
++- [x] ViewSpec 与 SourceData 边界不变。
++- [x] TDD、验证命令和 evidence 要求明确。
+
+diff --git a/.ai-platform/specs/003-chart-configuration-foundation/packets/T110.yaml b/.ai-platform/specs/003-chart-configuration-foundation/packets/T110.yaml
+new file mode 100644
+index 0000000..cee3c4e
+--- /dev/null
++++ b/.ai-platform/specs/003-chart-configuration-foundation/packets/T110.yaml
+@@ -0,0 +1,113 @@
++schema_version: "1.0"
++packet_id: "003-chart-configuration-foundation-T110-A001"
++task_id: "T110"
++feature_id: "003-chart-configuration-foundation"
++mode: "direct_execute"
++
++governance_inputs:
++  constitution: ".ai-platform/memory/constitution.md"
++  product_contract: ".ai-platform/docs/product-design.md"
++  tdr: ".ai-platform/docs/technology-decision-record.md"
++  spec: ".ai-platform/specs/003-chart-configuration-foundation/spec.md"
++  checklist: ".ai-platform/specs/003-chart-configuration-foundation/checklists/requirements.md"
++  plan: ".ai-platform/specs/003-chart-configuration-foundation/plan.md"
++  work_graph: ".ai-platform/specs/003-chart-configuration-foundation/tasks.md"
++  analysis: ".ai-platform/specs/003-chart-configuration-foundation/analysis.md"
++  approval: "User explicitly approved the safe semantic configuration and documentation direction on 2026-07-19."
++
++work_unit:
++  title: "建立 TellPlot 长期文档与安全图表配置层"
++  goal: "Expose bounded financial chart appearance controls without exposing G2 internals or changing domain behavior."
++  requirement_mapping:
++    - "FR-013"
++    - "CD-006"
++    - "TDR-012"
++  dependencies:
++    - "T108 Accepted"
++    - "TellPlot independent repository established"
++  parallel: false
++
++codebase_context:
++  branch: "codex/chart-configuration-docs"
++  current_state: "The accepted waterfall editor uses an internal G2Spec with fixed appearance and exposes no raw chart configuration."
++  reusable_boundaries:
++    - "createWaterfallChartSpec is shared by screen, SVG and PNG rendering."
++    - "FinancialChartEditorProps is the stable React host contract."
++    - "AccessibleChartSummary uses the same projected waterfall data."
++  forbidden_changes:
++    - "Do not change SourceData, ViewSpec, commands, projection or drag/group behavior."
++    - "Do not expose G2Spec, chart instances or arbitrary callbacks."
++
++execution_constraints:
++  adapter: "Codex direct execution; multi-agent delegation is not authorized for this task."
++  allowed_files:
++    - "docs/**"
++    - "README.md"
++    - "AGENTS.md"
++    - ".ai-platform/**"
++    - "packages/editor/src/config/**"
++    - "packages/editor/src/components/**"
++    - "packages/editor/src/export/**"
++    - "packages/editor/src/react/**"
++    - "packages/editor/src/index.ts"
++    - "packages/editor/tests/**"
++    - "e2e/**"
++  forbidden_changes:
++    - "Do not modify SourceData, ViewSpec, commands, financial projection or interaction semantics."
++    - "Do not expose G2Spec, chart instances or arbitrary spec transforms."
++    - "Do not add dependencies, publish, push or modify the predecessor repository."
++
++tdd_plan:
++  red:
++    - "Add failing tests for public types, runtime normalization, G2 mapping, rerender and export parity."
++  green:
++    - "Implement the minimal typed configuration module and pass it through screen, export and accessibility paths."
++  refactor:
++    - "Centralize defaults and retain byte-equivalent semantic defaults for existing consumers."
++
++validation_loop:
++  commands:
++    - "pnpm format:check"
++    - "pnpm lint"
++    - "pnpm typecheck"
++    - "pnpm test:coverage"
++    - "pnpm build"
++    - "pnpm test:package"
++    - "pnpm test:e2e"
++    - "pnpm test:a11y"
++    - "pnpm test:performance"
++    - "git diff --check"
++    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 003-chart-configuration-foundation --task-id T110 --strict"
++  expected_signals:
++    - "Existing calls without chartAppearance retain current behavior."
++    - "Approved appearance fields map deterministically to shared G2 specs."
++    - "No public raw G2 configuration escape hatch exists."
++  retry_budget: 3
++  failure_policy: "Fix only T110 configuration or documentation defects; stop for domain, schema, interaction or dependency changes."
++
++evidence_contract:
++  directory: ".ai-platform/evidence/T110"
++  required_files:
++    - "summary.md"
++    - "test-results.md"
++    - "diff.patch"
++  required_content:
++    - "RED receipt, changed files, validation results, API boundary review and residual risks."
++
++review_contract:
++  spec_compliance:
++    - "Map every supported appearance field to tests and screen/export/accessibility behavior."
++  engineering_quality:
++    - "Review runtime normalization, immutable defaults, strict types, rerender behavior and absence of G2 escape hatches."
++  qa_acceptance:
++    - "No unresolved Critical, High or Medium finding before user acceptance."
++
++stop_conditions:
++  - "A configuration requires changing ViewSpec or SourceData."
++  - "A test can pass only by exposing raw G2 internals or weakening interaction assertions."
++  - "Any new runtime dependency is required."
++
++handoff:
++  task_status: "Accepted"
++  next_gate: "Design the category bar and column validation slice under a new approved feature task."
++  remote_actions: "Commit, push, pull request and merge to main are authorized on 2026-07-19; publish and deployment remain unauthorized."
+
+diff --git a/.ai-platform/specs/003-chart-configuration-foundation/plan.md b/.ai-platform/specs/003-chart-configuration-foundation/plan.md
+new file mode 100644
+index 0000000..1143a15
+--- /dev/null
++++ b/.ai-platform/specs/003-chart-configuration-foundation/plan.md
+@@ -0,0 +1,34 @@
++# TellPlot 安全图表配置 Plan
++
++## Metadata
++
++- Status: Confirmed
++- Last updated: 2026-07-19
++
++## Design
++
++1. 在独立配置模块定义公共类型、默认值和纯运行时解析器。
++2. `FinancialChartEditorProps.chartAppearance` 将原始配置传给内部 G2 adapter 与导出路径。
++3. `createWaterfallChartSpec` 解析同一配置并生成屏幕/导出共享的 `G2Spec`。
++4. 数字格式函数和无障碍摘要接受已解析的有限数字格式。
++5. G2 `data`、编码、稳定 key、band geometry 和事件继续由内部 spec 独占。
++
++## TDD
++
++1. RED：公共类型、配置解析、G2 spec 映射、组件 rerender 和导出配置测试失败。
++2. GREEN：实现最小类型、解析器和端到端配置传递。
++3. REFACTOR：统一默认值与屏幕/导出 spec，保持现有无配置调用结果不变。
++
++## Validation
++
++- `pnpm format:check`
++- `pnpm lint`
++- `pnpm typecheck`
++- `pnpm test:coverage`
++- `pnpm build`
++- `pnpm test:package`
++- `pnpm test:e2e`
++- `pnpm test:a11y`
++- `pnpm test:performance`
++- artifact validator
++- `git diff --check`
+
+diff --git a/.ai-platform/specs/003-chart-configuration-foundation/spec.md b/.ai-platform/specs/003-chart-configuration-foundation/spec.md
+new file mode 100644
+index 0000000..9796239
+--- /dev/null
++++ b/.ai-platform/specs/003-chart-configuration-foundation/spec.md
+@@ -0,0 +1,30 @@
++# TellPlot 安全图表配置 Spec
++
++## Metadata
++
++- Feature ID: `003-chart-configuration-foundation`
++- Status: Confirmed
++- Last updated: 2026-07-19
++- Approval: 用户于 2026-07-19 明确同意安全语义配置层、长期文档与产品路线图方向并要求继续实现
++
++## Goal
++
++为 `FinancialChartEditor` 提供有限、类型化、运行时安全的 `chartAppearance` 配置，使宿主能够调整常见图表呈现，同时保持财务领域状态、G2 编码、拖拽命中、导出和无障碍语义一致。
++
++## Requirements
++
++- 公共 API 使用 `FinancialChartAppearance`，不得接受 `G2Spec`、G2 chart instance 或任意 spec transform。
++- 支持标题、财务语义色、X/Y 轴、数值标签模式、Tooltip、动画和数字格式。
++- 默认配置必须保持当前已验收的视觉和交互行为。
++- 配置同时作用于屏幕 G2 spec、SVG/PNG 导出和无障碍摘要；Tooltip 只属于交互屏幕。
++- `prefers-reduced-motion` 和显式 `reducedMotion` 优先于动画配置。
++- 运行时无效值必须回退或收敛到有限范围，不允许引发领域状态变化。
++- `chartAppearance` 不写入 `ViewSpec`，不改变 SourceData、命令或财务不变量。
++- 长期文档必须区分产品 SSOT、路线图、架构、配置边界和交付 evidence。
++
++## Non-Goals
++
++- 任意 G2 配置透传。
++- 新图表类型、主题编辑器或 UI 配置面板。
++- 修改拖拽、分组、折叠、持久化 schema 或财务计算。
++- 引入新的运行时依赖。
+
+diff --git a/.ai-platform/specs/003-chart-configuration-foundation/tasks.md b/.ai-platform/specs/003-chart-configuration-foundation/tasks.md
+new file mode 100644
+index 0000000..aeba7d1
+--- /dev/null
++++ b/.ai-platform/specs/003-chart-configuration-foundation/tasks.md
+@@ -0,0 +1,21 @@
++# TellPlot 安全图表配置任务
++
++## T110
++
++- Status: Accepted
++- Priority: P0
++- Dependencies: T108 Accepted；TellPlot 独立仓库已建立
++- Blocks: 分类图验证切片与稳定公共配置文档
++- Story / Requirement: FR-013、CD-006、TDR-012
++- Parallel: false
++- Conflicts with: 新图表类型、ViewSpec schema 修改、原始 G2Spec 透传、旧仓库操作
++- Goal: 建立长期文档入口和有限、可测试、屏幕/导出一致的 `FinancialChartAppearance` 公共配置。
++- Allowed files: `docs/**`、`README.md`、`AGENTS.md`、`.ai-platform/**`、`packages/editor/src/config/**`、`packages/editor/src/components/**`、`packages/editor/src/export/**`、`packages/editor/src/react/**`、`packages/editor/src/index.ts`、`packages/editor/tests/**`、`e2e/**`
++- Test targets: 配置解析、G2 spec、组件 rerender、导出一致性、公共类型、package、E2E、a11y、performance
++- Deliverables: 长期文档、配置类型与解析器、公共 prop、屏幕/导出映射、T110 evidence
++- Acceptance criteria: 默认行为不变；安全配置可控制批准字段；无原始 G2Spec 逃生口；全量质量门禁通过。
++- Definition of Done: RED/GREEN 证据、全量验证、spec/code/QA review、evidence 和用户验收全部完成。
++- Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；artifact validator；`git diff --check`
++- TDD plan: 先锁定公共类型、无效输入回退、G2 映射和 screen/export parity 的失败测试，再实现最小配置层。
++- Packet path: `packets/T110.yaml`
++- Evidence required: RED 结果、测试结果、公共 API diff、G2 边界 review、残余风险和最终 diff。
+
+diff --git a/docs/README.md b/docs/README.md
+new file mode 100644
+index 0000000..ea18f71
+--- /dev/null
++++ b/docs/README.md
+@@ -0,0 +1,25 @@
++# TellPlot 文档
++
++本目录提供面向产品、设计、工程和集成方的长期文档入口。交付任务、执行包与验收证据保留在 `.ai-platform/`，不与长期产品文档混写。
++
++## 权威来源
++
++- [产品设计 SSOT](../.ai-platform/docs/product-design.md)
++- [项目章程](../.ai-platform/memory/constitution.md)
++- [技术决策记录](../.ai-platform/docs/technology-decision-record.md)
++- [工程任务图](../.ai-platform/docs/tasks.md)
++- [发布状态](../.ai-platform/docs/release-report.md)
++
++## 长期文档
++
++- [产品路线图](roadmap.md)
++- [架构概览](architecture.md)
++- [图表配置边界](configuration.md)
++
++## 文档规则
++
++- 产品定位、范围和成功指标只在产品设计 SSOT 中定义。
++- 路线图只记录产品阶段、结果和进入条件，不复制工程任务清单。
++- 架构文档解释稳定边界；具体实现决策进入技术决策记录。
++- 配置文档描述 TellPlot 公共语义，不把 G2 的内部配置面直接变成公共 API。
++- `.ai-platform/evidence/` 是不可变的交付证明，不承担当前产品说明职责。
+
+diff --git a/docs/architecture.md b/docs/architecture.md
+new file mode 100644
+index 0000000..90c1382
+--- /dev/null
++++ b/docs/architecture.md
+@@ -0,0 +1,46 @@
++# TellPlot 架构概览
++
++## 核心边界
++
++TellPlot 把原始财务事实、可编辑叙事状态、确定性操作和图表渲染分为四层。
++
++```text
++SourceData -> ViewSpec -> Command Executor -> Projection -> G2Spec -> G2
++                  |              |
++                  |              +-> CommandLog / undo / redo
++                  +-> persistence / AI candidate commands
++```
++
++### SourceData
++
++`SourceData` 保存稳定 ID、金额、类型、币种和来源引用。编辑操作不改写该对象。
++
++### ViewSpec
++
++`ViewSpec` 保存顺序、递归分组树、折叠、锁定、注释和强调。它是可序列化、可校验的叙事状态，不包含 G2 chart instance 或任意渲染函数。
++
++### Command Executor
++
++直接操作、大纲、键盘和 AI 候选操作使用同一组类型化命令。执行器校验 revision、目标位置、锁定状态、递归树和来源覆盖不变量，并生成可撤销历史。
++
++### Projection And G2 Adapter
++
++投影层把 `SourceData + ViewSpec` 转换为可见瀑布数据。G2 adapter 负责 `G2Spec`、Canvas 生命周期、场景边界、Pointer Events 和图形动画。领域状态不引用 G2。
++
++## 配置流
++
++```text
++FinancialChartAppearance -> normalize -> resolved appearance
++                                      -> screen G2Spec
++                                      -> SVG/PNG G2Spec
++                                      -> accessible chart summary
++```
++
++公共配置只描述稳定的财务图表语义。内部 adapter 保留 `data`、`encode`、`key`、比例尺几何、事件注册和交互状态的所有权。
++
++## 包边界
++
++- `packages/editor`：唯一产品包，包含领域、投影、React 工作台、G2 adapter、持久化和导出。
++- `apps/playground`：示例数据和人工验收入口，不复制产品逻辑。
++- `e2e`：真实浏览器、可访问性、导出和性能验证。
++- `.ai-platform`：SSOT、feature spec、任务图、执行包和证据。
+
+diff --git a/docs/configuration.md b/docs/configuration.md
+new file mode 100644
+index 0000000..8a8248f
+--- /dev/null
++++ b/docs/configuration.md
+@@ -0,0 +1,65 @@
++# TellPlot 图表配置边界
++
++## 目标
++
++TellPlot 提供稳定、可测试、与财务语义一致的配置层。宿主可以调整常见呈现方式，但不能覆盖会破坏财务投影、拖拽命中、导出一致性或可访问性的 G2 内部配置。
++
++## 公共配置
++
++`FinancialChartEditor` 通过 `chartAppearance` 接收 `FinancialChartAppearance`：
++
++- `title`：图表可见标题、导出标题和无障碍摘要标题。
++- `palette`：起点、正向、负向、小计、分组和终点的财务语义色。
++- `axis`：X/Y 坐标轴是否显示。
++- `valueLabels`：`auto`、`always` 或 `never`。
++- `tooltip`：是否启用 G2 图形 Tooltip；导出图像不包含交互 Tooltip。
++- `animation`：启用状态和有限时长；系统 reduced motion 始终优先。
++- `numberFormat`：有限的小数位和币种显示方式。
++
++未提供的字段使用 TellPlot 默认值。运行时的非有限数字、越界小数位、空颜色和空标题回退到安全默认值，不进入领域状态。
++
++```tsx
++import { FinancialChartEditor } from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
++
++<FinancialChartEditor
++  sourceData={sourceData}
++  chartAppearance={{
++    title: '经营利润桥',
++    palette: {
++      positive: '#168363',
++      negative: '#D5524A',
++    },
++    axis: { x: true, y: true },
++    valueLabels: 'auto',
++    tooltip: true,
++    animation: { enabled: true, duration: 160 },
++    numberFormat: {
++      minimumFractionDigits: 0,
++      maximumFractionDigits: 2,
++      currencyDisplay: 'narrowSymbol',
++    },
++  }}
++/>;
++```
++
++语义色使用具体的 3、4、6 或 8 位十六进制颜色，例如 `#168363`；不接受依赖宿主样式表的 CSS variable，确保独立 SVG/PNG 导出得到相同颜色。`duration` 取 0 到 1000 毫秒，数字格式的小数位取 0 到 6。`maximumFractionDigits` 小于最小小数位时会自动提升到相同值。配置对象按不可变 React props 使用；宿主修改配置时应传入新对象。
++
++## 内部所有权
++
++以下能力不属于稳定公共配置：
++
++- G2 `data` 与 transform。
++- `encode.x`、`encode.y`、`encode.key` 和内部 color domain。
++- X band 几何、稳定 node ID 和场景命中边界。
++- G2 chart instance、renderer 和事件注册。
++- 拖拽状态机、Pointer capture 和落点计算。
++- 任意 `G2Spec` merge、spec transform 或未约束回调。
++
++## 为什么不开放原始 G2Spec
++
++TellPlot 的交互依赖稳定的节点编码、图形边界和屏幕/导出共享 spec。任意覆盖可能让视觉结果与 `ViewSpec`、无障碍摘要或命令历史不一致。需要增加呈现能力时，应先把真实需求定义为 TellPlot 语义配置，再由 adapter 映射到 G2。
++
++## 持久化边界
++
++`chartAppearance` 是宿主级呈现配置，不写入 `ViewSpec`。顺序、分组、折叠、注释和强调继续由 `ViewSpec` 保存。需要让某项呈现配置随视图持久化时，必须通过单独 schema 版本决策。
+
+diff --git a/docs/roadmap.md b/docs/roadmap.md
+new file mode 100644
+index 0000000..ba42182
+--- /dev/null
++++ b/docs/roadmap.md
+@@ -0,0 +1,56 @@
++# TellPlot 产品路线图
++
++## North Star
++
++TellPlot 让财务分析人员直接编排图表叙事，在不改写原始金额和来源关系的前提下完成排序、分组、折叠、强调、保存和演示文稿输出。
++
++## Now
++
++### 瀑布图基础能力
++
++- 可嵌入 React 编辑器与薄参考应用。
++- 确定性 `SourceData`、`ViewSpec`、命令历史和财务不变量。
++- 图表拖拽、框选分组、递归折叠、大纲编辑和键盘操作。
++- SVG、PNG、持久化、可访问性和浏览器兼容性。
++- TellPlot 品牌、独立仓库和发布候选验证。
++
++### 安全图表配置
++
++- 通过 TellPlot 语义配置控制标题、财务语义色、坐标轴、数值标签、Tooltip、数字格式和动画。
++- 屏幕、导出和无障碍摘要共享一致的显示语义。
++- 数据、编码、稳定 ID、命中目标和交互事件保持内部所有权。
++
++## Next
++
++### 分类图验证切片
++
++- 单序列分类条形图与分类柱状图共享分类编辑模型。
++- 验证排序、固定、分组、折叠、恢复默认顺序和导出。
++- 验证瀑布图与分类图是否具备可抽取的公共配置和命令边界。
++
++### 真实用户验证
++
++- 至少 3 名财务分析用户完成一张汇报图的编排和导出。
++- 相比工作流基线，中位完成时间降低至少 30%。
++- 根据真实任务修正默认值和配置优先级，不用通用 BI 功能列表驱动范围。
++
++## Later
++
++### AI 辅助编排
++
++- 自然语言转换为可解释的候选命令。
++- 候选修改可预览、拒绝、确认、撤销和审计。
++- AI 不负责金额计算，不绕过财务不变量。
++
++### 发布与集成
++
++- 稳定公共 API、版本策略和迁移说明。
++- npm 包发布、宿主集成示例和文档站。
++- 按真实汇报工作流评估 PowerPoint 集成，不承诺第一阶段可编辑 PPT 对象。
++
++## Decision Gates
++
++- 分类图完成前不抽取通用图表 SDK。
++- 真实用户验证前不扩展到折线图、饼图、散点图或 Dashboard。
++- AI 候选命令闭环完成前不允许 AI 自动执行编辑。
++- 原始 G2 options 不进入稳定公共 API；高级扩展只在语义配置无法覆盖真实集成需求时重新评估。
+
+diff --git a/packages/editor/src/config/chartAppearance.ts b/packages/editor/src/config/chartAppearance.ts
+new file mode 100644
+index 0000000..fc607d4
+--- /dev/null
++++ b/packages/editor/src/config/chartAppearance.ts
+@@ -0,0 +1,200 @@
++export type ChartValueLabelMode = 'auto' | 'always' | 'never';
++export type ChartCurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name';
++
++export interface FinancialChartPalette {
++  readonly start: string;
++  readonly positive: string;
++  readonly negative: string;
++  readonly subtotal: string;
++  readonly group: string;
++  readonly end: string;
++}
++
++export interface FinancialChartAxisAppearance {
++  readonly x?: boolean;
++  readonly y?: boolean;
++}
++
++export interface FinancialChartAnimationAppearance {
++  readonly enabled?: boolean;
++  readonly duration?: number;
++}
++
++export interface FinancialChartNumberFormat {
++  readonly minimumFractionDigits?: number;
++  readonly maximumFractionDigits?: number;
++  readonly currencyDisplay?: ChartCurrencyDisplay;
++}
++
++/** Stable, semantic presentation controls that cannot override TellPlot's G2 data or encoding. */
++export interface FinancialChartAppearance {
++  readonly title?: string;
++  readonly palette?: Partial<FinancialChartPalette>;
++  readonly axis?: FinancialChartAxisAppearance;
++  readonly valueLabels?: ChartValueLabelMode;
++  readonly tooltip?: boolean;
++  readonly animation?: FinancialChartAnimationAppearance;
++  readonly numberFormat?: FinancialChartNumberFormat;
++}
++
++export interface ResolvedFinancialChartNumberFormat {
++  readonly minimumFractionDigits: number;
++  readonly maximumFractionDigits: number;
++  readonly currencyDisplay: ChartCurrencyDisplay;
++}
++
++export interface ResolvedFinancialChartAppearance {
++  readonly title: string;
++  readonly palette: FinancialChartPalette;
++  readonly axis: {
++    readonly x: boolean;
++    readonly y: boolean;
++  };
++  readonly valueLabels: ChartValueLabelMode;
++  readonly tooltip: boolean;
++  readonly animation: {
++    readonly enabled: boolean;
++    readonly duration: number;
++  };
++  readonly numberFormat: ResolvedFinancialChartNumberFormat;
++}
++
++export const DEFAULT_FINANCIAL_CHART_PALETTE: FinancialChartPalette = Object.freeze({
++  start: '#5F6B65',
++  positive: '#168363',
++  negative: '#D5524A',
++  subtotal: '#315C8C',
++  group: '#A46812',
++  end: '#315C8C',
++});
++
++export const DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT: ResolvedFinancialChartNumberFormat =
++  Object.freeze({
++    minimumFractionDigits: 0,
++    maximumFractionDigits: 2,
++    currencyDisplay: 'narrowSymbol',
++  });
++
++const DEFAULT_TITLE = 'Financial chart';
++const DEFAULT_ANIMATION_DURATION = 160;
++const MAX_ANIMATION_DURATION = 1_000;
++const MAX_FRACTION_DIGITS = 6;
++const HEX_COLOR_PATTERN = /^#(?:[0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/iu;
++const COLOR_KEYS = [
++  'start',
++  'positive',
++  'negative',
++  'subtotal',
++  'group',
++  'end',
++] as const satisfies readonly (keyof FinancialChartPalette)[];
++const VALUE_LABEL_MODES: readonly ChartValueLabelMode[] = ['auto', 'always', 'never'];
++const CURRENCY_DISPLAYS: readonly ChartCurrencyDisplay[] = [
++  'symbol',
++  'narrowSymbol',
++  'code',
++  'name',
++];
++
++function ownDataValue(value: unknown, key: PropertyKey): unknown {
++  if (typeof value !== 'object' || value === null) {
++    return undefined;
++  }
++  try {
++    const descriptor = Object.getOwnPropertyDescriptor(value, key);
++    return descriptor !== undefined && 'value' in descriptor ? descriptor.value : undefined;
++  } catch {
++    return undefined;
++  }
++}
++
++function nonEmptyString(value: unknown): string | undefined {
++  if (typeof value !== 'string') {
++    return undefined;
++  }
++  const normalized = value.trim();
++  return normalized === '' ? undefined : normalized;
++}
++
++function colorOr(value: unknown, fallback: string): string {
++  const color = nonEmptyString(value);
++  return color !== undefined && HEX_COLOR_PATTERN.test(color) ? color : fallback;
++}
++
++function booleanOr(value: unknown, fallback: boolean): boolean {
++  return typeof value === 'boolean' ? value : fallback;
++}
++
++function boundedInteger(value: unknown, fallback: number, maximum: number): number {
++  return typeof value === 'number' && Number.isFinite(value)
++    ? Math.min(maximum, Math.max(0, Math.round(value)))
++    : fallback;
++}
++
++function enumOr<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
++  return typeof value === 'string' && allowed.includes(value as T) ? (value as T) : fallback;
++}
++
++function resolvePalette(value: unknown): FinancialChartPalette {
++  const palette = Object.fromEntries(
++    COLOR_KEYS.map(key => [
++      key,
++      colorOr(ownDataValue(value, key), DEFAULT_FINANCIAL_CHART_PALETTE[key]),
++    ]),
++  ) as unknown as FinancialChartPalette;
++  return Object.freeze(palette);
++}
++
++function resolveNumberFormat(value: unknown): ResolvedFinancialChartNumberFormat {
++  const minimum = boundedInteger(
++    ownDataValue(value, 'minimumFractionDigits'),
++    DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT.minimumFractionDigits,
++    MAX_FRACTION_DIGITS,
++  );
++  const requestedMaximum = boundedInteger(
++    ownDataValue(value, 'maximumFractionDigits'),
++    DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT.maximumFractionDigits,
++    MAX_FRACTION_DIGITS,
++  );
++  return Object.freeze({
++    minimumFractionDigits: minimum,
++    maximumFractionDigits: Math.max(minimum, requestedMaximum),
++    currencyDisplay: enumOr(
++      ownDataValue(value, 'currencyDisplay'),
++      CURRENCY_DISPLAYS,
++      DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT.currencyDisplay,
++    ),
++  });
++}
++
++/** Normalizes JavaScript callers into a finite, immutable chart appearance. */
++export function resolveFinancialChartAppearance(
++  appearance: FinancialChartAppearance | undefined,
++  fallbackTitle: string,
++): ResolvedFinancialChartAppearance {
++  const axis = ownDataValue(appearance, 'axis');
++  const animation = ownDataValue(appearance, 'animation');
++  const resolved = {
++    title:
++      nonEmptyString(ownDataValue(appearance, 'title')) ??
++      nonEmptyString(fallbackTitle) ??
++      DEFAULT_TITLE,
++    palette: resolvePalette(ownDataValue(appearance, 'palette')),
++    axis: Object.freeze({
++      x: booleanOr(ownDataValue(axis, 'x'), true),
++      y: booleanOr(ownDataValue(axis, 'y'), true),
++    }),
++    valueLabels: enumOr(ownDataValue(appearance, 'valueLabels'), VALUE_LABEL_MODES, 'auto'),
++    tooltip: booleanOr(ownDataValue(appearance, 'tooltip'), false),
++    animation: Object.freeze({
++      enabled: booleanOr(ownDataValue(animation, 'enabled'), true),
++      duration: boundedInteger(
++        ownDataValue(animation, 'duration'),
++        DEFAULT_ANIMATION_DURATION,
++        MAX_ANIMATION_DURATION,
++      ),
++    }),
++    numberFormat: resolveNumberFormat(ownDataValue(appearance, 'numberFormat')),
++  } satisfies ResolvedFinancialChartAppearance;
++  return Object.freeze(resolved);
++}
+
+diff --git a/packages/editor/tests/package/chart-appearance.test.ts b/packages/editor/tests/package/chart-appearance.test.ts
+new file mode 100644
+index 0000000..d4a4184
+--- /dev/null
++++ b/packages/editor/tests/package/chart-appearance.test.ts
+@@ -0,0 +1,116 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  DEFAULT_FINANCIAL_CHART_PALETTE,
++  resolveFinancialChartAppearance,
++} from '../../src/config/chartAppearance';
++import type { FinancialChartAppearance } from '../../src/config/chartAppearance';
++
++describe('financial chart appearance', () => {
++  it('resolves a bounded immutable appearance without exposing G2 options', () => {
++    const input: FinancialChartAppearance = {
++      title: '  Cash bridge  ',
++      palette: {
++        positive: '#00A36C',
++        negative: '#D23B3B',
++      },
++      axis: { x: false, y: true },
++      valueLabels: 'always',
++      tooltip: true,
++      animation: { enabled: true, duration: 240 },
++      numberFormat: {
++        minimumFractionDigits: 3,
++        maximumFractionDigits: 1,
++        currencyDisplay: 'code',
++      },
++    };
++
++    const resolved = resolveFinancialChartAppearance(input, 'Operating bridge');
++
++    expect(resolved).toEqual({
++      title: 'Cash bridge',
++      palette: {
++        ...DEFAULT_FINANCIAL_CHART_PALETTE,
++        positive: '#00A36C',
++        negative: '#D23B3B',
++      },
++      axis: { x: false, y: true },
++      valueLabels: 'always',
++      tooltip: true,
++      animation: { enabled: true, duration: 240 },
++      numberFormat: {
++        minimumFractionDigits: 3,
++        maximumFractionDigits: 3,
++        currencyDisplay: 'code',
++      },
++    });
++    expect(Object.isFrozen(resolved)).toBe(true);
++    expect(Object.isFrozen(resolved.palette)).toBe(true);
++    expect('g2Spec' in resolved).toBe(false);
++    expect('options' in resolved).toBe(false);
++  });
++
++  it('contains hostile JavaScript values within documented defaults and ranges', () => {
++    const hostile = {
++      title: '   ',
++      palette: { positive: 'not-a-color', negative: 42 },
++      axis: { x: 'false', y: null },
++      valueLabels: 'everything',
++      tooltip: 'yes',
++      animation: { enabled: 'yes', duration: Number.NaN },
++      numberFormat: {
++        minimumFractionDigits: -20,
++        maximumFractionDigits: 100,
++        currencyDisplay: 'private',
++      },
++    } as unknown as FinancialChartAppearance;
++
++    expect(resolveFinancialChartAppearance(hostile, '  Operating bridge  ')).toEqual({
++      title: 'Operating bridge',
++      palette: DEFAULT_FINANCIAL_CHART_PALETTE,
++      axis: { x: true, y: true },
++      valueLabels: 'auto',
++      tooltip: false,
++      animation: { enabled: true, duration: 160 },
++      numberFormat: {
++        minimumFractionDigits: 0,
++        maximumFractionDigits: 6,
++        currencyDisplay: 'narrowSymbol',
++      },
++    });
++  });
++
++  it('falls back to a stable accessible title when both runtime titles are empty', () => {
++    const hostile = { title: '' } as unknown as FinancialChartAppearance;
++
++    expect(resolveFinancialChartAppearance(hostile, '  ').title).toBe('Financial chart');
++  });
++
++  it('does not execute accessors or propagate hostile proxy reflection errors', () => {
++    let getterCalled = false;
++    const accessorInput = {};
++    Object.defineProperty(accessorInput, 'title', {
++      get() {
++        getterCalled = true;
++        return 'Unsafe title';
++      },
++    });
++    const unreadable = new Proxy(
++      {},
++      {
++        getOwnPropertyDescriptor() {
++          throw new Error('private runtime details');
++        },
++      },
++    );
++
++    expect(
++      resolveFinancialChartAppearance(accessorInput as FinancialChartAppearance, 'Fallback title')
++        .title,
++    ).toBe('Fallback title');
++    expect(getterCalled).toBe(false);
++    expect(() =>
++      resolveFinancialChartAppearance(unreadable as FinancialChartAppearance, 'Safe title'),
++    ).not.toThrow();
++  });
++});

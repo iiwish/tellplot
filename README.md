@@ -4,7 +4,7 @@ TellPlot 是面向财务分析与汇报场景的可编辑叙事图表项目。�
 
 ## 当前状态
 
-产品设计、技术方案以及 T101-T108 任务图均已确认并完成验收。仓库包含可嵌入的 `@tellplot/editor` React 组件包、薄参考编辑器、完整测试分层和本地发布候选证据；npm publish 与正式版本发布尚未执行。
+产品设计、技术方案以及 T101-T110 均已确认并完成验收。仓库包含可嵌入的 `@tellplot/editor` React 组件包、薄参考编辑器、安全图表配置层、完整测试分层和发布候选证据；npm publish 与正式版本发布尚未执行。
 
 ## 本地开发
 
@@ -26,6 +26,10 @@ pnpm test:package
 
 ## 当前文档
 
+- [文档入口](docs/README.md)
+- [产品路线图](docs/roadmap.md)
+- [架构概览](docs/architecture.md)
+- [图表配置边界](docs/configuration.md)
 - [产品设计 SSOT](.ai-platform/docs/product-design.md)
 - [项目章程](.ai-platform/memory/constitution.md)
 - [技术决策记录](.ai-platform/docs/technology-decision-record.md)
@@ -46,3 +50,4 @@ pnpm test:package
 - [实现计划](.ai-platform/specs/001-waterfall-editor-foundation/plan.md)
 - [设计合同](.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md)
 - [任务图](.ai-platform/specs/001-waterfall-editor-foundation/tasks.md)
+- [安全图表配置](.ai-platform/specs/003-chart-configuration-foundation/spec.md)

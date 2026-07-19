@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Version: 0.3.0
+- Version: 0.4.0
 - Status: Confirmed
 - Package: `@tellplot/editor`
 
@@ -21,6 +21,7 @@
 - `validateSourceData`
 - `validateViewSpec`
 - 公共 props、data、view、command、result、error 与 export 类型
+- `FinancialChartAppearance` 及其语义配置类型
 - `@tellplot/editor/styles.css`
 
 不导出 G2 chart instance、内部 reducer、DOM components、dnd-kit adapter 或 projection cache。
@@ -62,6 +63,7 @@ interface FinancialChartEditorProps {
   readonly locale?: 'zh-CN' | 'en-US';
   readonly readOnly?: boolean;
   readonly height?: number | string;
+  readonly chartAppearance?: FinancialChartAppearance;
   readonly panels?: {
     readonly outline?: boolean;
     readonly inspector?: boolean;
@@ -71,6 +73,20 @@ interface FinancialChartEditorProps {
   readonly onCommand?: (event: CommandEvent) => void;
   readonly onCommandRejected?: (error: CommandError) => void;
   readonly onSelectionChange?: (selection: SelectionState) => void;
+}
+
+interface FinancialChartAppearance {
+  readonly title?: string;
+  readonly palette?: Partial<FinancialChartPalette>;
+  readonly axis?: { readonly x?: boolean; readonly y?: boolean };
+  readonly valueLabels?: 'auto' | 'always' | 'never';
+  readonly tooltip?: boolean;
+  readonly animation?: { readonly enabled?: boolean; readonly duration?: number };
+  readonly numberFormat?: {
+    readonly minimumFractionDigits?: number;
+    readonly maximumFractionDigits?: number;
+    readonly currencyDisplay?: 'symbol' | 'narrowSymbol' | 'code' | 'name';
+  };
 }
 
 interface SelectionState {
@@ -88,6 +104,10 @@ Rules:
 - `SelectionState.nodeIds` 保留同父级直接选择，`sourceIds` 是递归展开后的叶子来源集合。
 - 公共 command 类型包含 `MoveGroupCommand`；直接操作、大纲、宿主与 AI 使用同一 `executeCommand` 语义。
 - `height` 默认 680px，最小 480px；组件宽度由宿主容器决定。
+- `chartAppearance` 是宿主级呈现配置，不写入 `ViewSpec`；无效运行时值收敛到安全默认值。
+- `chartAppearance` 不接受原始 `G2Spec`、chart instance、data transform 或编码覆盖。
+- 屏幕、SVG/PNG 导出和无障碍摘要共享标题、语义颜色与数字格式；交互 Tooltip 只存在于屏幕图表。
+- 动画 `duration` 收敛到 0 至 1000 毫秒；reduced motion 优先于宿主动画配置。
 - 回调执行异常不得破坏内部 chart cleanup；开发环境记录不含数据值的 contextual error。
 
 ## Imperative Handle
