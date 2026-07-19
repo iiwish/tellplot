@@ -1,5 +1,6 @@
 import type { Chart as G2Chart } from '@antv/g2';
 
+import type { FinancialChartAppearance } from '../config/chartAppearance';
 import type { ViewNodeId } from '../domain/ids';
 import type { Annotation, Emphasis } from '../domain/model';
 import type { WaterfallProjection } from '../waterfall/waterfallTypes';
@@ -26,6 +27,7 @@ interface SvgChartExportRequest {
   readonly suggestedFilename: string;
   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+  readonly appearance?: FinancialChartAppearance | undefined;
 }
 
 const REMOVED_ELEMENTS = 'script, foreignObject, iframe, object, embed, image, use';
@@ -150,6 +152,7 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
         showValueLabels: shouldShowWaterfallValueLabels(request.projection),
         annotations: request.annotations,
         emphasis: request.emphasis,
+        appearance: request.appearance,
       }),
     );
     await chart.render();

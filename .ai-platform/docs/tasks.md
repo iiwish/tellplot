@@ -2,10 +2,10 @@
 
 ## Metadata
 
-- Version: 0.5.0
-- Status: Review_Gate
-- Last updated: 2026-07-18
-- Scope: 瀑布图基础切片已验收；TellPlot 品牌与独立仓库迁移按 T109 执行
+- Version: 0.7.0
+- Status: Active
+- Last updated: 2026-07-19
+- Scope: T101-T110 已验收；下一阶段进入分类条形图与柱状图验证切片
 
 ## T001 - 确认产品设计与项目章程
 
@@ -65,7 +65,7 @@
 
 ## T109 - TellPlot 品牌与独立仓库迁移
 
-- Status: Needs_Review
+- Status: Accepted
 - Priority: P0
 - Dependencies: T108
 - Blocks: 旧仓库处置决策与公开发布准备
@@ -84,6 +84,26 @@
 - Packet path: `.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml`
 - Evidence required: 源/目标清单、旧历史镜像校验、品牌扫描、本地验证、GitHub CI、仓库设置与旧远端不变证明。
 
+## T110 - 长期文档与安全图表配置层
+
+- Status: Accepted
+- Priority: P0
+- Dependencies: T108；TellPlot 独立仓库已建立
+- Blocks: 分类图验证切片与稳定公共配置文档
+- Story / Requirement: FR-013、CD-006、TDR-012
+- Parallel: 否
+- Conflicts with: 新图表类型、ViewSpec schema 修改、任意 G2Spec 透传、旧仓库操作
+- Goal: 提供长期文档入口与有限、类型化、屏幕/导出一致的 `FinancialChartAppearance`。
+- Allowed files: `docs/**`、`README.md`、`AGENTS.md`、`.ai-platform/**`、editor 配置/组件/导出/react/公共入口、相关 tests/e2e
+- Test targets: 配置解析、G2 spec、组件 rerender、导出、公共类型、package、E2E、a11y、performance
+- Deliverables: roadmap、architecture、configuration 文档；安全公共配置 API；T110 evidence
+- Acceptance criteria: 默认行为不变；批准配置映射确定；无原始 G2 escape hatch；全量验证通过。
+- Definition of Done: TDD、全量验证、review、evidence 与用户验收全部完成。
+- Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:e2e`；`pnpm test:a11y`；`pnpm test:performance`；artifact validator；`git diff --check`
+- TDD plan: RED 配置/映射/一致性测试；GREEN 最小配置层；REFACTOR 统一默认值与 screen/export spec。
+- Packet path: `.ai-platform/specs/003-chart-configuration-foundation/packets/T110.yaml`
+- Evidence required: RED receipt、测试结果、API 边界 review、最终 diff 与残余风险。
+
 ## Next Gate
 
-T109 的实现与验证已进入用户验收闸门。用户明确接受后，才进入旧仓库归档决策；npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。
+分类条形图与柱状图验证切片进入 feature 设计。旧仓库归档、npm publish 和正式版本发布保持独立授权闸门。

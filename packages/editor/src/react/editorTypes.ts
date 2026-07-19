@@ -1,4 +1,5 @@
 import type { CommandError } from '../domain/errors';
+import type { FinancialChartAppearance } from '../config/chartAppearance';
 import type { CommandEvent } from '../domain/executeCommand';
 import type { SourceItemId, ViewNodeId } from '../domain/ids';
 import type { SourceData, ViewSpec } from '../domain/model';
@@ -31,6 +32,7 @@ export interface FinancialChartEditorProps {
   readonly readOnly?: boolean;
   readonly height?: number | string;
   readonly panels?: FinancialChartEditorPanels;
+  readonly chartAppearance?: FinancialChartAppearance;
   readonly onViewSpecChange?: (next: ViewSpec, event: CommandEvent) => void;
   readonly onCommand?: (event: CommandEvent) => void;
   readonly onCommandRejected?: (error: CommandError) => void;

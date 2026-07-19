@@ -411,3 +411,27 @@ describe('FinancialChartEditor public handle', () => {
     expect(summary.textContent).not.toContain('Outer');
   });
 });
+
+describe('FinancialChartEditor chart appearance accessibility', () => {
+  it('uses the configured title and number format in the ordered text equivalent', async () => {
+    render(
+      <FinancialChartEditor
+        chartAppearance={{
+          title: 'Board bridge',
+          numberFormat: {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+            currencyDisplay: 'code',
+          },
+        }}
+        locale="en-US"
+        sourceData={financialSourceData}
+      />,
+    );
+
+    const summary = await screen.findByRole('region', { name: 'Chart summary' });
+    expect(summary.querySelector('p')?.textContent).toContain('Board bridge');
+    expect(summary.textContent).toContain('CNY');
+    expect(summary.textContent).toContain('1,000.0');
+  });
+});

@@ -151,6 +151,31 @@ async function paintedPixelCount(canvas) {
   });
 }
 
+async function canvasPixelSignature(canvas) {
+  return canvas.evaluate(element => {
+    if (!(element instanceof HTMLCanvasElement)) {
+      return 0;
+    }
+    const context = element.getContext('2d');
+    if (context === null || element.width === 0 || element.height === 0) {
+      return 0;
+    }
+    const pixels = context.getImageData(0, 0, element.width, element.height).data;
+    let signature = 2_166_136_261;
+    for (let offset = 0; offset < pixels.length; offset += 16) {
+      signature ^= pixels[offset] ?? 0;
+      signature = Math.imul(signature, 16_777_619);
+      signature ^= pixels[offset + 1] ?? 0;
+      signature = Math.imul(signature, 16_777_619);
+      signature ^= pixels[offset + 2] ?? 0;
+      signature = Math.imul(signature, 16_777_619);
+      signature ^= pixels[offset + 3] ?? 0;
+      signature = Math.imul(signature, 16_777_619);
+    }
+    return signature >>> 0;
+  });
+}
+
 async function verifyConsumer(browser, consumer, directory) {
   const port = await availablePort();
   const url = `http://127.0.0.1:${port}`;
@@ -218,13 +243,38 @@ async function verifyConsumer(browser, consumer, directory) {
       assert.equal(runtime.background, 'rgb(243, 245, 244)');
       assert.equal(runtime.accent.toLowerCase(), '#126e57');
 
+      const defaultSignature = await canvasPixelSignature(canvas);
+      await page.evaluate(() => globalThis.__tellplotReactMatrix?.configure());
+      await page.waitForFunction(
+        () => document.querySelector('.tp-chart-stage__title')?.textContent === 'Configured bridge',
+      );
+
+      const configuredDeadline = Date.now() + 30_000;
+      let configuredPainted = 0;
+      let configuredSignature = defaultSignature;
+      while (Date.now() < configuredDeadline) {
+        configuredPainted = await paintedPixelCount(canvas);
+        configuredSignature = await canvasPixelSignature(canvas);
+        if (configuredPainted > 500 && configuredSignature !== defaultSignature) {
+          break;
+        }
+        await page.waitForTimeout(100);
+      }
+      assert.ok(configuredPainted > 500, `${consumer.id} configured canvas must remain nonblank`);
+      assert.notEqual(
+        configuredSignature,
+        defaultSignature,
+        `${consumer.id} chartAppearance must update the real G2 canvas`,
+      );
+      assert.equal(await page.locator('[data-tellplot="editor"]').count(), 1);
+
       await page.evaluate(() => globalThis.__tellplotReactMatrix?.unmount());
       await page.locator('#root[data-unmounted="true"]').waitFor({ state: 'attached' });
       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 0);
       await page.waitForTimeout(50);
       assert.deepEqual(runtimeErrors, []);
       console.log(
-        `[react-matrix:${consumer.id}] React ${runtime.reactVersion}, painted pixels ${painted}, clean unmount`,
+        `[react-matrix:${consumer.id}] React ${runtime.reactVersion}, configured G2 canvas ${configuredPainted} painted pixels, clean unmount`,
       );
     } finally {
       await page.close();

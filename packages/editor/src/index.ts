@@ -7,6 +7,15 @@ export { parseViewSpec, serializeViewSpec } from './domain/persistence';
 export { validateSourceData, validateViewSpec } from './domain/validation';
 
 export type {
+  ChartCurrencyDisplay,
+  ChartValueLabelMode,
+  FinancialChartAnimationAppearance,
+  FinancialChartAppearance,
+  FinancialChartAxisAppearance,
+  FinancialChartNumberFormat,
+  FinancialChartPalette,
+} from './config/chartAppearance';
+export type {
   CollapseGroupCommand,
   CommandEnvelope,
   CommandSource,

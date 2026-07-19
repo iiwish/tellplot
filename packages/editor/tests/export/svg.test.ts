@@ -189,4 +189,50 @@ describe('SVG export safety', () => {
       { readonly children?: readonly { readonly labels?: readonly unknown[] }[] } | undefined;
     expect(spec?.children?.[0]?.labels).toEqual([]);
   });
+
+  it('uses the same bounded appearance for exported title, palette, axes and labels', async () => {
+    const view = createInitialViewSpec(financialSourceData);
+    if (!view.ok) {
+      throw new Error('Expected a valid SVG appearance fixture');
+    }
+    const projection = projectWaterfall(financialSourceData, view.value);
+    if (!projection.ok) {
+      throw new Error('Expected a valid SVG appearance projection');
+    }
+
+    await exportSvgChart({
+      ownerDocument: document,
+      projection: projection.value,
+      title: 'Default bridge',
+      locale: 'en-US',
+      currency: 'USD',
+      width: 960,
+      height: 520,
+      background: '#ffffff',
+      suggestedFilename: 'bridge.svg',
+      annotations: {},
+      emphasis: {},
+      appearance: {
+        title: 'Exported bridge',
+        palette: { positive: '#00A36C' },
+        axis: { y: false },
+        valueLabels: 'never',
+      },
+    });
+
+    const spec = svgG2Mock.Chart.specs.at(-1) as
+      | {
+          readonly title?: { readonly title?: string };
+          readonly children?: readonly {
+            readonly scale?: { readonly color?: { readonly range?: readonly string[] } };
+            readonly axis?: { readonly y?: unknown };
+            readonly labels?: readonly unknown[];
+          }[];
+        }
+      | undefined;
+    expect(spec?.title?.title).toBe('Exported bridge');
+    expect(spec?.children?.[0]?.scale?.color?.range?.[1]).toBe('#00A36C');
+    expect(spec?.children?.[0]?.axis?.y).toBe(false);
+    expect(spec?.children?.[0]?.labels).toEqual([]);
+  });
 });

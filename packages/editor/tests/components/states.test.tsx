@@ -770,6 +770,58 @@ describe('G2 lifecycle', () => {
     expect(chart?.destroy).toHaveBeenCalledOnce();
   });
 
+  it('updates the bounded public chart appearance on one G2 instance', async () => {
+    const { rerender } = render(
+      <FinancialChartEditor
+        chartAppearance={{
+          title: 'Configured bridge',
+          palette: { positive: '#00A36C' },
+          axis: { x: false },
+          valueLabels: 'never',
+          tooltip: true,
+          animation: { duration: 220 },
+          numberFormat: { maximumFractionDigits: 1 },
+        }}
+        sourceData={financialSourceData}
+      />,
+    );
+
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    await waitFor(() => expect(chart?.render).toHaveBeenCalledOnce());
+    expect(screen.getByRole('heading', { name: 'Configured bridge' })).toBeTruthy();
+    expect(chart?.options).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        children: [
+          expect.objectContaining({
+            axis: expect.objectContaining({ x: false }),
+            labels: [],
+            tooltip: true,
+          }),
+        ],
+      }),
+    );
+    const firstScreenSpec = chart?.options.mock.calls.at(-1)?.[0] as
+      { readonly title?: unknown } | undefined;
+    expect(firstScreenSpec?.title).toBeUndefined();
+
+    rerender(
+      <FinancialChartEditor
+        chartAppearance={{ title: 'Second bridge', valueLabels: 'always' }}
+        sourceData={financialSourceData}
+      />,
+    );
+
+    await waitFor(() => expect(chart?.render).toHaveBeenCalledTimes(2));
+    expect(g2Mock.Chart.instances).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Second bridge' })).toBeTruthy();
+    expect(chart?.options).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        children: [expect.objectContaining({ labels: [expect.objectContaining({})] })],
+      }),
+    );
+  });
+
   it('does not report a pending render rejection after disposal', async () => {
     const pending = deferred();
     const onRenderError = vi.fn();
