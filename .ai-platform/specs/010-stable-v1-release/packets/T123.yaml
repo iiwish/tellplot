@@ -1,0 +1,164 @@
+schema_version: 1
+packet_id: EP-G004-T123-A001
+task_id: T123
+feature_id: 010-stable-v1-release
+mode: execute_goal
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  goal_spec: .ai-platform/specs/010-stable-v1-release/spec.md
+  goal_plan: .ai-platform/specs/010-stable-v1-release/plan.md
+  goal_graph: .ai-platform/specs/010-stable-v1-release/tasks.md
+  requirements_checklist: .ai-platform/specs/010-stable-v1-release/checklists/requirements.md
+  analysis: .ai-platform/specs/010-stable-v1-release/analysis.md
+  execution_authorization: >-
+    Granted. The user explicitly approved creating and completing the 1.0.0 stable-version goal on 2026-07-23.
+    Stage, commit, push, pull request, merge, repository visibility, production deploy, DNS, git tag, GitHub Release
+    and npm publish remain unauthorized.
+
+work_unit:
+  title: 首个稳定版 1.0 本地候选
+  goal: Deliver a local, reproducible @tellplot/editor 1.0.0 stable release candidate.
+  depends_on:
+    - G002 T117 implementation and evidence complete
+    - G002-R1 T118 implementation and evidence complete
+    - G002-R2 T119 implementation and evidence complete
+    - G002-R3 T122 implementation and evidence complete
+  requirements:
+    - STABLE-FR-001
+    - STABLE-FR-002
+    - STABLE-FR-003
+    - STABLE-FR-004
+    - STABLE-FR-005
+    - STABLE-FR-006
+    - STABLE-FR-007
+    - STABLE-FR-008
+    - STABLE-NFR-001
+    - STABLE-NFR-002
+    - STABLE-NFR-003
+    - STABLE-NFR-004
+    - STABLE-NFR-005
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  accepted_baseline:
+    branch: codex/t112-categorical-data-contract
+    state: T112-T122 and governance corrections are intentionally uncommitted in the current worktree
+    constraints:
+      - Preserve all existing user and accepted changes.
+      - Do not reset, stash, stage or commit.
+      - Generate T123 evidence against the recorded snapshot.
+  relevant_files:
+    - packages/editor/package.json
+    - packages/editor/src/index.ts
+    - packages/editor/tests/package/**
+    - scripts/release/**
+    - vitest.config.ts
+    - README.md
+    - CHANGELOG.md
+    - docs/**
+
+baseline:
+  snapshot: /tmp/tellplot-G004-stable.PBkJ9I/worktree
+  note: Snapshot recorded before G004 stable artifacts or implementation edits.
+
+execution_constraints:
+  allowed_files:
+    - package.json
+    - vitest.config.ts
+    - packages/editor/package.json
+    - packages/editor/README.md
+    - packages/editor/tests/package/**
+    - scripts/release/**
+    - README.md
+    - CHANGELOG.md
+    - docs/**
+    - apps/playground/src/DocsPage.tsx
+    - apps/playground/src/SiteHeader.tsx
+    - e2e/**
+    - .github/**
+    - .ai-platform/**
+    - AGENTS.md
+  forbidden_changes:
+    - No runtime or dev dependency.
+    - No domain, schema, command, projection, interaction, G2 runtime or export behavior change.
+    - No remote action, publish or deployment.
+    - No any, @ts-ignore or @ts-expect-error.
+
+tdd_plan:
+  red:
+    - Lock stable version, required public files and release scripts before implementation.
+    - Lock architecture import graph and cycle rules.
+    - Lock tarball manifest and no-prerelease metadata.
+  green:
+    - Implement stable policy/docs/community files and release checks.
+    - Implement isolated-source rehearsal.
+  refactor:
+    - Compose root release commands without duplicating project validation logic.
+
+validation_commands:
+  - pnpm release:architecture
+  - pnpm release:audit
+  - pnpm release:check
+  - pnpm release:rehearse
+  - pnpm format:check
+  - pnpm lint
+  - pnpm typecheck
+  - pnpm test:coverage
+  - pnpm build
+  - pnpm test:package
+  - pnpm test:react-matrix
+  - pnpm test:e2e
+  - pnpm test:a11y
+  - pnpm test:performance
+  - pnpm test:browser-previous
+  - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 010-stable-v1-release --task-id T123 --strict
+  - git diff --check
+
+validation_loop:
+  focused_red:
+    - Run stable package identity, required public files and release-script tests before implementation.
+    - Record the expected beta version and missing-file/script failures.
+  focused_green:
+    - Run the same focused suite after stable metadata, public docs and release scripts are present.
+  regression:
+    - Run release:check, isolated rehearsal and the complete current/previous compatibility matrix.
+  failure_policy:
+    - Fix T123 failures only within allowed files.
+    - Stop if a fix requires dependency, schema, runtime behavior or a remote action.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T123
+  required:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+    - architecture-report.md
+    - tarball-manifest.json
+    - isolated-source-receipt.md
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: >-
+    G004 may move to Needs_Review only when all stable success criteria and complete gates pass with no unresolved
+    Critical, High or Medium finding. Only the user can mark the goal Accepted.
+
+stop_conditions:
+  - A dependency, public schema or runtime behavior change is required.
+  - Existing package, React, browser, accessibility or performance gates regress.
+  - The dirty baseline cannot be preserved.
+  - A Critical or High review finding remains unresolved.
+  - A remote action or publish is requested without separate approval.
+
+handoff:
+  remote_actions_authorized: false
+  public_release_goal: G005
+  finish_state: Needs_Review

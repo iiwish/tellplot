@@ -1,0 +1,154 @@
+schema_version: 1
+packet_id: EP-G002-R2-A001
+task_id: T119
+feature_id: 007-open-source-showcase
+mode: execute_goal
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  goal_spec: .ai-platform/specs/007-open-source-showcase/spec.md
+  goal_plan: .ai-platform/specs/007-open-source-showcase/plan.md
+  goal_graph: .ai-platform/specs/007-open-source-showcase/tasks.md
+  design_contract: .ai-platform/specs/007-open-source-showcase/design-contract.md
+  requirements_checklist: .ai-platform/specs/007-open-source-showcase/checklists/requirements.md
+  analysis: .ai-platform/specs/007-open-source-showcase/analysis.md
+  execution_authorization: >-
+    Granted. The user explicitly approved G002-R2 and requested implementation on 2026-07-23. Internal workstreams
+    execute continuously and stop at goal-level Needs_Review. Dependency, public API, schema, remote Git, publish,
+    release and deployment changes are not authorized.
+
+work_unit:
+  title: 开源官网与示例中心
+  goal: >-
+    Deliver a responsive TellPlot website shell, real-chart hero, explicit example catalog, developer docs entry and
+    the existing bidirectional workbench without changing @tellplot/editor behavior.
+  depends_on:
+    - G002 T117 Needs_Review
+    - G002-R1 T118 Needs_Review
+  requirements:
+    - SHOWCASE-FR-001
+    - SHOWCASE-FR-002
+    - SHOWCASE-FR-003
+    - SHOWCASE-FR-004
+    - SHOWCASE-FR-005
+    - SHOWCASE-FR-006
+    - SHOWCASE-NFR-001
+    - SHOWCASE-NFR-002
+    - SHOWCASE-NFR-003
+    - SHOWCASE-NFR-004
+    - SHOWCASE-NFR-005
+    - SHOWCASE-NFR-006
+    - SHOWCASE-NFR-007
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  accepted_baseline:
+    branch: codex/t112-categorical-data-contract
+    state: T112-T118 changes are intentionally uncommitted in the current worktree
+    constraints:
+      - Preserve all existing accepted and Needs_Review changes.
+      - Do not reset, stash, stage or commit.
+      - Generate T119-only evidence against the recorded G002-R2 snapshot.
+  relevant_files:
+    - apps/playground/src/App.tsx
+    - apps/playground/src/UsageGuide.tsx
+    - apps/playground/src/LiveChartEditor.tsx
+    - apps/playground/src/fixtures.ts
+    - apps/playground/src/playground.css
+    - e2e/live-code-editor.spec.ts
+    - e2e/accessibility.spec.ts
+
+baseline:
+  snapshot: /tmp/tellplot-G002-R2-baseline.sMohDO/worktree
+  manifest: /tmp/tellplot-G002-R2-baseline.sMohDO/manifest.sha256
+  file_count: 338
+  manifest_sha256: 0440f851c6553fa2d0ffe916776c11639134a44e329b8904d8cf779fe31391e4
+
+execution_constraints:
+  allowed_files:
+    - .ai-platform/**
+    - AGENTS.md
+    - README.md
+    - docs/**
+    - apps/playground/**
+    - e2e/**
+    - vitest.config.ts
+  forbidden_changes:
+    - No dependency manifest or lockfile change.
+    - No packages/editor behavior, public API or style change.
+    - No SourceData, ViewSpec or command schema change.
+    - No new chart family, remote service, telemetry or login.
+    - No remote Git, publish, release or deployment.
+    - No any, @ts-ignore or @ts-expect-error.
+
+tdd_plan:
+  red:
+    - Require root website landmarks, real chart hero and chart-family selector.
+    - Require example catalog routes to correct playground fixtures.
+    - Require docs navigation and mobile menu behavior.
+    - Move existing editor E2E entrypoints to /playground and prove missing route support fails first.
+  green:
+    - Implement the minimum route shell, pages, catalog and extracted workbench.
+  refactor:
+    - Keep routing and content helpers playground-only and remove App monolith without changing editor state ownership.
+
+validation_commands:
+  - pnpm format:check
+  - pnpm lint
+  - pnpm typecheck
+  - pnpm test:unit
+  - pnpm test:coverage
+  - pnpm build
+  - pnpm test:package
+  - pnpm test:react-matrix
+  - pnpm test:e2e
+  - pnpm test:a11y
+  - pnpm test:performance
+  - mise exec node@22.20.0 -- pnpm test:browser-previous
+  - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 007-open-source-showcase --task-id T119 --strict
+  - git diff --check
+
+validation_loop:
+  focused_red:
+    - Run the new route/content unit tests and website browser spec before implementation and record expected failures.
+    - Run one migrated /playground browser slice before route support exists and record the expected failure.
+  focused_green:
+    - Run the same focused suites after the route shell, pages and workbench extraction.
+  regression:
+    - Run the complete validation matrix without weakening existing thresholds, fixtures or browser coverage.
+  failure_policy:
+    - Fix T119 failures only within allowed files.
+    - Stop if a fix requires dependencies, core package behavior, schema, breaking API or remote action.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T119
+  required:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+    - desktop/mobile screenshots
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+    - visual_rubric
+  acceptance_rule: >-
+    G002-R2 may move to Needs_Review only when all success criteria and full gates pass with no unresolved Critical,
+    High or Medium finding. Only the user can mark the goal Accepted.
+
+stop_conditions:
+  - A dependency, core package, schema, breaking API, remote action or deployment change is required.
+  - Existing dirty baseline cannot be preserved.
+  - A Critical or High artifact/review finding remains unresolved.
+  - Existing validation must be weakened.
+
+handoff:
+  remote_actions_authorized: false
+  finish_state: Needs_Review

@@ -264,7 +264,7 @@ async function verifyConsumer(browser, consumer, directory) {
       assert.notEqual(
         configuredSignature,
         defaultSignature,
-        `${consumer.id} chartAppearance must update the real G2 canvas`,
+        `${consumer.id} public appearance config must update the real G2 canvas`,
       );
       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 1);
 
@@ -341,7 +341,10 @@ async function main() {
       );
       assert.equal(installedManifest.name, '@tellplot/editor');
       assert.equal(installedManifest.version, sourceManifest.version);
-      assert.equal(installedManifest.exports?.['./styles.css'], './dist/styles.css');
+      assert.deepEqual(installedManifest.exports?.['./styles.css'], {
+        types: './dist/styles.d.ts',
+        default: './dist/styles.css',
+      });
       await run('pnpm', ['run', 'build'], { cwd: directory });
       await verifyConsumer(browser, consumer, directory);
     }

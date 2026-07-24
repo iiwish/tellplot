@@ -29,6 +29,28 @@ function OverlayHarness(): React.JSX.Element {
   );
 }
 
+function UpdatingOverlayHarness(): React.JSX.Element {
+  const [showAction, setShowAction] = useState(true);
+
+  return (
+    <PanelOverlay
+      backdropLabel="Inspector backdrop"
+      closeLabel="Close inspector"
+      label="Inspector"
+      side="right"
+      onClose={() => undefined}
+    >
+      {showAction ? (
+        <button type="button" onClick={() => setShowAction(false)}>
+          Replace action
+        </button>
+      ) : (
+        <button type="button">Replacement action</button>
+      )}
+    </PanelOverlay>
+  );
+}
+
 describe('PanelOverlay focus boundary', () => {
   it('moves focus inside, traps Tab, closes on Escape and restores the opener', async () => {
     const user = userEvent.setup();
@@ -51,5 +73,17 @@ describe('PanelOverlay focus boundary', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Inspector' })).toBeNull());
     expect(document.activeElement).toBe(opener);
+  });
+
+  it('keeps focus in the dialog when an action replaces the focused control', async () => {
+    const user = userEvent.setup();
+    render(<UpdatingOverlayHarness />);
+
+    const action = screen.getByRole('button', { name: 'Replace action' });
+    action.focus();
+    await user.click(action);
+
+    const dialog = screen.getByRole('dialog', { name: 'Inspector' });
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
   });
 });

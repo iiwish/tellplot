@@ -1,0 +1,3502 @@
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index f84e49d..6deceb5 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.7.0
++- Version: 0.10.0
+ - Status: Active
+ - Last updated: 2026-07-19
+-- Scope: T101-T110 已验收；下一阶段进入分类条形图与柱状图验证切片
++- Scope: T101-T112 已验收；004 分类图验证切片进入 T113/T114 execution packet 闸门
+ 
+ ## T001 - 确认产品设计与项目章程
+ 
+@@ -106,4 +106,40 @@
+ 
+ ## Next Gate
+ 
+-分类条形图与柱状图验证切片进入 feature 设计。旧仓库归档、npm publish 和正式版本发布保持独立授权闸门。
++## T111 - 审批分类图需求与技术合同
++
++- Status: Accepted
++- Priority: P0
++- Dependencies: T110 Accepted
++- Blocks: T112-T116
++- Story / Requirement: US-003、FR-005、TDR-013、TDR-014
++- Parallel: 否
++- Conflicts with: 未经审批修改 schema、公共 API、图表范围或开始实现
++- Goal: 确认分类图范围、schema v2、legacy 兼容矩阵、公共 API、G2/交互边界、任务图和质量门禁。
++- Allowed files: `.ai-platform/specs/004-categorical-chart-validation/**`、`.ai-platform/docs/technology-decision-record.md`、`.ai-platform/docs/tasks.md`、`AGENTS.md`
++- Test targets: requirements checklist、cross-artifact analysis、artifact validator
++- Deliverables: Confirmed feature artifacts、Completed checklist/analysis、T112 execution packet
++- Acceptance criteria: 用户明确批准全部 004 artifacts；analysis 无 Critical/High finding；T112 packet 自包含。
++- Definition of Done: 用户于 2026-07-19 明确批准；T111 Accepted；T112 Ready。
++- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
++- TDD plan: 不适用；本任务只审批技术 artifact。
++- Packet path: 不适用；审批任务不生成实现 packet。
++- Evidence required: 用户审批记录、validator、analysis、文档 diff。
++
++## Feature 004 Execution
++
++权威实现任务图位于 `.ai-platform/specs/004-categorical-chart-validation/tasks.md`。
++
++| Task | Status | Gate |
++| --- | --- | --- |
++| T111 - 审批分类图需求与技术合同 | Accepted | 用户于 2026-07-19 明确批准 |
++| T112 - 扩展数据合同与共享命令策略 | Accepted | 用户于 2026-07-19 明确验收；实现、evidence 与质量门禁完整 |
++| T113 - 分类投影与 G2 Spec | Draft | 依赖 T112 Accepted |
++| T114 - 方向感知分类轴交互 | Draft | 依赖 T112 Accepted |
++| T115 - 分类图编辑、导出与可访问性 | Draft | 依赖 T113/T114 Accepted |
++| T116 - 多图表内部架构收敛 | Draft | 依赖 T115 Accepted |
++
++## Next Gate
++
++T112 已验收。T113 与 T114 的依赖已满足，下一步是分别生成并审批 execution packet；在 packet 获批前不开始
++实现。T115-T116、旧仓库归档、npm publish 和正式版本发布保持独立闸门。
+diff --git a/.ai-platform/docs/technology-decision-record.md b/.ai-platform/docs/technology-decision-record.md
+index 66f0b67..b3a60b3 100644
+--- a/.ai-platform/docs/technology-decision-record.md
++++ b/.ai-platform/docs/technology-decision-record.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.5.0
++- Version: 0.6.0
+ - Status: Confirmed
+ - Last updated: 2026-07-19
+-- Approval: 用户于 2026-07-19 明确批准长期文档与安全语义图表配置方向
++- Approval: 用户于 2026-07-19 明确批准长期文档、安全语义图表配置和 004 分类图验证切片技术方案
+ 
+ ## Decision Context
+ 
+@@ -114,6 +114,39 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ - Runtime safety: 无效数字和空字符串回退到安全默认值；动画时长和小数位被限制在文档范围；reduced motion 始终优先。
+ - Rejected alternatives: 原始 `G2Spec` prop、任意 spec transform、chart instance ref、深度 merge G2 options。
+ 
++## TDR-013 多图表数据合同与命令策略
++
++- Status: Confirmed
++- Decision: `SourceData` 使用显式 schema generation 与 `dataKind` 判别 waterfall/categorical；现有
++  `1.0.0` waterfall wire shape 原样兼容，新 chart family 使用 `2.0.0`。`ViewSpec` 共享递归叙事树，并在
++  current schema 中支持 `waterfall | bar | column`。source/view compatibility 使用严格矩阵，不启发式推断，
++  不隐式迁移。
++- Command ownership: tree transform、history、revision、annotation 和 emphasis 保持一份；waterfall
++  anchor/segment 与 categorical movable-item 差异由最小内部 chart policy 提供。policy 不属于公共 API，
++  不接受宿主 callback。
++- Rationale: 放宽 waterfall validator 会让缺失 anchor 的错误输入被误判为分类数据；复制命令内核会产生
++  多个状态源。显式判别联合同时保护 legacy compatibility 与 strict TypeScript exhaustiveness。
++- Consequences: validator、session、fingerprint、persistence 和 executor 必须覆盖 legacy/current 分支；
++  command wire shape 保持不变；bar/column 不建立独立领域模型。
++- Rejected alternatives: 把 categorical 解释为无 anchor waterfall、按 item shape 推断 family、复制分类命令
++  executor、公共 ChartPlugin registry、静默 schema upgrade。
++
++## TDR-014 分类图方向与 G2 边界
++
++- Status: Confirmed
++- Decision: column 使用 canonical `x = nodeId, y = amount` Cartesian interval；bar 保持同一语义 encode，
++  使用 G2 `coordinate.transform: transpose`。`ViewSpec.rootOrder` 始终保存逻辑顺序，column 首项位于左侧，
++  bar 首项位于顶部。
++- Interaction ownership: direct reorder 读取 G2 scene bounds，并在物理 category axis 上计算 collision；
++  waterfall/column 使用 X，bar 使用 Y。value-axis 位移与 mark 长度不参与排序，不猜测固定柱宽或行高。
++- Runtime extraction: categorical vertical slice 通过前不建立公共或内部通用插件框架；两类 chart green 后只
++  抽取真实重复的 G2 load/render/destroy、animation finish、event cleanup 与 offscreen export lifecycle。
++- Rationale: transpose 保留统一 categorical spec 语义，并让 G2 负责坐标变换；延迟抽象符合项目章程
++  P-006 与 P-009。
++- Rejected alternatives: 手工交换并分叉两套投影、DOM 模拟图形、第二渲染引擎、新动画框架、raw G2Spec。
++
+ ## Approval Gate
+ 
+-用户批准本记录与 `001-waterfall-editor-foundation` 任务图后，任务状态才能从 `Draft` 转为 `Ready` 并生成执行包。任何依赖变化必须重新运行兼容性、许可证和包边界检查。
++TDR-001 至 TDR-014 均已获得用户明确批准。实现任务只有在对应 feature spec、Plan、tasks、analysis 和
++self-contained execution packet 完整时才能进入 `Ready`；任何依赖、schema 或公共边界变化必须重新进入
++审批，并运行兼容性、许可证和包边界检查。
+diff --git a/AGENTS.md b/AGENTS.md
+index 0b1b047..79f1b04 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -2,7 +2,7 @@
+ 
+ ## 项目状态
+ 
+-- 当前阶段：瀑布图基础切片 T101-T108 与 T106-CR001 已完成并通过用户验收；后续任务以项目任务图与对应 feature task graph 为准。
++- 当前阶段：T101-T112 已验收；`004-categorical-chart-validation` 已批准，T113/T114 等待 execution packet 生成与审批。
+ - 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
+ - 产品 SSOT：`.ai-platform/docs/product-design.md`。
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+index edd3fc8..191c00e 100644
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -217,7 +217,9 @@ export const FinancialChartEditor = forwardRef<
+         ? canonicalProjectionResult.errors
+         : [],
+   );
+-  const empty = !invalid && !props.sourceData.items.some(item => item.kind === 'contribution');
++  const empty =
++    !invalid &&
++    !props.sourceData.items.some(item => 'kind' in item && item.kind === 'contribution');
+   const modalOpen =
+     pendingChartGroup !== null ||
+     (!invalid && ((panels.outline && outlineOpen) || (panels.inspector && inspectorOpen)));
+diff --git a/packages/editor/src/domain/createInitialViewSpec.ts b/packages/editor/src/domain/createInitialViewSpec.ts
+index 083cd15..2cdeeb7 100644
+--- a/packages/editor/src/domain/createInitialViewSpec.ts
++++ b/packages/editor/src/domain/createInitialViewSpec.ts
+@@ -1,26 +1,138 @@
+-import { validationSuccess, type ValidationResult } from './errors';
+-import type { SourceData, ViewSpec } from './model';
++import {
++  validationFailure,
++  validationIssue,
++  validationSuccess,
++  type ValidationIssue,
++  type ValidationResult,
++} from './errors';
++import type { ChartType, SourceData, ViewSpec } from './model';
++import { sourceDataKind } from './chartPolicy';
+ import { validateSourceData } from './validation';
+ 
+-/** Creates a deterministic initial view after validating the supplied source data. */
+-export function createInitialViewSpec(sourceData: SourceData): ValidationResult<ViewSpec> {
++const INITIAL_VIEW_OPTION_FIELDS: ReadonlySet<string> = new Set(['chartType']);
++
++type UnknownRecord = Record<string, unknown>;
++
++/** Closed options for selecting a compatible initial chart layout. */
++export interface InitialViewSpecOptions {
++  readonly chartType?: ChartType;
++}
++
++function isPlainRecord(value: unknown): value is UnknownRecord {
++  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
++    return false;
++  }
++  const prototype = Object.getPrototypeOf(value) as unknown;
++  return prototype === Object.prototype || prototype === null;
++}
++
++function optionIssue(
++  reason: 'INVALID_CHART_TYPE' | 'NON_PLAIN_DATA' | 'UNKNOWN_FIELD' | 'UNREADABLE_INPUT',
++  path: string,
++): ValidationIssue {
++  return validationIssue('INVALID_VIEW_SPEC', reason, path);
++}
++
++function parseOptionsInternal(options: unknown): ValidationResult<ChartType | undefined> {
++  if (options === undefined) {
++    return validationSuccess(undefined);
++  }
++  if (!isPlainRecord(options)) {
++    return validationFailure([optionIssue('NON_PLAIN_DATA', '/')]);
++  }
++
++  const errors: ValidationIssue[] = [];
++  let chartType: unknown;
++  for (const key of Reflect.ownKeys(options)) {
++    if (typeof key === 'symbol') {
++      errors.push(optionIssue('NON_PLAIN_DATA', '/'));
++      continue;
++    }
++    const path = `/${key.replaceAll('~', '~0').replaceAll('/', '~1')}`;
++    if (!INITIAL_VIEW_OPTION_FIELDS.has(key)) {
++      errors.push(optionIssue('UNKNOWN_FIELD', path));
++      continue;
++    }
++    const descriptor = Object.getOwnPropertyDescriptor(options, key);
++    if (descriptor === undefined || !descriptor.enumerable || !('value' in descriptor)) {
++      errors.push(optionIssue('NON_PLAIN_DATA', path));
++      continue;
++    }
++    chartType = descriptor.value;
++  }
++
++  if (
++    chartType !== undefined &&
++    chartType !== 'waterfall' &&
++    chartType !== 'bar' &&
++    chartType !== 'column'
++  ) {
++    errors.push(optionIssue('INVALID_CHART_TYPE', '/chartType'));
++  }
++
++  return errors.length === 0
++    ? validationSuccess(chartType as ChartType | undefined)
++    : validationFailure(errors);
++}
++
++function parseOptions(options: unknown): ValidationResult<ChartType | undefined> {
++  try {
++    return parseOptionsInternal(options);
++  } catch {
++    return validationFailure([optionIssue('UNREADABLE_INPUT', '/')]);
++  }
++}
++
++/** Creates a deterministic initial view after validating the source and closed options. */
++export function createInitialViewSpec(
++  sourceData: SourceData,
++  options?: InitialViewSpecOptions,
++): ValidationResult<ViewSpec> {
+   const sourceResult = validateSourceData(sourceData);
+   if (!sourceResult.ok) {
+     return sourceResult;
+   }
+ 
+-  return validationSuccess({
+-    schemaVersion: '1.0.0',
+-    datasetId: sourceResult.value.datasetId,
+-    chartType: 'waterfall',
++  const optionsResult = parseOptions(options);
++  if (!optionsResult.ok) {
++    return optionsResult;
++  }
++
++  const source = sourceResult.value;
++  const sourceKind = sourceDataKind(source);
++  const chartType = optionsResult.value ?? (sourceKind === 'categorical' ? 'column' : 'waterfall');
++  const compatible =
++    sourceKind === 'categorical'
++      ? chartType === 'bar' || chartType === 'column'
++      : chartType === 'waterfall';
++  if (!compatible) {
++    return validationFailure([
++      validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'),
++    ]);
++  }
++
++  const rootOrder = source.items
++    .filter(
++      item => sourceKind === 'categorical' || ('kind' in item && item.kind === 'contribution'),
++    )
++    .map(item => item.id);
++  const narrativeFields = {
++    datasetId: source.datasetId,
+     revision: 0,
+-    rootOrder: sourceResult.value.items
+-      .filter(item => item.kind === 'contribution')
+-      .map(item => item.id),
++    rootOrder,
+     groups: {},
+     collapsedGroupIds: [],
+     pinnedItemIds: [],
+     annotations: {},
+     emphasis: {},
+-  });
++  } as const;
++
++  if (source.schemaVersion === '1.0.0') {
++    return validationSuccess({
++      ...narrativeFields,
++      schemaVersion: '1.0.0',
++      chartType: 'waterfall',
++    });
++  }
++  return validationSuccess({ ...narrativeFields, schemaVersion: '2.0.0', chartType });
+ }
+diff --git a/packages/editor/src/domain/errors.ts b/packages/editor/src/domain/errors.ts
+index 129e68e..a224b1d 100644
+--- a/packages/editor/src/domain/errors.ts
++++ b/packages/editor/src/domain/errors.ts
+@@ -18,9 +18,12 @@ export type ValidationIssueReason =
+   | 'NON_FINITE_AMOUNT'
+   | 'UNSAFE_AMOUNT'
+   | 'INVALID_SOURCE_ITEM_KIND'
++  | 'INVALID_DATA_KIND'
+   | 'INVALID_METADATA_VALUE'
+   | 'INVALID_ANCHOR'
+   | 'DATASET_ID_MISMATCH'
++  | 'SCHEMA_VERSION_MISMATCH'
++  | 'INCOMPATIBLE_CHART_TYPE'
+   | 'INVALID_CHART_TYPE'
+   | 'INVALID_REVISION'
+   | 'INVALID_HISTORY_LIMIT'
+@@ -79,14 +82,17 @@ const ISSUE_MESSAGES: Readonly<Record<ValidationIssueReason, string>> = {
+   NON_FINITE_AMOUNT: 'Amount must be finite.',
+   UNSAFE_AMOUNT: 'Amount exceeds the supported numeric range.',
+   INVALID_SOURCE_ITEM_KIND: 'Source item kind is not supported.',
++  INVALID_DATA_KIND: 'Source data kind is not supported.',
+   INVALID_METADATA_VALUE: 'Metadata value is not JSON-compatible.',
+   INVALID_ANCHOR: 'Source anchors are invalid.',
+   DATASET_ID_MISMATCH: 'View and source datasets do not match.',
++  SCHEMA_VERSION_MISMATCH: 'View and source schema generations do not match.',
++  INCOMPATIBLE_CHART_TYPE: 'Chart type is incompatible with the source data.',
+   INVALID_CHART_TYPE: 'Chart type is not supported.',
+   INVALID_REVISION: 'Revision must be a non-negative safe integer.',
+   INVALID_HISTORY_LIMIT: 'History limit must be a non-negative safe integer.',
+   UNKNOWN_SOURCE_REFERENCE: 'View references an unknown source item.',
+-  MISSING_SOURCE_REFERENCE: 'View does not cover every contribution.',
++  MISSING_SOURCE_REFERENCE: 'View does not cover every narrative source item.',
+   DUPLICATE_VIEW_NODE: 'View node appears more than once.',
+   LOCKED_ANCHOR_REFERENCE: 'Locked anchors cannot appear in root order.',
+   ANCHOR_SEGMENT_ORDER: 'View order crosses a subtotal anchor.',
+@@ -95,14 +101,14 @@ const ISSUE_MESSAGES: Readonly<Record<ValidationIssueReason, string>> = {
+   GROUP_SOURCE_ID_CONFLICT: 'Group identifier conflicts with a source identifier.',
+   GROUP_TOO_SMALL: 'A group requires at least two child nodes.',
+   DUPLICATE_GROUP_CHILD: 'A group child appears more than once.',
+-  INVALID_GROUP_CHILD: 'Only contribution items and groups can be grouped.',
++  INVALID_GROUP_CHILD: 'Only narrative source items and groups can be grouped.',
+   GROUP_CROSSES_ANCHOR: 'Group children cannot cross a subtotal anchor.',
+-  DUPLICATE_GROUP_MEMBERSHIP: 'A contribution cannot belong to multiple groups.',
++  DUPLICATE_GROUP_MEMBERSHIP: 'A narrative source item cannot belong to multiple groups.',
+   CYCLIC_GROUP_REFERENCE: 'Group references must not form a cycle.',
+   ORPHAN_GROUP: 'Every group must appear in root order.',
+   DUPLICATE_REFERENCE: 'Reference appears more than once.',
+   UNKNOWN_GROUP_REFERENCE: 'View references an unknown group.',
+-  INVALID_PIN_REFERENCE: 'Only contribution items can be pinned.',
++  INVALID_PIN_REFERENCE: 'Only narrative source items can be pinned.',
+   INVALID_ANNOTATION: 'Annotation must contain text.',
+   ANNOTATION_TOO_LONG: 'Annotation exceeds the supported length.',
+   UNKNOWN_NODE_REFERENCE: 'View references an unknown node.',
+diff --git a/packages/editor/src/domain/executeCommand.ts b/packages/editor/src/domain/executeCommand.ts
+index ef3b339..4f82a58 100644
+--- a/packages/editor/src/domain/executeCommand.ts
++++ b/packages/editor/src/domain/executeCommand.ts
+@@ -4,11 +4,12 @@ import {
+   type EditorCommand,
+   type EditorCommandType,
+ } from './commands';
++import { createNarrativeChartPolicy, sourceDataKind } from './chartPolicy';
+ import { commandError, type CommandError } from './errors';
+ import { appendHistory, cloneViewSpec, type HistoryEntry } from './history';
+ import type { GroupId, SourceItemId, ViewNodeId } from './ids';
+ import { validateEditorInvariants } from './invariants';
+-import type { SourceItem, ViewGroup, ViewSpec } from './model';
++import type { SourceDataItem, ViewGroup, ViewSpec } from './model';
+ import type { EditorSession } from './session';
+ import {
+   collectLeafSourceIds,
+@@ -59,7 +60,7 @@ function failure(session: EditorSession, error: CommandError): CommandResult {
+   return { ok: false, session, error };
+ }
+ 
+-function itemById(session: EditorSession, itemId: SourceItemId): SourceItem | undefined {
++function itemById(session: EditorSession, itemId: SourceItemId): SourceDataItem | undefined {
+   return session.sourceData.items.find(item => item.id === itemId);
+ }
+ 
+@@ -76,11 +77,14 @@ function groupById(session: EditorSession, groupId: string): ViewGroup | undefin
+ }
+ 
+ function contributionSegment(session: EditorSession, itemId: SourceItemId): number | undefined {
++  if (sourceDataKind(session.sourceData) === 'categorical') {
++    return itemById(session, itemId) === undefined ? undefined : 0;
++  }
+   let segment = 0;
+   for (const item of session.sourceData.items) {
+-    if (item.kind === 'subtotal') {
++    if ('kind' in item && item.kind === 'subtotal') {
+       segment += 1;
+-    } else if (item.kind === 'contribution' && item.id === itemId) {
++    } else if ('kind' in item && item.kind === 'contribution' && item.id === itemId) {
+       return segment;
+     }
+   }
+@@ -138,7 +142,7 @@ function validateMovableItem(
+   commandId: string,
+   itemId: SourceItemId,
+   path: string,
+-): ApplyFailure | { readonly ok: true; readonly item: SourceItem } {
++): ApplyFailure | { readonly ok: true; readonly item: SourceDataItem } {
+   const item = itemById(session, itemId);
+   if (item === undefined) {
+     return {
+@@ -146,7 +150,7 @@ function validateMovableItem(
+       error: commandError('ITEM_NOT_FOUND', 'ITEM_NOT_FOUND', path, commandId, { itemId }),
+     };
+   }
+-  if (item.kind !== 'contribution') {
++  if (!createNarrativeChartPolicy(session.sourceData).isMovableItem(session.sourceData, itemId)) {
+     return {
+       ok: false,
+       error: commandError('ITEM_LOCKED', 'SYSTEM_ANCHOR', path, commandId, {
+@@ -490,8 +494,10 @@ function applyCreateGroup(
+   }
+ 
+   const orderedIds = orderedPositions.map(position => parentValues?.[position] as ViewNodeId);
+-  const segments = new Set(orderedIds.map(nodeId => nodeSegment(session, nodeId)));
+-  if (segments.size !== 1) {
++  const leafIds = orderedIds.flatMap(nodeId => collectLeafSourceIds(session.viewSpec, nodeId));
++  if (
++    !createNarrativeChartPolicy(session.sourceData).canShareContainer(session.sourceData, leafIds)
++  ) {
+     return {
+       ok: false,
+       error: commandError('INVALID_DROP_TARGET', 'CROSS_SEGMENT', '/payload/nodeIds', command.id),
+@@ -671,7 +677,12 @@ function applyPin(
+       }),
+     };
+   }
+-  if (item.kind !== 'contribution') {
++  if (
++    !createNarrativeChartPolicy(session.sourceData).isMovableItem(
++      session.sourceData,
++      command.payload.itemId,
++    )
++  ) {
+     return {
+       ok: false,
+       error: commandError('ITEM_LOCKED', 'SYSTEM_ANCHOR', '/payload/itemId', command.id, {
+diff --git a/packages/editor/src/domain/history.ts b/packages/editor/src/domain/history.ts
+index 23e50e4..ccfb29d 100644
+--- a/packages/editor/src/domain/history.ts
++++ b/packages/editor/src/domain/history.ts
+@@ -34,10 +34,8 @@ export function cloneViewSpec(view: ViewSpec): ViewSpec {
+     ]),
+   );
+ 
+-  return {
+-    schemaVersion: view.schemaVersion,
++  const narrativeFields = {
+     datasetId: view.datasetId,
+-    chartType: view.chartType,
+     revision: view.revision,
+     rootOrder: [...view.rootOrder],
+     groups,
+@@ -46,6 +44,10 @@ export function cloneViewSpec(view: ViewSpec): ViewSpec {
+     annotations: { ...view.annotations },
+     emphasis: { ...view.emphasis },
+   };
++
++  return view.schemaVersion === '1.0.0'
++    ? { ...narrativeFields, schemaVersion: '1.0.0', chartType: 'waterfall' }
++    : { ...narrativeFields, schemaVersion: '2.0.0', chartType: view.chartType };
+ }
+ 
+ /** Appends an entry while evicting the oldest entries beyond the configured limit. */
+diff --git a/packages/editor/src/domain/model.ts b/packages/editor/src/domain/model.ts
+index 33a7fef..57accce 100644
+--- a/packages/editor/src/domain/model.ts
++++ b/packages/editor/src/domain/model.ts
+@@ -1,25 +1,65 @@
+ import type { DatasetId, GroupId, SourceItemId, ViewNodeId } from './ids';
+ 
+-export type SchemaVersion = '1.0.0';
+-export type SourceItemKind = 'start' | 'contribution' | 'subtotal' | 'end';
++export type LegacySchemaVersion = '1.0.0';
++export type CurrentSchemaVersion = '2.0.0';
++/** Supported persisted schema generations. */
++export type SchemaVersion = LegacySchemaVersion | CurrentSchemaVersion;
++/** Chart layouts understood by the editor data contract. */
++export type ChartType = 'waterfall' | 'bar' | 'column';
++/** Source families with distinct validation and narrative policies. */
++export type SourceDataKind = 'waterfall' | 'categorical';
++export type WaterfallSourceItemKind = 'start' | 'contribution' | 'subtotal' | 'end';
++export type SourceItemKind = WaterfallSourceItemKind;
+ export type MetadataValue = string | number | boolean | null;
+ 
+-export interface SourceItem {
++interface SourceItemBase {
+   readonly id: SourceItemId;
+   readonly label: string;
+   readonly amount: number;
+-  readonly kind: SourceItemKind;
+   readonly sourceRef?: string;
+   readonly metadata?: Readonly<Record<string, MetadataValue>>;
+ }
+ 
+-export interface SourceData {
+-  readonly schemaVersion: SchemaVersion;
++/** A source item with explicit waterfall anchor or contribution semantics. */
++export interface WaterfallSourceItem extends SourceItemBase {
++  readonly kind: WaterfallSourceItemKind;
++}
++
++/** A plain categorical value with no per-item family discriminator. */
++export type CategoricalSourceItem = SourceItemBase;
++
++/** Backward-compatible alias retaining the existing waterfall item contract. */
++export type SourceItem = WaterfallSourceItem;
++export type SourceDataItem = WaterfallSourceItem | CategoricalSourceItem;
++
++export interface LegacyWaterfallSourceData {
++  readonly schemaVersion: LegacySchemaVersion;
++  readonly datasetId: DatasetId;
++  readonly currency?: string;
++  readonly items: readonly WaterfallSourceItem[];
++}
++
++/** Current-schema waterfall source data. */
++export interface WaterfallSourceData {
++  readonly schemaVersion: CurrentSchemaVersion;
++  readonly dataKind: 'waterfall';
++  readonly datasetId: DatasetId;
++  readonly currency?: string;
++  readonly items: readonly WaterfallSourceItem[];
++}
++
++/** Current-schema categorical source data. */
++export interface CategoricalSourceData {
++  readonly schemaVersion: CurrentSchemaVersion;
++  readonly dataKind: 'categorical';
+   readonly datasetId: DatasetId;
+   readonly currency?: string;
+-  readonly items: readonly SourceItem[];
++  readonly items: readonly CategoricalSourceItem[];
+ }
+ 
++/** Valid legacy and current source-data variants. */
++export type SourceData = LegacyWaterfallSourceData | WaterfallSourceData | CategoricalSourceData;
++
+ export type Annotation = string;
+ export type Emphasis = 'highlight' | 'muted';
+ 
+@@ -29,10 +69,8 @@ export interface ViewGroup {
+   readonly childIds: readonly ViewNodeId[];
+ }
+ 
+-export interface ViewSpec {
+-  readonly schemaVersion: SchemaVersion;
++interface NarrativeViewFields {
+   readonly datasetId: DatasetId;
+-  readonly chartType: 'waterfall';
+   readonly revision: number;
+   readonly rootOrder: readonly ViewNodeId[];
+   readonly groups: Readonly<Record<GroupId, ViewGroup>>;
+@@ -41,3 +79,16 @@ export interface ViewSpec {
+   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
+   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+ }
++
++export interface LegacyWaterfallViewSpec extends NarrativeViewFields {
++  readonly schemaVersion: LegacySchemaVersion;
++  readonly chartType: 'waterfall';
++}
++
++export interface CurrentViewSpec extends NarrativeViewFields {
++  readonly schemaVersion: CurrentSchemaVersion;
++  readonly chartType: ChartType;
++}
++
++/** Persisted narrative view state paired with a compatible source generation and family. */
++export type ViewSpec = LegacyWaterfallViewSpec | CurrentViewSpec;
+diff --git a/packages/editor/src/domain/session.ts b/packages/editor/src/domain/session.ts
+index 939671f..b105cff 100644
+--- a/packages/editor/src/domain/session.ts
++++ b/packages/editor/src/domain/session.ts
+@@ -8,6 +8,7 @@ import {
+ } from './errors';
+ import type { HistoryEntry } from './history';
+ import type { SourceData, ViewSpec } from './model';
++import { sourceDataKind } from './chartPolicy';
+ import { validateSourceData, validateViewSpec } from './validation';
+ 
+ const DEFAULT_HISTORY_LIMIT = 100;
+@@ -128,15 +129,17 @@ function parseSessionOptions(options: unknown): ValidationResult<ParsedSessionOp
+ }
+ 
+ function sourceFingerprint(sourceData: SourceData): string {
++  const waterfall = sourceDataKind(sourceData) === 'waterfall';
+   const canonicalSource = {
+     schemaVersion: sourceData.schemaVersion,
++    ...(sourceData.schemaVersion === '2.0.0' ? { dataKind: sourceData.dataKind } : {}),
+     datasetId: sourceData.datasetId,
+     ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
+     items: sourceData.items.map(item => ({
+       id: item.id,
+       label: item.label,
+       amount: item.amount,
+-      kind: item.kind,
++      ...(waterfall && 'kind' in item ? { kind: item.kind } : {}),
+       ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
+       ...(item.metadata === undefined
+         ? {}
+diff --git a/packages/editor/src/domain/validation.ts b/packages/editor/src/domain/validation.ts
+index 4d124bb..cb02b90 100644
+--- a/packages/editor/src/domain/validation.ts
++++ b/packages/editor/src/domain/validation.ts
+@@ -5,26 +5,41 @@ import {
+   type ValidationIssue,
+   type ValidationResult,
+ } from './errors';
+-import type { SourceData, SourceItem, SourceItemKind, ViewSpec } from './model';
++import { createNarrativeChartPolicy, sourceDataKind } from './chartPolicy';
++import type {
++  ChartType,
++  SchemaVersion,
++  SourceData,
++  SourceDataItem,
++  SourceItemKind,
++  ViewSpec,
++} from './model';
+ 
+ type UnknownRecord = Record<string, unknown>;
+ 
+ const SOURCE_ITEM_KINDS: readonly SourceItemKind[] = ['start', 'contribution', 'subtotal', 'end'];
+ 
+-const SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
++const LEGACY_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
+   'schemaVersion',
+   'datasetId',
+   'currency',
+   'items',
+ ]);
+-const SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
++const CURRENT_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
++  ...LEGACY_SOURCE_DATA_FIELDS,
++  'dataKind',
++]);
++const SOURCE_ITEM_BASE_FIELDS: ReadonlySet<string> = new Set([
+   'id',
+   'label',
+   'amount',
+-  'kind',
+   'sourceRef',
+   'metadata',
+ ]);
++const WATERFALL_SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
++  ...SOURCE_ITEM_BASE_FIELDS,
++  'kind',
++]);
+ const VIEW_SPEC_FIELDS: ReadonlySet<string> = new Set([
+   'schemaVersion',
+   'datasetId',
+@@ -142,19 +157,27 @@ function isSourceItemKind(value: unknown): value is SourceItemKind {
+   return typeof value === 'string' && SOURCE_ITEM_KINDS.includes(value as SourceItemKind);
+ }
+ 
++function isChartType(value: unknown): value is ChartType {
++  return value === 'waterfall' || value === 'bar' || value === 'column';
++}
++
+ function validateSchemaVersion(
+   record: UnknownRecord,
+   code: 'INVALID_SOURCE_DATA' | 'INVALID_VIEW_SPEC',
+   errors: ValidationIssue[],
+-): void {
++): SchemaVersion | undefined {
+   const value = ownDataValue(record, 'schemaVersion');
+   if (typeof value !== 'string') {
+     errors.push(validationIssue(code, 'INVALID_TYPE', '/schemaVersion'));
+-  } else if (value !== '1.0.0') {
++    return undefined;
++  }
++  if (value !== '1.0.0' && value !== '2.0.0') {
+     errors.push(
+       validationIssue('UNSUPPORTED_SCHEMA_VERSION', 'UNSUPPORTED_SCHEMA_VERSION', '/schemaVersion'),
+     );
++    return undefined;
+   }
++  return value;
+ }
+ 
+ function validateSourceItem(
+@@ -162,6 +185,7 @@ function validateSourceItem(
+   index: number,
+   seenIds: Set<string>,
+   errors: ValidationIssue[],
++  waterfall: boolean,
+ ): void {
+   const itemPath = pointer('/items', index);
+   if (!isPlainRecord(value)) {
+@@ -169,7 +193,13 @@ function validateSourceItem(
+     return;
+   }
+ 
+-  inspectRecord(value, itemPath, 'INVALID_SOURCE_DATA', errors, SOURCE_ITEM_FIELDS);
++  inspectRecord(
++    value,
++    itemPath,
++    'INVALID_SOURCE_DATA',
++    errors,
++    waterfall ? WATERFALL_SOURCE_ITEM_FIELDS : SOURCE_ITEM_BASE_FIELDS,
++  );
+ 
+   const id = ownDataValue(value, 'id');
+   if (typeof id !== 'string') {
+@@ -208,7 +238,7 @@ function validateSourceItem(
+     );
+   }
+ 
+-  if (!isSourceItemKind(ownDataValue(value, 'kind'))) {
++  if (waterfall && !isSourceItemKind(ownDataValue(value, 'kind'))) {
+     errors.push(
+       validationIssue('INVALID_SOURCE_DATA', 'INVALID_SOURCE_ITEM_KIND', pointer(itemPath, 'kind')),
+     );
+@@ -306,8 +336,20 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
+   }
+ 
+   const errors: ValidationIssue[] = [];
+-  inspectRecord(input, '', 'INVALID_SOURCE_DATA', errors, SOURCE_DATA_FIELDS);
+-  validateSchemaVersion(input, 'INVALID_SOURCE_DATA', errors);
++  const schemaValue = ownDataValue(input, 'schemaVersion');
++  inspectRecord(
++    input,
++    '',
++    'INVALID_SOURCE_DATA',
++    errors,
++    schemaValue === '2.0.0' ? CURRENT_SOURCE_DATA_FIELDS : LEGACY_SOURCE_DATA_FIELDS,
++  );
++  const schemaVersion = validateSchemaVersion(input, 'INVALID_SOURCE_DATA', errors);
++
++  const dataKind = ownDataValue(input, 'dataKind');
++  if (schemaVersion === '2.0.0' && dataKind !== 'waterfall' && dataKind !== 'categorical') {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_DATA_KIND', '/dataKind'));
++  }
+ 
+   const datasetId = ownDataValue(input, 'datasetId');
+   if (typeof datasetId !== 'string') {
+@@ -323,11 +365,14 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
+ 
+   const items = readArray(ownDataValue(input, 'items'), '/items', 'INVALID_SOURCE_DATA', errors);
+   if (items !== undefined) {
++    const waterfall = schemaVersion !== '2.0.0' || dataKind === 'waterfall';
+     const seenIds = new Set<string>();
+     for (let index = 0; index < items.length; index += 1) {
+-      validateSourceItem(items[index], index, seenIds, errors);
++      validateSourceItem(items[index], index, seenIds, errors, waterfall);
++    }
++    if (waterfall) {
++      validateAnchors(items, errors);
+     }
+-    validateAnchors(items, errors);
+   }
+ 
+   return errors.length === 0
+@@ -345,28 +390,32 @@ export function validateSourceData(input: unknown): ValidationResult<SourceData>
+ }
+ 
+ interface SourceIndexes {
+-  readonly itemsById: ReadonlyMap<string, SourceItem>;
+-  readonly contributionIds: readonly string[];
++  readonly itemsById: ReadonlyMap<string, SourceDataItem>;
++  readonly narrativeItemIds: readonly string[];
++  readonly narrativeItemIdSet: ReadonlySet<string>;
+   readonly segmentById: ReadonlyMap<string, number>;
+ }
+ 
+ function indexSource(sourceData: SourceData): SourceIndexes {
+-  const itemsById = new Map<string, SourceItem>();
+-  const contributionIds: string[] = [];
++  const itemsById = new Map<string, SourceDataItem>();
++  const narrativeItemIds: string[] = [];
++  const narrativeItemIdSet = new Set<string>();
+   const segmentById = new Map<string, number>();
++  const policy = createNarrativeChartPolicy(sourceData);
+   let segment = 0;
+ 
+   for (const item of sourceData.items) {
+     itemsById.set(item.id, item);
+-    if (item.kind === 'contribution') {
+-      contributionIds.push(item.id);
++    if (policy.isMovableItem(sourceData, item.id)) {
++      narrativeItemIds.push(item.id);
++      narrativeItemIdSet.add(item.id);
+       segmentById.set(item.id, segment);
+-    } else if (item.kind === 'subtotal') {
++    } else if ('kind' in item && item.kind === 'subtotal') {
+       segment += 1;
+     }
+   }
+ 
+-  return { itemsById, contributionIds, segmentById };
++  return { itemsById, narrativeItemIds, narrativeItemIdSet, segmentById };
+ }
+ 
+ interface GroupIndexes {
+@@ -478,7 +527,7 @@ function validateGroups(
+       const child = children[childIndex] as string;
+       const childPath = pointer(pointer(pointer('/groups', groupId), 'childIds'), childIndex);
+       const sourceItem = source.itemsById.get(child);
+-      if (sourceItem !== undefined && sourceItem.kind !== 'contribution') {
++      if (sourceItem !== undefined && !source.narrativeItemIdSet.has(child)) {
+         errors.push(validationIssue('INVALID_VIEW_SPEC', 'INVALID_GROUP_CHILD', childPath));
+         continue;
+       }
+@@ -545,7 +594,7 @@ function validateGroups(
+     for (const child of childrenByGroupId.get(groupId) ?? []) {
+       if (groupIds.has(child)) {
+         leaves.push(...leavesFor(child, nextActive));
+-      } else if (source.itemsById.get(child)?.kind === 'contribution') {
++      } else if (source.narrativeItemIdSet.has(child)) {
+         leaves.push(child);
+       }
+     }
+@@ -559,7 +608,7 @@ function validateGroups(
+       const childId = children[childIndex] as string;
+       const childLeaves = groupIds.has(childId)
+         ? leavesFor(childId, new Set())
+-        : source.itemsById.get(childId)?.kind === 'contribution'
++        : source.narrativeItemIdSet.has(childId)
+           ? [childId]
+           : [];
+       const childSegments = new Set(
+@@ -602,7 +651,7 @@ function validateRootOrder(
+   }
+ 
+   const rootNodes = new Set<string>();
+-  const directContributionIds = new Set<string>();
++  const directNarrativeItemIds = new Set<string>();
+   const rootedGroupIds = new Set<string>();
+   let previousSegment = 0;
+ 
+@@ -632,11 +681,11 @@ function validateRootOrder(
+         errors.push(validationIssue('SOURCE_CONFLICT', 'UNKNOWN_SOURCE_REFERENCE', nodePath));
+         continue;
+       }
+-      if (sourceItem.kind !== 'contribution') {
++      if (!source.narrativeItemIdSet.has(nodeId)) {
+         errors.push(validationIssue('INVALID_VIEW_SPEC', 'LOCKED_ANCHOR_REFERENCE', nodePath));
+         continue;
+       }
+-      directContributionIds.add(nodeId);
++      directNarrativeItemIds.add(nodeId);
+       if (groups.childIds.has(nodeId)) {
+         errors.push(validationIssue('INVALID_VIEW_SPEC', 'DUPLICATE_VIEW_NODE', nodePath));
+       }
+@@ -660,11 +709,11 @@ function validateRootOrder(
+     }
+   }
+ 
+-  const coveredContributions = new Set([
+-    ...directContributionIds,
++  const coveredNarrativeItems = new Set([
++    ...directNarrativeItemIds,
+     ...[...groups.childIds].filter(nodeId => source.segmentById.has(nodeId)),
+   ]);
+-  if (source.contributionIds.some(id => !coveredContributions.has(id))) {
++  if (source.narrativeItemIds.some(id => !coveredNarrativeItems.has(id))) {
+     errors.push(validationIssue('SOURCE_CONFLICT', 'MISSING_SOURCE_REFERENCE', '/rootOrder'));
+   }
+ }
+@@ -714,7 +763,7 @@ function validatePinnedItems(
+       errors.push(validationIssue('INVALID_VIEW_SPEC', 'DUPLICATE_REFERENCE', path));
+     } else {
+       seen.add(itemId);
+-      if (source.itemsById.get(itemId)?.kind !== 'contribution') {
++      if (!source.narrativeItemIdSet.has(itemId)) {
+         errors.push(validationIssue('INVALID_VIEW_SPEC', 'INVALID_PIN_REFERENCE', path));
+       }
+     }
+@@ -777,7 +826,10 @@ function validateViewSpecInternal(
+ 
+   const errors: ValidationIssue[] = [];
+   inspectRecord(input, '', 'INVALID_VIEW_SPEC', errors, VIEW_SPEC_FIELDS);
+-  validateSchemaVersion(input, 'INVALID_VIEW_SPEC', errors);
++  const schemaVersion = validateSchemaVersion(input, 'INVALID_VIEW_SPEC', errors);
++  if (schemaVersion !== undefined && schemaVersion !== sourceData.schemaVersion) {
++    errors.push(validationIssue('SOURCE_CONFLICT', 'SCHEMA_VERSION_MISMATCH', '/schemaVersion'));
++  }
+ 
+   const datasetId = ownDataValue(input, 'datasetId');
+   if (typeof datasetId !== 'string') {
+@@ -788,8 +840,15 @@ function validateViewSpecInternal(
+     errors.push(validationIssue('SOURCE_CONFLICT', 'DATASET_ID_MISMATCH', '/datasetId'));
+   }
+ 
+-  if (ownDataValue(input, 'chartType') !== 'waterfall') {
++  const chartType = ownDataValue(input, 'chartType');
++  const validChartType = isChartType(chartType);
++  if (!validChartType || (schemaVersion === '1.0.0' && chartType !== 'waterfall')) {
+     errors.push(validationIssue('INVALID_VIEW_SPEC', 'INVALID_CHART_TYPE', '/chartType'));
++  } else if (
++    (sourceDataKind(sourceData) === 'categorical' && chartType === 'waterfall') ||
++    (sourceDataKind(sourceData) === 'waterfall' && chartType !== 'waterfall')
++  ) {
++    errors.push(validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'));
+   }
+ 
+   const revision = ownDataValue(input, 'revision');
+diff --git a/packages/editor/src/index.ts b/packages/editor/src/index.ts
+index 6b49796..a93a640 100644
+--- a/packages/editor/src/index.ts
++++ b/packages/editor/src/index.ts
+@@ -45,15 +45,22 @@ export type { CommandEvent, CommandResult } from './domain/executeCommand';
+ export type { HistoryAction, HistoryEntry } from './domain/history';
+ export type {
+   Annotation,
++  CategoricalSourceData,
++  CategoricalSourceItem,
++  ChartType,
+   Emphasis,
+   MetadataValue,
+   SchemaVersion,
+   SourceData,
++  SourceDataKind,
+   SourceItem,
+   SourceItemKind,
+   ViewGroup,
+   ViewSpec,
++  WaterfallSourceData,
++  WaterfallSourceItem,
+ } from './domain/model';
++export type { InitialViewSpecOptions } from './domain/createInitialViewSpec';
+ export type { EditorSession, EditorSessionOptions } from './domain/session';
+ export type {
+   ExportError,
+diff --git a/packages/editor/src/interactions/groupSelection.ts b/packages/editor/src/interactions/groupSelection.ts
+index f2f0e02..47a93f6 100644
+--- a/packages/editor/src/interactions/groupSelection.ts
++++ b/packages/editor/src/interactions/groupSelection.ts
+@@ -31,10 +31,15 @@ export function evaluateGroupSelection(
+   }
+   const leafIds = uniqueIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId));
+   if (
+-    leafIds.some(
+-      itemId =>
+-        sourceItems.get(itemId)?.kind !== 'contribution' || viewSpec.pinnedItemIds.includes(itemId),
+-    )
++    leafIds.some(itemId => {
++      const item = sourceItems.get(itemId);
++      return (
++        item === undefined ||
++        !('kind' in item) ||
++        item.kind !== 'contribution' ||
++        viewSpec.pinnedItemIds.includes(itemId)
++      );
++    })
+   ) {
+     return { ok: false, reason: 'ITEM_LOCKED' };
+   }
+diff --git a/packages/editor/src/waterfall/projectWaterfall.ts b/packages/editor/src/waterfall/projectWaterfall.ts
+index 9bff75b..2595571 100644
+--- a/packages/editor/src/waterfall/projectWaterfall.ts
++++ b/packages/editor/src/waterfall/projectWaterfall.ts
+@@ -1,6 +1,13 @@
+ import { validationFailure, validationIssue, validationSuccess } from '../domain/errors';
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+-import type { SourceData, SourceItem, ViewGroup, ViewSpec } from '../domain/model';
++import type {
++  LegacyWaterfallSourceData,
++  SourceData,
++  SourceItem,
++  ViewGroup,
++  ViewSpec,
++  WaterfallSourceData,
++} from '../domain/model';
+ import { validateViewSpec } from '../domain/validation';
+ import { collectLeafSourceIds } from '../domain/viewTree';
+ import type {
+@@ -28,6 +35,8 @@ interface CompensatedAccumulator {
+   correction: number;
+ }
+ 
++type WaterfallSource = LegacyWaterfallSourceData | WaterfallSourceData;
++
+ function createAccumulator(initialValue: number): CompensatedAccumulator {
+   return { sum: initialValue, correction: 0 };
+ }
+@@ -72,7 +81,7 @@ function equalsWithinUlps(left: number, right: number): boolean {
+   return distance <= MAX_ULP_DISTANCE;
+ }
+ 
+-function indexSource(sourceData: SourceData): IndexedSource {
++function indexSource(sourceData: WaterfallSource): IndexedSource {
+   const itemsById = new Map<string, SourceItem>();
+   const sourceIndexById = new Map<string, number>();
+   const segmentByContributionId = new Map<string, number>();
+@@ -181,7 +190,10 @@ function getGroup(viewSpec: ViewSpec, nodeId: ViewNodeId): ViewGroup | undefined
+     : undefined;
+ }
+ 
+-function projectValidated(sourceData: SourceData, viewSpec: ViewSpec): WaterfallProjectionResult {
++function projectValidated(
++  sourceData: WaterfallSource,
++  viewSpec: ViewSpec,
++): WaterfallProjectionResult {
+   const source = indexSource(sourceData);
+   const nodesBySegment = new Map<number, ViewNodeId[]>();
+   for (const nodeId of viewSpec.rootOrder) {
+@@ -300,6 +312,11 @@ export function projectWaterfall(
+   if (!validation.ok) {
+     return validation;
+   }
++  if (sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical') {
++    return validationFailure([
++      validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'),
++    ]);
++  }
+ 
+   try {
+     return projectValidated(sourceData, validation.value);
+diff --git a/packages/editor/tests/domain/invariants.test.ts b/packages/editor/tests/domain/invariants.test.ts
+index 8f22a4c..046f724 100644
+--- a/packages/editor/tests/domain/invariants.test.ts
++++ b/packages/editor/tests/domain/invariants.test.ts
+@@ -129,7 +129,7 @@ describe('editor invariant gate', () => {
+ 
+     const sourceAmounts = new Map(
+       start.sourceData.items
+-        .filter(item => item.kind === 'contribution')
++        .filter(item => 'kind' in item && item.kind === 'contribution')
+         .map(item => [item.id, item.amount] as const),
+     );
+     const covered = result.session.viewSpec.rootOrder.flatMap(nodeId => {
+@@ -137,13 +137,13 @@ describe('editor invariant gate', () => {
+       return group?.childIds ?? [nodeId as SourceItemId];
+     });
+     const total = start.sourceData.items
+-      .filter(item => item.kind === 'contribution')
++      .filter(item => 'kind' in item && item.kind === 'contribution')
+       .reduce(
+         (sum, item) => sum + (covered.includes(item.id) ? (sourceAmounts.get(item.id) ?? 0) : 0),
+         0,
+       );
+     const expected = start.sourceData.items
+-      .filter(item => item.kind === 'contribution')
++      .filter(item => 'kind' in item && item.kind === 'contribution')
+       .reduce((sum, item) => sum + item.amount, 0);
+ 
+     expect(new Set(covered)).toEqual(new Set(sourceAmounts.keys()));
+diff --git a/packages/editor/tests/domain/persistence.test.ts b/packages/editor/tests/domain/persistence.test.ts
+index 4b20270..8ce244e 100644
+--- a/packages/editor/tests/domain/persistence.test.ts
++++ b/packages/editor/tests/domain/persistence.test.ts
+@@ -96,7 +96,7 @@ describe('ViewSpec persistence', () => {
+ 
+   it('rejects unsupported major schema versions without migration', () => {
+     const parsed = JSON.parse(serializeViewSpec(initialView())) as Record<string, unknown>;
+-    parsed['schemaVersion'] = '2.0.0';
++    parsed['schemaVersion'] = '3.0.0';
+ 
+     expectIssue(parseViewSpec(JSON.stringify(parsed), financialSourceData), {
+       code: 'UNSUPPORTED_SCHEMA_VERSION',
+diff --git a/packages/editor/tests/domain/validation.test.ts b/packages/editor/tests/domain/validation.test.ts
+index f1dedc0..5b0b64f 100644
+--- a/packages/editor/tests/domain/validation.test.ts
++++ b/packages/editor/tests/domain/validation.test.ts
+@@ -133,7 +133,7 @@ describe('validateSourceData', () => {
+     },
+     {
+       name: 'unsupported schema',
+-      input: () => ({ ...cloneSource(), schemaVersion: '2.0.0' }),
++      input: () => ({ ...cloneSource(), schemaVersion: '3.0.0' }),
+       expected: {
+         code: 'UNSUPPORTED_SCHEMA_VERSION',
+         reason: 'UNSUPPORTED_SCHEMA_VERSION',
+@@ -520,7 +520,7 @@ describe('validateViewSpec', () => {
+   }[] = [
+     {
+       name: 'unsupported schema',
+-      mutate: view => void (view['schemaVersion'] = '2.0.0'),
++      mutate: view => void (view['schemaVersion'] = '3.0.0'),
+       expected: {
+         code: 'UNSUPPORTED_SCHEMA_VERSION',
+         reason: 'UNSUPPORTED_SCHEMA_VERSION',
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index 6e86b32..bd8983e 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -8,6 +8,9 @@ import {
+   serializeViewSpec,
+   undoSession,
+   type CommandResult,
++  type CategoricalSourceData,
++  type CategoricalSourceItem,
++  type ChartType,
+   type EditorCommand,
+   type EditorSession,
+   type ExportOptions,
+@@ -21,8 +24,12 @@ import {
+   validateSourceData,
+   validateViewSpec,
+   type SourceData,
++  type SourceDataKind,
++  type InitialViewSpecOptions,
+   type ValidationResult,
+   type ViewSpec,
++  type WaterfallSourceData,
++  type WaterfallSourceItem,
+ } from '@tellplot/editor';
+ 
+ declare const source: SourceData;
+@@ -31,6 +38,10 @@ declare const session: EditorSession;
+ declare const command: EditorCommand;
+ declare const historyAction: SessionActionMeta;
+ declare const editorHandle: FinancialChartEditorHandle;
++declare const categoricalSource: CategoricalSourceData;
++declare const waterfallSource: WaterfallSourceData;
++declare const categoricalItem: CategoricalSourceItem;
++declare const waterfallItem: WaterfallSourceItem;
+ 
+ export const sourceValidation: ValidationResult<SourceData> = validateSourceData(source);
+ export const viewValidation: ValidationResult<ViewSpec> = validateViewSpec(view, source);
+@@ -41,6 +52,15 @@ export const exportedImage: Promise<ExportResult> = editorHandle.exportImage(png
+ export const currentView: ViewSpec = editorHandle.getViewSpec();
+ export const focusEditor: () => void = editorHandle.focus.bind(editorHandle);
+ export const initialView: ValidationResult<ViewSpec> = createInitialViewSpec(source);
++export const initialBar: ValidationResult<ViewSpec> = createInitialViewSpec(categoricalSource, {
++  chartType: 'bar',
++} satisfies InitialViewSpecOptions);
++export const chartType: ChartType = 'column';
++export const sourceKind: SourceDataKind = categoricalSource.dataKind;
++export const categoricalAmount: number = categoricalItem.amount;
++export const waterfallKind = waterfallItem.kind;
++export const waterfallValidation: ValidationResult<SourceData> =
++  validateSourceData(waterfallSource);
+ export const editorSession: ValidationResult<EditorSession> = createEditorSession(source, {
+   viewSpec: view,
+   historyLimit: 100,
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/analysis.md b/.ai-platform/specs/004-categorical-chart-validation/analysis.md
+new file mode 100644
+index 0000000..d34d5f0
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/analysis.md
+@@ -0,0 +1,147 @@
++# 004 分类图验证切片 Cross-Artifact Analysis
++
++## Metadata
++
++- Version: 0.1.2
++- Status: Completed
++- Feature ID: `004-categorical-chart-validation`
++- Last updated: 2026-07-19
++- Inputs: constitution 0.3.0 Confirmed；product design 0.5.0 Confirmed；feature spec/data model/API
++  contract/plan/tasks 0.1.0 Confirmed；requirements checklist 0.1.0 Completed
++- Analysis mode: 只读一致性与执行就绪性检查；未检查运行时代码实现
++
++## Result
++
++- Critical: 0
++- High: 0
++- Medium: 0
++- Low: 0
++
++没有发现违反章程、需求缺失、任务无来源、术语漂移或非功能要求无验证路径的问题。用户已明确批准
++feature contracts、Plan 与 tasks，并于 2026-07-19 验收 T112。T113 与 T114 的依赖已经满足，可以分别
++生成 execution packet；T113-T116 在各自 packet 获批前继续保持 `Draft`。
++
++## Status And Placeholder Check
++
++- `spec.md`、`data-model.md`、`contracts/editor-api.md`、`plan.md`、`tasks.md` 均为 `Confirmed`，与
++  2026-07-19 用户明确审批记录一致。
++- `checklists/requirements.md` 为 `Completed`，只表示需求质量检查完成，正文保留独立 user review gate。
++- T111-T112 为 `Accepted`，T113-T116 为 `Draft`。
++- T112 packet 已生成；T113-T116 只有预留路径，没有提前生成 packet。
++- artifacts 已通过模板残留检查，没有未填写的占位内容。
++
++## Requirement Coverage
++
++| Requirement | Task coverage | Validation coverage | Result |
++| --- | --- | --- | --- |
++| CAT-FR-001 分类数据合同 | T111, T112 | domain validation, package public types | Covered |
++| CAT-FR-002 类型与兼容矩阵 | T111, T112 | compatibility, initial view, parse/serialize | Covered |
++| CAT-FR-003 共享状态与命令 | T112 | command/invariant/property tests | Covered |
++| CAT-FR-004 分类投影 | T113 | categorical projection/coverage | Covered |
++| CAT-FR-005 G2 图形与动画 | T113, T115 | spec, component, browser, reduced motion | Covered |
++| CAT-FR-006 方向感知直接操作 | T114, T115 | X/Y collision, real browser reorder | Covered |
++| CAT-FR-007 大纲与可访问性 | T114, T115 | component, keyboard, axe, browser | Covered |
++| CAT-FR-008 持久化与导出 | T112, T115 | round-trip, SVG/PNG, export E2E | Covered |
++| CAT-FR-009 安全公共配置 | T113, T115 | spec mapping, package/API boundary | Covered |
++| CAT-NFR-001 瀑布零回归 | T112-T116 | scoped waterfall regression + final full suite | Covered |
++| CAT-NFR-002 交互性能 | T114-T116 | RAF/collision tests + 200-item real G2 performance | Covered |
++| CAT-NFR-003 可打断动画 | T113-T116 | spec/reduced motion/browser interruption | Covered |
++| CAT-NFR-004 类型与运行时安全 | T112-T114, T116 | typecheck, lint, hostile input, coverage | Covered |
++| CAT-NFR-005 包与浏览器兼容 | T115, T116 | package, React, current/previous browsers | Covered |
++| CAT-NFR-006 可观测性与隐私 | T112, T115, T116 | safe error details, callback/log review | Covered |
++
++全部 CAT-FR/CAT-NFR 至少映射到一个 task、一个可执行 validation surface 和一个 acceptance/result contract。
++
++## Task Lineage And Scheduling
++
++- T111 映射 global `US-003`、`FR-005` 和全部 feature requirements，承担 human approval，不实现代码。
++- T112 映射 schema、compatibility、shared command 和 persistence，是全部实现的基础依赖。
++- T113 映射 categorical projection/G2 spec，只拥有 categorical/config/test 文件。
++- T114 映射 category-axis interaction，只拥有 interaction primitives 和对应 tests。
++- T113/T114 在 T112 Accepted 后可并行，allowed files 不重叠，均被 T115 join。
++- T115 是用户可验证的 vertical integration，覆盖唯一 editor、export、a11y 和 browser workflow。
++- T116 只有在 T115 Accepted 后执行，只抽取实际重复并运行全量 release-candidate gates。
++
++没有循环依赖。每个实现 task 都包含 priority、dependencies、blocks、requirement mapping、parallel/conflict、
++goal、allowed files、test targets、deliverables、acceptance、Definition of Done、validation commands、TDD、packet
++path 和 evidence contract。
++
++## Constitution Compliance
++
++- P-001：范围只包含已确认单序列分类图，不引入通用 BI 列表。
++- P-002：amount/sourceRef/metadata 留在 SourceData，叙事操作只修改 ViewSpec。
++- P-003：bar、column、outline、keyboard 共享现有 EditorCommand wire union。
++- P-004：本 feature 不连接 AI，未放宽 candidate/confirmation 边界。
++- P-005：来源覆盖、聚合、overflow、固定和 waterfall anchor regression 是 blocking validation。
++- P-006：G2 是唯一 renderer，mark、scene bounds、Tooltip 和图形动画由 G2 提供。
++- P-007：Canvas 直接操作和 outline/keyboard 同时进入 acceptance。
++- P-008：150ms、RAF、interrupt 和 reduced motion 均有 requirement/task/validation。
++- P-009：shared runtime extraction 明确依赖第二类 chart vertical slice green。
++- P-010：每个 task 有真实命令和 evidence，最终包含三浏览器、package、a11y 和 performance。
++
++无例外，无静默放宽章程。
++
++## Terminology Check
++
++- `waterfall`、`bar`、`column` 只用作 `ChartType`；bar/column 统一归属 `categorical` SourceData family。
++- `dataKind` 只标识 SourceData family；不与 `chartType`、G2 mark type 或 item kind 混用。
++- `rootOrder` 在所有 artifacts 中定义为逻辑叙事顺序；bar 为 top-to-bottom，column/waterfall 为 left-to-right。
++- `chart policy` 始终是内部命令约束，不是公共 plugin、renderer 或 host callback。
++- `projection` 是 chart-family-specific plain data；`G2Spec` 只属于内部 rendering adapter。
++- `chartAppearance` 仍是宿主级语义呈现配置，不进入 ViewSpec。
++
++术语一致，无 conflicting definition。
++
++## Public API And Compatibility Check
++
++- data model、spec 和 API contract 一致选择 explicit schema `2.0.0` discriminator。
++- legacy `1.0.0` waterfall 在三份 artifact 中都要求保留 input identity、validation、initial view 和 round-trip。
++- current categorical 默认 column、可显式 bar，在 spec/data model/API contract/plan/tasks 中一致。
++- chart switching 在全部 artifacts 中保持 Non-Goal，不存在隐藏 `setChartType` command。
++- `FinancialChartAppearance` wire shape 保持不变；categorical 只映射现有 semantic palette。
++- raw G2Spec、chart instance、spec transform、plugin registry 和新 renderer 在全部 artifacts 中被排除。
++
++## Non-Functional Validation Check
++
++- Performance: 200 visible items、RAF 合并、150ms product target、真实 G2/browser evidence。
++- Accessibility: keyboard equivalent、outline、aria-live、Canvas summary、empty summary、axe。
++- Motion: G2 native enter/update/exit、interrupt、reduced motion、dense behavior。
++- Compatibility: ESM/CJS/types、React 18/19、G2 5.4、current/previous browser matrix。
++- Privacy: issue/log/evidence 不包含 amount、label、sourceRef 或 metadata value。
++- Regression: 每个 task scoped waterfall checks，T116 全量 matrix。
++
++所有 NFR 都有可执行 validation command 或 task-specific test target，没有仅以形容词描述的质量要求。
++
++## Residual Risks
++
++以下是已经进入 Plan risk register 并有 mitigation 的实施风险，不构成 artifact finding：
++
++- dual schema generation 增加 validator/session 分支。
++- G2 horizontal bar category scale 可能反转视觉顺序。
++- Canvas lifecycle extraction 可能引发 render queue 或 cleanup regression。
++- 200 个横向标签可能影响布局和软件 Canvas 性能。
++
++这些风险分别由 strict union/round-trip、order parity、characterization/cleanup tests 和真实浏览器性能门禁控制。
++
++## Artifact Validation Evidence
++
++- AI Delivery Governor validator：通过，0 error、0 warning。
++- Prettier check：通过，7 个 feature artifacts 全部符合仓库格式。
++- `git diff --check`：通过，无空白错误。
++- Requirement ID parity：spec 与 tasks 均覆盖 CAT-FR-001 至 CAT-FR-009、CAT-NFR-001 至
++  CAT-NFR-006、CAT-AC-001 至 CAT-AC-009。
++- Runtime tests：未运行；本轮仅新增待审核文档，未修改源码、测试、依赖或构建配置。
++
++## Execution Readiness
++
++结论：004 artifacts 已获用户明确批准并完成一致性复核，T112 已实现并由用户验收。T113 与 T114 可以进入
++各自 packet 生成/审批闸门；T115-T116 仍等待前序依赖。任何 artifact 实质修改都必须重新分析。
++
++T112 RED 后的 TypeScript 编译确认：`SourceData` 扩展为严格 union 后，现有 waterfall projector 必须在
++canonical validation 成功后显式收窄 waterfall source，否则公共 union 无法通过严格类型检查。T112 allowed
++files 因此包含 `projectWaterfall.ts` 的单一防御性收窄；该调整不实现 categorical projection、不改变现有
++waterfall projection 结果，也不与 T113 ownership 冲突。
++
++同一 exact union 要求现有 editor empty-state 判断与 `groupSelection` 在访问 waterfall-only `kind` 前先做
++属性收窄。T112 只加入防御性 type guard：categorical component 仍由 waterfall projector 返回结构化不兼容
++结果，categorical direct interaction 仍未接入；T115/T114 的产品行为 ownership 保持不变。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md b/.ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+new file mode 100644
+index 0000000..79662eb
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+@@ -0,0 +1,100 @@
++# 004 分类图验证切片 Requirements Checklist
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Completed
++- Source spec: `../spec.md` 0.1.0 Confirmed
++- Last updated: 2026-07-19
++- Scope: 需求清晰度、完整性、一致性、可测试性、边界与非功能要求
++
++## Product And Scope
++
++- [x] 是否说明了本切片解决的用户问题，而不是只描述新增图表类型？[Clarity]
++- [x] 是否明确 bar 与 column 是同一 categorical family 的两种布局？[Consistency]
++- [x] 是否明确分类图与现有 waterfall 共享哪些叙事能力？[Coverage]
++- [x] 是否明确本切片也是第二类图表的架构验证闸门？[Scope]
++- [x] 是否排除了堆叠、多序列、双轴、其他图表和 Dashboard？[Boundary]
++- [x] 是否排除了运行中图表类型切换、AI、publish 和 release？[Boundary]
++- [x] 是否避免把顶级开源项目目标等同于本切片内建设通用 SDK？[Scope]
++
++## Data And Compatibility
++
++- [x] 是否显式区分 waterfall 与 categorical SourceData，而不是依赖启发式？[Clarity]
++- [x] 是否规定 legacy `1.0.0` waterfall wire shape 的兼容行为？[Compatibility]
++- [x] 是否规定 current schema 的 discriminator、item 字段和 closed-schema 规则？[Completeness]
++- [x] 是否定义 source/view/chart type compatibility matrix？[Testability]
++- [x] 是否定义 categorical 默认 column 和显式 bar 的初始化行为？[Clarity]
++- [x] 是否定义空分类、单分类、重复标签、正负零和非有限/溢出金额？[Edge Cases]
++- [x] 是否定义 persistence 保留 schema version 且不隐式迁移？[Compatibility]
++- [x] 是否说明 chart type 在当前 session 中保持不变？[State]
++
++## Domain And Invariants
++
++- [x] 是否要求 SourceData 不可变且 ViewSpec 承载叙事状态？[Constitution]
++- [x] 是否要求分类图复用确定性 command/history，而不是建立第二套状态？[Consistency]
++- [x] 是否分别定义 waterfall anchor/segment 和 categorical movable policy？[Clarity]
++- [x] 是否定义递归树、同父级连续分组、固定后代和来源覆盖规则？[Completeness]
++- [x] 是否定义 collapsed group 聚合口径、顺序和 overflow failure？[Testability]
++- [x] 是否定义 undo/redo、revision、schema/type 保持语义？[State]
++- [x] 是否禁止通过图形拖动修改 amount？[Safety]
++
++## Rendering And Interaction
++
++- [x] 是否规定 G2 是唯一 renderer，interval/key/animation 由内部 adapter 所有？[Architecture]
++- [x] 是否规定 column 的 X category axis 与 bar 的 Y category axis？[Clarity]
++- [x] 是否定义 bar 的逻辑首项对应视觉最上方？[Ambiguity]
++- [x] 是否要求 scene bounds 而不是猜测柱宽或行高？[Constitution]
++- [x] 是否定义 value-axis 位移不参与排序或金额变更？[Safety]
++- [x] 是否覆盖 pointer threshold、cancel、blur、unmount、stale preview 和 locked target？[Edge Cases]
++- [x] 是否定义拖动预览不写 history、提交只产生一个命令？[State]
++- [x] 是否定义 G2 动画、可打断和 reduced motion 优先级？[NFR]
++
++## UI, Accessibility And Export
++
++- [x] 是否要求 chart、outline、summary 和 export 使用同一逻辑顺序？[Consistency]
++- [x] 是否要求直接操作存在 outline/keyboard 等价路径？[Accessibility]
++- [x] 是否定义 empty、invalid、incompatible、render failure 和 exporting-preview 状态？[Coverage]
++- [x] 是否定义空 categorical 的屏幕、摘要和导出行为？[Clarity]
++- [x] 是否要求 SVG/PNG 使用同一 projection/spec 并保留方向和叙事状态？[Testability]
++- [x] 是否定义 chartAppearance 对 categorical 的语义映射与公共边界？[API]
++- [x] 是否禁止 raw G2Spec、chart instance、formatter callback 和任意 encoding override？[Boundary]
++
++## Non-Functional Requirements
++
++- [x] 是否量化 200 项场景和 150ms 可见反馈目标？[Measurability]
++- [x] 是否要求真实 G2/浏览器性能证据而不是 Mock？[Evidence]
++- [x] 是否定义 waterfall 零回归范围？[Regression]
++- [x] 是否定义 TypeScript strict、禁止逃生类型和 hostile input 行为？[Quality]
++- [x] 是否定义 ESM/CJS/types、React、G2 和浏览器兼容矩阵？[Compatibility]
++- [x] 是否明确不增加 runtime/animation dependency？[Dependency]
++- [x] 是否定义不含金额、标签、sourceRef 和 metadata value 的可观测性边界？[Privacy]
++
++## Traceability And Acceptance
++
++- [x] 每个 CAT-FR 是否至少映射到一个 CAT-AC 或明确的 task validation？[Traceability]
++- [x] 每个 CAT-NFR 是否映射到 task 和可执行 validation command？[Traceability]
++- [x] Success Criteria 是否可测、面向用户结果且不依赖未批准技术？[Testability]
++- [x] Acceptance Criteria 是否覆盖创建、排序、分组、锁定、持久化、导出、动画和 legacy regression？[Coverage]
++- [x] tasks 是否为每个 requirement 指定 dependencies、allowed files、tests、TDD、commands 和 evidence？[Execution]
++- [x] 是否明确 spec/plan/tasks 用户批准前全部实现任务保持 Draft？[Governance]
++
++## Findings Summary
++
++- Critical: 0
++- High: 0
++- Medium: 0
++- Low: 0
++
++## Resolution Notes
++
++- 数据合同采用显式 schema `2.0.0` discriminator，避免放宽 legacy waterfall validator。
++- bar 的逻辑顺序固定为 top-to-bottom，消除 G2 category scale 方向歧义。
++- 运行中 chart type switching 明确排除，避免在未验证工作流下扩展 command schema。
++- 空 categorical 明确为合法图表和合法导出，避免实现阶段自行决定。
++- architecture extraction 放在完整 vertical slice green 后，符合 P-009。
++
++## User Review Gate
++
++Checklist 已完成需求质量检查；用户于 2026-07-19 明确批准 `spec.md`、`data-model.md`、
++`contracts/editor-api.md`、`plan.md` 与 `tasks.md`。当前只允许 T112 按 execution packet 进入实现。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md b/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+new file mode 100644
+index 0000000..19aa55e
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+@@ -0,0 +1,187 @@
++# `@tellplot/editor` 分类图公共 API 合同
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Confirmed
++- Feature ID: `004-categorical-chart-validation`
++- Package: `@tellplot/editor`
++- Last updated: 2026-07-19
++- Approval: 用户于 2026-07-19 明确批准分类图公共 API 合同
++
++## Public Surface Delta
++
++公共入口新增或扩展以下类型，不新增第二个组件包：
++
++- `ChartType`
++- `SourceDataKind`
++- `WaterfallSourceData`
++- `CategoricalSourceData`
++- `WaterfallSourceItem`
++- `CategoricalSourceItem`
++- `InitialViewSpecOptions`
++- 扩展后的 `SourceData`、`ViewSpec` 与 `SchemaVersion` 判别联合
++
++现有 `SourceItem` 与 `SourceItemKind` export 保持 waterfall 含义，并分别作为 `WaterfallSourceItem` 与
++`WaterfallSourceItemKind` 的兼容名称；已有 waterfall consumer 不需要改名。categorical consumer 使用新的
++`CategoricalSourceItem`。
++
++已有函数和组件保持相同名称：
++
++- `FinancialChartEditor`
++- `createInitialViewSpec`
++- `createEditorSession`
++- `executeCommand`
++- `undoSession`
++- `redoSession`
++- `serializeViewSpec`
++- `parseViewSpec`
++- `validateSourceData`
++- `validateViewSpec`
++
++不导出 `projectWaterfall`、`projectCategorical`、G2 spec factory、chart policy、G2 chart instance、scene
++bounds adapter、renderer、gesture state machine 或内部 chart registry。
++
++## Initial View Contract
++
++```typescript
++interface InitialViewSpecOptions {
++  readonly chartType?: ChartType;
++}
++
++function createInitialViewSpec(
++  sourceData: SourceData,
++  options?: InitialViewSpecOptions,
++): ValidationResult<ViewSpec>;
++```
++
++- legacy/current waterfall source 只接受 `waterfall`；未提供 option 时默认 `waterfall`。
++- categorical source 接受 `bar | column`；未提供 option 时默认 `column`。
++- 显式不兼容类型返回 `SOURCE_CONFLICT / INCOMPATIBLE_CHART_TYPE`，path 为 `/chartType`。
++- options 必须是 closed plain data；未知字段、accessor、symbol 或 hostile input 返回结构化 issue。
++- 已有 `createInitialViewSpec(sourceData)` 调用继续对 legacy waterfall 产生当前 deep-equal 结果。
++
++## Validation Contract
++
++```typescript
++function validateSourceData(input: unknown): ValidationResult<SourceData>;
++
++function validateViewSpec(
++  input: unknown,
++  sourceData: SourceData,
++): ValidationResult<ViewSpec>;
++```
++
++- validator 根据 `schemaVersion` 和 `dataKind` 选择精确 closed schema。
++- legacy `1.0.0` waterfall 不接受新增 `dataKind`；current `2.0.0` source 必须包含合法 `dataKind`。
++- validation success 保留调用方输入 identity，不克隆、冻结或升级。
++- validation failure 累积稳定顺序 issue，不抛出预期输入异常。
++- 错误 message/details 不包含 amount、label、sourceRef 或 metadata value。
++- `validateViewSpec` 同时检查 dataset ID、schema generation 和 chart compatibility。
++
++## Component Contract
++
++`FinancialChartEditorProps` 不新增 G2、projection 或 chart callback。图表类型来自有效 `ViewSpec`：
++
++```typescript
++interface FinancialChartEditorProps {
++  readonly sourceData: SourceData;
++  readonly viewSpec?: ViewSpec;
++  readonly defaultViewSpec?: ViewSpec;
++  readonly historyLimit?: number;
++  readonly locale?: 'zh-CN' | 'en-US';
++  readonly readOnly?: boolean;
++  readonly height?: number | string;
++  readonly panels?: FinancialChartEditorPanels;
++  readonly chartAppearance?: FinancialChartAppearance;
++  readonly onViewSpecChange?: (next: ViewSpec, event: CommandEvent) => void;
++  readonly onCommand?: (event: CommandEvent) => void;
++  readonly onCommandRejected?: (error: CommandError) => void;
++  readonly onSelectionChange?: (selection: SelectionState) => void;
++}
++```
++
++Rules:
++
++- source-only uncontrolled waterfall 保持当前初始化行为。
++- source-only uncontrolled categorical 确定性初始化为 `column`。
++- 宿主要初始化 `bar` 时，调用 `createInitialViewSpec(source, { chartType: 'bar' })` 并把结果作为
++  `defaultViewSpec` 或受控 `viewSpec` 传入。
++- `viewSpec` 与 `defaultViewSpec` 继续互斥；不兼容 source/view 显示结构化错误工作台，不初始化 G2。
++- chart type 在当前 editor session 中保持不变。宿主替换受控 ViewSpec 时仍必须满足 schema generation 与
++  source compatibility；本切片不把替换解释为可撤销命令。
++- readOnly、selection、panels、callbacks 和 imperative handle 语义不变。
++
++## Appearance Contract
++
++`FinancialChartAppearance` wire shape 保持不变：
++
++- categorical 普通 item amount `< 0` 映射 `palette.negative`，否则映射 `palette.positive`。
++- categorical collapsed group 映射 `palette.group`。
++- `palette.start`、`palette.subtotal`、`palette.end` 只由 waterfall 使用，但继续保留统一稳定类型。
++- axis.x/axis.y 按实际视觉轴控制；bar 和 column 不交换配置字段含义。
++- valueLabels、Tooltip、numberFormat 和 animation 使用现有安全解析规则。
++- reduced motion 优先于 animation；导出禁用交互 Tooltip 与动画。
++
++本切片不增加 `categoryColor`、`orientation`、raw theme、formatter callback 或 arbitrary G2 options。
++
++## Persistence Contract
++
++```typescript
++function serializeViewSpec(viewSpec: ViewSpec): string;
++
++function parseViewSpec(
++  serialized: string,
++  sourceData: SourceData,
++): ValidationResult<ViewSpec>;
++```
++
++- serializer 保留输入 schema version 与 chart type，不把 `1.0.0` 自动升级为 `2.0.0`。
++- parser 拒绝 schema generation、dataset ID 或 chart family 不兼容。
++- bar 和 column 使用相同叙事树字段，但序列化保留具体 chart type。
++- JSON 字段顺序继续确定；groups、annotations 和 emphasis record key 继续排序。
++- parse/serialize 不执行 G2、DOM、formatter callback 或 host code。
++
++## Command Contract
++
++现有 `EditorCommand` union 和 wire schema 不变。执行结果保持：
++
++- 成功命令只修改 `ViewSpec`，从不修改 SourceData。
++- chart type 与 schema version 在成功命令、undo 和 redo 中保持不变。
++- waterfall policy 保留 anchor 与 segment 约束。
++- categorical policy 允许普通 item 在合法同父级位置移动，但 pinned item 与 pinned descendant 继续锁定。
++- 直接操作、结构大纲、键盘和 host/AI candidate 继续使用同一命令语义。
++
++内部 chart policy 不是公共 callback，宿主不能替换命令规则。
++
++## Export Contract
++
++`FinancialChartEditorHandle.exportImage` 和 `ExportOptions` 保持不变：
++
++- renderer 根据当前 `ViewSpec.chartType` 选择内部投影和 G2 spec factory。
++- bar、column 和 waterfall 均支持 SVG 与 PNG。
++- 空 categorical source 生成合法的空图导出，保留标题、尺寸和背景，不抛出仅因零分类导致的错误。
++- 活动 reorder preview、无 owner document 或 renderer failure 继续返回结构化 export error。
++- SVG sanitizer、PNG pixel ratio、filename 和不触发下载的现有合同不变。
++- screen/export spec 必须共享 data、encode、axis、label、palette、annotation 与 emphasis 语义。
++
++## Accessibility Contract
++
++- `AccessibleChartSummary` 根据 chart type 描述 waterfall、bar 或 column，但不暴露 renderer 术语。
++- 分类摘要按 `ViewSpec.rootOrder` 的逻辑顺序输出；bar 的第一个节点对应最上方，column 对应最左侧。
++- 金额使用与屏幕/导出相同的 locale、currency 和 numberFormat。
++- Canvas 交互必须有结构大纲和键盘等价路径。
++- 空分类图仍提供标题与“0 个可见分类”的可读摘要。
++
++## Package And Compatibility
++
++- `@antv/g2` 继续是 peer dependency 和唯一图表引擎。
++- React、React DOM、G2 peer ranges 保持不变。
++- 不增加新的 runtime dependency。
++- ESM、CJS、`.d.ts` / `.d.cts` 和 `styles.css` export map 保持不变。
++- current public entrypoint 不导出内部文件路径；内部目录移动不构成 API。
++
++## Approval Gate
++
++本合同已于 2026-07-19 经用户明确批准。T112 只实现 data、view、initialization、validation、persistence
++和 command policy 边界；组件渲染与初始化接入保留给 T115。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/data-model.md b/.ai-platform/specs/004-categorical-chart-validation/data-model.md
+new file mode 100644
+index 0000000..92d76a6
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/data-model.md
+@@ -0,0 +1,260 @@
++# 004 分类图数据模型
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Confirmed
++- Feature ID: `004-categorical-chart-validation`
++- Last updated: 2026-07-19
++- Compatibility target: legacy schema `1.0.0` 与新增 schema `2.0.0`
++- Approval: 用户于 2026-07-19 明确批准 schema v2、legacy compatibility 和 categorical data contract
++
++## Design Decisions
++
++- `SourceData` 使用显式 `dataKind` 区分 waterfall 与 categorical，不从 item 数量、anchor 是否存在或
++  `ViewSpec.chartType` 猜测数据语义。
++- 现有 `1.0.0` waterfall wire shape 继续作为合法 legacy variant；验证器不得静默加字段、迁移或克隆。
++- 新 chart family 使用 `2.0.0` closed schema。major bump 反映新增 discriminator、分类 item shape 和
++  `ViewSpec.chartType` 联合的持久化语义变化。
++- `ViewSpec` 的递归树字段在 chart family 之间保持一致；各 family 只拥有 validation、projection、
++  compatibility 和 interaction-axis policy。
++- bar 与 column 是 categorical family 的两种 layout，不是两个数据模型。
++- 本切片不提供自动 legacy migration writer；legacy waterfall 可以原样读取、编辑和序列化。
++
++## Public Type Model
++
++```typescript
++type LegacySchemaVersion = '1.0.0';
++type CurrentSchemaVersion = '2.0.0';
++type SchemaVersion = LegacySchemaVersion | CurrentSchemaVersion;
++
++type ChartType = 'waterfall' | 'bar' | 'column';
++type SourceDataKind = 'waterfall' | 'categorical';
++type MetadataValue = string | number | boolean | null;
++
++interface SourceItemBase {
++  readonly id: SourceItemId;
++  readonly label: string;
++  readonly amount: number;
++  readonly sourceRef?: string;
++  readonly metadata?: Readonly<Record<string, MetadataValue>>;
++}
++
++type WaterfallSourceItemKind = 'start' | 'contribution' | 'subtotal' | 'end';
++
++interface WaterfallSourceItem extends SourceItemBase {
++  readonly kind: WaterfallSourceItemKind;
++}
++
++interface CategoricalSourceItem extends SourceItemBase {}
++
++// Backward-compatible public names keep their waterfall meaning.
++type SourceItemKind = WaterfallSourceItemKind;
++type SourceItem = WaterfallSourceItem;
++
++interface LegacyWaterfallSourceData {
++  readonly schemaVersion: '1.0.0';
++  readonly datasetId: DatasetId;
++  readonly currency?: string;
++  readonly items: readonly WaterfallSourceItem[];
++}
++
++interface WaterfallSourceData {
++  readonly schemaVersion: '2.0.0';
++  readonly dataKind: 'waterfall';
++  readonly datasetId: DatasetId;
++  readonly currency?: string;
++  readonly items: readonly WaterfallSourceItem[];
++}
++
++interface CategoricalSourceData {
++  readonly schemaVersion: '2.0.0';
++  readonly dataKind: 'categorical';
++  readonly datasetId: DatasetId;
++  readonly currency?: string;
++  readonly items: readonly CategoricalSourceItem[];
++}
++
++type SourceData = LegacyWaterfallSourceData | WaterfallSourceData | CategoricalSourceData;
++```
++
++`SourceItem` 与 `SourceItemKind` 保持现有 waterfall 含义，已有 import 不需要改名。categorical host 使用新的
++`CategoricalSourceItem`。该类型不包含 `kind: 'category'`；`dataKind: 'categorical'` 已经提供可靠
++discriminator，避免在每个 item 重复相同信息，也避免普通分类被错误解释为 waterfall contribution。
++
++## Source Validation
++
++所有 source variant 继续遵守：
++
++- plain JSON-compatible object 与 dense arrays。
++- closed schema；未知字段、symbol key、accessor property 和数组附加属性被拒绝。
++- dataset ID 与 item ID 去除首尾空白后非空，item ID 在数据集内唯一。
++- label 去除首尾空白后非空；label 可以重复。
++- amount 必须为 finite number，且绝对值不超过 `Number.MAX_SAFE_INTEGER`。
++- metadata value 只允许 `string | number | boolean | null`，其中 number 必须有限。
++- validation issue 不包含 amount、label、sourceRef 或 metadata value。
++
++Waterfall variant 继续额外要求：
++
++- 恰好一个 start 与一个 end。
++- start 位于首位，end 位于末位。
++- subtotal 是锁定锚点并定义 contribution segment。
++- anchor 和累计金额一致性继续由 waterfall projection 校验。
++
++Categorical variant 额外要求：
++
++- `items` 可以为空。
++- 每个 item 都是可进入叙事树的普通分类，不存在 start、end 或 subtotal anchor。
++- source array order 是默认分类顺序。
++
++## ViewSpec Variants
++
++```typescript
++interface NarrativeViewFields {
++  readonly datasetId: DatasetId;
++  readonly revision: number;
++  readonly rootOrder: readonly ViewNodeId[];
++  readonly groups: Readonly<Record<GroupId, ViewGroup>>;
++  readonly collapsedGroupIds: readonly GroupId[];
++  readonly pinnedItemIds: readonly SourceItemId[];
++  readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
++  readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
++}
++
++interface LegacyWaterfallViewSpec extends NarrativeViewFields {
++  readonly schemaVersion: '1.0.0';
++  readonly chartType: 'waterfall';
++}
++
++interface CurrentViewSpec extends NarrativeViewFields {
++  readonly schemaVersion: '2.0.0';
++  readonly chartType: ChartType;
++}
++
++type ViewSpec = LegacyWaterfallViewSpec | CurrentViewSpec;
++```
++
++Compatibility matrix:
++
++| Source variant | Valid ViewSpec | Result |
++| --- | --- | --- |
++| legacy `1.0.0` waterfall | legacy `1.0.0` waterfall | 保持现有行为与 wire value |
++| legacy `1.0.0` waterfall | current `2.0.0` waterfall | 拒绝，避免隐式 schema migration |
++| current `2.0.0` waterfall | current `2.0.0` waterfall | 有效 |
++| current `2.0.0` categorical | current `2.0.0` bar | 有效 |
++| current `2.0.0` categorical | current `2.0.0` column | 有效 |
++| waterfall source | bar 或 column | `SOURCE_CONFLICT / INCOMPATIBLE_CHART_TYPE` |
++| categorical source | waterfall | `SOURCE_CONFLICT / INCOMPATIBLE_CHART_TYPE` |
++
++`ViewSpec.rootOrder` 始终是逻辑叙事顺序。column 将第一个逻辑节点放在最左侧；bar 将第一个逻辑节点放在
++最上方。G2 adapter 负责必要的 category scale range 方向，不能通过反转持久化数组实现视觉顺序。
++
++## Initial View Creation
++
++```typescript
++interface InitialViewSpecOptions {
++  readonly chartType?: ChartType;
++}
++
++function createInitialViewSpec(
++  sourceData: SourceData,
++  options?: InitialViewSpecOptions,
++): ValidationResult<ViewSpec>;
++```
++
++Rules:
++
++- legacy `1.0.0` waterfall 默认并且只允许 `waterfall`，输出 legacy `1.0.0` ViewSpec。
++- current `2.0.0` waterfall 默认并且只允许 `waterfall`，输出 current `2.0.0` ViewSpec。
++- current `2.0.0` categorical 默认 `column`，可显式选择 `bar`，输出 current `2.0.0` ViewSpec。
++- 不兼容的显式 `chartType` 返回 validation failure，不回退到其他类型。
++- waterfall 初始 `rootOrder` 是 contribution 的 segment-preserving 顺序。
++- categorical 初始 `rootOrder` 是全部 source item ID 的源顺序。
++
++## Shared Narrative Tree Rules
++
++- `rootOrder` 与全部 group `childIds` 构成规范化有序森林。
++- 每个可叙事 source item 与每个 group 恰好出现一次。
++- group 至少包含两个同父级连续直接 child；child 可以是 item 或 group。
++- 禁止自身引用、循环、孤儿 group、多个父级、空组和单 child group。
++- collapsed、annotation 和 emphasis 只能引用存在的 node。
++- pinned item 继续保留在树中，只限制命令。
++- waterfall group 不能跨 subtotal segment；categorical group 没有 segment 限制。
++- 任一 pinned descendant 使对应 node 在 move/group policy 中被视为 locked。
++
++## CategoricalProjection
++
++```typescript
++interface CategoricalDatum {
++  readonly nodeId: ViewNodeId;
++  readonly label: string;
++  readonly amount: number;
++  readonly kind: 'positive' | 'negative' | 'group';
++  readonly sourceIds: readonly SourceItemId[];
++  readonly locked: boolean;
++  readonly order: number;
++}
++
++type CategoricalProjection = readonly CategoricalDatum[];
++type CategoricalProjectionResult = ValidationResult<CategoricalProjection>;
++```
++
++Projection rules:
++
++1. 先验证 source/view compatibility 和全部叙事树不变量；失败不返回部分 projection。
++2. 按逻辑深度优先顺序遍历 `rootOrder` 和 expanded group children。
++3. 普通 item 的 amount 等于 source amount，`sourceIds` 是只含自身的独立数组。
++4. collapsed group 输出一个 datum，amount 是全部后代 item 的 Neumaier compensated sum，sourceIds 按逻辑
++   叶子顺序展开。
++5. expanded group 不输出额外 datum；后代保持自己的 collapsed 状态。
++6. 普通 item amount 小于 0 时 kind 为 `negative`，否则包括零在内为 `positive`；collapsed group 始终为
++   `group`。
++7. item pinned 时 locked 为 true；collapsed group 包含任一 pinned descendant 时 locked 为 true。
++8. `order` 等于输出数组零基索引；同一有效输入重复调用必须 deep-equal。
++9. 聚合变成非有限值或绝对值超过 `Number.MAX_SAFE_INTEGER` 时返回
++   `INVALID_SOURCE_DATA / UNSAFE_AMOUNT`。
++
++## Commands And Chart Policy
++
++`EditorCommand` wire shape 在本切片保持不变。内部命令执行器通过 chart policy 取得：
++
++```typescript
++interface NarrativeChartPolicy {
++  readonly sourceKind: SourceDataKind;
++  isMovableItem(sourceData: SourceData, itemId: SourceItemId): boolean;
++  canShareContainer(sourceData: SourceData, itemIds: readonly SourceItemId[]): boolean;
++}
++```
++
++该接口是内部最小 policy，不是公共 plugin contract，也不接受宿主 callback。waterfall policy 保留 anchor 和
++segment 规则；categorical policy 允许所有未 pinned item 参与同父级排序和分组。
++
++## Persistence
++
++- `serializeViewSpec` 保留输入 schema version，不静默升级 legacy view。
++- `parseViewSpec` 先读取 schema discriminator，再调用对应 closed-schema validator。
++- legacy source 只能解析 legacy view；current source 只能解析 current view。
++- dataset ID、schema family 或 chart type 不兼容时拒绝整个输入。
++- 所有 record key 序列化继续使用稳定排序；ordered arrays 保持逻辑顺序。
++- source fingerprint 必须包含 schema version 与 current source 的 `dataKind`，避免不同 family 发生碰撞式
++  语义复用。fingerprint 仍是确定性一致性标识，不是安全哈希。
++
++## State Transitions
++
++```text
++validate source -> LegacyWaterfall | Waterfall | Categorical | InvalidData
++source + compatible initial options -> ViewSpec(revision 0)
++source + incompatible chart type -> SourceConflict
++valid command -> ViewSpec(same schema/type, revision + 1)
++undo/redo -> ViewSpec(same schema/type, revision + 1)
++valid view + projection -> WaterfallProjection | CategoricalProjection
++valid projection + chart type -> G2Spec
++```
++
++图表类型不会被现有命令改变。分类 bar/column 切换不属于本切片运行时状态迁移。
++
++## Approval Gate
++
++本数据模型已于 2026-07-19 经用户明确批准。T112 只能按照已批准 compatibility matrix 修改
++`SchemaVersion`、`SourceData`、`ViewSpec`、validator、persistence 和公共类型；任何 schema 或范围变化必须
++重新进入用户审批。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/packets/T112.yaml b/.ai-platform/specs/004-categorical-chart-validation/packets/T112.yaml
+new file mode 100644
+index 0000000..be735da
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/packets/T112.yaml
+@@ -0,0 +1,254 @@
++schema_version: 1
++packet_id: EP-004-T112-A001
++task_id: T112
++feature_id: 004-categorical-chart-validation
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_spec: .ai-platform/specs/004-categorical-chart-validation/spec.md
++  data_model: .ai-platform/specs/004-categorical-chart-validation/data-model.md
++  public_api_contract: .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
++  requirements_checklist: .ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
++  feature_plan: .ai-platform/specs/004-categorical-chart-validation/plan.md
++  work_graph: .ai-platform/specs/004-categorical-chart-validation/tasks.md
++  analysis: .ai-platform/specs/004-categorical-chart-validation/analysis.md
++  approval_gates:
++    constitution: Confirmed
++    product_contract: Confirmed
++    feature_contracts: Confirmed by user on 2026-07-19
++    requirements_checklist: Completed with 0 Critical/High/Medium findings
++    technical_plan_and_work_graph: Confirmed by user on 2026-07-19
++    analysis: Completed with 0 Critical/High/Medium findings
++    implementation_authorization: User explicitly authorized T112 packet generation and implementation on 2026-07-19
++
++execution_receipt:
++  attempt_id: T112-A001
++  status: Accepted
++  evidence_directory: .ai-platform/evidence/T112
++  final_validation: >-
++    unit 341/341; domain coverage 98.09/95.61/100/98.05; waterfall coverage
++    97.56/96.15/100/97.54; strict typecheck, build, package, lint, format and diff checks pass
++  review: >-
++    Spec compliance, engineering and QA review report no unresolved blocking finding; public runtime exports,
++    command wire schema and legacy waterfall behavior remain unchanged.
++  user_acceptance: User explicitly replied "T112 验收通过" on 2026-07-19.
++  downstream_gate: T113 and T114 dependencies are satisfied; each remains Draft until its execution packet is generated and approved.
++
++work_unit:
++  title: 扩展数据合同与共享命令策略
++  goal: >-
++    以严格判别联合支持 legacy waterfall、current waterfall 和 current categorical，建立
++    source/view compatibility、初始 ViewSpec、version-preserving persistence、source fingerprint
++    和最小内部 chart policy，同时保持现有 waterfall 与 command wire behavior 不变。
++  epic: E004
++  story: S004-1
++  requirements:
++    - CAT-FR-001
++    - CAT-FR-002
++    - CAT-FR-003
++    - CAT-FR-008
++    - CAT-NFR-001
++    - CAT-NFR-004
++    - CAT-NFR-006
++    - CAT-AC-001
++    - CAT-AC-004
++    - CAT-AC-005
++    - CAT-AC-009
++  priority: P0
++  depends_on:
++    - T111 Accepted
++  blocks:
++    - T113
++    - T114
++    - T115
++    - T116
++  parallel: false
++  conflicts_with:
++    - T113
++    - T114
++    - T115
++    - T116
++    - Any raw G2 public surface
++    - Any implicit schema migration
++    - Any EditorCommand wire-shape change
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - packages/editor/src/domain/model.ts
++    - packages/editor/src/domain/errors.ts
++    - packages/editor/src/domain/validation.ts
++    - packages/editor/src/domain/createInitialViewSpec.ts
++    - packages/editor/src/domain/session.ts
++    - packages/editor/src/domain/executeCommand.ts
++    - packages/editor/src/domain/invariants.ts
++    - packages/editor/src/domain/persistence.ts
++    - packages/editor/src/domain/viewTree.ts
++    - packages/editor/src/index.ts
++    - packages/editor/src/waterfall/projectWaterfall.ts
++    - packages/editor/src/components/FinancialChartEditor.tsx
++    - packages/editor/src/interactions/groupSelection.ts
++    - packages/editor/tests/domain/validation.test.ts
++    - packages/editor/tests/domain/model.test.ts
++    - packages/editor/tests/domain/commands.test.ts
++    - packages/editor/tests/domain/persistence.test.ts
++    - packages/editor/tests/domain/property-sequences.test.ts
++    - packages/editor/tests/package/public-api.test.ts
++    - packages/editor/tests/package/types-consumer.ts
++  existing_patterns:
++    - SourceData/ViewSpec are immutable JSON-compatible plain data with branded string IDs.
++    - Validators inspect own enumerable data properties, reject unrecognized fields and hostile input, accumulate stable issues, and preserve successful input identity.
++    - Session creation validates source and view before computing a deterministic non-cryptographic fingerprint.
++    - Command execution validates pre/post invariants and never mutates SourceData or the input session.
++    - Persistence emits deterministic JSON and validates parsed input against SourceData.
++    - Existing legacy waterfall fixtures and snapshots are the compatibility baseline.
++  interfaces_or_contracts:
++    - .ai-platform/specs/004-categorical-chart-validation/data-model.md
++    - .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
++  required_design:
++    - Preserve public SourceItem and SourceItemKind names as waterfall-compatible aliases.
++    - SourceData is LegacyWaterfallSourceData | WaterfallSourceData | CategoricalSourceData.
++    - Current SourceData uses schemaVersion 2.0.0 plus dataKind waterfall or categorical.
++    - ViewSpec is LegacyWaterfallViewSpec | CurrentViewSpec; legacy/current source generations cannot mix.
++    - Categorical defaults to column and accepts explicit bar; incompatible explicit chartType fails without fallback.
++    - EditorCommand wire union remains unchanged.
++    - Internal chart policy owns movable-item and container compatibility questions; it is not exported publicly.
++  forbidden_changes:
++    - Do not modify chart rendering, projection or interaction semantics; projectWaterfall.ts, FinancialChartEditor.tsx and groupSelection.ts may only narrow the exact new SourceData item union. Do not connect categorical UI, and do not modify CSS, export runtime, dependencies or package metadata.
++    - Do not add setChartType, sorting, Top N or other commands.
++    - Do not weaken legacy waterfall anchors, subtotal segments, group, pin or source-coverage invariants.
++    - Do not expose projectors, policy, G2Spec, chart instance, renderer or plugin callbacks.
++    - Do not log amount, label, sourceRef or metadata values.
++
++execution_constraints:
++  execution_mode: direct
++  direct_reason: User authorized implementation but did not authorize delegation; repository policy requires one governed task at a time.
++  branch_or_worktree: codex/t112-categorical-data-contract
++  allowed_files:
++    - packages/editor/src/domain/model.ts
++    - packages/editor/src/domain/errors.ts
++    - packages/editor/src/domain/validation.ts
++    - packages/editor/src/domain/createInitialViewSpec.ts
++    - packages/editor/src/domain/session.ts
++    - packages/editor/src/domain/history.ts
++    - packages/editor/src/domain/invariants.ts
++    - packages/editor/src/domain/executeCommand.ts
++    - packages/editor/src/domain/persistence.ts
++    - packages/editor/src/domain/viewTree.ts
++    - packages/editor/src/domain/chartPolicy.ts
++    - packages/editor/src/index.ts
++    - packages/editor/src/waterfall/projectWaterfall.ts
++    - packages/editor/src/components/FinancialChartEditor.tsx
++    - packages/editor/src/interactions/groupSelection.ts
++    - packages/editor/tests/domain/**
++    - packages/editor/tests/package/**
++    - .ai-platform/evidence/T112/**
++  test_targets:
++    - packages/editor/tests/domain/schema-v2.test.ts
++    - packages/editor/tests/domain/chart-policy.test.ts
++    - packages/editor/tests/domain/validation.test.ts
++    - packages/editor/tests/domain/persistence.test.ts
++    - packages/editor/tests/domain/property-sequences.test.ts
++    - packages/editor/tests/package/public-api.test.ts
++    - packages/editor/tests/package/types-consumer.ts
++  ownership_notes:
++    - Worktree was clean before 004 artifacts were created; current uncommitted 004 documents belong to this approved delivery.
++    - Stop if unrelated user edits appear in an allowed runtime file.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    files:
++      - packages/editor/tests/domain/schema-v2.test.ts
++      - packages/editor/tests/domain/chart-policy.test.ts
++      - packages/editor/tests/domain/persistence.test.ts
++      - packages/editor/tests/package/public-api.test.ts
++      - packages/editor/tests/package/types-consumer.ts
++    command: >-
++      pnpm exec vitest run packages/editor/tests/domain/schema-v2.test.ts
++      packages/editor/tests/domain/chart-policy.test.ts
++      packages/editor/tests/domain/persistence.test.ts
++      packages/editor/tests/package/public-api.test.ts
++    expected_failure: >-
++      Tests or typecheck fail because schema 2.0.0/dataKind, ChartType, categorical initialization,
++      compatibility issues and categorical chart policy do not exist yet. Existing legacy tests remain green.
++  green:
++    command: >-
++      pnpm exec vitest run packages/editor/tests/domain/schema-v2.test.ts
++      packages/editor/tests/domain/chart-policy.test.ts
++      packages/editor/tests/domain/persistence.test.ts
++      packages/editor/tests/package/public-api.test.ts
++    expected_signal: New T112 tests and all referenced legacy regression tests pass.
++  refactor:
++    command: pnpm exec vitest run packages/editor/tests/domain packages/editor/tests/package
++    expected_signal: Domain and package unit suites remain green after schema dispatch and policy cleanup.
++
++validation_loop:
++  commands:
++    - pnpm exec vitest run packages/editor/tests/domain packages/editor/tests/package
++    - pnpm test:coverage
++    - pnpm typecheck
++    - pnpm build
++    - pnpm test:package
++    - pnpm lint
++    - pnpm format:check
++    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T112
++    - git diff --check
++  expected_signals:
++    - All legacy waterfall tests pass without updated behavioral expectations.
++    - New schema, compatibility, initial-view, fingerprint, persistence and policy tests pass.
++    - Domain coverage remains at least 95 percent for statements, branches, functions and lines.
++    - ESM, CJS and type consumers expose only the approved public types and functions.
++    - Artifact validator reports no errors or warnings for T112.
++  retry_budget: 2
++  failure_policy:
++    first_failure: Read the exact output and fix only behavior directly owned by T112.
++    second_failure: Determine whether the failure is a scope, contract or environment blocker; do not widen allowed files.
++    beyond_budget: Stop implementation, preserve RED/GREEN receipts and record blocked evidence.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T112/summary.md
++  diff: .ai-platform/evidence/T112/diff.patch
++  test_results: .ai-platform/evidence/T112/test-results.md
++  required:
++    - task ID, executor and direct-execution reason
++    - exact changed files
++    - RED command, exit code and expected failure reason
++    - GREEN and refactor command results
++    - coverage, typecheck, build, package, lint, format and artifact validation results
++    - public API and schema compatibility summary
++    - spec-compliance and engineering review findings
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  review_focus:
++    - Legacy 1.0.0 waterfall identity and behavior are unchanged.
++    - Current schema rejects missing/invalid dataKind and mixed source/view generations.
++    - Categorical trees cover every source item exactly once and preserve locked/pinned invariants.
++    - Policy extraction does not create a public or renderer abstraction.
++    - Errors and fingerprints do not expose or ambiguously mix financial data families.
++  acceptance_rule: T112 moves to Needs_Review after validation; only explicit user acceptance can mark it Accepted.
++
++handoff:
++  task_status: Accepted
++  acceptance_receipt: User explicitly replied "T112 验收通过" on 2026-07-19.
++  next_gate: Generate and approve separate T113 and T114 execution packets before implementation.
++  remote_actions: Commit, push, pull request, merge, publish and release are not authorized by this request.
++
++stop_conditions:
++  - A required behavior needs chart rendering, projection, React, CSS, interaction or export files.
++  - Legacy waterfall behavior can only pass by weakening an existing assertion or validator.
++  - The approved compatibility matrix needs to change.
++  - A new EditorCommand or runtime dependency is required.
++  - An unrelated user change appears in an allowed runtime file.
++  - Artifact validator reports an unresolved Critical/High finding or missing packet field.
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/plan.md b/.ai-platform/specs/004-categorical-chart-validation/plan.md
+new file mode 100644
+index 0000000..a6a0b61
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/plan.md
+@@ -0,0 +1,304 @@
++# TellPlot 分类图验证切片 Plan
++
++## Metadata
++
++- Feature ID: `004-categorical-chart-validation`
++- Version: 0.1.0
++- Status: Confirmed
++- Last updated: 2026-07-19
++- Depends on: T101-T110 Accepted
++- Approval: 用户于 2026-07-19 明确批准技术决策、任务顺序和验证门禁
++
++## Decision Summary
++
++1. 使用 schema `2.0.0` 的可判别 `SourceData` 联合增加 categorical family，同时完整保留 legacy
++   `1.0.0` waterfall wire contract。
++2. `ViewSpec` 保留共享叙事树，并把 `chartType` 扩展为 `waterfall | bar | column`；source/view 使用明确
++   compatibility matrix，不通过启发式推断。
++3. 命令执行器复用一套树变换，只把 waterfall anchor/segment 与 categorical movable-item 差异提取为
++   最小内部 policy，不建立公共 plugin registry。
++4. categorical 使用一个投影模型；bar 与 column 只在 G2 encode、axis、label 和 category-axis interaction
++   上区分方向。
++5. G2 继续负责 interval mark、scene bounds、Tooltip 和 enter/update/exit animation；TellPlot 负责财务
++   语义、确定性命令、拖动状态与 DOM UI。
++6. 先完成显式分类图纵向切片，再基于瀑布图与分类图真实重复抽取 `rendering/g2` 内部运行时。禁止在
++   第二类图表跑通前进行通用化重写。
++
++## Current Architecture Assessment
++
++现有架构已经建立可靠的领域和质量基础：
++
++- `SourceData` 与 `ViewSpec` 分离，原始金额不可变。
++- 所有图表、大纲和键盘操作进入确定性命令与历史。
++- waterfall projection 与 G2 spec 是确定性 adapter。
++- screen、SVG 和 PNG 复用同一个 waterfall spec factory。
++- TypeScript strict、closed-schema validation、真实浏览器、package、a11y 和 performance 门禁已经存在。
++
++分类图会暴露五个已知扩展点：
++
++- `SourceItemKind`、anchor validation 和 `ViewSpec.chartType` 当前只表达 waterfall。
++- 命令执行器直接读取 contribution/subtotal segment。
++- `chartPointer` 和 drop target 当前只表达 X 轴几何。
++- `WaterfallCanvas` 同时承担 G2 生命周期、事件注册、手势状态、DOM overlay 和 chart-specific copy。
++- `waterfallChartSpec.ts` 位于 `export/`，但同时服务屏幕与导出，目录所有权不准确。
++
++这些是本 feature 的验证对象，不是预先大重构的理由。
++
++## Target Architecture
++
++目标边界在 T116 完成后形成，具体文件只在真实复用被测试证明后移动：
++
++```text
++packages/editor/src/
++  domain/
++    model.ts                 # public discriminated source/view contracts
++    validation.ts            # schema dispatch + shared tree validation
++    executeCommand.ts        # shared tree transforms + internal chart policy
++    persistence.ts           # version-preserving parse/serialize
++  charts/
++    waterfall/
++      projection.ts
++      spec.ts
++      policy.ts
++    categorical/
++      projection.ts
++      spec.ts
++      policy.ts
++  rendering/g2/
++    chartRuntime.ts          # Chart load/create/options/render/destroy queue
++    exportRuntime.ts         # offscreen Canvas/SVG lifecycle
++  interactions/
++    categoryAxis.ts          # x/y neutral scene-bound ordering primitives
++  components/
++    FinancialChartEditor.tsx # orchestration and chart dispatch
++    WaterfallCanvas.tsx      # waterfall presentation/gesture composition
++    CategoricalCanvas.tsx    # categorical presentation/gesture composition
++```
++
++这是内部目标结构，不是公共 import surface。若实现证据显示某个 runtime 只有一个消费者，则保留在 chart
++module 内，不为目录对称而抽取。
++
++## Data And Schema Plan
++
++### Schema dispatch
++
++- `1.0.0` 无 `dataKind`，始终按 legacy waterfall closed schema 读取。
++- `2.0.0` 必须有 `dataKind: 'waterfall' | 'categorical'`。
++- `ViewSpec` 同样按 schema version 选择 legacy/current union。
++- validation success 保留输入 identity；所有 normalization 只在 projection/spec 内产生新 plain data。
++
++### Compatibility
++
++- legacy source 与 legacy waterfall view 保持现有 round-trip。
++- current waterfall source 只接受 current waterfall view。
++- current categorical source 接受 current bar/column view。
++- 不提供 implicit source/view upgrade，也不把 schema mismatch 当作可恢复警告。
++- source fingerprint 纳入 schema version 和 dataKind。
++
++### Initial view
++
++- `createInitialViewSpec` 增加可选 closed options。
++- legacy/current waterfall 默认 waterfall。
++- categorical 默认 column，可显式选择 bar。
++- chart type 在 session 内保持不变；本切片不增加 `setChartType` 命令。
++
++## Domain Plan
++
++命令树变换继续只有一份。当前 `contributionSegment` 和 `item.kind === 'contribution'` 判断改由内部 policy
++提供，policy 只回答执行命令所需的稳定问题：
++
++- item 是否属于可叙事集合。
++- item 是否为系统锚点。
++- 一组后代是否可以共享 container。
++- 锁定原因是 system anchor、segment boundary 还是 pinned。
++
++policy 不接受宿主回调、不携带 G2 类型、不决定投影、不决定 UI copy。validator 与 command executor 使用
++同一个 family 选择逻辑，避免“validator 允许但 command 拒绝”的漂移。
++
++分类聚合复用 waterfall 已验证的 compensated summation，但结果类型与 anchor semantics 独立。分类图不会
++复用 `WaterfallDatum.start/end`，避免让通用 projection 变成大量可选字段。
++
++## G2 Rendering Plan
++
++### Categorical spec
++
++- 一个 `CategoricalProjection` 支持 bar/column。
++- column: `encode.x = nodeId`、`encode.y = amount`，使用默认 Cartesian coordinate。
++- bar: 保持同一语义 encode，使用 G2 `coordinate.transform: transpose` 转为横向布局，并通过 category scale
++  方向保证逻辑首项位于顶部。
++- `encode.key = nodeId` 在两种布局保持稳定。
++- ordinary datum color 根据 amount 符号映射 positive/negative；collapsed group 使用 group。
++- value label、axis formatter、Tooltip、annotation、emphasis 和 animation 复用 resolved appearance。
++- export 设置 reduced motion 并关闭 Tooltip，screen 使用当前配置。
++
++### Runtime ownership
++
++T113 先实现可独立测试的 categorical spec。T115 完成真实 screen/export integration。只有 T115 green 后，
++T116 才比较两类 chart lifecycle 并抽取：
++
++- dynamic G2 constructor loading。
++- render request ordering 与 stale request discard。
++- active animation finish。
++- options/render error mapping。
++- event unregistration、destroy 和 callback isolation。
++- offscreen Canvas/SVG host cleanup。
++
++chart-specific mark、copy、projection、interaction policy 和 label position 不进入 shared runtime。
++
++## Interaction Plan
++
++把现有水平 bounds adapter 扩展为 axis-neutral category bounds：
++
++```typescript
++type CategoryAxis = 'x' | 'y';
++
++interface ChartCategoryBounds {
++  readonly nodeId: ViewNodeId;
++  readonly min: number;
++  readonly center: number;
++  readonly max: number;
++}
++```
++
++- G2 scene `getBounds()` 继续是唯一图形边界来源。
++- column 和 waterfall 使用 X category axis。
++- bar 使用 Y category axis，并由 adapter 保留 top-to-bottom logical order。
++- collision 使用移动 mark 在 category axis 上的边缘越过相邻 mark 边缘，不读取 value-axis size。
++- pointer down 后冻结同一 render revision 的 bounds；projection 改变或 render revision 变化时取消旧 session。
++- 4px pending threshold、RAF 合并、Pointer capture、Escape/blur/unmount cancel 继续复用。
++- keyboard 和 outline 不经过像素碰撞，直接产生同一 command target。
++
++## React And UI Plan
++
++`FinancialChartEditor` 继续是唯一公共组件，根据已验证的 source/view 选择 projection 与 chart canvas。共享
++selection、outline、inspector、toolbar、feedback、history 和 export orchestration。
++
++新增 `CategoricalCanvas` 只负责分类图所需的：
++
++- bar/column G2 spec 输入。
++- category-axis gesture composition。
++- 分类图标题、empty state 和 group action anchor。
++- G2 render issue 与现有 feedback contract 的连接。
++
++不复制 session、command dispatch、group dialog、outline 或 inspector 领域状态。若两类 Canvas 出现完全相同
++的 G2 lifecycle block，保留到 T116 再抽取。
++
++## Accessibility And Export Plan
++
++- accessible summary 使用 chart type 对应的可读名称和逻辑顺序，不描述 G2 encode。
++- bar 的 DOM summary 第一项对应视觉最上方；column 第一项对应最左侧。
++- empty categorical 仍渲染标题、0 项摘要和可导出的空图。
++- SVG/PNG 接收 chart-neutral render request，内部选择匹配 spec factory。
++- SVG sanitizer、PNG encoder 和 export error contract 保持不变。
++- screen/export parity 通过同一 factory 的结构测试与真实浏览器像素/DOM 检查证明。
++
++## TDD Strategy
++
++### RED
++
++- 新 schema discriminator、compatibility matrix、legacy identity 与 deterministic round-trip 测试失败。
++- categorical tree invariants、projection、compensated aggregation 和 property sequence 测试失败。
++- bar Y-axis 与 column X-axis scene bounds/collision 测试失败。
++- categorical G2 spec、screen rerender、SVG/PNG、a11y 和 package consumer 测试失败。
++- architecture consolidation 前增加 screen/export spec parity 与 runtime cleanup characterization tests。
++
++### GREEN
++
++- 每个 task 只实现通过本 task RED 所需的最小行为。
++- 新 family 先通过 pure domain/projection，再接 G2，再接 React/export。
++- 所有现有 waterfall tests 在每个 task 后保持 green。
++
++### REFACTOR
++
++- 只有 T115 vertical slice 全部 green 后才执行 T116 shared runtime extraction。
++- 不改变公共 API、wire schema、error code、默认 appearance 或 screenshot baseline。
++- 每次文件移动后运行 scoped tests、typecheck 和 package tests，最终再跑全量浏览器矩阵。
++
++## Validation Strategy
++
++每个 task 使用 scoped RED/GREEN 命令；T116 最终门禁为：
++
++- `pnpm format:check`
++- `pnpm lint`
++- `pnpm typecheck`
++- `pnpm test:coverage`
++- `pnpm build`
++- `pnpm test:package`
++- `pnpm test:react-matrix`
++- `pnpm test:e2e`
++- `pnpm test:a11y`
++- `pnpm test:performance`
++- `pnpm test:browser-previous`
++- `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`
++- `git diff --check`
++
++Coverage 必须为 `domain/**`、`waterfall/**`、新增 `categorical/**` 和抽取后的 `rendering/**` 建立不低于
++95% statements/branches/functions/lines 的门禁。真实浏览器需要新增 bar/column rendering、direct reorder、
++group/collapse、export、a11y 和 200 项 performance 场景。
++
++## Constitution Check
++
++| Principle | Compliance |
++| --- | --- |
++| P-001 真实工作流优先 | 只实现已确认的单序列分类条形/柱状图，不扩展通用 BI 范围。 |
++| P-002 数据与视图分离 | 分类 amount 保留在 SourceData，排序/分组只修改 ViewSpec。 |
++| P-003 一个确定性命令入口 | chart、outline、keyboard 共用现有 command union。 |
++| P-004 AI 必须受控 | 本切片不连接 AI；保留 command source 与未来 candidate 边界。 |
++| P-005 财务不变量优先 | 分类来源覆盖、聚合和锁定规则是阻断门禁。 |
++| P-006 原生能力优先 | interval、scene bounds、Tooltip 和图形动画使用 G2。 |
++| P-007 直接与精确操作并存 | bar/column canvas 和 outline/keyboard 同时验收。 |
++| P-008 性能与可打断 | 保留 RAF、短动画、interrupt/reduced motion 与真实性能预算。 |
++| P-009 小范围验证后抽象 | T116 只在第二类图表通过后抽取实际重复。 |
++| P-010 Evidence over assertion | scoped TDD、全量浏览器与 package evidence 全部列入任务。 |
++
++无章程例外。
++
++## Alternatives Considered
++
++### 直接把 categorical 当作无 anchor 的 waterfall
++
++拒绝。该方案会放宽已确认的 waterfall SourceData validator，让缺失 start/end 的错误数据被误判为合法，
++并迫使 projection 使用大量可选字段。
++
++### 现在建立通用 ChartPlugin registry
++
++拒绝。只有一个完整 family 和一个待验证 family，无法证明第三方扩展协议。公共 registry 会过早冻结
++projection、gesture、export 和 error contract。
++
++### 为 bar 与 column 分别复制领域模型
++
++拒绝。两者只在方向和 G2 encode 上不同，复制 tree/command/history 会违反单一命令入口。
++
++### 允许宿主传入 G2Spec 实现分类图
++
++拒绝。会破坏 source/view encoding、稳定 node key、scene hit testing、screen/export parity 和公共 API
++演进边界。
++
++### 引入第二个渲染或动画引擎
++
++拒绝。G2 已满足 interval 和图形过渡，新增依赖没有已确认问题与退出收益。
++
++## Risk Register
++
++| Risk | Impact | Mitigation |
++| --- | --- | --- |
++| schema v2 使 legacy 类型分支增加 | validator、session 和 persistence 复杂度上升 | 使用严格判别联合；legacy/current 各自 characterization 与 round-trip tests；禁止隐式迁移 |
++| bar 视觉顺序与 rootOrder 反转 | chart、outline、export 顺序不一致 | 固定 rootOrder 为 top-to-bottom；只在 G2 scale 适配方向；跨 surface parity tests |
++| chart policy 提取变成通用框架 | 范围和维护成本失控 | policy 只暴露命令所需问题；保持内部；T116 删除未被两类 chart 使用的抽象 |
++| Canvas 复用造成复杂条件分支 | 手势回归和可维护性下降 | 先独立 CategoricalCanvas；只抽取 lifecycle，不合并 chart-specific gesture composition |
++| 200 个横向标签造成布局/性能问题 | 可读性与交互预算失败 | stable dimensions、label auto hide、密集模式、真实三浏览器性能与截图 |
++| screen/export spec 漂移 | 输出与编辑状态不一致 | 单一 spec factory、parity tests、真实 SVG/PNG evidence |
++
++## Work Order
++
++1. T111 审批 feature contract、schema v2、公共 API 和技术计划。
++2. T112 扩展 domain schema、compatibility、policy 与 persistence。
++3. T113 与 T114 在 T112 后可以并行：分类投影/G2 spec；方向感知交互 primitives。
++4. T115 集成 React、G2 screen、export、a11y 和真实工作流。
++5. T116 在 vertical slice green 后收敛内部结构并执行全量门禁与三层 review。
++
++## Approval Gate
++
++用户已于 2026-07-19 明确批准 `spec.md`、`data-model.md`、`contracts/editor-api.md`、本 Plan 和
++`tasks.md`。T111 标记为 `Accepted`，T112 在 self-contained execution packet 与 analysis 复核通过后进入
++`Ready`。实现必须按 T112 packet 执行，T113-T116 不得提前开始。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/spec.md b/.ai-platform/specs/004-categorical-chart-validation/spec.md
+new file mode 100644
+index 0000000..e6bcc74
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/spec.md
+@@ -0,0 +1,231 @@
++# TellPlot 分类图验证切片 Spec
++
++## Metadata
++
++- Feature ID: `004-categorical-chart-validation`
++- Version: 0.1.0
++- Status: Confirmed
++- Source: 已确认的 `US-003`、`FR-005`、Phase 1A 分类图验证切片；2026-07-19 架构规划讨论
++- Last updated: 2026-07-19
++- Approval: 用户于 2026-07-19 明确批准 004 artifacts 并授权生成 T112 执行包后开始实现
++
++## Goal
++
++在不改写原始财务数据、不复制命令内核、不暴露 G2 内部能力的前提下，为
++`@tellplot/editor` 增加单序列分类条形图和分类柱状图。该切片必须证明瀑布图与分类图能够共享
++`ViewSpec` 的叙事树、确定性命令、历史、结构大纲和公共配置，同时保留各自独立的数据校验、投影、
++G2 编码和轴向交互规则。
++
++本切片也是多图表架构的验证闸门。只有瀑布图、条形图和柱状图均通过真实浏览器验收后，才允许从
++实际重复中抽取内部公共图表运行时；本切片不建立面向第三方的通用图表插件系统。
++
++## User Stories And Scenarios
++
++### US-CAT-001 创建分类图
++
++财务分析人员可以使用一组带稳定 ID、标签和金额的分类数据创建纵向柱状图或横向条形图。两种布局
++展示相同的分类顺序、金额、分组和来源关系。
++
++### US-CAT-002 调整叙事顺序
++
++财务分析人员可以直接拖动未锁定的分类柱或条，也可以在结构大纲中精确排序。提交后图表使用 G2
++短过渡动画稳定到新位置，原始分类金额和来源关系保持不变。
++
++### US-CAT-003 组织分类层级
++
++财务分析人员可以对同父级连续分类或分组创建递归分组、折叠、展开、解散和固定。折叠分组显示后代
++分类金额的确定性聚合，并保留完整来源追踪。
++
++### US-CAT-004 保存与输出
++
++财务分析人员可以撤销、重做、保存、加载并导出当前分类图。屏幕、SVG、PNG 和无障碍摘要使用同一
++顺序、分组、折叠、标签、金额格式和强调语义。
++
++## Functional Requirements
++
++### CAT-FR-001 分类数据合同
++
++系统必须使用显式可判别的数据合同区分瀑布数据与分类数据。分类数据至少包含稳定数据集 ID、可选
++币种，以及按源顺序排列的分类项；每个分类项包含稳定 item ID、非空标签、有限金额、可选来源引用和
++JSON-compatible metadata。
++
++现有 `1.0.0` 瀑布 `SourceData` 必须继续按当前严格规则验证和运行。新分类数据使用新的可判别 schema，
++不得通过放宽瀑布起点、终点或小计校验来伪装成分类数据。
++
++### CAT-FR-002 图表类型与兼容矩阵
++
++`ViewSpec` 必须明确区分 `waterfall`、`bar` 和 `column`。瀑布数据只兼容 `waterfall`；分类数据只兼容
++`bar` 和 `column`。不兼容组合必须返回结构化 validation issue，不生成部分视图或部分投影。
++
++分类数据在未指定初始图表类型时确定性地使用 `column`。宿主可以通过受约束的初始视图选项选择
++`bar`。本切片不在编辑器内部增加图表类型切换命令；运行中的类型切换需要后续真实工作流证据。
++
++### CAT-FR-003 共享叙事状态与命令
++
++分类图必须复用 `ViewSpec` 中的规范化递归树、折叠状态、固定状态、注释、强调和 revision，并复用
++`moveItem`、`moveGroup`、`createGroup`、`ungroup`、`collapseGroup`、`expandGroup`、`pinItem`、
++`unpinItem` 和 `setAnnotation`。
++
++图表家族特有规则必须由内部类型化 policy 执行。瀑布图继续禁止移动系统锚点和跨 subtotal segment
++操作；分类图没有 subtotal segment，但固定项及包含固定后代的分组仍不得移动或非法归组。
++
++### CAT-FR-004 分类投影
++
++系统必须把有效的分类 `SourceData + ViewSpec` 投影为稳定、有序、JSON-compatible 的分类 datum。
++普通分类的金额等于原始 item amount；折叠分组金额等于全部后代分类的 compensated sum；展开分组
++不生成额外数据柱。投影不得修改或共享可变输入容器。
++
++金额为正、负或零均合法。聚合结果非有限或绝对值超过 `Number.MAX_SAFE_INTEGER` 时必须拒绝投影，
++不得输出截断或部分结果。
++
++### CAT-FR-005 G2 图形与动画
++
++条形图和柱状图必须使用 G2 `interval` mark、稳定 node ID key、TellPlot 受控的 encode、scale、axis、
++label、Tooltip 和 enter/update/exit animation。柱状图以 X 轴为分类轴，条形图以 Y 轴为分类轴。
++
++分类金额使用长度和零基线表达。折叠分组使用 `chartAppearance.palette.group`；普通分类按金额符号使用
++`positive` 或 `negative`。颜色不得成为正负或锁定状态的唯一信息。
++
++### CAT-FR-006 方向感知的直接操作
++
++图表必须按分类轴解释拖动和落点。柱状图沿 X 轴计算排序，条形图沿 Y 轴计算排序；数值轴位移和柱高
++不得改变分类金额或参与排序语义。拖动使用 G2 场景边界和 pointer 坐标，不允许猜测固定柱宽或行高。
++
++拖动开始阈值、Pointer capture、取消、失焦、非法落点、实时预览和提交语义必须与已验收瀑布图保持
++一致。拖动预览不写入 history，提交只产生一条确定性命令。
++
++### CAT-FR-007 结构大纲与可访问性
++
++条形图、柱状图和结构大纲必须显示一致的分类顺序、层级、折叠、固定、来源数量和金额。所有核心
++排序与分组能力必须有键盘等价路径；Canvas 不是唯一信息源。状态变化必须通过现有焦点与 `aria-live`
++机制可感知。
++
++### CAT-FR-008 持久化与导出
++
++分类 `ViewSpec` 必须支持确定性 JSON 序列化、严格解析、数据集冲突检查和版本识别。SVG 与 PNG 导出
++必须使用与屏幕相同的分类投影和 G2 spec factory，并保留当前顺序、方向、分组、折叠、标签、注释、
++强调和数字格式。
++
++### CAT-FR-009 安全公共配置
++
++现有 `FinancialChartAppearance` 必须继续作为分类图唯一公共呈现配置入口。分类图可以映射已经批准的
++标题、正负/分组语义色、坐标轴、数值标签、Tooltip、数字格式和动画，不得增加原始 `G2Spec`、chart
++instance、任意 spec transform 或编码覆盖。
++
++## Non-Functional Requirements
++
++### CAT-NFR-001 瀑布图零回归
++
++现有 `1.0.0` 瀑布输入、ViewSpec、命令结果、屏幕交互、SVG/PNG、可访问性和性能门禁必须继续通过。
++内部文件移动不得改变公共入口或默认视觉。
++
++### CAT-NFR-002 交互性能
++
++在 200 个可见分类以内，拖动目标预览必须按 animation frame 合并更新；普通重排提交后的可见反馈在
++产品基准环境中必须于 150ms 内开始。分类图必须建立独立的真实 G2 性能样本，不能以 Mock 或空图
++替代。
++
++### CAT-NFR-003 可打断动画
++
++G2 重排和折叠动画必须能被下一次输入快速完成或打断，不得锁住编辑器。`prefers-reduced-motion` 和
++显式 reduced motion 必须优先，密集图表可以按已批准阈值关闭非必要动画。
++
++### CAT-NFR-004 类型与运行时安全
++
++公共 API 和内部 chart family 分派必须使用 TypeScript 严格判别联合，禁止 `any`、`@ts-ignore` 和
++`@ts-expect-error`。所有外部 JSON 输入继续使用 closed schema、own-property 读取和结构化错误。
++
++### CAT-NFR-005 包与浏览器兼容
++
++ESM、CJS、类型声明、React 18.3/19、G2 5.4、当前 Chromium/Firefox/WebKit 和上一代浏览器矩阵必须
++继续通过。分类图不得增加新的运行时或动画依赖。
++
++### CAT-NFR-006 可观测性与隐私
++
++新增错误、命令和性能记录只能包含图表类型、命令类型、失败类型、计数和耗时，不得记录金额、标签、
++来源引用或 metadata value。
++
++## Functional Scope
++
++本切片包括：
++
++- 单序列纵向分类柱状图。
++- 单序列横向分类条形图。
++- 排序、固定、递归分组、折叠、展开和解散分组。
++- 结构大纲、键盘操作、撤销、重做、注释和强调。
++- `ViewSpec` 持久化、SVG/PNG、无障碍摘要和安全图表配置。
++- 基于两类图表真实重复的内部架构收敛。
++
++## Non-Goals
++
++- 堆叠条形图、堆叠柱状图、多序列分组图、百分比图或双轴组合图。
++- 在图表中编辑金额、改变原始分类或写回数据源。
++- 运行中的图表类型切换命令或图表类型选择器。
++- 排名、Top N、Others 自动归组或其他新增排序命令。
++- 折线图、饼图、散点图、地图、Dashboard 或通用 G2 图表 SDK。
++- 第三方 chart plugin registry、原始 G2 配置逃生口或第二个渲染引擎。
++- 新动画框架、AI provider、npm publish 或正式版本发布。
++
++## States And Error Handling
++
++- 空分类数据：显示结构化空状态，不创建可拖动标记；导出仍产生合法空图或明确的
++  `EXPORT_UNAVAILABLE`，具体行为在公共 API 合同中固定。
++- 无效数据：编辑器保持错误工作台，不初始化 G2，不泄露原始值。
++- 不兼容数据与图表类型：返回 `SOURCE_CONFLICT / INCOMPATIBLE_CHART_TYPE`。
++- 聚合溢出：返回 `INVALID_SOURCE_DATA / UNSAFE_AMOUNT`，不生成部分 projection。
++- 活动预览期间导出：继续返回 `EXPORT_UNAVAILABLE /export`。
++- G2 render 失败：保留结构大纲和可访问摘要，显示不含财务值的结构化错误。
++
++## Edge Cases
++
++- 空分类集合和仅一个分类。
++- 重复标签但稳定 ID 不同。
++- 正数、负数、零和全部为零。
++- 极长标签、窄容器、200 个可见分类和深层递归分组。
++- 折叠组包含正负混合项、零和固定后代。
++- 横向条形图反向视觉顺序与 `ViewSpec.rootOrder` 的一致定义。
++- pointer 在拖动中离开图表、窗口失焦、Escape 取消或组件卸载。
++- bar/column ViewSpec 与 waterfall/categorical SourceData 不兼容。
++- legacy `1.0.0` 瀑布 ViewSpec 的加载、保存和重新渲染。
++- reduced motion、高缩放比例、键盘-only 和屏幕阅读器路径。
++
++## Data And Integration Needs
++
++- `SourceData` 使用可判别 chart family，并保留稳定 ID、币种和来源引用。
++- `ViewSpec.chartType` 是持久化叙事状态的一部分，不进入 `chartAppearance`。
++- 宿主继续负责数据获取、权限和服务端存储。
++- 分类图不要求宿主提供 G2 配置、像素边界或聚合结果。
++- 详细 schema 和兼容策略见 `data-model.md`；公共调用边界见 `contracts/editor-api.md`。
++
++## Success Criteria
++
++- CAT-SC-001：同一分类数据和合法编辑序列在条形图与柱状图中产生完全一致的分类顺序、分组树和来源集合。
++- CAT-SC-002：全部分类领域不变量和现有瀑布领域不变量测试通过，来源丢失、重复或金额漂移缺陷为 0。
++- CAT-SC-003：用户可以分别通过图表直接操作与结构大纲完成分类重排并成功撤销。
++- CAT-SC-004：200 个可见分类的真实浏览器重排满足 CAT-NFR-002，且下一次操作不被动画阻塞。
++- CAT-SC-005：SVG、PNG、屏幕和无障碍摘要在方向、顺序、折叠、标签和金额格式上保持一致。
++- CAT-SC-006：现有瀑布、package、React、浏览器、a11y 和 performance 全量门禁无回归。
++
++## Acceptance Criteria
++
++- CAT-AC-001：有效分类数据可以确定性创建 `column` ViewSpec，并可显式创建 `bar` ViewSpec。
++- CAT-AC-002：柱状图沿 X 轴、条形图沿 Y 轴拖动同一节点后，得到 deep-equal 的叙事顺序和一条命令记录。
++- CAT-AC-003：折叠分类组的金额等于全部后代分类 compensated sum，展开后恢复原顺序、层级和后代折叠状态。
++- CAT-AC-004：固定分类或包含固定后代的分组不能被非法移动，界面与命令错误都说明稳定原因码。
++- CAT-AC-005：条形图和柱状图可以保存、恢复、撤销、重做，并拒绝不兼容 source/view 组合。
++- CAT-AC-006：两种分类布局的 SVG 与 PNG 反映当前方向、顺序、分组、折叠、标签、注释和强调。
++- CAT-AC-007：分类图使用 G2 原生图形动画，reduced motion 下不发生非必要补间，拖动中不使用动画追赶指针。
++- CAT-AC-008：公共包只增加受约束的 chart/data 类型和初始化选项，不导出 G2Spec、chart instance 或内部 adapter。
++- CAT-AC-009：现有 `1.0.0` 瀑布数据和 ViewSpec 在不迁移 wire value 的情况下继续通过验证、渲染和 round-trip。
++
++## Clarifications And Confirmed Direction
++
++- 2026-07-19：用户确认继续使用完整 G2，并逐步增加图表类型，不以按图形裁剪 G2 为当前目标。
++- 2026-07-19：用户确认图表渲染和动画继续基于 G2，TellPlot 只负责财务语义、确定性编辑和 UI 编排。
++- 2026-07-19：用户确认下一阶段以分类条形图与柱状图验证架构，不先进行脱离需求的大重构。
++- 2026-07-19：用户要求按上述方向产出 feature spec、plan、tasks、checklist 和 analysis。
++
++## Approval Gate
++
++本 Spec、`data-model.md` 与 `contracts/editor-api.md` 已于 2026-07-19 经用户明确批准。实现阶段一次只推进
++一个拥有自包含 execution packet 的 `Ready` task；当前授权只允许执行 T112，T113-T116 保持 `Draft`。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/tasks.md b/.ai-platform/specs/004-categorical-chart-validation/tasks.md
+new file mode 100644
+index 0000000..6a496a9
+--- /dev/null
++++ b/.ai-platform/specs/004-categorical-chart-validation/tasks.md
+@@ -0,0 +1,259 @@
++# TellPlot 分类图验证切片任务图
++
++## Metadata
++
++- Feature ID: `004-categorical-chart-validation`
++- Version: 0.3.0
++- Status: Confirmed
++- Last updated: 2026-07-19
++- Approval: 用户于 2026-07-19 明确批准任务图并授权生成 T112 packet 后开始实现
++- Execution state: T111-T112 Accepted；T113-T116 Draft
++
++## Work Graph
++
++### Epic E004 分类图验证切片
++
++交付单序列 bar/column 的确定性编辑、G2 渲染、直接操作、持久化、导出和可访问性，并在第二类图表
++通过后收敛内部多图表架构。
++
++### Stories
++
++| Story | User value | Tasks |
++| --- | --- | --- |
++| S004-1 类型安全的分类叙事状态 | 分类数据可以安全创建、保存和编辑，不破坏 legacy waterfall | T111, T112 |
++| S004-2 G2 分类图与直接操作 | 用户可以在 bar/column 中看到并拖动同一叙事顺序 | T113, T114 |
++| S004-3 完整编辑与输出 | 用户可以分组、撤销、导出并使用键盘/辅助技术 | T115 |
++| S004-4 可维护的多图表内核 | 两类图表共享被真实证明的运行时边界并通过全量门禁 | T116 |
++
++### Dependency Graph
++
++```text
++T111
++  -> T112
++       -> T113 [P] --+
++       -> T114 [P] --+-> T115 -> T116
++```
++
++T113 与 T114 只有在 T112 Accepted 后才允许并行。T113 只拥有 categorical projection/spec，T114 只拥有
++axis-neutral interaction primitives，二者不得修改同一文件。
++
++## T111 - 审批分类图需求与技术合同
++
++- Status: Accepted
++- Priority: P0
++- Dependencies: T110 Accepted
++- Blocks: T112、T113、T114、T115、T116
++- Story / Requirement: `US-003`、`FR-005`、CAT-FR-001 至 CAT-FR-009、CAT-NFR-001 至 CAT-NFR-006
++- Parallel: false
++- Conflicts with: 任何分类图运行时代码、schema 修改、公共 API 修改或架构重构
++- Goal: 确认分类图产品范围、schema v2、legacy 兼容矩阵、公共 API、G2/交互边界、任务图和质量门禁。
++- Allowed files: `.ai-platform/specs/004-categorical-chart-validation/**`；批准后同步
++  `.ai-platform/docs/technology-decision-record.md`、`.ai-platform/docs/tasks.md`、`AGENTS.md`
++- Test targets: requirements checklist、cross-artifact analysis、artifact validator、文档链接和 placeholder audit
++- Deliverables: 经用户明确批准并标记为 `Confirmed` 的 spec、data model、API contract、plan 和 tasks；完成的
++  checklist/analysis；首个任务执行前 packet
++- Acceptance criteria: 用户明确批准数据合同、兼容策略、非目标、技术计划、任务顺序和验证矩阵；analysis
++  不含 Critical/High finding。
++- Definition of Done: T111 状态为 `Accepted`；feature artifacts 为 `Confirmed`；T112 packet 自包含且 T112
++  状态为 `Ready`。
++- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
++- TDD plan: 不适用；本任务只验证自然语言需求、技术决策和工作图，不实现行为。
++- Packet path: 不适用；审批任务不生成实现 execution packet。
++- Evidence required: 用户明确审批记录、artifact validator、placeholder audit、cross-artifact analysis 和文档 diff。
++
++## T112 - 扩展数据合同与共享命令策略
++
++- Status: Accepted
++- Priority: P0
++- Dependencies: T111 Accepted
++- Blocks: T113、T114、T115、T116
++- Story / Requirement: S004-1；CAT-FR-001、CAT-FR-002、CAT-FR-003、CAT-FR-008；CAT-NFR-001、
++  CAT-NFR-004、CAT-NFR-006；CAT-AC-001、CAT-AC-004、CAT-AC-005、CAT-AC-009
++- Parallel: false
++- Conflicts with: T113、T114、T115、T116；任何原始 G2Spec 公开、implicit schema migration 或 command
++  wire shape 修改
++- Goal: 以 strict discriminated union 支持 legacy waterfall、current waterfall 和 current categorical，建立
++  source/view compatibility、initial view、version-preserving persistence 和最小内部 chart policy。
++- Allowed files: `packages/editor/src/domain/model.ts`、`packages/editor/src/domain/errors.ts`、
++  `packages/editor/src/domain/validation.ts`、`packages/editor/src/domain/createInitialViewSpec.ts`、
++  `packages/editor/src/domain/session.ts`、`packages/editor/src/domain/history.ts`、
++  `packages/editor/src/domain/invariants.ts`、`packages/editor/src/domain/executeCommand.ts`、
++  `packages/editor/src/domain/persistence.ts`、`packages/editor/src/domain/viewTree.ts`、
++  `packages/editor/src/domain/chartPolicy.ts`、
++  `packages/editor/src/index.ts`、`packages/editor/src/waterfall/projectWaterfall.ts`（仅允许对新增 union 做类型收窄，
++  不改变 waterfall projection 语义）、`packages/editor/src/components/FinancialChartEditor.tsx` 与
++  `packages/editor/src/interactions/groupSelection.ts`（仅允许对不存在 `kind` 的 categorical item 做防御性
++  类型收窄，不接入 categorical UI/interaction）、`packages/editor/tests/domain/**`、
++  `packages/editor/tests/package/**`、
++  `.ai-platform/evidence/T112/**`
++- Test targets: schema discriminator/closed input、legacy identity、compatibility matrix、initial default/explicit type、
++  tree coverage、waterfall segment policy、categorical movable policy、fingerprint、parse/serialize、public types
++- Deliverables: public discriminated types；chart-compatible validators；initial view options；version-preserving
++  persistence；internal chart policy；T112 evidence
++- Acceptance criteria: legacy `1.0.0` waterfall calls 保持 deep-equal 行为；categorical default column/explicit bar
++  生效；全部 incompatible combinations 稳定拒绝；command wire schema 不变；无财务值泄露。
++- Definition of Done: RED/GREEN receipt、domain coverage 四项不低于 95%、package type consumer 通过、spec 与
++  engineering review 无 blocking finding、evidence 完整，状态进入 `Needs_Review`。
++- Validation commands: `pnpm exec vitest run packages/editor/tests/domain packages/editor/tests/package`；
++  `pnpm test:coverage`；`pnpm typecheck`；
++  `pnpm build`；`pnpm test:package`；`pnpm lint`；`git diff --check`
++- TDD plan: RED 先锁定 v2 discriminator、legacy contract、compatibility、policy 和 round-trip；GREEN 实现最小
++  schema dispatch/policy；REFACTOR 只在 domain suite green 后消除重复，保持 command wire 和 v1 identity。
++- Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T112.yaml`
++- Evidence required: RED/GREEN 命令输出、changed files、public type diff、schema compatibility matrix results、
++  coverage、review findings、residual risk 和 final patch。
++- Review state: spec compliance、engineering 和 QA 自审均无 blocking finding；fresh unit 341/341、domain
++  coverage 98.09/95.61/100/98.05、waterfall coverage 97.56/96.15/100/97.54、type/build/package/lint/format
++  全绿。
++- Acceptance authority: 用户于 2026-07-19 明确回复“T112 验收通过”。
++
++## T113 - 实现分类投影与 G2 Spec
++
++- Status: Draft
++- Priority: P0
++- Dependencies: T112 Accepted
++- Blocks: T115、T116
++- Story / Requirement: S004-2；CAT-FR-004、CAT-FR-005、CAT-FR-009；CAT-NFR-001、CAT-NFR-003、
++  CAT-NFR-004；CAT-AC-003、CAT-AC-006、CAT-AC-007、CAT-AC-008
++- Parallel: true，允许与 T114 并行，前提是独立 worktree 且不修改 interactions/components
++- Conflicts with: T115、T116；T114 的 interactions ownership；waterfall behavior 和 chartAppearance public shape
++- Goal: 建立一个确定性 categorical projection 和一个由 chartType 决定方向的 G2 interval spec factory，
++  覆盖聚合、顺序、颜色、标签、annotation、emphasis、Tooltip 和原生动画。
++- Allowed files: `packages/editor/src/categorical/**`、`packages/editor/src/config/chartAppearance.ts`、
++  `packages/editor/tests/categorical/**`、`packages/editor/tests/export/categorical-chart-spec.test.ts`、
++  `vitest.config.ts`、`.ai-platform/evidence/T113/**`
++- Test targets: empty/single/positive/negative/zero、重复标签、递归 collapsed/expanded、mixed-sign group、pinned
++  descendant、compensated sum/overflow、determinism、column Cartesian/bar transpose、category scale/order、
++  appearance、reduced motion、stable key、tooltip/labels/annotations/emphasis
++- Deliverables: CategoricalDatum/Projection；projectCategorical；bar/column shared spec factory；95% coverage gate；
++  T113 evidence
++- Acceptance criteria: 同一 source/view 的 bar 与 column projection deep-equal；逻辑顺序稳定；group amount 和
++  sourceIds 正确；G2 spec 只改变方向相关编码；无 raw G2 public export；waterfall spec tests 无回归。
++- Definition of Done: RED/GREEN、categorical coverage 四项不低于 95%、type/lint/build 通过、projection/spec
++  review 无 blocking finding、evidence 完整，状态进入 `Needs_Review`。
++- Validation commands: `pnpm exec vitest run packages/editor/tests/categorical packages/editor/tests/export/categorical-chart-spec.test.ts packages/editor/tests/export/chart-spec.test.ts`；`pnpm exec vitest run --coverage packages/editor/tests/categorical packages/editor/tests/export/categorical-chart-spec.test.ts`；`pnpm typecheck`；`pnpm lint`；`pnpm build`；`git diff --check`
++- TDD plan: RED 先覆盖投影不变量和两种 encode；GREEN 实现独立 categorical projection/spec；REFACTOR 只复用
++  已存在的纯金额格式/appearance 函数，不移动 waterfall runtime。
++- Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T113.yaml`
++- Evidence required: RED/GREEN 输出、projection fixtures、G2 spec snapshots/structural assertions、coverage、
++  waterfall regression results、review findings、residual risk 和 final patch。
++
++## T114 - 建立方向感知的分类轴交互
++
++- Status: Draft
++- Priority: P0
++- Dependencies: T112 Accepted
++- Blocks: T115、T116
++- Story / Requirement: S004-2；CAT-FR-006、CAT-FR-007；CAT-NFR-001、CAT-NFR-002、CAT-NFR-003、
++  CAT-NFR-004；CAT-AC-002、CAT-AC-004、CAT-AC-007
++- Parallel: true，允许与 T113 并行，前提是独立 worktree 且不修改 categorical projection/spec
++- Conflicts with: T115、T116；T113 的 categorical ownership；猜测固定图形尺寸或引入第二个拖拽内核
++- Goal: 把 G2 scene bounds 与 pointer collision 扩展为 X/Y category-axis primitive，保持瀑布/column 的
++  X 行为，并为 bar 提供 top-to-bottom Y 排序。
++- Allowed files: `packages/editor/src/interactions/chartPointer.ts`、
++  `packages/editor/src/interactions/moveTargets.ts`、`packages/editor/src/interactions/categoryAxis.ts`、
++  `packages/editor/tests/components/chartPointer.test.ts`、
++  `packages/editor/tests/components/categoryAxis.test.ts`、`.ai-platform/evidence/T114/**`
++- Test targets: scene bounds min/center/max、X/Y edge、top-to-bottom order、translated rectangle collision、同父级
++  target、4px threshold input、reverse drag、return-to-origin、invalid/stale bounds、locked target、hostile G2 event
++- Deliverables: axis-neutral bounds/collision types and functions；兼容 waterfall X wrappers；bar Y primitives；
++  T114 evidence
++- Acceptance criteria: 现有 waterfall pointer tests 保持 deep-equal；column 与 bar 的等价 gesture 产生相同
++  logical target；value-axis movement 不改变 target；不读取固定 bar width/row height；结构化失败不抛异常。
++- Definition of Done: RED/GREEN、interaction tests/coverage 通过、type/lint 通过、G2 event boundary review 无
++  blocking finding、evidence 完整，状态进入 `Needs_Review`。
++- Validation commands: `pnpm exec vitest run packages/editor/tests/components/chartPointer.test.ts packages/editor/tests/components/categoryAxis.test.ts packages/editor/tests/components/group-actions.test.ts`；`pnpm typecheck`；`pnpm lint`；`pnpm test:unit`；`git diff --check`
++- TDD plan: RED 先固定 Y-axis 和 X regression；GREEN 实现最小 coordinate adapter；REFACTOR 在 parity green 后
++  用 category-axis 内核替代 horizontal-only 私有重复，保留兼容函数直到 T115 集成。
++- Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T114.yaml`
++- Evidence required: RED/GREEN 输出、axis parity table、hostile event cases、waterfall regression、review findings、
++  residual risk 和 final patch。
++
++## T115 - 完成分类图编辑、导出与可访问性闭环
++
++- Status: Draft
++- Priority: P0
++- Dependencies: T113 Accepted、T114 Accepted
++- Blocks: T116
++- Story / Requirement: S004-2、S004-3；CAT-FR-005 至 CAT-FR-009；CAT-NFR-001 至 CAT-NFR-006；
++  CAT-AC-001 至 CAT-AC-008
++- Parallel: false
++- Conflicts with: T112、T113、T114、T116；独立领域状态、复制 Outline/session、原始 G2Spec 公开、新依赖
++- Goal: 把 categorical projection/spec/axis interaction 接入唯一 `FinancialChartEditor`，交付 bar/column 的
++  直接操作、outline、history、SVG/PNG、empty/error、a11y 和真实浏览器工作流。
++- Allowed files: `packages/editor/src/components/**`、`packages/editor/src/react/**`、
++  `packages/editor/src/export/**`、`packages/editor/src/styles/editor.css`、`packages/editor/src/index.ts`、
++  `packages/editor/tests/components/**`、`packages/editor/tests/export/**`、`packages/editor/tests/package/**`、
++  `apps/playground/**`、`e2e/**`、`playwright.config.ts`、`.ai-platform/evidence/T115/**`
++- Test targets: source-only column、defaultViewSpec bar、controlled/uncontrolled、selection、direct X/Y reorder、
++  group/collapse/expand/ungroup、pinned feedback、undo/redo、empty/invalid/render error、screen rerender、SVG/PNG、
++  summary/keyboard/aria-live/reduced motion、React/package/browser compatibility、200-item performance
++- Deliverables: CategoricalCanvas；editor chart dispatch；chart-neutral export request；classification summary/copy；
++  playground fixtures；unit/component/E2E/a11y/performance/package evidence
++- Acceptance criteria: bar/column 主流程可在真实浏览器完成；逻辑顺序跨 canvas/outline/summary/export 一致；
++  screen/export 共享 spec；活动预览不可导出；无第二套 session/command；瀑布全部 baseline 无回归。
++- Definition of Done: scoped RED/GREEN、当前浏览器三引擎、React matrix、package、a11y、分类 performance、
++  必需截图和 spec/engineering/QA review 通过，evidence 完整，状态进入 `Needs_Review`。
++- Validation commands: `pnpm test:unit`；`pnpm test:coverage`；`pnpm typecheck`；`pnpm lint`；`pnpm build`；
++  `pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:e2e`；`pnpm test:a11y`；
++  `pnpm test:performance`；`git diff --check`
++- TDD plan: RED 按 component -> export -> browser 顺序锁定 source/view dispatch 和用户流程；GREEN 接入最小
++  CategoricalCanvas 与 chart-neutral export；REFACTOR 仅消除本任务内部重复，不提前移动 waterfall runtime。
++- Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T115.yaml`
++- Evidence required: RED/GREEN 输出、当前三浏览器结果、React/package/a11y/performance、bar/column screen/export
++  screenshots、pixel checks、review findings、residual risk 和 final patch。
++
++## T116 - 基于验证结果收敛多图表内部架构
++
++- Status: Draft
++- Priority: P0
++- Dependencies: T115 Accepted
++- Blocks: 分类图用户验收、Phase 1A 公共 API 稳定化、真实用户验证
++- Story / Requirement: S004-4；CAT-NFR-001 至 CAT-NFR-006；CAT-AC-006 至 CAT-AC-009；P-006、P-009、P-010
++- Parallel: false
++- Conflicts with: 所有其他实现任务；公共 plugin registry；行为/视觉改版；npm publish 或 release
++- Goal: 在 waterfall 与 categorical 均 green 的前提下，只抽取真实重复的 G2 lifecycle、offscreen export 和
++  category-axis primitives，建立清晰 chart module ownership，并完成全量发布候选验证与三层 review。
++- Allowed files: `packages/editor/src/**`、`packages/editor/tests/**`、`e2e/**`、`apps/playground/**`、
++  `vitest.config.ts`、`playwright.config.ts`、`docs/architecture.md`、
++  `.ai-platform/specs/004-categorical-chart-validation/**`、`.ai-platform/evidence/T116/**`
++- Allowed files rationale: 内部文件移动会更新跨模块 import 和测试路径；禁止公共行为、schema 或产品范围变化。
++- Test targets: G2 load/render/destroy queue、stale request、animation finish、event cleanup、callback isolation、
++  Canvas/SVG host cleanup、spec parity、all chart domain/projection/interaction/component/export/package/browser/a11y/
++  performance regressions
++- Deliverables: `charts/waterfall`、`charts/categorical`、按证据成立的 `rendering/g2` 边界；无 export 目录
++  ownership 漂移；长期 architecture 文档；全量 evidence 与三层 review
++- Acceptance criteria: shared runtime 只包含两类 chart 的真实重复；无 unused generic hook/registry；公共入口和
++  visual behavior 不变；全部全量命令 green；artifact validator 无 blocking issue；用户可独立验收两种分类图。
++- Definition of Done: characterization RED/green refactor receipt、全量 validation、spec compliance、engineering、
++  QA review 无 Critical/High/Medium finding，evidence 完整，状态进入 `Needs_Review`；只有用户明确验收后
++  才能 `Accepted`。
++- Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；
++  `pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:e2e`；`pnpm test:a11y`；
++  `pnpm test:performance`；`pnpm test:browser-previous`；
++  `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
++- TDD plan: RED 增加 runtime cleanup、screen/export parity 和 chart dispatch characterization；GREEN 逐块移动
++  最小重复并保持所有 tests green；REFACTOR 删除只为对称存在的抽象，更新 canonical architecture 文档。
++- Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml`
++- Evidence required: pre-refactor characterization、changed/moved files、全量命令与 exit code、coverage、当前/上一代
++  浏览器、React/package/a11y/performance、架构 dependency audit、三层 review、residual risk 和 final patch。
++
++## Traceability
++
++| Requirement | Tasks |
++| --- | --- |
++| CAT-FR-001, CAT-FR-002, CAT-FR-003 | T111, T112 |
++| CAT-FR-004 | T113 |
++| CAT-FR-005, CAT-FR-009 | T113, T115 |
++| CAT-FR-006 | T114, T115 |
++| CAT-FR-007 | T114, T115 |
++| CAT-FR-008 | T112, T115 |
++| CAT-NFR-001 | T112, T113, T114, T115, T116 |
++| CAT-NFR-002, CAT-NFR-003 | T114, T115, T116 |
++| CAT-NFR-004 | T112, T113, T114, T116 |
++| CAT-NFR-005, CAT-NFR-006 | T112, T115, T116 |
++
++## Execution Gate
++
++用户已明确批准 feature contracts、Plan 与本任务图，并于 2026-07-19 验收 T112。T113 与 T114 的上游依赖
++已经满足，可以分别生成 execution packet；T113-T116 在各自 packet 获批前继续保持 `Draft`。
+diff --git a/packages/editor/src/domain/chartPolicy.ts b/packages/editor/src/domain/chartPolicy.ts
+new file mode 100644
+index 0000000..7d59866
+--- /dev/null
++++ b/packages/editor/src/domain/chartPolicy.ts
+@@ -0,0 +1,78 @@
++import type { SourceItemId } from './ids';
++import type { SourceData, SourceDataKind } from './model';
++
++export interface NarrativeChartPolicy {
++  readonly sourceKind: SourceDataKind;
++  isMovableItem(sourceData: SourceData, itemId: SourceItemId): boolean;
++  canShareContainer(sourceData: SourceData, itemIds: readonly SourceItemId[]): boolean;
++}
++
++export function sourceDataKind(sourceData: SourceData): SourceDataKind {
++  return sourceData.schemaVersion === '1.0.0' ? 'waterfall' : sourceData.dataKind;
++}
++
++interface PolicySourceIndex {
++  readonly sourceKind: SourceDataKind;
++  readonly movableItemIds: ReadonlySet<string>;
++  readonly segmentByItemId: ReadonlyMap<string, number>;
++}
++
++function waterfallSegmentByItemId(sourceData: SourceData): ReadonlyMap<string, number> {
++  const segments = new Map<string, number>();
++  let segment = 0;
++  for (const item of sourceData.items) {
++    if ('kind' in item && item.kind === 'contribution') {
++      segments.set(item.id, segment);
++    } else if ('kind' in item && item.kind === 'subtotal') {
++      segment += 1;
++    }
++  }
++  return segments;
++}
++
++function indexPolicySource(sourceData: SourceData): PolicySourceIndex {
++  const sourceKind = sourceDataKind(sourceData);
++  const movableItemIds = new Set(
++    sourceData.items
++      .filter(
++        item => sourceKind === 'categorical' || ('kind' in item && item.kind === 'contribution'),
++      )
++      .map(item => item.id),
++  );
++  const segmentByItemId =
++    sourceKind === 'categorical'
++      ? new Map(sourceData.items.map(item => [item.id, 0] as const))
++      : waterfallSegmentByItemId(sourceData);
++  return { sourceKind, movableItemIds, segmentByItemId };
++}
++
++/** Selects the internal narrative rules for an already validated source variant. */
++export function createNarrativeChartPolicy(sourceData: SourceData): NarrativeChartPolicy {
++  const boundIndex = indexPolicySource(sourceData);
++  const indexFor = (candidateSource: SourceData): PolicySourceIndex =>
++    candidateSource === sourceData ? boundIndex : indexPolicySource(candidateSource);
++
++  return {
++    sourceKind: boundIndex.sourceKind,
++    isMovableItem(candidateSource, itemId) {
++      return indexFor(candidateSource).movableItemIds.has(itemId);
++    },
++    canShareContainer(candidateSource, itemIds) {
++      if (itemIds.length === 0) {
++        return false;
++      }
++      const index = indexFor(candidateSource);
++      if (itemIds.some(itemId => !index.movableItemIds.has(itemId))) {
++        return false;
++      }
++      if (index.sourceKind === 'categorical') {
++        return true;
++      }
++      const firstSegment = index.segmentByItemId.get(itemIds[0] as SourceItemId);
++      return (
++        firstSegment !== undefined &&
++        itemIds.every(itemId => index.segmentByItemId.get(itemId) === firstSegment)
++      );
++    },
++  };
++}
+diff --git a/packages/editor/tests/domain/chart-policy.test.ts b/packages/editor/tests/domain/chart-policy.test.ts
+new file mode 100644
+index 0000000..b536134
+--- /dev/null
++++ b/packages/editor/tests/domain/chart-policy.test.ts
+@@ -0,0 +1,171 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  executeCommand,
++  redoSession,
++  undoSession,
++  validateViewSpec,
++  type CategoricalSourceData,
++  type CommandResult,
++  type CreateGroupCommand,
++  type EditorSession,
++  type MoveItemCommand,
++  type PinItemCommand,
++  type SourceData,
++} from '../../src';
++import { createNarrativeChartPolicy } from '../../src/domain/chartPolicy';
++import { commandSourceData } from '../fixtures/commandSourceData';
++
++const categoricalSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'categorical-command-fixture',
++  items: [
++    { id: 'a', label: 'Alpha', amount: 10 },
++    { id: 'b', label: 'Beta', amount: -3 },
++    { id: 'c', label: 'Gamma', amount: 6 },
++    { id: 'd', label: 'Delta', amount: 2 },
++  ],
++} as const satisfies CategoricalSourceData;
++
++function sessionFrom(sourceData: SourceData = categoricalSourceData): EditorSession {
++  const result = createEditorSession(sourceData);
++  if (!result.ok) {
++    throw new Error('Expected a valid editor session');
++  }
++  return result.value;
++}
++
++function success(result: CommandResult): EditorSession {
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    throw new Error(`Expected command success, received ${result.error.code}`);
++  }
++  return result.session;
++}
++
++function move(
++  id: string,
++  baseRevision: number,
++  itemId: string,
++  containerId: string,
++  index: number,
++): MoveItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'moveItem',
++    source: 'outline',
++    baseRevision,
++    payload: { itemId, target: { containerId, index } },
++  };
++}
++
++function group(
++  id: string,
++  baseRevision: number,
++  groupId: string,
++  nodeIds: readonly string[],
++): CreateGroupCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'createGroup',
++    source: 'direct',
++    baseRevision,
++    payload: { groupId, label: 'Drivers', nodeIds, initiallyCollapsed: false },
++  };
++}
++
++function pin(id: string, baseRevision: number, itemId: string): PinItemCommand {
++  return {
++    schemaVersion: '1.0.0',
++    id,
++    type: 'pinItem',
++    source: 'host',
++    baseRevision,
++    payload: { itemId },
++  };
++}
++
++describe('internal narrative chart policy', () => {
++  it('identifies narrative items and segment compatibility by chart family', () => {
++    const categorical = createNarrativeChartPolicy(categoricalSourceData);
++    expect(categorical.sourceKind).toBe('categorical');
++    expect(categorical.isMovableItem(categoricalSourceData, 'a')).toBe(true);
++    expect(categorical.canShareContainer(categoricalSourceData, ['a', 'd'])).toBe(true);
++    expect(categorical.canShareContainer(categoricalSourceData, [])).toBe(false);
++    expect(categorical.canShareContainer(categoricalSourceData, ['a', 'missing'])).toBe(false);
++
++    const waterfall = createNarrativeChartPolicy(commandSourceData);
++    expect(waterfall.sourceKind).toBe('waterfall');
++    expect(waterfall.isMovableItem(commandSourceData, 'start')).toBe(false);
++    expect(waterfall.isMovableItem(commandSourceData, 'a')).toBe(true);
++    expect(waterfall.canShareContainer(commandSourceData, ['a', 'b'])).toBe(true);
++    expect(waterfall.canShareContainer(commandSourceData, ['a', 'd'])).toBe(false);
++    expect(categorical.isMovableItem(commandSourceData, 'a')).toBe(true);
++  });
++});
++
++describe('categorical command policy', () => {
++  it('supports move, group and pin through the unchanged command wire format', () => {
++    const initial = sessionFrom();
++    expect(initial.viewSpec.chartType).toBe('column');
++
++    const moved = success(executeCommand(initial, move('move-c', 0, 'c', 'root', 0)));
++    expect(moved.viewSpec.rootOrder).toEqual(['c', 'a', 'b', 'd']);
++    expect(moved.sourceData).toBe(initial.sourceData);
++    expect(moved.viewSpec).toMatchObject({ schemaVersion: '2.0.0', chartType: 'column' });
++
++    const grouped = success(executeCommand(moved, group('group-a-b', 1, 'drivers', ['a', 'b'])));
++    expect(grouped.viewSpec.rootOrder).toEqual(['c', 'drivers', 'd']);
++    expect(grouped.viewSpec.groups['drivers']?.childIds).toEqual(['a', 'b']);
++
++    const groupedMoved = success(executeCommand(grouped, move('move-d', 2, 'd', 'drivers', 2)));
++    expect(groupedMoved.viewSpec.groups['drivers']?.childIds).toEqual(['a', 'b', 'd']);
++
++    const pinned = success(executeCommand(groupedMoved, pin('pin-a', 3, 'a')));
++    const rejected = executeCommand(pinned, move('move-a', 4, 'a', 'root', 0));
++    expect(rejected.ok).toBe(false);
++    if (!rejected.ok) {
++      expect(rejected.error).toMatchObject({ code: 'ITEM_LOCKED', reason: 'PINNED_ITEM' });
++    }
++    expect(validateViewSpec(pinned.viewSpec, categoricalSourceData).ok).toBe(true);
++
++    const undone = undoSession(pinned, {
++      id: 'undo-pin',
++      source: 'keyboard',
++      baseRevision: 4,
++    });
++    expect(undone.ok).toBe(true);
++    if (!undone.ok) {
++      return;
++    }
++    expect(undone.viewSpec).toMatchObject({ schemaVersion: '2.0.0', chartType: 'column' });
++
++    const redone = redoSession(undone.session, {
++      id: 'redo-pin',
++      source: 'keyboard',
++      baseRevision: 5,
++    });
++    expect(redone.ok).toBe(true);
++    if (redone.ok) {
++      expect(redone.viewSpec).toMatchObject({ schemaVersion: '2.0.0', chartType: 'column' });
++    }
++  });
++
++  it('retains waterfall cross-segment restrictions', () => {
++    const initial = sessionFrom(commandSourceData);
++    const grouped = success(executeCommand(initial, group('group-a-b', 0, 'drivers', ['a', 'b'])));
++    const rejected = executeCommand(grouped, move('cross-segment', 1, 'd', 'drivers', 2));
++
++    expect(rejected.ok).toBe(false);
++    if (!rejected.ok) {
++      expect(rejected.error).toMatchObject({
++        code: 'INVALID_DROP_TARGET',
++        reason: 'CROSS_SEGMENT',
++      });
++    }
++  });
++});
+diff --git a/packages/editor/tests/domain/schema-v2.test.ts b/packages/editor/tests/domain/schema-v2.test.ts
+new file mode 100644
+index 0000000..6311d40
+--- /dev/null
++++ b/packages/editor/tests/domain/schema-v2.test.ts
+@@ -0,0 +1,312 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  createInitialViewSpec,
++  parseViewSpec,
++  serializeViewSpec,
++  validateSourceData,
++  validateViewSpec,
++  type CategoricalSourceData,
++  type InitialViewSpecOptions,
++  type ValidationResult,
++  type ViewSpec,
++  type WaterfallSourceData,
++} from '../../src';
++import { financialSourceData } from '../fixtures/financialSourceData';
++import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++
++type UnknownRecord = Record<string, unknown>;
++
++const categoricalSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'categorical-fixture',
++  currency: 'CNY',
++  items: [
++    { id: 'alpha', label: 'Alpha', amount: 12 },
++    { id: 'beta', label: 'Beta', amount: -4 },
++    { id: 'gamma', label: 'Gamma', amount: 0 },
++  ],
++} as const satisfies CategoricalSourceData;
++
++const emptyCategoricalSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'empty-categorical-fixture',
++  items: [],
++} as const satisfies CategoricalSourceData;
++
++const currentWaterfallSourceData = {
++  ...financialSourceData,
++  schemaVersion: '2.0.0',
++  dataKind: 'waterfall',
++} as const satisfies WaterfallSourceData;
++
++function expectIssue<T>(
++  result: ValidationResult<T>,
++  expected: { readonly code: string; readonly reason: string; readonly path: string },
++): void {
++  expect(result.ok).toBe(false);
++  if (result.ok) {
++    throw new Error('Expected validation failure');
++  }
++  expect(result.errors).toEqual(expect.arrayContaining([expect.objectContaining(expected)]));
++}
++
++function initialView(
++  sourceData: CategoricalSourceData | WaterfallSourceData = categoricalSourceData,
++  options?: InitialViewSpecOptions,
++): ViewSpec {
++  const result = createInitialViewSpec(sourceData, options);
++  if (!result.ok) {
++    throw new Error('Expected a valid initial view');
++  }
++  return result.value;
++}
++
++describe('schema 2.0.0 source data', () => {
++  it('accepts categorical and current waterfall variants without cloning', () => {
++    expect(validateSourceData(categoricalSourceData)).toEqual({
++      ok: true,
++      value: categoricalSourceData,
++      errors: [],
++    });
++    expect(validateSourceData(emptyCategoricalSourceData)).toEqual({
++      ok: true,
++      value: emptyCategoricalSourceData,
++      errors: [],
++    });
++    expect(validateSourceData(currentWaterfallSourceData)).toEqual({
++      ok: true,
++      value: currentWaterfallSourceData,
++      errors: [],
++    });
++    expect(validateSourceData(financialSourceData)).toEqual({
++      ok: true,
++      value: financialSourceData,
++      errors: [],
++    });
++  });
++
++  it('uses schemaVersion and dataKind as a closed discriminator pair', () => {
++    const missingKind = structuredClone(categoricalSourceData) as unknown as UnknownRecord;
++    delete missingKind['dataKind'];
++    expectIssue(validateSourceData(missingKind), {
++      code: 'INVALID_SOURCE_DATA',
++      reason: 'INVALID_DATA_KIND',
++      path: '/dataKind',
++    });
++
++    const categoricalItemKind = structuredClone(categoricalSourceData) as unknown as UnknownRecord;
++    const items = categoricalItemKind['items'] as UnknownRecord[];
++    const firstItem = items[0];
++    if (firstItem === undefined) {
++      throw new Error('Expected categorical fixture item');
++    }
++    firstItem['kind'] = 'contribution';
++    expectIssue(validateSourceData(categoricalItemKind), {
++      code: 'INVALID_SOURCE_DATA',
++      reason: 'UNKNOWN_FIELD',
++      path: '/items/0/kind',
++    });
++
++    expectIssue(validateSourceData({ ...currentWaterfallSourceData, items: [] }), {
++      code: 'INVALID_SOURCE_DATA',
++      reason: 'INVALID_ANCHOR',
++      path: '/items',
++    });
++  });
++});
++
++describe('schema 2.0.0 initial views', () => {
++  it('defaults categorical sources to column and preserves source order', () => {
++    const view = initialView();
++    expect(view).toMatchObject({
++      schemaVersion: '2.0.0',
++      datasetId: 'categorical-fixture',
++      chartType: 'column',
++      revision: 0,
++      rootOrder: ['alpha', 'beta', 'gamma'],
++    });
++    expect(initialView(emptyCategoricalSourceData).rootOrder).toEqual([]);
++  });
++
++  it('allows explicit bar and keeps both waterfall generations on waterfall', () => {
++    expect(initialView(categoricalSourceData, { chartType: 'bar' }).chartType).toBe('bar');
++    expect(initialView(currentWaterfallSourceData).chartType).toBe('waterfall');
++
++    const legacy = createInitialViewSpec(financialSourceData);
++    expect(legacy.ok).toBe(true);
++    if (legacy.ok) {
++      expect(legacy.value.schemaVersion).toBe('1.0.0');
++      expect(legacy.value.chartType).toBe('waterfall');
++    }
++  });
++
++  it('rejects incompatible chart types and unsafe option objects', () => {
++    expectIssue(createInitialViewSpec(categoricalSourceData, { chartType: 'waterfall' }), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'INCOMPATIBLE_CHART_TYPE',
++      path: '/chartType',
++    });
++    expectIssue(createInitialViewSpec(currentWaterfallSourceData, { chartType: 'column' }), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'INCOMPATIBLE_CHART_TYPE',
++      path: '/chartType',
++    });
++
++    expectIssue(
++      createInitialViewSpec(categoricalSourceData, {
++        chartType: 'pie',
++      } as unknown as InitialViewSpecOptions),
++      {
++        code: 'INVALID_VIEW_SPEC',
++        reason: 'INVALID_CHART_TYPE',
++        path: '/chartType',
++      },
++    );
++    expectIssue(
++      createInitialViewSpec(categoricalSourceData, null as unknown as InitialViewSpecOptions),
++      {
++        code: 'INVALID_VIEW_SPEC',
++        reason: 'NON_PLAIN_DATA',
++        path: '/',
++      },
++    );
++
++    const unknownOptions = { chartType: 'bar', extra: true } as InitialViewSpecOptions;
++    expectIssue(createInitialViewSpec(categoricalSourceData, unknownOptions), {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'UNKNOWN_FIELD',
++      path: '/extra',
++    });
++
++    const symbolOptions: InitialViewSpecOptions = {};
++    Object.defineProperty(symbolOptions, Symbol('private'), { enumerable: true, value: true });
++    expectIssue(createInitialViewSpec(categoricalSourceData, symbolOptions), {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'NON_PLAIN_DATA',
++      path: '/',
++    });
++
++    let getterCalls = 0;
++    const accessorOptions: InitialViewSpecOptions = {};
++    Object.defineProperty(accessorOptions, 'chartType', {
++      enumerable: true,
++      get() {
++        getterCalls += 1;
++        return 'bar';
++      },
++    });
++    expectIssue(createInitialViewSpec(categoricalSourceData, accessorOptions), {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'NON_PLAIN_DATA',
++      path: '/chartType',
++    });
++    expect(getterCalls).toBe(0);
++
++    const missingDescriptor = new Proxy(
++      {},
++      {
++        ownKeys: () => ['chartType'],
++        getOwnPropertyDescriptor: () => undefined,
++      },
++    ) as InitialViewSpecOptions;
++    expectIssue(createInitialViewSpec(categoricalSourceData, missingDescriptor), {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'NON_PLAIN_DATA',
++      path: '/chartType',
++    });
++
++    const hostile = new Proxy(
++      {},
++      {
++        ownKeys() {
++          throw new Error('private option proxy');
++        },
++      },
++    ) as InitialViewSpecOptions;
++    const result = createInitialViewSpec(categoricalSourceData, hostile);
++    expectIssue(result, {
++      code: 'INVALID_VIEW_SPEC',
++      reason: 'UNREADABLE_INPUT',
++      path: '/',
++    });
++    expect(JSON.stringify(result)).not.toContain('private option proxy');
++  });
++});
++
++describe('schema 2.0.0 view compatibility and persistence', () => {
++  it('validates categorical bar and column views with shared narrative fields', () => {
++    const column = initialView();
++    const bar: ViewSpec = {
++      ...initialView(categoricalSourceData, { chartType: 'bar' }),
++      rootOrder: ['drivers', 'gamma'],
++      groups: {
++        drivers: { id: 'drivers', label: 'Drivers', childIds: ['alpha', 'beta'] },
++      },
++      pinnedItemIds: ['alpha'],
++    };
++
++    expect(validateViewSpec(column, categoricalSourceData).ok).toBe(true);
++    expect(validateViewSpec(bar, categoricalSourceData)).toEqual({
++      ok: true,
++      value: bar,
++      errors: [],
++    });
++  });
++
++  it('rejects schema-generation and chart-family mismatches', () => {
++    const categoricalWaterfall = { ...initialView(), chartType: 'waterfall' };
++    expectIssue(validateViewSpec(categoricalWaterfall, categoricalSourceData), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'INCOMPATIBLE_CHART_TYPE',
++      path: '/chartType',
++    });
++
++    const waterfallBar = { ...initialView(currentWaterfallSourceData), chartType: 'bar' };
++    expectIssue(validateViewSpec(waterfallBar, currentWaterfallSourceData), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'INCOMPATIBLE_CHART_TYPE',
++      path: '/chartType',
++    });
++
++    const legacySourceWithCurrentView = {
++      ...initialView(currentWaterfallSourceData),
++      datasetId: financialSourceData.datasetId,
++    };
++    expectIssue(validateViewSpec(legacySourceWithCurrentView, financialSourceData), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'SCHEMA_VERSION_MISMATCH',
++      path: '/schemaVersion',
++    });
++
++    expectIssue(projectWaterfall(categoricalSourceData, initialView()), {
++      code: 'SOURCE_CONFLICT',
++      reason: 'INCOMPATIBLE_CHART_TYPE',
++      path: '/chartType',
++    });
++  });
++
++  it('round-trips bar without changing schema, chart type or source identity', () => {
++    const view = initialView(categoricalSourceData, { chartType: 'bar' });
++    const serialized = serializeViewSpec(view);
++    const parsed = parseViewSpec(serialized, categoricalSourceData);
++
++    expect(parsed).toEqual({ ok: true, value: view, errors: [] });
++    expect(serialized).toContain('"schemaVersion":"2.0.0"');
++    expect(serialized).toContain('"chartType":"bar"');
++
++    const session = createEditorSession(categoricalSourceData, { viewSpec: view });
++    const clonedSession = createEditorSession(structuredClone(categoricalSourceData));
++    expect(session.ok).toBe(true);
++    expect(clonedSession.ok).toBe(true);
++    if (session.ok && clonedSession.ok) {
++      expect(session.value.sourceData).toBe(categoricalSourceData);
++      expect(session.value.viewSpec).toBe(view);
++      expect(session.value.sourceFingerprint).toMatch(/^fnv1a64:[0-9a-f]{16}$/);
++      expect(clonedSession.value.sourceFingerprint).toBe(session.value.sourceFingerprint);
++    }
++  });
++});

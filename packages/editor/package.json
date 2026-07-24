@@ -1,7 +1,7 @@
 {
   "name": "@tellplot/editor",
-  "version": "0.0.0",
-  "description": "Embeddable financial narrative chart editor",
+  "version": "1.0.0",
+  "description": "Lightweight editable React charts built on AntV G2",
   "license": "MIT",
   "homepage": "https://tellplot.com",
   "repository": {
@@ -12,6 +12,15 @@
   "bugs": {
     "url": "https://github.com/iiwish/tellplot/issues"
   },
+  "keywords": [
+    "charts",
+    "react",
+    "g2",
+    "waterfall",
+    "bar-chart",
+    "column-chart",
+    "data-visualization"
+  ],
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -33,13 +42,16 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./styles.css": "./dist/styles.css",
+    "./styles.css": {
+      "types": "./dist/styles.d.ts",
+      "default": "./dist/styles.css"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test:package": "publint && attw --pack . --exclude-entrypoints ./styles.css && node tests/package/import-esm.mjs && node tests/package/import-cjs.cjs && tsc -p tests/package/tsconfig.json"
+    "test:package": "publint && attw --pack . --exclude-entrypoints ./styles.css && node tests/package/import-esm.mjs && node tests/package/import-cjs.cjs && tsc -p tests/package/tsconfig.json && node tests/package/pack-contract.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

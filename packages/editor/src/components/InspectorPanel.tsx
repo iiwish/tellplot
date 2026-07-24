@@ -3,16 +3,17 @@ import { useId, useRef, useState } from 'react';
 
 import type { GroupId, ViewNodeId } from '../domain/ids';
 import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
+import type { CategoricalProjection } from '../charts/categorical/types';
 import type { GroupSelectionResult } from '../interactions/groupSelection';
 import type { SelectionState } from '../react/editorTypes';
-import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+import type { WaterfallProjection } from '../charts/waterfall/types';
 import type { EditorMessages } from './editorMessages';
 import { formatAmount, type EditorLocale } from './formatAmount';
 
 interface InspectorPanelProps {
   readonly sourceData: SourceData;
   readonly viewSpec: ViewSpec;
-  readonly projection: WaterfallProjection;
+  readonly projection: WaterfallProjection | CategoricalProjection;
   readonly selection: SelectionState | null;
   readonly groupSelection: GroupSelectionResult;
   readonly readOnly: boolean;
@@ -163,6 +164,8 @@ export function InspectorPanel({
   const selectedGroup = selection === null ? undefined : ownGroup(viewSpec, selection.nodeId);
   const selectedAnnotation = selection === null ? null : ownAnnotation(viewSpec, selection.nodeId);
   const disabledReason = groupReason(groupSelection, readOnly, groupLabel, messages);
+  const showCreateGroup = (selection?.nodeIds.length ?? 0) >= 2;
+  const showSelectedGroupActions = selectedGroup !== undefined && selection?.nodeIds.length === 1;
 
   return (
     <div className="tp-panel-body tp-inspector-body">
@@ -236,48 +239,54 @@ export function InspectorPanel({
           />
         )}
 
-        <section className="tp-inspector-section tp-group-actions">
-          <label className="tp-field-label" htmlFor={groupLabelId}>
-            {messages.groupLabel}
-          </label>
-          <input
-            id={groupLabelId}
-            className="tp-text-input"
-            ref={groupLabelRef}
-            type="text"
-            value={groupLabel}
-            onChange={event => setGroupLabel(event.target.value)}
-          />
-          <button
-            className="tp-command-button"
-            type="button"
-            aria-description={disabledReason ?? undefined}
-            disabled={disabledReason !== null}
-            title={disabledReason ?? messages.createGroup}
-            onClick={() => {
-              if (onCreateGroup(groupLabel)) {
-                setGroupLabel('');
-                groupLabelRef.current?.focus();
-              }
-            }}
-          >
-            {messages.createGroup}
-          </button>
+        {!showCreateGroup && !showSelectedGroupActions ? null : (
+          <section className="tp-inspector-section tp-group-actions">
+            {showCreateGroup ? (
+              <>
+                <label className="tp-field-label" htmlFor={groupLabelId}>
+                  {messages.groupLabel}
+                </label>
+                <input
+                  id={groupLabelId}
+                  className="tp-text-input"
+                  ref={groupLabelRef}
+                  type="text"
+                  value={groupLabel}
+                  onChange={event => setGroupLabel(event.target.value)}
+                />
+                <button
+                  className="tp-command-button"
+                  type="button"
+                  aria-description={disabledReason ?? undefined}
+                  disabled={disabledReason !== null}
+                  title={disabledReason ?? messages.createGroup}
+                  onClick={() => {
+                    if (onCreateGroup(groupLabel)) {
+                      setGroupLabel('');
+                      groupLabelRef.current?.focus();
+                    }
+                  }}
+                >
+                  {messages.createGroup}
+                </button>
+              </>
+            ) : null}
 
-          {selectedGroup === undefined ? null : (
-            <button
-              className="tp-command-button tp-command-button-secondary"
-              type="button"
-              disabled={readOnly}
-              aria-description={readOnly ? messages.readOnlyReason : undefined}
-              title={readOnly ? messages.readOnlyReason : messages.ungroup}
-              onClick={() => onUngroup(selectedGroup.id)}
-            >
-              <Ungroup size={15} aria-hidden="true" />
-              <span>{messages.ungroup}</span>
-            </button>
-          )}
-        </section>
+            {!showSelectedGroupActions || selectedGroup === undefined ? null : (
+              <button
+                className="tp-command-button tp-command-button-secondary"
+                type="button"
+                disabled={readOnly}
+                aria-description={readOnly ? messages.readOnlyReason : undefined}
+                title={readOnly ? messages.readOnlyReason : messages.ungroup}
+                onClick={() => onUngroup(selectedGroup.id)}
+              >
+                <Ungroup size={15} aria-hidden="true" />
+                <span>{messages.ungroup}</span>
+              </button>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

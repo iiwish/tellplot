@@ -1,0 +1,254 @@
+schema_version: 1
+packet_id: EP-004-T112-A001
+task_id: T112
+feature_id: 004-categorical-chart-validation
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_spec: .ai-platform/specs/004-categorical-chart-validation/spec.md
+  data_model: .ai-platform/specs/004-categorical-chart-validation/data-model.md
+  public_api_contract: .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+  requirements_checklist: .ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+  feature_plan: .ai-platform/specs/004-categorical-chart-validation/plan.md
+  work_graph: .ai-platform/specs/004-categorical-chart-validation/tasks.md
+  analysis: .ai-platform/specs/004-categorical-chart-validation/analysis.md
+  approval_gates:
+    constitution: Confirmed
+    product_contract: Confirmed
+    feature_contracts: Confirmed by user on 2026-07-19
+    requirements_checklist: Completed with 0 Critical/High/Medium findings
+    technical_plan_and_work_graph: Confirmed by user on 2026-07-19
+    analysis: Completed with 0 Critical/High/Medium findings
+    implementation_authorization: User explicitly authorized T112 packet generation and implementation on 2026-07-19
+
+execution_receipt:
+  attempt_id: T112-A001
+  status: Accepted
+  evidence_directory: .ai-platform/evidence/T112
+  final_validation: >-
+    unit 341/341; domain coverage 98.09/95.61/100/98.05; waterfall coverage
+    97.56/96.15/100/97.54; strict typecheck, build, package, lint, format and diff checks pass
+  review: >-
+    Spec compliance, engineering and QA review report no unresolved blocking finding; public runtime exports,
+    command wire schema and legacy waterfall behavior remain unchanged.
+  user_acceptance: User explicitly replied "T112 验收通过" on 2026-07-19.
+  downstream_gate: T113 and T114 dependencies are satisfied; each remains Draft until its execution packet is generated and approved.
+
+work_unit:
+  title: 扩展数据合同与共享命令策略
+  goal: >-
+    以严格判别联合支持 legacy waterfall、current waterfall 和 current categorical，建立
+    source/view compatibility、初始 ViewSpec、version-preserving persistence、source fingerprint
+    和最小内部 chart policy，同时保持现有 waterfall 与 command wire behavior 不变。
+  epic: E004
+  story: S004-1
+  requirements:
+    - CAT-FR-001
+    - CAT-FR-002
+    - CAT-FR-003
+    - CAT-FR-008
+    - CAT-NFR-001
+    - CAT-NFR-004
+    - CAT-NFR-006
+    - CAT-AC-001
+    - CAT-AC-004
+    - CAT-AC-005
+    - CAT-AC-009
+  priority: P0
+  depends_on:
+    - T111 Accepted
+  blocks:
+    - T113
+    - T114
+    - T115
+    - T116
+  parallel: false
+  conflicts_with:
+    - T113
+    - T114
+    - T115
+    - T116
+    - Any raw G2 public surface
+    - Any implicit schema migration
+    - Any EditorCommand wire-shape change
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - packages/editor/src/domain/model.ts
+    - packages/editor/src/domain/errors.ts
+    - packages/editor/src/domain/validation.ts
+    - packages/editor/src/domain/createInitialViewSpec.ts
+    - packages/editor/src/domain/session.ts
+    - packages/editor/src/domain/executeCommand.ts
+    - packages/editor/src/domain/invariants.ts
+    - packages/editor/src/domain/persistence.ts
+    - packages/editor/src/domain/viewTree.ts
+    - packages/editor/src/index.ts
+    - packages/editor/src/waterfall/projectWaterfall.ts
+    - packages/editor/src/components/FinancialChartEditor.tsx
+    - packages/editor/src/interactions/groupSelection.ts
+    - packages/editor/tests/domain/validation.test.ts
+    - packages/editor/tests/domain/model.test.ts
+    - packages/editor/tests/domain/commands.test.ts
+    - packages/editor/tests/domain/persistence.test.ts
+    - packages/editor/tests/domain/property-sequences.test.ts
+    - packages/editor/tests/package/public-api.test.ts
+    - packages/editor/tests/package/types-consumer.ts
+  existing_patterns:
+    - SourceData/ViewSpec are immutable JSON-compatible plain data with branded string IDs.
+    - Validators inspect own enumerable data properties, reject unrecognized fields and hostile input, accumulate stable issues, and preserve successful input identity.
+    - Session creation validates source and view before computing a deterministic non-cryptographic fingerprint.
+    - Command execution validates pre/post invariants and never mutates SourceData or the input session.
+    - Persistence emits deterministic JSON and validates parsed input against SourceData.
+    - Existing legacy waterfall fixtures and snapshots are the compatibility baseline.
+  interfaces_or_contracts:
+    - .ai-platform/specs/004-categorical-chart-validation/data-model.md
+    - .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+  required_design:
+    - Preserve public SourceItem and SourceItemKind names as waterfall-compatible aliases.
+    - SourceData is LegacyWaterfallSourceData | WaterfallSourceData | CategoricalSourceData.
+    - Current SourceData uses schemaVersion 2.0.0 plus dataKind waterfall or categorical.
+    - ViewSpec is LegacyWaterfallViewSpec | CurrentViewSpec; legacy/current source generations cannot mix.
+    - Categorical defaults to column and accepts explicit bar; incompatible explicit chartType fails without fallback.
+    - EditorCommand wire union remains unchanged.
+    - Internal chart policy owns movable-item and container compatibility questions; it is not exported publicly.
+  forbidden_changes:
+    - Do not modify chart rendering, projection or interaction semantics; projectWaterfall.ts, FinancialChartEditor.tsx and groupSelection.ts may only narrow the exact new SourceData item union. Do not connect categorical UI, and do not modify CSS, export runtime, dependencies or package metadata.
+    - Do not add setChartType, sorting, Top N or other commands.
+    - Do not weaken legacy waterfall anchors, subtotal segments, group, pin or source-coverage invariants.
+    - Do not expose projectors, policy, G2Spec, chart instance, renderer or plugin callbacks.
+    - Do not log amount, label, sourceRef or metadata values.
+
+execution_constraints:
+  execution_mode: direct
+  direct_reason: User authorized implementation but did not authorize delegation; repository policy requires one governed task at a time.
+  branch_or_worktree: codex/t112-categorical-data-contract
+  allowed_files:
+    - packages/editor/src/domain/model.ts
+    - packages/editor/src/domain/errors.ts
+    - packages/editor/src/domain/validation.ts
+    - packages/editor/src/domain/createInitialViewSpec.ts
+    - packages/editor/src/domain/session.ts
+    - packages/editor/src/domain/history.ts
+    - packages/editor/src/domain/invariants.ts
+    - packages/editor/src/domain/executeCommand.ts
+    - packages/editor/src/domain/persistence.ts
+    - packages/editor/src/domain/viewTree.ts
+    - packages/editor/src/domain/chartPolicy.ts
+    - packages/editor/src/index.ts
+    - packages/editor/src/waterfall/projectWaterfall.ts
+    - packages/editor/src/components/FinancialChartEditor.tsx
+    - packages/editor/src/interactions/groupSelection.ts
+    - packages/editor/tests/domain/**
+    - packages/editor/tests/package/**
+    - .ai-platform/evidence/T112/**
+  test_targets:
+    - packages/editor/tests/domain/schema-v2.test.ts
+    - packages/editor/tests/domain/chart-policy.test.ts
+    - packages/editor/tests/domain/validation.test.ts
+    - packages/editor/tests/domain/persistence.test.ts
+    - packages/editor/tests/domain/property-sequences.test.ts
+    - packages/editor/tests/package/public-api.test.ts
+    - packages/editor/tests/package/types-consumer.ts
+  ownership_notes:
+    - Worktree was clean before 004 artifacts were created; current uncommitted 004 documents belong to this approved delivery.
+    - Stop if unrelated user edits appear in an allowed runtime file.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    files:
+      - packages/editor/tests/domain/schema-v2.test.ts
+      - packages/editor/tests/domain/chart-policy.test.ts
+      - packages/editor/tests/domain/persistence.test.ts
+      - packages/editor/tests/package/public-api.test.ts
+      - packages/editor/tests/package/types-consumer.ts
+    command: >-
+      pnpm exec vitest run packages/editor/tests/domain/schema-v2.test.ts
+      packages/editor/tests/domain/chart-policy.test.ts
+      packages/editor/tests/domain/persistence.test.ts
+      packages/editor/tests/package/public-api.test.ts
+    expected_failure: >-
+      Tests or typecheck fail because schema 2.0.0/dataKind, ChartType, categorical initialization,
+      compatibility issues and categorical chart policy do not exist yet. Existing legacy tests remain green.
+  green:
+    command: >-
+      pnpm exec vitest run packages/editor/tests/domain/schema-v2.test.ts
+      packages/editor/tests/domain/chart-policy.test.ts
+      packages/editor/tests/domain/persistence.test.ts
+      packages/editor/tests/package/public-api.test.ts
+    expected_signal: New T112 tests and all referenced legacy regression tests pass.
+  refactor:
+    command: pnpm exec vitest run packages/editor/tests/domain packages/editor/tests/package
+    expected_signal: Domain and package unit suites remain green after schema dispatch and policy cleanup.
+
+validation_loop:
+  commands:
+    - pnpm exec vitest run packages/editor/tests/domain packages/editor/tests/package
+    - pnpm test:coverage
+    - pnpm typecheck
+    - pnpm build
+    - pnpm test:package
+    - pnpm lint
+    - pnpm format:check
+    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T112
+    - git diff --check
+  expected_signals:
+    - All legacy waterfall tests pass without updated behavioral expectations.
+    - New schema, compatibility, initial-view, fingerprint, persistence and policy tests pass.
+    - Domain coverage remains at least 95 percent for statements, branches, functions and lines.
+    - ESM, CJS and type consumers expose only the approved public types and functions.
+    - Artifact validator reports no errors or warnings for T112.
+  retry_budget: 2
+  failure_policy:
+    first_failure: Read the exact output and fix only behavior directly owned by T112.
+    second_failure: Determine whether the failure is a scope, contract or environment blocker; do not widen allowed files.
+    beyond_budget: Stop implementation, preserve RED/GREEN receipts and record blocked evidence.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T112/summary.md
+  diff: .ai-platform/evidence/T112/diff.patch
+  test_results: .ai-platform/evidence/T112/test-results.md
+  required:
+    - task ID, executor and direct-execution reason
+    - exact changed files
+    - RED command, exit code and expected failure reason
+    - GREEN and refactor command results
+    - coverage, typecheck, build, package, lint, format and artifact validation results
+    - public API and schema compatibility summary
+    - spec-compliance and engineering review findings
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - Legacy 1.0.0 waterfall identity and behavior are unchanged.
+    - Current schema rejects missing/invalid dataKind and mixed source/view generations.
+    - Categorical trees cover every source item exactly once and preserve locked/pinned invariants.
+    - Policy extraction does not create a public or renderer abstraction.
+    - Errors and fingerprints do not expose or ambiguously mix financial data families.
+  acceptance_rule: T112 moves to Needs_Review after validation; only explicit user acceptance can mark it Accepted.
+
+handoff:
+  task_status: Accepted
+  acceptance_receipt: User explicitly replied "T112 验收通过" on 2026-07-19.
+  next_gate: Generate and approve separate T113 and T114 execution packets before implementation.
+  remote_actions: Commit, push, pull request, merge, publish and release are not authorized by this request.
+
+stop_conditions:
+  - A required behavior needs chart rendering, projection, React, CSS, interaction or export files.
+  - Legacy waterfall behavior can only pass by weakening an existing assertion or validator.
+  - The approved compatibility matrix needs to change.
+  - A new EditorCommand or runtime dependency is required.
+  - An unrelated user change appears in an allowed runtime file.
+  - Artifact validator reports an unresolved Critical/High finding or missing packet field.

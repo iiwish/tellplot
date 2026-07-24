@@ -1,4 +1,5 @@
-export { FinancialChartEditor } from './components/FinancialChartEditor';
+export { ChartEditor } from './components/ChartEditor';
+export { validateChartConfig } from './config/chartConfig';
 export { createEditorSession } from './domain/session';
 export { createInitialViewSpec } from './domain/createInitialViewSpec';
 export { executeCommand } from './domain/executeCommand';
@@ -8,13 +9,32 @@ export { validateSourceData, validateViewSpec } from './domain/validation';
 
 export type {
   ChartCurrencyDisplay,
+  ChartGroupRegionLabelMode,
+  ChartLabelPlacement,
   ChartValueLabelMode,
-  FinancialChartAnimationAppearance,
-  FinancialChartAppearance,
-  FinancialChartAxisAppearance,
-  FinancialChartNumberFormat,
-  FinancialChartPalette,
 } from './config/chartAppearance';
+export type {
+  CategoricalChartAppearance,
+  CategoricalChartConfig,
+  ChartAnimation,
+  ChartAppearance,
+  ChartAxes,
+  ChartColors,
+  ChartConfig,
+  ChartEditorOptions,
+  ChartEditorPanels,
+  ChartGroupRegion,
+  ChartGroupLabelOptions,
+  ChartLabelStyle,
+  ChartLabels,
+  ChartLocale,
+  ChartNumberFormat,
+  ChartValueLabelOptions,
+  WaterfallChartAppearance,
+  WaterfallChartColors,
+  WaterfallChartConfig,
+  WaterfallChartData,
+} from './config/chartConfig';
 export type {
   CollapseGroupCommand,
   CommandEnvelope,
@@ -45,15 +65,23 @@ export type { CommandEvent, CommandResult } from './domain/executeCommand';
 export type { HistoryAction, HistoryEntry } from './domain/history';
 export type {
   Annotation,
+  CategoricalSourceData,
+  CategoricalSourceItem,
+  ChartType,
   Emphasis,
+  LegacyWaterfallSourceData,
   MetadataValue,
   SchemaVersion,
   SourceData,
+  SourceDataKind,
   SourceItem,
   SourceItemKind,
   ViewGroup,
   ViewSpec,
+  WaterfallSourceData,
+  WaterfallSourceItem,
 } from './domain/model';
+export type { InitialViewSpecOptions } from './domain/createInitialViewSpec';
 export type { EditorSession, EditorSessionOptions } from './domain/session';
 export type {
   ExportError,
@@ -61,9 +89,4 @@ export type {
   ExportOptions,
   ExportResult,
 } from './export/exportTypes';
-export type {
-  FinancialChartEditorHandle,
-  FinancialChartEditorPanels,
-  FinancialChartEditorProps,
-  SelectionState,
-} from './react/editorTypes';
+export type { ChartEditorHandle, ChartEditorProps, SelectionState } from './react/editorTypes';

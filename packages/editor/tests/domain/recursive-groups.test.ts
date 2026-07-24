@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EditorCommand } from '../../src/domain/commands';
 import { executeCommand } from '../../src/domain/executeCommand';
-import { undoSession } from '../../src/domain/history';
+import { redoSession, undoSession } from '../../src/domain/history';
 import type { SourceData, ViewSpec } from '../../src/domain/model';
 import { createEditorSession } from '../../src/domain/session';
 import { parseViewSpec, serializeViewSpec } from '../../src/domain/persistence';
@@ -270,7 +270,7 @@ describe('recursive groups', () => {
     }
   });
 
-  it('rejects missing, pinned and too-small group movement targets without mutation', () => {
+  it('rejects missing and pinned movement targets without mutation', () => {
     const baseSession = createEditorSession(sourceData, { viewSpec: baseView() });
     expect(baseSession.ok).toBe(true);
     if (!baseSession.ok) {
@@ -318,20 +318,55 @@ describe('recursive groups', () => {
     if (!missingTarget.ok) {
       expect(missingTarget.error.code).toBe('GROUP_NOT_FOUND');
     }
+  });
 
-    const tooSmall = executeCommand(
-      baseSession.value,
+  it('atomically dissolves a two-child source group and restores it with one undo', () => {
+    const decorated: ViewSpec = {
+      ...baseView(),
+      annotations: { inner: 'Group-only note', a: 'Item note' },
+      emphasis: { inner: 'highlight', b: 'muted' },
+    };
+    const session = createEditorSession(sourceData, { viewSpec: decorated });
+    expect(session.ok).toBe(true);
+    if (!session.ok) {
+      return;
+    }
+
+    const moved = executeCommand(
+      session.value,
       command('moveItem', {
         itemId: 'a',
         target: { containerId: 'root', index: 0 },
       }),
     );
-    expect(tooSmall.ok).toBe(false);
-    if (!tooSmall.ok) {
-      expect(tooSmall.error).toMatchObject({
-        code: 'INVALID_DROP_TARGET',
-        reason: 'GROUP_WOULD_BE_TOO_SMALL',
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) {
+      return;
+    }
+    expect(moved.viewSpec.rootOrder).toEqual(['a', 'b', 'c', 'd']);
+    expect(moved.viewSpec.groups).toEqual({});
+    expect(moved.viewSpec.collapsedGroupIds).toEqual([]);
+    expect(moved.viewSpec.annotations).toEqual({ a: 'Item note' });
+    expect(moved.viewSpec.emphasis).toEqual({ b: 'muted' });
+    expect(moved.session.undoStack).toHaveLength(1);
+
+    const undone = undoSession(moved.session, {
+      id: 'undo-dissolve',
+      source: 'keyboard',
+      baseRevision: 1,
+    });
+    expect(undone.ok).toBe(true);
+    if (undone.ok) {
+      expect({ ...undone.viewSpec, revision: 0 }).toEqual(decorated);
+      const redone = redoSession(undone.session, {
+        id: 'redo-dissolve',
+        source: 'keyboard',
+        baseRevision: undone.viewSpec.revision,
       });
+      expect(redone.ok).toBe(true);
+      if (redone.ok) {
+        expect({ ...redone.viewSpec, revision: moved.viewSpec.revision }).toEqual(moved.viewSpec);
+      }
     }
   });
 

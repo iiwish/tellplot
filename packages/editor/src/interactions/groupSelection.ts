@@ -30,11 +30,17 @@ export function evaluateGroupSelection(
     return { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
   }
   const leafIds = uniqueIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId));
+  const categoricalSource =
+    sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical';
   if (
-    leafIds.some(
-      itemId =>
-        sourceItems.get(itemId)?.kind !== 'contribution' || viewSpec.pinnedItemIds.includes(itemId),
-    )
+    leafIds.some(itemId => {
+      const item = sourceItems.get(itemId);
+      return (
+        item === undefined ||
+        (!categoricalSource && (!('kind' in item) || item.kind !== 'contribution')) ||
+        viewSpec.pinnedItemIds.includes(itemId)
+      );
+    })
   ) {
     return { ok: false, reason: 'ITEM_LOCKED' };
   }

@@ -1,0 +1,24 @@
+{
+  "package": "@tellplot/editor@0.1.0-beta.1",
+  "entrypoint": "@tellplot/editor",
+  "stylesEntrypoint": "@tellplot/editor/styles.css",
+  "runtimeExports": [
+    "FinancialChartEditor",
+    "createEditorSession",
+    "createInitialViewSpec",
+    "executeCommand",
+    "parseViewSpec",
+    "redoSession",
+    "serializeViewSpec",
+    "undoSession",
+    "validateSourceData",
+    "validateViewSpec"
+  ],
+  "commandSources": ["direct", "outline", "keyboard", "host"],
+  "chartTypes": ["waterfall", "bar", "column"],
+  "declarationLeakScan": {
+    "patterns": ["G2Spec", "@antv/g2", "ChartRuntime", "ChartConstructor", "ExportRuntime"],
+    "matches": 0
+  },
+  "contractPassed": true
+}

@@ -1,0 +1,4157 @@
+diff --git a/apps/playground/src/App.tsx b/apps/playground/src/App.tsx
+index 0df1e20..b411592 100644
+--- a/apps/playground/src/App.tsx
++++ b/apps/playground/src/App.tsx
+@@ -10,11 +10,19 @@ import {
+ import { Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
+ import { useEffect, useMemo, useRef, useState } from 'react';
+ 
+-import { getPlaygroundFixture } from './fixtures';
++import { getPlaygroundChartType, getPlaygroundFixture } from './fixtures';
+ 
+ export function App(): React.JSX.Element {
+   const sourceData = useMemo(() => getPlaygroundFixture(window.location.search), []);
+-  const initialView = useMemo(() => createInitialViewSpec(sourceData), [sourceData]);
++  const initialChartType = useMemo(() => getPlaygroundChartType(window.location.search), []);
++  const initialView = useMemo(
++    () =>
++      createInitialViewSpec(
++        sourceData,
++        initialChartType === undefined ? undefined : { chartType: initialChartType },
++      ),
++    [initialChartType, sourceData],
++  );
+   const [viewSpec, setViewSpec] = useState<ViewSpec | undefined>(() =>
+     initialView.ok ? initialView.value : undefined,
+   );
+diff --git a/apps/playground/src/fixtures.ts b/apps/playground/src/fixtures.ts
+index fce899d..a3749f8 100644
+--- a/apps/playground/src/fixtures.ts
++++ b/apps/playground/src/fixtures.ts
+@@ -56,6 +56,49 @@ const performanceFixture = {
+   ],
+ } satisfies SourceData;
+ 
++const categoricalFixture = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: '2026-h1-category-performance',
++  currency: 'CNY',
++  items: [
++    { id: 'enterprise', label: '企业订阅', amount: 1_260 },
++    { id: 'consumer', label: '个人订阅', amount: 880 },
++    { id: 'services', label: '专业服务', amount: 540 },
++    { id: 'marketplace', label: '应用市场', amount: 320 },
++    { id: 'support', label: '客户支持投入', amount: -410 },
++    { id: 'infrastructure', label: '基础设施投入', amount: -620 },
++    { id: 'research', label: '研发投入', amount: -760 },
++    { id: 'other', label: '其他经营项目', amount: 150 },
++  ],
++} as const satisfies SourceData;
++
++const emptyCategoricalFixture = {
++  ...categoricalFixture,
++  datasetId: 'empty-category-performance',
++  items: [],
++} as const satisfies SourceData;
++
++const invalidCategoricalFixture = {
++  ...categoricalFixture,
++  datasetId: 'invalid-category-performance',
++  items: categoricalFixture.items.map(item =>
++    item.id === 'infrastructure' ? { ...item, amount: Number.POSITIVE_INFINITY } : item,
++  ),
++} satisfies SourceData;
++
++const categoricalPerformanceFixture = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'categorical-performance-200',
++  currency: 'CNY',
++  items: Array.from({ length: 200 }, (_, index) => ({
++    id: `category-${String(index + 1).padStart(3, '0')}`,
++    label: `分类项目 ${String(index + 1).padStart(3, '0')}`,
++    amount: (index % 2 === 0 ? 1 : -1) * (300 + (index % 11) * 45),
++  })),
++} satisfies SourceData;
++
+ /** Resolves deterministic visual fixtures without adding playground-only editor state. */
+ export function getPlaygroundFixture(search: string): SourceData {
+   const fixture = new URLSearchParams(search).get('fixture');
+@@ -68,5 +111,22 @@ export function getPlaygroundFixture(search: string): SourceData {
+   if (fixture === 'performance') {
+     return performanceFixture;
+   }
++  if (fixture === 'categorical-column' || fixture === 'categorical-bar') {
++    return categoricalFixture;
++  }
++  if (fixture === 'categorical-empty') {
++    return emptyCategoricalFixture;
++  }
++  if (fixture === 'categorical-invalid') {
++    return invalidCategoricalFixture;
++  }
++  if (fixture === 'categorical-performance') {
++    return categoricalPerformanceFixture;
++  }
+   return financialFixture;
+ }
++
++/** Keeps fixture selection out of the editor while allowing an explicit horizontal layout. */
++export function getPlaygroundChartType(search: string): 'bar' | undefined {
++  return new URLSearchParams(search).get('fixture') === 'categorical-bar' ? 'bar' : undefined;
++}
+diff --git a/e2e/accessibility.spec.ts b/e2e/accessibility.spec.ts
+index 1b5ad13..63874be 100644
+--- a/e2e/accessibility.spec.ts
++++ b/e2e/accessibility.spec.ts
+@@ -151,7 +151,7 @@ test('invalid imported ViewSpec remains accessible and exposes only stable diagn
+   });
+ 
+   const status = page.getByRole('status', { name: '文件状态' });
+-  await expect(status).toContainText('UNSUPPORTED_SCHEMA_VERSION');
++  await expect(status).toContainText('SOURCE_CONFLICT');
+   await expect(status).toContainText('/schemaVersion');
+   await expect(status).not.toContainText('销量增长');
+   await expectNoSeriousOrCritical(page, 'invalid ViewSpec import');
+@@ -219,3 +219,42 @@ test('mobile outline sheet keeps the interaction controls reachable', async ({ p
+     true,
+   );
+ });
++
++for (const layout of ['column', 'bar'] as const) {
++  test(`categorical ${layout} keeps ordered keyboard, summary, and live-region equivalents`, async ({
++    page,
++  }) => {
++    await page.emulateMedia({ reducedMotion: 'reduce' });
++    await page.setViewportSize({ width: 1440, height: 900 });
++    await page.goto(`/?fixture=categorical-${layout}`);
++    await expect(
++      page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="${layout}"]`),
++    ).toBeVisible();
++    await expectNoSeriousOrCritical(page, `categorical ${layout}`);
++
++    const tree = page.getByRole('tree', { name: '结构大纲' });
++    await expect(tree.getByRole('treeitem')).toHaveCount(8);
++    const first = tree.getByRole('treeitem', { name: /企业订阅/ });
++    await expect(first).toHaveAttribute('aria-level', '1');
++    await expect(first).toHaveAttribute('aria-selected', 'false');
++    await first.focus();
++    await expect(first).toBeFocused();
++
++    const summary = page.getByRole('region', { name: '图表摘要' });
++    await expect(summary).toContainText(layout === 'bar' ? '分类条形图' : '分类柱状图');
++    const summaryLabels = await summary
++      .locator('li')
++      .evaluateAll(items => items.map(item => item.textContent?.split(',')[0] ?? ''));
++    expect(summaryLabels.slice(0, 3)).toEqual(['企业订阅', '个人订阅', '专业服务']);
++
++    await page.keyboard.press('Alt+ArrowDown');
++    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++    await expect(page.locator(COMMAND_FEEDBACK)).toHaveAttribute('aria-live', 'polite');
++    await expect(page.locator(COMMAND_FEEDBACK)).toContainText('已移动');
++    const reorderedLabels = await summary
++      .locator('li')
++      .evaluateAll(items => items.map(item => item.textContent?.split(',')[0] ?? ''));
++    expect(reorderedLabels.slice(0, 3)).toEqual(['个人订阅', '企业订阅', '专业服务']);
++    await expectNoSeriousOrCritical(page, `categorical ${layout} reordered`);
++  });
++}
+diff --git a/e2e/categorical-editor.spec.ts b/e2e/categorical-editor.spec.ts
+new file mode 100644
+index 0000000..d3d617b
+--- /dev/null
++++ b/e2e/categorical-editor.spec.ts
+@@ -0,0 +1,456 @@
++import { readFile } from 'node:fs/promises';
++
++import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
++
++const EDITOR = '[data-tellplot="editor"]';
++const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
++  process.platform === 'darwin' ? 'Meta' : 'Control';
++const INITIAL_ORDER = [
++  'enterprise',
++  'consumer',
++  'services',
++  'marketplace',
++  'support',
++  'infrastructure',
++  'research',
++  'other',
++] as const;
++
++type CategoricalLayout = 'bar' | 'column';
++
++interface MarkBand {
++  readonly minX: number;
++  readonly minY: number;
++  readonly maxX: number;
++  readonly maxY: number;
++  readonly kind: 'negative' | 'positive';
++}
++
++async function openCategorical(page: Page, layout: CategoricalLayout): Promise<void> {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto(`/?fixture=categorical-${layout}`);
++  await expect(
++    page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="${layout}"]`),
++  ).toBeVisible();
++  await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
++}
++
++async function readDownload(download: Download): Promise<Buffer> {
++  const path = await download.path();
++  expect(path).not.toBeNull();
++  if (path === null) {
++    throw new Error('Expected a local download path');
++  }
++  return readFile(path);
++}
++
++async function chooseExport(page: Page, name: 'PNG 图像' | 'SVG 图像'): Promise<Download> {
++  await page.getByRole('button', { name: '导出' }).click();
++  const item = page.getByRole('menuitem', { name });
++  await expect(item).toBeVisible();
++  const download = page.waitForEvent('download');
++  await item.click();
++  return download;
++}
++
++async function rootOrder(page: Page): Promise<readonly string[]> {
++  return page
++    .getByRole('tree', { name: '结构大纲' })
++    .locator('[role="treeitem"][aria-level="1"][data-node-id]')
++    .evaluateAll(rows => rows.map(row => row.getAttribute('data-node-id') ?? 'missing-node-id'));
++}
++
++async function paintedPixelCount(canvas: Locator): Promise<number> {
++  return canvas.evaluate(element => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return 0;
++    }
++    const context = element.getContext('2d');
++    if (context === null) {
++      return 0;
++    }
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    let painted = 0;
++    for (let offset = 0; offset < pixels.length; offset += 4) {
++      const red = pixels[offset] ?? 255;
++      const green = pixels[offset + 1] ?? 255;
++      const blue = pixels[offset + 2] ?? 255;
++      const alpha = pixels[offset + 3] ?? 0;
++      if (alpha > 20 && (red < 242 || green < 242 || blue < 242)) {
++        painted += 1;
++      }
++    }
++    return painted;
++  });
++}
++
++async function categoricalMarkBands(
++  canvas: Locator,
++  layout: CategoricalLayout,
++): Promise<readonly MarkBand[]> {
++  const localBands = await canvas.evaluate((element, currentLayout) => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return [];
++    }
++    const context = element.getContext('2d');
++    if (context === null) {
++      return [];
++    }
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    const coordinateCount = currentLayout === 'column' ? element.width : element.height;
++    const crossCount = currentLayout === 'column' ? element.height : element.width;
++    const populated: {
++      kind: 'negative' | 'positive';
++      coordinate: number;
++      crossMin: number;
++      crossMax: number;
++    }[] = [];
++    for (let coordinate = 0; coordinate < coordinateCount; coordinate += 1) {
++      const positive: number[] = [];
++      const negative: number[] = [];
++      for (let cross = 0; cross < crossCount; cross += 1) {
++        const x = currentLayout === 'column' ? coordinate : cross;
++        const y = currentLayout === 'column' ? cross : coordinate;
++        const offset = (y * element.width + x) * 4;
++        const red = pixels[offset] ?? 0;
++        const green = pixels[offset + 1] ?? 0;
++        const blue = pixels[offset + 2] ?? 0;
++        const alpha = pixels[offset + 3] ?? 0;
++        if (alpha <= 120) {
++          continue;
++        }
++        if (Math.abs(red - 22) <= 8 && Math.abs(green - 131) <= 8 && Math.abs(blue - 99) <= 8) {
++          positive.push(cross);
++        }
++        if (Math.abs(red - 213) <= 8 && Math.abs(green - 82) <= 8 && Math.abs(blue - 74) <= 8) {
++          negative.push(cross);
++        }
++      }
++      const matches = positive.length >= 3 ? positive : negative;
++      if (matches.length >= 3) {
++        populated.push({
++          kind: positive.length >= 3 ? 'positive' : 'negative',
++          coordinate,
++          crossMin: Math.min(...matches),
++          crossMax: Math.max(...matches),
++        });
++      }
++    }
++    const bands: {
++      kind: 'negative' | 'positive';
++      coordinateMin: number;
++      coordinateMax: number;
++      crossMin: number;
++      crossMax: number;
++    }[] = [];
++    for (const point of populated) {
++      const current = bands.at(-1);
++      if (
++        current === undefined ||
++        point.kind !== current.kind ||
++        point.coordinate > current.coordinateMax + 1
++      ) {
++        bands.push({
++          kind: point.kind,
++          coordinateMin: point.coordinate,
++          coordinateMax: point.coordinate,
++          crossMin: point.crossMin,
++          crossMax: point.crossMax,
++        });
++      } else {
++        current.coordinateMax = point.coordinate;
++        current.crossMin = Math.min(current.crossMin, point.crossMin);
++        current.crossMax = Math.max(current.crossMax, point.crossMax);
++      }
++    }
++    return bands
++      .filter(band => band.coordinateMax - band.coordinateMin >= 3)
++      .map(band =>
++        currentLayout === 'column'
++          ? {
++              minX: band.coordinateMin,
++              maxX: band.coordinateMax,
++              minY: band.crossMin,
++              maxY: band.crossMax,
++              kind: band.kind,
++            }
++          : {
++              minX: band.crossMin,
++              maxX: band.crossMax,
++              minY: band.coordinateMin,
++              maxY: band.coordinateMax,
++              kind: band.kind,
++            },
++      );
++  }, layout);
++  const box = await canvas.boundingBox();
++  const size = await canvas.evaluate(element => ({
++    width: element instanceof HTMLCanvasElement ? element.width : 0,
++    height: element instanceof HTMLCanvasElement ? element.height : 0,
++  }));
++  if (box === null || size.width === 0 || size.height === 0) {
++    return [];
++  }
++  return localBands.map(band => ({
++    minX: box.x + (band.minX / size.width) * box.width,
++    maxX: box.x + (band.maxX / size.width) * box.width,
++    minY: box.y + (band.minY / size.height) * box.height,
++    maxY: box.y + (band.maxY / size.height) * box.height,
++    kind: band.kind,
++  }));
++}
++
++async function dragFirstAfterSecond(page: Page, layout: CategoricalLayout): Promise<void> {
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++  await expect.poll(() => categoricalMarkBands(canvas, layout)).toHaveLength(INITIAL_ORDER.length);
++  const bands = await categoricalMarkBands(canvas, layout);
++  const source = bands[0];
++  const target = bands[1];
++  expect(source).toBeDefined();
++  expect(target).toBeDefined();
++  if (source === undefined || target === undefined) {
++    return;
++  }
++  const sourceX = (source.minX + source.maxX) / 2;
++  const sourceY = (source.minY + source.maxY) / 2;
++  const targetCoordinate =
++    layout === 'column'
++      ? sourceX + (target.minX - source.maxX) + 1
++      : sourceY + (target.minY - source.maxY) + 1;
++
++  await page.mouse.move(sourceX, sourceY);
++  await page.mouse.down();
++  await page.mouse.move(
++    layout === 'column' ? targetCoordinate : sourceX,
++    layout === 'bar' ? targetCoordinate : sourceY,
++    { steps: 8 },
++  );
++  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
++  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-node-id', 'consumer');
++  await page.mouse.up();
++}
++
++async function createAndCollapseGroup(page: Page): Promise<void> {
++  await page.getByRole('treeitem', { name: /企业订阅/ }).click();
++  await page
++    .getByRole('treeitem', { name: /个人订阅/ })
++    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await page.getByRole('textbox', { name: '分组名称' }).fill('订阅业务');
++  await page.getByRole('button', { name: '创建分组' }).click();
++  await page.getByRole('button', { name: '折叠 订阅业务' }).click();
++  await expect(page.getByRole('treeitem', { name: /订阅业务/ })).toContainText('2,140');
++}
++
++for (const layout of ['column', 'bar'] as const) {
++  test(`${layout} renders ordered G2 marks and commits the same direct reorder`, async ({
++    browserName,
++    page,
++  }, testInfo) => {
++    await page.emulateMedia({ reducedMotion: 'reduce' });
++    await openCategorical(page, layout);
++    const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++    await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
++    await expect
++      .poll(() => categoricalMarkBands(canvas, layout))
++      .toHaveLength(INITIAL_ORDER.length);
++    const bands = await categoricalMarkBands(canvas, layout);
++    expect(bands.map(band => band.kind)).toEqual([
++      'positive',
++      'positive',
++      'positive',
++      'positive',
++      'negative',
++      'negative',
++      'negative',
++      'positive',
++    ]);
++    expect(await rootOrder(page)).toEqual(INITIAL_ORDER);
++    const summaryLabels = await page
++      .getByRole('region', { name: '图表摘要' })
++      .locator('li')
++      .evaluateAll(items => items.map(item => item.textContent?.split(',')[0] ?? ''));
++    expect(summaryLabels).toEqual([
++      '企业订阅',
++      '个人订阅',
++      '专业服务',
++      '应用市场',
++      '客户支持投入',
++      '基础设施投入',
++      '研发投入',
++      '其他经营项目',
++    ]);
++
++    if (browserName === 'chromium') {
++      await testInfo.attach(`${layout}-ready.png`, {
++        body: await page.screenshot({ animations: 'disabled', fullPage: true }),
++        contentType: 'image/png',
++      });
++    }
++
++    await dragFirstAfterSecond(page, layout);
++    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++    expect((await rootOrder(page)).slice(0, 3)).toEqual(['consumer', 'enterprise', 'services']);
++    await page.getByRole('button', { name: '撤销' }).click();
++    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
++    expect(await rootOrder(page)).toEqual(INITIAL_ORDER);
++    await page.getByRole('button', { name: '重做' }).click();
++    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '3');
++    expect((await rootOrder(page)).slice(0, 3)).toEqual(['consumer', 'enterprise', 'services']);
++  });
++
++  test(`${layout} exports the canonical collapsed projection as nonblank SVG and PNG`, async ({
++    browserName,
++    page,
++  }, testInfo) => {
++    await page.emulateMedia({ reducedMotion: 'reduce' });
++    await openCategorical(page, layout);
++    await createAndCollapseGroup(page);
++    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
++
++    const svgDownload = await chooseExport(page, 'SVG 图像');
++    const svg = (await readDownload(svgDownload)).toString('utf8');
++    expect(svgDownload.suggestedFilename()).toBe('2026-h1-category-performance.svg');
++    expect(svg).toContain('<svg');
++    expect(svg).toContain(layout === 'bar' ? '分类条形图' : '分类柱状图');
++    expect(svg).toContain('订阅业务');
++    expect(svg).not.toContain('企业订阅');
++    expect(svg).not.toContain('个人订阅');
++    expect(svg.indexOf('订阅业务')).toBeLessThan(svg.indexOf('专业服务'));
++    expect(svg).not.toMatch(
++      /<script|foreignObject|javascript:|(?:href|xlink:href)=["']https?:|sourceRef|metadata/iu,
++    );
++
++    const pngDownload = await chooseExport(page, 'PNG 图像');
++    const png = await readDownload(pngDownload);
++    expect(pngDownload.suggestedFilename()).toBe('2026-h1-category-performance.png');
++    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG');
++    const pixels = await page.evaluate(async base64 => {
++      const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
++      const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
++      const canvas = document.createElement('canvas');
++      canvas.width = bitmap.width;
++      canvas.height = bitmap.height;
++      const context = canvas.getContext('2d');
++      if (context === null) {
++        return { width: 0, height: 0, painted: 0 };
++      }
++      context.drawImage(bitmap, 0, 0);
++      const data = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
++      let painted = 0;
++      for (let offset = 0; offset < data.length; offset += 4) {
++        if (
++          (data[offset + 3] ?? 0) > 20 &&
++          ((data[offset] ?? 255) < 242 ||
++            (data[offset + 1] ?? 255) < 242 ||
++            (data[offset + 2] ?? 255) < 242)
++        ) {
++          painted += 1;
++        }
++      }
++      return { width: bitmap.width, height: bitmap.height, painted };
++    }, png.toString('base64'));
++    expect(pixels.width).toBeGreaterThan(500);
++    expect(pixels.height).toBeGreaterThan(300);
++    expect(pixels.painted).toBeGreaterThan(500);
++    if (browserName === 'chromium') {
++      await testInfo.attach(`${layout}-collapsed-screen.png`, {
++        body: await page.screenshot({ animations: 'disabled', fullPage: true }),
++        contentType: 'image/png',
++      });
++      await testInfo.attach(`${layout}-collapsed-export.svg`, {
++        body: Buffer.from(svg),
++        contentType: 'image/svg+xml',
++      });
++      await testInfo.attach(`${layout}-collapsed-export.png`, {
++        body: png,
++        contentType: 'image/png',
++      });
++    }
++  });
++}
++
++test('categorical group, pin, and history share one editor session', async ({
++  browserName,
++  page,
++}, testInfo) => {
++  await openCategorical(page, 'column');
++  const pinnedView = {
++    schemaVersion: '2.0.0',
++    datasetId: '2026-h1-category-performance',
++    chartType: 'column',
++    revision: 0,
++    rootOrder: [...INITIAL_ORDER],
++    groups: {},
++    collapsedGroupIds: [],
++    pinnedItemIds: ['enterprise'],
++    annotations: {},
++    emphasis: {},
++  };
++  await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
++    name: 'pinned-categorical.json',
++    mimeType: 'application/json',
++    buffer: Buffer.from(JSON.stringify(pinnedView)),
++  });
++  const enterprise = page.getByRole('treeitem', { name: /企业订阅/ });
++  await enterprise.focus();
++  await page.keyboard.press('Alt+ArrowDown');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
++  await expect(page.locator('.tp-command-feedback')).toContainText('ITEM_LOCKED');
++
++  await page.reload();
++  await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
++  await createAndCollapseGroup(page);
++  const collapsedOrder = await rootOrder(page);
++  expect(collapsedOrder[0]).not.toBe('enterprise');
++  expect(collapsedOrder[0]).not.toBe('consumer');
++  const groupRow = page.getByRole('treeitem', { name: /订阅业务/ });
++  await expect(groupRow).toHaveAttribute('data-source-count', '2');
++  await expect(page.getByRole('region', { name: '图表摘要' })).toContainText('订阅业务');
++  if (browserName === 'chromium') {
++    await testInfo.attach('categorical-group-collapsed.png', {
++      body: await page.screenshot({ animations: 'disabled', fullPage: true }),
++      contentType: 'image/png',
++    });
++  }
++  await page.getByRole('button', { name: '展开 订阅业务' }).click();
++  await groupRow.click();
++  await page.getByRole('button', { name: '取消分组' }).click();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '4');
++  expect(await rootOrder(page)).toEqual(INITIAL_ORDER);
++  await page.getByRole('button', { name: '撤销' }).click();
++  await expect(page.getByRole('treeitem', { name: /订阅业务/ })).toBeVisible();
++  await page.getByRole('button', { name: '重做' }).click();
++  await expect(page.getByRole('treeitem', { name: /订阅业务/ })).toHaveCount(0);
++});
++
++test('categorical empty and invalid fixtures expose stable non-leaking states', async ({
++  browserName,
++  page,
++}, testInfo) => {
++  await page.goto('/?fixture=categorical-empty');
++  await expect(page.locator(`${EDITOR}[data-editor-state="empty"]`)).toBeVisible();
++  await expect(page.getByText('暂无分类项')).toBeVisible();
++  await expect(page.getByRole('region', { name: '图表摘要' })).toContainText('0 个可见节点');
++  if (browserName === 'chromium') {
++    await testInfo.attach('categorical-empty.png', {
++      body: await page.screenshot({ animations: 'disabled', fullPage: true }),
++      contentType: 'image/png',
++    });
++  }
++
++  await page.goto('/?fixture=categorical-invalid');
++  await expect(page.locator(`${EDITOR}[data-editor-state="invalid"]`)).toBeVisible();
++  const issues = page.getByRole('alert');
++  await expect(issues).toContainText('INVALID_SOURCE_DATA');
++  await expect(issues).toContainText('/items/5/amount');
++  await expect(issues).not.toContainText('基础设施投入');
++  await expect(issues).not.toContainText('Infinity');
++  await expect(page.getByTestId('tellplot-chart').locator('canvas')).toHaveCount(0);
++  if (browserName === 'chromium') {
++    await testInfo.attach('categorical-invalid.png', {
++      body: await page.screenshot({ animations: 'disabled', fullPage: true }),
++      contentType: 'image/png',
++    });
++  }
++});
+diff --git a/e2e/export.spec.ts b/e2e/export.spec.ts
+index 230bea7..df783ed 100644
+--- a/e2e/export.spec.ts
++++ b/e2e/export.spec.ts
+@@ -111,7 +111,7 @@ test('invalid ViewSpec import reports code and path without changing the current
+   });
+ 
+   const status = page.getByRole('status', { name: '文件状态' });
+-  await expect(status).toContainText('UNSUPPORTED_SCHEMA_VERSION');
++  await expect(status).toContainText('SOURCE_CONFLICT');
+   await expect(status).toContainText('/schemaVersion');
+   await expect(status).not.toContainText('销量增长');
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', before ?? '0');
+diff --git a/e2e/performance.spec.ts b/e2e/performance.spec.ts
+index 62cc84a..9088626 100644
+--- a/e2e/performance.spec.ts
++++ b/e2e/performance.spec.ts
+@@ -26,6 +26,7 @@ interface PerformanceWindow extends Window {
+     samples: number[];
+     start: number | null;
+   };
++  __tellplotPointerLifecycle?: string[];
+ }
+ 
+ async function installReactCommitProbe(page: Page): Promise<void> {
+@@ -512,3 +513,145 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
+   );
+   expect(p95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
+ });
++
++test('200-item categorical G2 chart keeps direct feedback outside React and meets commit p95', async ({
++  page,
++}) => {
++  test.setTimeout(90_000);
++  await installReactCommitProbe(page);
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto('/?fixture=categorical-performance');
++  await expect(
++    page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="column"]`),
++  ).toBeVisible();
++
++  const handles = page.locator('[data-node-kind="contribution"] button[aria-label^="拖动 "]');
++  await expect(handles).toHaveCount(200);
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
++  await expect.poll(() => barSlots(canvas)).toHaveLength(200);
++  await page.evaluate(() => {
++    const performanceWindow = window as PerformanceWindow;
++    performanceWindow.__tellplotPointerLifecycle = [];
++    for (const type of ['lostpointercapture', 'pointercancel', 'pointerup'] as const) {
++      document.addEventListener(
++        type,
++        event => {
++          performanceWindow.__tellplotPointerLifecycle?.push(
++            `${type}:${String(event.pointerId)}:${String(event.buttons)}:${(event.target as Element | null)?.tagName ?? 'none'}`,
++          );
++        },
++        { capture: true },
++      );
++    }
++  });
++  const slots = await barSlots(canvas);
++  const first = slots[0];
++  const second = slots[1];
++  const third = slots[2];
++  expect(first).toBeDefined();
++  expect(second).toBeDefined();
++  expect(third).toBeDefined();
++  if (first === undefined || second === undefined || third === undefined) {
++    return;
++  }
++  const canvasBox = await canvas.boundingBox();
++  expect(canvasBox).not.toBeNull();
++  if (canvasBox === null || canvasBox.width <= 0) {
++    return;
++  }
++  const signatureRegion: CanvasSignatureRegion = {
++    minXRatio: Math.max(0, (first.minX - canvasBox.x - 2) / canvasBox.width),
++    maxXRatio: Math.min(1, (third.maxX - canvasBox.x + 2) / canvasBox.width),
++  };
++
++  const firstY = await yInsideBar(canvas, first.x);
++  const secondCollisionDelta = Math.max(4.5, second.minX - first.maxX + 0.5);
++  const thirdCollisionX = first.x + (third.minX - first.maxX);
++  const stableAfterStartX = first.x + secondCollisionDelta;
++  const stableAfterEndX = Math.min(stableAfterStartX + 0.5, thirdCollisionX - 0.25);
++  expect(stableAfterEndX).toBeGreaterThan(stableAfterStartX);
++  await page.mouse.move(first.x, firstY);
++  await page.mouse.down();
++  await page.mouse.move(stableAfterStartX, firstY, { steps: 8 });
++  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
++  const overlay = page.getByTestId('chart-drag-overlay');
++  await expect(overlay).toBeVisible();
++  const transformBefore = await overlay.evaluate(element => getComputedStyle(element).transform);
++  await page.waitForTimeout(180);
++  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
++  const commitsBefore = await page.evaluate(
++    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
++  );
++  expect(commitsBefore).toBeGreaterThan(0);
++  await page.mouse.move(stableAfterEndX, firstY, { steps: 100 });
++  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
++  const commitsAfter = await page.evaluate(
++    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
++  );
++  const lifecycle = await page.evaluate(
++    () => (window as PerformanceWindow).__tellplotPointerLifecycle ?? [],
++  );
++  expect(await overlay.count(), `active overlay lifecycle: ${JSON.stringify(lifecycle)}`).toBe(1);
++  const transformAfter = await overlay.evaluate(element => getComputedStyle(element).transform);
++  expect(transformAfter).not.toBe(transformBefore);
++  expect(commitsAfter - commitsBefore).toBe(0);
++  await page.keyboard.press('Escape');
++  await page.mouse.up();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
++
++  await installLatencyProbe(page);
++  const keyboardMover = page.locator('[role="treeitem"][data-node-id="category-001"]');
++  for (let sample = 0; sample < SAMPLE_COUNT; sample += 1) {
++    const expectsSwappedOrder = sample % 2 === 0;
++    const nextRevision = sample + 1;
++    await keyboardMover.focus();
++    const previousSignature = await canvasPixelSignature(canvas, signatureRegion);
++    await page.evaluate(() => {
++      const metric = (window as PerformanceWindow).__tellplotPerf;
++      if (metric !== undefined) {
++        metric.start = performance.now();
++      }
++    });
++    await page.keyboard.press(expectsSwappedOrder ? 'Alt+ArrowDown' : 'Alt+ArrowUp');
++    await recordFirstVisibleCanvasUpdate(canvas, previousSignature, signatureRegion);
++    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', String(nextRevision));
++    const expectedPrefix = expectsSwappedOrder
++      ? ['category-002', 'category-001', 'category-003']
++      : ['category-001', 'category-002', 'category-003'];
++    expect(await rootContributionPrefix(page)).toEqual(expectedPrefix);
++    await page.waitForTimeout(180);
++  }
++
++  const samples = await page.evaluate(
++    () => (window as PerformanceWindow).__tellplotPerf?.samples ?? [],
++  );
++  expect(samples).toHaveLength(SAMPLE_COUNT);
++  const sorted = [...samples].sort((left, right) => left - right);
++  const p95 = sorted[Math.ceil(0.95 * sorted.length) - 1];
++  await test.info().attach('categorical-performance-samples.json', {
++    body: Buffer.from(
++      JSON.stringify(
++        {
++          chartFamily: 'categorical',
++          visibleCategories: 200,
++          sampleCount: samples.length,
++          formula: 'sorted[ceil(.95*n)-1]',
++          samples,
++          p95,
++          p95BudgetMs: PERFORMANCE_P95_BUDGET_MS,
++          sameTargetRootCommitDelta: commitsAfter - commitsBefore,
++          pointerLifecycle: lifecycle,
++        },
++        null,
++        2,
++      ),
++    ),
++    contentType: 'application/json',
++  });
++  console.log(
++    `[performance] categorical-canvas p95=${String(p95)}ms, budget=${String(PERFORMANCE_P95_BUDGET_MS)}ms, samples=${samples.length}, same-target-root-commit-delta=${commitsAfter - commitsBefore}`,
++  );
++  expect(p95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
++});
+diff --git a/packages/editor/src/components/AccessibleChartSummary.tsx b/packages/editor/src/components/AccessibleChartSummary.tsx
+index 932b0c6..c4d0714 100644
+--- a/packages/editor/src/components/AccessibleChartSummary.tsx
++++ b/packages/editor/src/components/AccessibleChartSummary.tsx
+@@ -1,6 +1,11 @@
+ import type { ViewNodeId } from '../domain/ids';
+-import type { Annotation } from '../domain/model';
++import type { Annotation, ChartType } from '../domain/model';
+ import type { ResolvedFinancialChartNumberFormat } from '../config/chartAppearance';
++import {
++  formatCategoricalDatumAmount,
++  visibleCategoricalAnnotation,
++} from '../categorical/categoricalChartSpec';
++import type { CategoricalDatumKind, CategoricalProjection } from '../categorical/categoricalTypes';
+ import {
+   formatWaterfallDatumAmount,
+   visibleWaterfallAnnotation,
+@@ -8,20 +13,32 @@ import {
+ import type { WaterfallDatumKind, WaterfallProjection } from '../waterfall/waterfallTypes';
+ import type { EditorLocale } from './formatAmount';
+ 
+-interface AccessibleChartSummaryProps {
++interface AccessibleChartSummaryBaseProps {
+   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
+-  readonly projection: WaterfallProjection;
+   readonly title: string;
+   readonly locale: EditorLocale;
+   readonly currency?: string | undefined;
+   readonly numberFormat?: ResolvedFinancialChartNumberFormat;
+ }
+ 
++type AccessibleChartSummaryProps = AccessibleChartSummaryBaseProps &
++  (
++    | {
++        readonly chartType?: 'waterfall';
++        readonly projection: WaterfallProjection;
++      }
++    | {
++        readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++        readonly projection: CategoricalProjection;
++      }
++  );
++
+ interface SummaryCopy {
+   readonly label: string;
+   readonly annotation: string;
+   readonly intro: (title: string, count: number) => string;
+-  readonly kindLabels: Readonly<Record<WaterfallDatumKind, string>>;
++  readonly waterfallKindLabels: Readonly<Record<WaterfallDatumKind, string>>;
++  readonly categoricalKindLabels: Readonly<Record<CategoricalDatumKind, string>>;
+ }
+ 
+ const SUMMARY_COPY: Readonly<Record<EditorLocale, SummaryCopy>> = {
+@@ -29,7 +46,7 @@ const SUMMARY_COPY: Readonly<Record<EditorLocale, SummaryCopy>> = {
+     label: '图表摘要',
+     annotation: '注释',
+     intro: (title, count) => `${title}，共 ${count} 个可见节点。`,
+-    kindLabels: {
++    waterfallKindLabels: {
+       start: '起点',
+       positive: '正向贡献',
+       negative: '负向贡献',
+@@ -37,12 +54,17 @@ const SUMMARY_COPY: Readonly<Record<EditorLocale, SummaryCopy>> = {
+       group: '分组',
+       end: '终点',
+     },
++    categoricalKindLabels: {
++      positive: '正值分类',
++      negative: '负值分类',
++      group: '分组',
++    },
+   },
+   'en-US': {
+     label: 'Chart summary',
+     annotation: 'annotation',
+     intro: (title, count) => `${title}, ${count} visible nodes.`,
+-    kindLabels: {
++    waterfallKindLabels: {
+       start: 'start',
+       positive: 'positive contribution',
+       negative: 'negative contribution',
+@@ -50,12 +72,18 @@ const SUMMARY_COPY: Readonly<Record<EditorLocale, SummaryCopy>> = {
+       group: 'group',
+       end: 'end',
+     },
++    categoricalKindLabels: {
++      positive: 'positive category',
++      negative: 'negative category',
++      group: 'group',
++    },
+   },
+ };
+ 
+-/** Ordered text equivalent for the currently visible waterfall projection. */
++/** Ordered text equivalent for the currently visible chart projection. */
+ export function AccessibleChartSummary({
+   annotations,
++  chartType = 'waterfall',
+   projection,
+   title,
+   locale,
+@@ -63,20 +91,39 @@ export function AccessibleChartSummary({
+   numberFormat,
+ }: AccessibleChartSummaryProps): React.JSX.Element {
+   const copy = SUMMARY_COPY[locale];
++  const items =
++    chartType === 'waterfall'
++      ? (projection as WaterfallProjection).map(datum => {
++          const annotation = visibleWaterfallAnnotation(annotations, datum.nodeId);
++          return {
++            nodeId: datum.nodeId,
++            text: `${datum.label}, ${copy.waterfallKindLabels[datum.kind]}, ${formatWaterfallDatumAmount(
++              datum,
++              locale,
++              currency,
++              numberFormat,
++            )}${annotation === '' ? '' : `, ${copy.annotation}: ${annotation}`}`,
++          };
++        })
++      : (projection as CategoricalProjection).map(datum => {
++          const annotation = visibleCategoricalAnnotation(annotations, datum.nodeId);
++          return {
++            nodeId: datum.nodeId,
++            text: `${datum.label}, ${copy.categoricalKindLabels[datum.kind]}, ${formatCategoricalDatumAmount(
++              datum,
++              locale,
++              currency,
++              numberFormat,
++            )}${annotation === '' ? '' : `, ${copy.annotation}: ${annotation}`}`,
++          };
++        });
+   return (
+     <section aria-label={copy.label} className="tp-visually-hidden" role="region">
+       <p>{copy.intro(title, projection.length)}</p>
+       <ol>
+-        {projection.map(datum => {
+-          const annotation = visibleWaterfallAnnotation(annotations, datum.nodeId);
+-          return (
+-            <li key={datum.nodeId}>
+-              {datum.label}, {copy.kindLabels[datum.kind]},{' '}
+-              {formatWaterfallDatumAmount(datum, locale, currency, numberFormat)}
+-              {annotation === '' ? null : `, ${copy.annotation}: ${annotation}`}
+-            </li>
+-          );
+-        })}
++        {items.map(item => (
++          <li key={item.nodeId}>{item.text}</li>
++        ))}
+       </ol>
+     </section>
+   );
+diff --git a/packages/editor/src/components/CategoricalCanvas.tsx b/packages/editor/src/components/CategoricalCanvas.tsx
+new file mode 100644
+index 0000000..484bb63
+--- /dev/null
++++ b/packages/editor/src/components/CategoricalCanvas.tsx
+@@ -0,0 +1,1728 @@
++import type { Chart as G2Chart, G2Spec } from '@antv/g2';
++import { FoldVertical, Ungroup, UnfoldVertical } from 'lucide-react';
++import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
++
++import {
++  resolveFinancialChartAppearance,
++  type FinancialChartAppearance,
++} from '../config/chartAppearance';
++import type { GroupId, ViewNodeId } from '../domain/ids';
++import type { Annotation, ChartType, Emphasis, ViewSpec } from '../domain/model';
++import { collectLeafSourceIds, locateViewNode, ownGroup } from '../domain/viewTree';
++import {
++  createCategoricalChartSpec,
++  shouldShowCategoricalValueLabels,
++} from '../categorical/categoricalChartSpec';
++import {
++  readChartElementBounds,
++  readChartCategoryElementPointer,
++  readChartPointerPoint,
++  readChartTargetCoordinate,
++  type ChartCategoryElementPointer,
++  type ChartPointerPoint,
++} from '../interactions/chartPointer';
++import {
++  categoryCoordinate,
++  projectChartCategoryBounds,
++  resolveChartCategoryDropTarget,
++  resolveChartCategoryMinimumTargetHit,
++  type CategoryAxis,
++  type ChartCategoryBounds,
++} from '../interactions/categoryAxis';
++import { resolvePointerMoveTarget, type MoveTargetEdge } from '../interactions/moveTargets';
++import type { CategoricalDatum, CategoricalProjection } from '../categorical/categoricalTypes';
++import type { EditorLocale } from './formatAmount';
++import { AccessibleChartSummary } from './AccessibleChartSummary';
++
++const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
++const MOBILE_VIEWPORT_QUERY = '(max-width: 759px)';
++const MINIMUM_POINTER_TARGET_SIZE = 32;
++const CHART_ERROR = { code: 'CHART_RENDER_ERROR', path: '/chart' } as const;
++const EMPTY_EMPHASIS: Readonly<Record<ViewNodeId, Emphasis>> = {};
++const EMPTY_ANNOTATIONS: Readonly<Record<ViewNodeId, Annotation>> = {};
++
++type G2ChartConstructor = typeof G2Chart;
++
++let chartConstructorPromise: Promise<G2ChartConstructor> | undefined;
++
++function loadChartConstructor(): Promise<G2ChartConstructor> {
++  if (chartConstructorPromise !== undefined) {
++    return chartConstructorPromise;
++  }
++  const pending = import('@antv/g2').then(module => module.Chart);
++  chartConstructorPromise = pending;
++  void pending.catch(() => {
++    if (chartConstructorPromise === pending) {
++      chartConstructorPromise = undefined;
++    }
++  });
++  return pending;
++}
++
++interface ChartCopy {
++  readonly eyebrow: string;
++  readonly title: string;
++  readonly empty: string;
++  readonly visibleNodes: (count: number) => string;
++  readonly collapseGroup: string;
++  readonly expandGroup: string;
++  readonly ungroup: string;
++}
++
++interface ChartRenderRequest {
++  readonly id: number;
++  readonly projection: CategoricalProjection;
++  readonly spec: G2Spec;
++}
++
++interface ChartEventRegistration {
++  readonly name: string;
++  readonly listener: (event: unknown) => void;
++}
++
++interface ChartMoveTarget {
++  readonly containerId: 'root' | GroupId;
++  readonly index: number;
++}
++
++type ChartCancelReason = 'cancelled' | 'invalid-target' | 'item-locked';
++
++export interface ChartDropTarget {
++  readonly nodeId: ViewNodeId;
++  readonly edge: MoveTargetEdge;
++}
++
++export type ChartInteractionPreview =
++  | { readonly state: 'idle' }
++  | {
++      readonly state: 'dragging';
++      readonly itemId: ViewNodeId;
++      readonly target: ChartDropTarget | null;
++    };
++
++type ChartInteractionState =
++  | { readonly state: 'idle' }
++  | {
++      readonly state: 'dragging';
++      readonly itemId: ViewNodeId;
++      readonly nodeId: ViewNodeId;
++      readonly label: string;
++      readonly target: ChartDropTarget | null;
++    };
++
++interface ChartInteractionConfig {
++  readonly axis: CategoryAxis;
++  readonly projection: CategoricalProjection;
++  readonly viewSpec: ViewSpec | undefined;
++  readonly readOnly: boolean;
++  readonly onMove: CategoricalCanvasProps['onMove'];
++  readonly onInteractionChange: CategoricalCanvasProps['onInteractionChange'];
++  readonly onCancel: CategoricalCanvasProps['onCancel'];
++  readonly onMarqueeSelection: CategoricalCanvasProps['onMarqueeSelection'];
++  readonly onSelectNode: CategoricalCanvasProps['onSelectNode'];
++}
++
++interface ChartDragSession {
++  readonly axis: CategoryAxis;
++  readonly boundsRevision: number;
++  readonly pointerId: number;
++  readonly itemId: ViewNodeId;
++  readonly nodeId: ViewNodeId;
++  readonly label: string;
++  canvas: HTMLCanvasElement;
++  readonly start: ChartPointerPoint;
++  readonly orderedBounds: readonly ChartCategoryBounds[];
++  current: ChartPointerPoint;
++  moved: boolean;
++  target: ChartDropTarget | null;
++}
++
++interface ChartSelectionPressSession {
++  readonly axis: CategoryAxis;
++  readonly pointerId: number;
++  readonly nodeId: ViewNodeId;
++  readonly canvas: HTMLCanvasElement;
++  readonly start: ChartPointerPoint;
++  readonly dragCancelReason: ChartCancelReason;
++  attemptedDrag: boolean;
++}
++
++interface ChartMarqueeSession {
++  readonly pointerId: number;
++  readonly canvas: HTMLCanvasElement;
++  readonly start: ChartPointerPoint;
++  current: ChartPointerPoint;
++}
++
++interface MarqueeRect {
++  readonly left: number;
++  readonly top: number;
++  readonly width: number;
++  readonly height: number;
++}
++
++interface ChartGroupActions {
++  readonly nodeId: ViewNodeId;
++  readonly left: number;
++  readonly top: number;
++  readonly expandGroupId?: GroupId;
++  readonly collapseGroupId?: GroupId;
++  readonly ungroupGroupId?: GroupId;
++}
++
++type ChartGroupActionIds = Pick<
++  ChartGroupActions,
++  'expandGroupId' | 'collapseGroupId' | 'ungroupGroupId'
++>;
++
++const CHART_COPY: Readonly<Record<EditorLocale, ChartCopy>> = {
++  'zh-CN': {
++    eyebrow: '分类图',
++    title: '分类柱状图',
++    empty: '暂无分类项',
++    visibleNodes: count => `${count} 个可见节点`,
++    collapseGroup: '折叠分组',
++    expandGroup: '展开分组',
++    ungroup: '取消分组',
++  },
++  'en-US': {
++    eyebrow: 'Categorical chart',
++    title: 'Category column chart',
++    empty: 'No category items',
++    visibleNodes: count => `${count} visible nodes`,
++    collapseGroup: 'Collapse group',
++    expandGroup: 'Expand group',
++    ungroup: 'Ungroup',
++  },
++};
++
++export interface ChartRenderIssue {
++  readonly code: 'CHART_RENDER_ERROR';
++  readonly path: '/chart';
++}
++
++export interface CategoricalCanvasProps {
++  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++  readonly projection: CategoricalProjection;
++  readonly viewSpec?: ViewSpec;
++  readonly readOnly?: boolean;
++  readonly title?: string;
++  readonly locale?: EditorLocale;
++  readonly currency?: string | undefined;
++  readonly empty?: boolean;
++  readonly reducedMotion?: boolean;
++  readonly appearance?: FinancialChartAppearance | undefined;
++  readonly externalPreview?: ChartInteractionPreview;
++  readonly onRenderError?: (issue: ChartRenderIssue | null) => void;
++  readonly onMove?: (nodeId: ViewNodeId, target: ChartMoveTarget, source: 'direct') => boolean;
++  readonly onInteractionChange?: (preview: ChartInteractionPreview) => void;
++  readonly onCancel?: (reason: ChartCancelReason) => void;
++  readonly onMarqueeSelection?: (nodeIds: readonly ViewNodeId[]) => void;
++  readonly onToggleGroup?: (groupId: GroupId, expanded: boolean) => void;
++  readonly onUngroup?: (groupId: GroupId) => void;
++  readonly onSelectNode?: (nodeId: ViewNodeId) => void;
++}
++
++function useMediaQuery(query: string): boolean {
++  const [matches, setMatches] = useState(() =>
++    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
++      ? window.matchMedia(query).matches
++      : false,
++  );
++
++  useEffect(() => {
++    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
++      return undefined;
++    }
++
++    const mediaQuery = window.matchMedia(query);
++    const handleChange = (event: MediaQueryListEvent): void => {
++      setMatches(event.matches);
++    };
++    mediaQuery.addEventListener('change', handleChange);
++
++    return () => {
++      mediaQuery.removeEventListener('change', handleChange);
++    };
++  }, [query]);
++
++  return matches;
++}
++
++function notifyRenderIssue(
++  callback: CategoricalCanvasProps['onRenderError'],
++  issue: ChartRenderIssue | null,
++): void {
++  if (callback === undefined) {
++    return;
++  }
++
++  try {
++    callback(issue);
++  } catch {
++    console.error('tellplot callback failed: onRenderError');
++  }
++}
++
++function notifyInteractionChange(
++  callback: CategoricalCanvasProps['onInteractionChange'],
++  preview: ChartInteractionPreview,
++): void {
++  if (callback === undefined) {
++    return;
++  }
++  try {
++    callback(preview);
++  } catch {
++    console.error('tellplot callback failed: onInteractionChange');
++  }
++}
++
++function notifyCancel(
++  callback: CategoricalCanvasProps['onCancel'],
++  reason: ChartCancelReason,
++): void {
++  if (callback === undefined) {
++    return;
++  }
++  try {
++    callback(reason);
++  } catch {
++    console.error('tellplot callback failed: onCancel');
++  }
++}
++
++function notifyMove(
++  callback: CategoricalCanvasProps['onMove'],
++  itemId: ViewNodeId,
++  target: ChartMoveTarget,
++): void {
++  if (callback === undefined) {
++    return;
++  }
++  try {
++    callback(itemId, target, 'direct');
++  } catch {
++    console.error('tellplot callback failed: onMove');
++  }
++}
++
++function notifyMarqueeSelection(
++  callback: CategoricalCanvasProps['onMarqueeSelection'],
++  nodeIds: readonly ViewNodeId[],
++): void {
++  if (callback === undefined) {
++    return;
++  }
++  try {
++    callback(nodeIds);
++  } catch {
++    console.error('tellplot callback failed: onMarqueeSelection');
++  }
++}
++
++function notifySelectNode(
++  callback: CategoricalCanvasProps['onSelectNode'],
++  nodeId: ViewNodeId,
++): void {
++  if (callback === undefined) {
++    return;
++  }
++  try {
++    callback(nodeId);
++  } catch {
++    console.error('tellplot callback failed: onSelectNode');
++  }
++}
++
++function marqueeRect(start: ChartPointerPoint, current: ChartPointerPoint): MarqueeRect {
++  const left = Math.min(start.x, current.x);
++  const top = Math.min(start.y, current.y);
++  return {
++    left,
++    top,
++    width: Math.abs(current.x - start.x),
++    height: Math.abs(current.y - start.y),
++  };
++}
++
++function setDropIndicatorCoordinate(
++  host: HTMLElement | null,
++  axis: CategoryAxis,
++  coordinate: number | undefined,
++): void {
++  host?.style.removeProperty('--tp-chart-drop-x');
++  host?.style.removeProperty('--tp-chart-drop-y');
++  if (host !== null && coordinate !== undefined) {
++    host.style.setProperty(
++      axis === 'x' ? '--tp-chart-drop-x' : '--tp-chart-drop-y',
++      `${coordinate}px`,
++    );
++  }
++}
++
++function firstVisibleNodeForGroup(
++  projection: CategoricalProjection,
++  viewSpec: ViewSpec,
++  groupId: GroupId,
++): ViewNodeId | undefined {
++  const sourceIds = new Set(collectLeafSourceIds(viewSpec, groupId));
++  return projection.find(
++    datum => datum.nodeId === groupId || datum.sourceIds.some(sourceId => sourceIds.has(sourceId)),
++  )?.nodeId;
++}
++
++function ancestorGroupIds(viewSpec: ViewSpec, nodeId: ViewNodeId): readonly GroupId[] {
++  const result: GroupId[] = [];
++  const visited = new Set<ViewNodeId>();
++  let current = nodeId;
++  while (!visited.has(current)) {
++    visited.add(current);
++    const location = locateViewNode(viewSpec, current);
++    if (location === undefined || location.containerId === 'root') {
++      break;
++    }
++    result.push(location.containerId);
++    current = location.containerId;
++  }
++  return result;
++}
++
++function resolveChartGroupActionIds(
++  projection: CategoricalProjection,
++  viewSpec: ViewSpec,
++  datum: CategoricalDatum,
++): ChartGroupActionIds | null {
++  const collapsed = new Set(viewSpec.collapsedGroupIds);
++  const own = ownGroup(viewSpec, datum.nodeId);
++  const expandGroupId = own !== undefined && collapsed.has(own.id) ? own.id : undefined;
++  const collapseGroupId = ancestorGroupIds(viewSpec, datum.nodeId).find(
++    groupId =>
++      !collapsed.has(groupId) &&
++      firstVisibleNodeForGroup(projection, viewSpec, groupId) === datum.nodeId,
++  );
++  if (expandGroupId === undefined && collapseGroupId === undefined) {
++    return null;
++  }
++  const ungroupGroupId = expandGroupId ?? collapseGroupId;
++  return {
++    ...(expandGroupId === undefined ? {} : { expandGroupId }),
++    ...(collapseGroupId === undefined ? {} : { collapseGroupId }),
++    ...(ungroupGroupId === undefined ? {} : { ungroupGroupId }),
++  };
++}
++
++function draggableDatum(datum: CategoricalDatum | undefined): CategoricalDatum | undefined {
++  return datum !== undefined &&
++    (datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group') &&
++    !datum.locked
++    ? datum
++    : undefined;
++}
++
++function finishActiveAnimations(chart: G2Chart): void {
++  try {
++    for (const animation of chart.getContext().animations ?? []) {
++      try {
++        animation.finish();
++      } catch {
++        // Finishing an already-disposed animation is best effort.
++      }
++    }
++  } catch {
++    // A renderer without an animation context does not block the next request.
++  }
++}
++
++/** Owns the real G2 canvas lifecycle for one immutable categorical projection. */
++export function CategoricalCanvas({
++  chartType,
++  projection,
++  viewSpec,
++  readOnly = false,
++  title,
++  locale = 'zh-CN',
++  currency,
++  empty,
++  reducedMotion,
++  appearance,
++  externalPreview = { state: 'idle' },
++  onRenderError,
++  onMove,
++  onInteractionChange,
++  onCancel,
++  onMarqueeSelection,
++  onToggleGroup,
++  onUngroup,
++  onSelectNode,
++}: CategoricalCanvasProps): React.JSX.Element {
++  const axis: CategoryAxis = chartType === 'bar' ? 'y' : 'x';
++  const stageRef = useRef<HTMLElement>(null);
++  const hostRef = useRef<HTMLDivElement>(null);
++  const overlayRef = useRef<HTMLDivElement>(null);
++  const chartRef = useRef<G2Chart | undefined>(undefined);
++  const requestIdRef = useRef(0);
++  const attemptedRequestIdRef = useRef(0);
++  const latestRequestRef = useRef<ChartRenderRequest | undefined>(undefined);
++  const flushRenderRef = useRef<() => Promise<void>>(async () => undefined);
++  const registrationsRef = useRef<readonly ChartEventRegistration[]>([]);
++  const onRenderErrorRef = useRef(onRenderError);
++  const interactionConfigRef = useRef<ChartInteractionConfig>({
++    axis,
++    projection,
++    viewSpec,
++    readOnly,
++    onMove,
++    onInteractionChange,
++    onCancel,
++    onMarqueeSelection,
++    onSelectNode,
++  });
++  const dragSessionRef = useRef<ChartDragSession | null>(null);
++  const selectionPressSessionRef = useRef<ChartSelectionPressSession | null>(null);
++  const marqueeSessionRef = useRef<ChartMarqueeSession | null>(null);
++  const pendingPointerRef = useRef<ChartPointerPoint | null>(null);
++  const animationFrameRef = useRef<number | null>(null);
++  const renderFrameRef = useRef<{ readonly ownerWindow: Window; readonly id: number } | null>(null);
++  const applyPointerRef = useRef<() => void>(() => undefined);
++  const cancelDragRef = useRef<(reason?: ChartCancelReason) => ChartDragSession | null>(() => null);
++  const cancelSelectionPressRef = useRef<() => void>(() => undefined);
++  const cancelMarqueeRef = useRef<(reason?: ChartCancelReason) => void>(() => undefined);
++  const previousExternalStateRef = useRef<ChartInteractionPreview['state']>('idle');
++  const [renderFailure, setRenderFailure] = useState<{
++    readonly projection: CategoricalProjection;
++    readonly issue: ChartRenderIssue;
++  } | null>(null);
++  const [interaction, setInteraction] = useState<ChartInteractionState>({ state: 'idle' });
++  const [selectionRect, setSelectionRect] = useState<MarqueeRect | null>(null);
++  const [groupActions, setGroupActions] = useState<ChartGroupActions | null>(null);
++  const titleId = useId();
++  const systemReducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
++  const isEmpty =
++    empty ??
++    !projection.some(
++      datum => datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group',
++    );
++  const shouldReduceMotion = reducedMotion ?? systemReducedMotion;
++  const emphasis = viewSpec?.emphasis ?? EMPTY_EMPHASIS;
++  const annotations = viewSpec?.annotations ?? EMPTY_ANNOTATIONS;
++  const renderIssue = renderFailure?.projection === projection ? renderFailure.issue : null;
++  const copy = CHART_COPY[locale];
++  const defaultTitle =
++    title ??
++    (chartType === 'bar' ? (locale === 'en-US' ? 'Category bar chart' : '分类条形图') : copy.title);
++  const resolvedAppearance = resolveFinancialChartAppearance(appearance, defaultTitle);
++  const visibleTitle = resolvedAppearance.title;
++
++  const interactionTarget = interaction.state === 'dragging' ? interaction.target : null;
++
++  useLayoutEffect(() => {
++    onRenderErrorRef.current = onRenderError;
++  }, [onRenderError]);
++
++  useLayoutEffect(() => {
++    const previous = interactionConfigRef.current;
++    const scopeChanged =
++      previous.viewSpec !== viewSpec || previous.readOnly !== readOnly || previous.axis !== axis;
++    interactionConfigRef.current = {
++      axis,
++      projection,
++      viewSpec,
++      readOnly,
++      onMove,
++      onInteractionChange,
++      onCancel,
++      onMarqueeSelection,
++      onSelectNode,
++    };
++    if (scopeChanged && dragSessionRef.current !== null) {
++      cancelDragRef.current('cancelled');
++    }
++    if (scopeChanged && selectionPressSessionRef.current !== null) {
++      cancelSelectionPressRef.current();
++    }
++    if (scopeChanged && marqueeSessionRef.current !== null) {
++      cancelMarqueeRef.current('cancelled');
++    }
++  }, [
++    axis,
++    onCancel,
++    onInteractionChange,
++    onMarqueeSelection,
++    onMove,
++    onSelectNode,
++    projection,
++    readOnly,
++    viewSpec,
++  ]);
++
++  useLayoutEffect(() => {
++    if (interaction.state === 'dragging' && animationFrameRef.current === null) {
++      applyPointerRef.current();
++    }
++  }, [interaction.state]);
++
++  useLayoutEffect(() => {
++    let cancelled = false;
++    let destroyed = false;
++    let rendering = false;
++    let restoringPointerCapture = false;
++    const isEffectDisposed = (): boolean => cancelled;
++
++    const host = hostRef.current;
++    const ownerDocument =
++      host?.ownerDocument ??
++      stageRef.current?.ownerDocument ??
++      (typeof document === 'undefined' ? undefined : document);
++    const ownerWindow = ownerDocument?.defaultView;
++
++    const cancelPointerFrame = (): void => {
++      const frame = animationFrameRef.current;
++      if (
++        frame !== null &&
++        ownerWindow !== undefined &&
++        ownerWindow !== null &&
++        typeof ownerWindow.cancelAnimationFrame === 'function'
++      ) {
++        ownerWindow.cancelAnimationFrame(frame);
++      }
++      animationFrameRef.current = null;
++      pendingPointerRef.current = null;
++    };
++
++    const applyPendingPointer = (): void => {
++      animationFrameRef.current = null;
++      const point = pendingPointerRef.current;
++      const currentHost = hostRef.current;
++      const stage = stageRef.current;
++      const overlay = overlayRef.current;
++      if (
++        isEffectDisposed() ||
++        dragSessionRef.current === null ||
++        point === null ||
++        currentHost === null ||
++        stage === null ||
++        overlay === null
++      ) {
++        return;
++      }
++      const hostBounds = currentHost.getBoundingClientRect();
++      const stageBounds = stage.getBoundingClientRect();
++      const x = hostBounds.left - stageBounds.left + point.x;
++      const y = hostBounds.top - stageBounds.top + point.y;
++      overlay.style.transform = `translate3d(${x}px, ${y}px, 0)`;
++    };
++    applyPointerRef.current = applyPendingPointer;
++
++    const schedulePointer = (point: ChartPointerPoint): void => {
++      pendingPointerRef.current = point;
++      if (animationFrameRef.current !== null) {
++        return;
++      }
++      if (
++        ownerWindow === undefined ||
++        ownerWindow === null ||
++        typeof ownerWindow.requestAnimationFrame !== 'function'
++      ) {
++        applyPendingPointer();
++        return;
++      }
++      animationFrameRef.current = ownerWindow.requestAnimationFrame(applyPendingPointer);
++    };
++
++    const publishInteraction = (preview: ChartInteractionPreview): void => {
++      if (isEffectDisposed()) {
++        return;
++      }
++      if (preview.state === 'dragging') {
++        const session = dragSessionRef.current;
++        if (session === null) {
++          return;
++        }
++        setInteraction({
++          ...preview,
++          nodeId: session.nodeId,
++          label: session.label,
++        });
++      } else {
++        setInteraction(preview);
++      }
++      notifyInteractionChange(interactionConfigRef.current.onInteractionChange, preview);
++    };
++
++    const detachCanvas = (session: Pick<ChartDragSession, 'canvas' | 'pointerId'>): void => {
++      session.canvas.removeEventListener('pointercancel', handleNativePointerCancel);
++      session.canvas.removeEventListener('lostpointercapture', handleLostPointerCapture);
++      session.canvas.removeEventListener('pointerup', handleNativePointerUp);
++      try {
++        const hasCapture =
++          typeof session.canvas.hasPointerCapture !== 'function' ||
++          session.canvas.hasPointerCapture(session.pointerId);
++        if (hasCapture && typeof session.canvas.releasePointerCapture === 'function') {
++          session.canvas.releasePointerCapture(session.pointerId);
++        }
++      } catch {
++        // The browser can release capture before adapter cleanup runs.
++      }
++    };
++
++    const attachCanvas = (session: Pick<ChartDragSession, 'canvas' | 'pointerId'>): void => {
++      session.canvas.addEventListener('pointercancel', handleNativePointerCancel);
++      session.canvas.addEventListener('lostpointercapture', handleLostPointerCapture);
++      session.canvas.addEventListener('pointerup', handleNativePointerUp);
++      try {
++        session.canvas.setPointerCapture(session.pointerId);
++      } catch {
++        // Pointer capture is best effort on browsers that already released the pointer.
++      }
++    };
++
++    const restoreDragPointerCapture = (): void => {
++      const session = dragSessionRef.current;
++      const renderedCanvas = hostRef.current?.querySelector<HTMLCanvasElement>('canvas');
++      if (session === null || renderedCanvas === null || renderedCanvas === undefined) {
++        return;
++      }
++      if (renderedCanvas !== session.canvas) {
++        detachCanvas(session);
++        session.canvas = renderedCanvas;
++      }
++      attachCanvas(session);
++    };
++
++    const resetDrag = (reason?: ChartCancelReason): ChartDragSession | null => {
++      const session = dragSessionRef.current;
++      if (session === null) {
++        return null;
++      }
++      dragSessionRef.current = null;
++      cancelPointerFrame();
++      detachCanvas(session);
++      setDropIndicatorCoordinate(hostRef.current, session.axis, undefined);
++      if (!isEffectDisposed()) {
++        if (session.moved) {
++          publishInteraction({ state: 'idle' });
++        }
++        if (reason !== undefined) {
++          notifyCancel(interactionConfigRef.current.onCancel, reason);
++        }
++      }
++      return session;
++    };
++    cancelDragRef.current = resetDrag;
++
++    const resetSelectionPress = (): ChartSelectionPressSession | null => {
++      const session = selectionPressSessionRef.current;
++      if (session === null) {
++        return null;
++      }
++      selectionPressSessionRef.current = null;
++      detachCanvas(session);
++      return session;
++    };
++    cancelSelectionPressRef.current = (): void => {
++      resetSelectionPress();
++    };
++
++    const resetMarquee = (reason?: ChartCancelReason): void => {
++      const session = marqueeSessionRef.current;
++      if (session === null) {
++        return;
++      }
++      marqueeSessionRef.current = null;
++      detachCanvas(session);
++      if (!isEffectDisposed()) {
++        setSelectionRect(null);
++        if (reason !== undefined) {
++          notifyCancel(interactionConfigRef.current.onCancel, reason);
++        }
++      }
++    };
++    cancelMarqueeRef.current = resetMarquee;
++
++    const publishTarget = (target: ChartDropTarget | null, indicator?: number): void => {
++      const session = dragSessionRef.current;
++      if (session === null) {
++        return;
++      }
++      if (session.target?.nodeId === target?.nodeId && session.target?.edge === target?.edge) {
++        return;
++      }
++      session.target = target;
++      setDropIndicatorCoordinate(
++        hostRef.current,
++        session.axis,
++        target === null ? undefined : indicator,
++      );
++      publishInteraction({
++        state: 'dragging',
++        itemId: session.itemId,
++        target,
++      });
++    };
++
++    const startElementPointerSession = (pointer: ChartCategoryElementPointer): void => {
++      const config = interactionConfigRef.current;
++      if (isEffectDisposed()) {
++        return;
++      }
++      const chart = chartRef.current;
++      if (chart !== undefined) {
++        finishActiveAnimations(chart);
++      }
++      const projectedDatum = config.projection.find(
++        candidate => candidate.nodeId === pointer.nodeId,
++      );
++      const canvas = hostRef.current?.querySelector<HTMLCanvasElement>('canvas');
++      if (projectedDatum === undefined || canvas === null || canvas === undefined) {
++        return;
++      }
++      const datum = draggableDatum(projectedDatum);
++      if (
++        datum === undefined ||
++        config.readOnly ||
++        config.viewSpec === undefined ||
++        config.onMove === undefined
++      ) {
++        if (dragSessionRef.current !== null) {
++          resetDrag('cancelled');
++        }
++        resetSelectionPress();
++        const session: ChartSelectionPressSession = {
++          axis: config.axis,
++          pointerId: pointer.pointerId,
++          nodeId: pointer.nodeId,
++          canvas,
++          start: pointer,
++          dragCancelReason: projectedDatum.locked ? 'item-locked' : 'cancelled',
++          attemptedDrag: false,
++        };
++        selectionPressSessionRef.current = session;
++        attachCanvas(session);
++        return;
++      }
++      const itemId = datum.nodeId;
++      const location = locateViewNode(config.viewSpec, itemId);
++      if (location === undefined) {
++        return;
++      }
++      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
++      const boundsByNode = new Map<ViewNodeId, ChartCategoryBounds>();
++      for (const bounds of sceneBounds) {
++        const categoryBounds = projectChartCategoryBounds(bounds, config.axis);
++        if (categoryBounds !== undefined) {
++          boundsByNode.set(bounds.nodeId, categoryBounds);
++        }
++      }
++      boundsByNode.set(itemId, {
++        nodeId: itemId,
++        min: pointer.min,
++        center: (pointer.min + pointer.max) / 2,
++        max: pointer.max,
++      });
++      const orderedBounds: ChartCategoryBounds[] = [];
++      for (const nodeId of location.values) {
++        const bounds = boundsByNode.get(nodeId);
++        if (bounds !== undefined) {
++          orderedBounds.push(bounds);
++        }
++      }
++
++      resetDrag('cancelled');
++      resetSelectionPress();
++      const session: ChartDragSession = {
++        axis: config.axis,
++        boundsRevision: config.viewSpec.revision,
++        pointerId: pointer.pointerId,
++        itemId,
++        nodeId: datum.nodeId,
++        label: datum.label,
++        canvas,
++        start: pointer,
++        orderedBounds,
++        current: pointer,
++        moved: false,
++        target: null,
++      };
++      dragSessionRef.current = session;
++      attachCanvas(session);
++    };
++
++    const handleElementPointerDown = (event: unknown): void => {
++      setGroupActions(null);
++      const result = readChartCategoryElementPointer(event, interactionConfigRef.current.axis);
++      if (result.ok) {
++        startElementPointerSession(result.value);
++      }
++    };
++
++    const updateSelectionPress = (point: ChartPointerPoint): boolean => {
++      const session = selectionPressSessionRef.current;
++      if (session === null || point.pointerId !== session.pointerId) {
++        return false;
++      }
++      const start = categoryCoordinate(session.start, session.axis);
++      const current = categoryCoordinate(point, session.axis);
++      if (
++        !session.attemptedDrag &&
++        start !== undefined &&
++        current !== undefined &&
++        Math.abs(current - start) >= 4
++      ) {
++        session.attemptedDrag = true;
++        notifyCancel(interactionConfigRef.current.onCancel, session.dragCancelReason);
++        resetSelectionPress();
++      }
++      return true;
++    };
++
++    const updateDragPointer = (point: ChartPointerPoint): boolean => {
++      const session = dragSessionRef.current;
++      if (session === null || point.pointerId !== session.pointerId) {
++        return false;
++      }
++      session.current = point;
++      const dropResult = resolveChartCategoryDropTarget({
++        axis: session.axis,
++        itemId: session.itemId,
++        startPointer: session.start,
++        pointer: point,
++        orderedBounds: session.orderedBounds,
++        boundsRevision: session.boundsRevision,
++        currentRevision: interactionConfigRef.current.viewSpec?.revision ?? -1,
++        minimumDragDistance: 4,
++      });
++      if (!dropResult.ok && dropResult.reason === 'BELOW_THRESHOLD') {
++        return true;
++      }
++      if (!dropResult.ok && dropResult.reason === 'STALE_BOUNDS') {
++        resetDrag();
++        notifyCancel(interactionConfigRef.current.onCancel, 'cancelled');
++        return true;
++      }
++      const target = !dropResult.ok
++        ? null
++        : { nodeId: dropResult.target.nodeId, edge: dropResult.target.edge };
++      const indicator = dropResult.ok ? dropResult.target.target : undefined;
++      const wasPending = !session.moved;
++      session.moved = true;
++      schedulePointer(point);
++      if (wasPending) {
++        session.target = target;
++        setDropIndicatorCoordinate(hostRef.current, session.axis, indicator);
++        publishInteraction({
++          state: 'dragging',
++          itemId: session.itemId,
++          target,
++        });
++        return true;
++      }
++      publishTarget(target, indicator);
++      return true;
++    };
++
++    const handleElementPointerMove = (event: unknown): void => {
++      const point = readChartPointerPoint(event);
++      if (point !== undefined) {
++        if (updateSelectionPress(point)) {
++          return;
++        }
++        updateDragPointer(point);
++      }
++    };
++
++    const handleElementPointerOver = (event: unknown): void => {
++      handleElementPointerMove(event);
++      if (
++        dragSessionRef.current !== null ||
++        selectionPressSessionRef.current !== null ||
++        marqueeSessionRef.current !== null
++      ) {
++        return;
++      }
++      const config = interactionConfigRef.current;
++      const pointerResult = readChartCategoryElementPointer(event, config.axis);
++      const chart = chartRef.current;
++      if (!pointerResult.ok || config.viewSpec === undefined || chart === undefined) {
++        return;
++      }
++      const pointer = pointerResult.value;
++      const datum = config.projection.find(candidate => candidate.nodeId === pointer.nodeId);
++      if (datum === undefined) {
++        return;
++      }
++      const actionIds = resolveChartGroupActionIds(config.projection, config.viewSpec, datum);
++      if (actionIds === null) {
++        setGroupActions(null);
++        return;
++      }
++      const bounds = readChartElementBounds(chart.getContext()).find(
++        element => element.nodeId === datum.nodeId,
++      );
++      if (bounds === undefined) {
++        return;
++      }
++      setGroupActions({
++        nodeId: datum.nodeId,
++        left: (bounds.minX + bounds.maxX) / 2,
++        top: Math.max(4, bounds.minY - 38),
++        ...actionIds,
++      });
++    };
++
++    const handleElementPointerOut = (event: unknown): void => {
++      const point = readChartPointerPoint(event);
++      if (point !== undefined) {
++        if (updateSelectionPress(point)) {
++          return;
++        }
++        updateDragPointer(point);
++      }
++    };
++
++    const handlePlotPointerDown = (event: unknown): void => {
++      setGroupActions(null);
++      const config = interactionConfigRef.current;
++      if (dragSessionRef.current !== null || selectionPressSessionRef.current !== null) {
++        return;
++      }
++      const point = readChartPointerPoint(event);
++      const canvas = hostRef.current?.querySelector<HTMLCanvasElement>('canvas');
++      if (point === undefined || canvas === null || canvas === undefined) {
++        return;
++      }
++      const chart = chartRef.current;
++      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
++      const pointHitsMark = sceneBounds.some(
++        bounds =>
++          point.x >= bounds.minX &&
++          point.x <= bounds.maxX &&
++          point.y >= bounds.minY &&
++          point.y <= bounds.maxY,
++      );
++      if (pointHitsMark) {
++        return;
++      }
++      const ownerWindow = canvas.ownerDocument.defaultView;
++      const usesMinimumTargets =
++        ownerWindow !== null &&
++        typeof ownerWindow.matchMedia === 'function' &&
++        ownerWindow.matchMedia(MOBILE_VIEWPORT_QUERY).matches;
++      const expandedTarget = usesMinimumTargets
++        ? resolveChartCategoryMinimumTargetHit(
++            point,
++            sceneBounds,
++            MINIMUM_POINTER_TARGET_SIZE,
++            config.axis,
++          )
++        : { ok: false as const, reason: 'NO_TARGET' as const };
++      if (expandedTarget.ok) {
++        resetMarquee('cancelled');
++        startElementPointerSession({
++          ...point,
++          axis: config.axis,
++          nodeId: expandedTarget.hit.nodeId,
++          edge: expandedTarget.hit.edge,
++          min: expandedTarget.hit.min,
++          max: expandedTarget.hit.max,
++          target: expandedTarget.hit.target,
++        });
++        return;
++      }
++      if (
++        config.readOnly ||
++        config.viewSpec === undefined ||
++        config.onMarqueeSelection === undefined
++      ) {
++        return;
++      }
++      resetMarquee('cancelled');
++      marqueeSessionRef.current = {
++        pointerId: point.pointerId,
++        canvas,
++        start: point,
++        current: point,
++      };
++      attachCanvas(marqueeSessionRef.current);
++      setSelectionRect(marqueeRect(point, point));
++    };
++
++    const handlePlotPointerMove = (event: unknown): void => {
++      const point = readChartPointerPoint(event);
++      if (point !== undefined && updateSelectionPress(point)) {
++        return;
++      }
++      if (point !== undefined && updateDragPointer(point)) {
++        return;
++      }
++      const marquee = marqueeSessionRef.current;
++      if (marquee !== null && point !== undefined && point.pointerId === marquee.pointerId) {
++        marquee.current = point;
++        setSelectionRect(marqueeRect(marquee.start, point));
++      }
++    };
++
++    const completeSelectionPress = (point: ChartPointerPoint): boolean => {
++      const session = selectionPressSessionRef.current;
++      if (session === null || point.pointerId !== session.pointerId) {
++        return false;
++      }
++      updateSelectionPress(point);
++      resetSelectionPress();
++      if (!session.attemptedDrag) {
++        notifySelectNode(interactionConfigRef.current.onSelectNode, session.nodeId);
++      }
++      return true;
++    };
++
++    const completeDrag = (point: ChartPointerPoint, forceCancel = false): boolean => {
++      const session = dragSessionRef.current;
++      if (session === null || point.pointerId !== session.pointerId) {
++        return false;
++      }
++      const target = forceCancel ? null : session.target;
++      const config = interactionConfigRef.current;
++      session.current = point;
++      if (forceCancel) {
++        resetDrag();
++        notifyCancel(config.onCancel, 'cancelled');
++        return true;
++      }
++      const start = categoryCoordinate(session.start, session.axis);
++      const current = categoryCoordinate(point, session.axis);
++      session.moved ||=
++        start !== undefined && current !== undefined && Math.abs(current - start) >= 4;
++      resetDrag();
++      if (target === null || config.viewSpec === undefined) {
++        if (!session.moved) {
++          notifySelectNode(config.onSelectNode, session.nodeId);
++        } else {
++          notifyCancel(config.onCancel, 'cancelled');
++        }
++        return true;
++      }
++      const resolved = resolvePointerMoveTarget(config.viewSpec, {
++        itemId: session.itemId,
++        targetNodeId: target.nodeId,
++        edge: target.edge,
++      });
++      if (!resolved.ok) {
++        notifyCancel(config.onCancel, 'invalid-target');
++        return true;
++      }
++      notifyMove(config.onMove, session.itemId, resolved.target);
++      return true;
++    };
++
++    const handlePlotPointerUp = (event: unknown): void => {
++      const point = readChartPointerPoint(event);
++      if (point !== undefined && completeSelectionPress(point)) {
++        return;
++      }
++      const marquee = marqueeSessionRef.current;
++      if (marquee !== null && point !== undefined && point.pointerId === marquee.pointerId) {
++        marquee.current = point;
++        const bounds = marqueeRect(marquee.start, point);
++        const chart = chartRef.current;
++        const config = interactionConfigRef.current;
++        resetMarquee();
++        if (bounds.width < 4 || bounds.height < 4 || chart === undefined) {
++          notifyCancel(config.onCancel, 'cancelled');
++          return;
++        }
++        const maxX = bounds.left + bounds.width;
++        const maxY = bounds.top + bounds.height;
++        const selectable = new Set(
++          config.projection
++            .filter(
++              datum =>
++                !datum.locked &&
++                (datum.kind === 'positive' || datum.kind === 'negative' || datum.kind === 'group'),
++            )
++            .map(datum => datum.nodeId),
++        );
++        const selectedIds = readChartElementBounds(chart.getContext())
++          .filter(
++            element =>
++              selectable.has(element.nodeId) &&
++              element.maxX >= bounds.left &&
++              element.minX <= maxX &&
++              element.maxY >= bounds.top &&
++              element.minY <= maxY,
++          )
++          .map(element => element.nodeId);
++        if (selectedIds.length < 2) {
++          notifyCancel(config.onCancel, 'cancelled');
++          return;
++        }
++        notifyMarqueeSelection(config.onMarqueeSelection, selectedIds);
++        return;
++      }
++      if (point !== undefined) {
++        updateDragPointer(point);
++        completeDrag(point);
++      }
++    };
++
++    const handlePlotPointerUpOutside = (event: unknown): void => {
++      const point = readChartPointerPoint(event);
++      const selectionPress = selectionPressSessionRef.current;
++      if (
++        selectionPress !== null &&
++        (point === undefined || point.pointerId === selectionPress.pointerId)
++      ) {
++        if (point !== undefined) {
++          updateSelectionPress(point);
++        }
++        resetSelectionPress();
++        return;
++      }
++      const marquee = marqueeSessionRef.current;
++      if (marquee !== null && (point === undefined || point.pointerId === marquee.pointerId)) {
++        resetMarquee('cancelled');
++        return;
++      }
++      const session = dragSessionRef.current;
++      if (session === null || (point !== undefined && point.pointerId !== session.pointerId)) {
++        return;
++      }
++      resetDrag('cancelled');
++    };
++
++    function handleNativePointerCancel(event: PointerEvent): void {
++      if (dragSessionRef.current?.pointerId === event.pointerId) {
++        resetDrag('cancelled');
++      } else if (selectionPressSessionRef.current?.pointerId === event.pointerId) {
++        resetSelectionPress();
++      } else if (marqueeSessionRef.current?.pointerId === event.pointerId) {
++        resetMarquee('cancelled');
++      }
++    }
++
++    function handleLostPointerCapture(event: PointerEvent): void {
++      const dragSession = dragSessionRef.current;
++      if (dragSession?.pointerId === event.pointerId) {
++        if (event.currentTarget !== dragSession.canvas) {
++          return;
++        }
++        restoreDragPointerCapture();
++      } else if (selectionPressSessionRef.current?.pointerId === event.pointerId) {
++        resetSelectionPress();
++      } else if (marqueeSessionRef.current?.pointerId === event.pointerId) {
++        resetMarquee('cancelled');
++      }
++    }
++
++    const documentPoint = (
++      event: PointerEvent,
++      session: Pick<ChartDragSession, 'canvas' | 'pointerId'>,
++    ): ChartPointerPoint | undefined => {
++      if (event.pointerId !== session.pointerId) {
++        return undefined;
++      }
++      const bounds = session.canvas.getBoundingClientRect();
++      const x = event.clientX - bounds.left;
++      const y = event.clientY - bounds.top;
++      return Number.isFinite(x) && Number.isFinite(y)
++        ? { pointerId: event.pointerId, x, y }
++        : undefined;
++    };
++
++    const handleDocumentPointerMove = (event: PointerEvent): void => {
++      const session = dragSessionRef.current;
++      if (session === null) {
++        return;
++      }
++      const point = documentPoint(event, session);
++      if (point !== undefined) {
++        updateDragPointer(point);
++      }
++    };
++
++    const handleDocumentPointerUp = (event: PointerEvent): void => {
++      const session = dragSessionRef.current;
++      if (session === null) {
++        return;
++      }
++      const point = documentPoint(event, session);
++      if (point === undefined) {
++        return;
++      }
++      const bounds = session.canvas.getBoundingClientRect();
++      const releasedInsideCanvas =
++        event.clientX >= bounds.left &&
++        event.clientX <= bounds.right &&
++        event.clientY >= bounds.top &&
++        event.clientY <= bounds.bottom;
++      completeDrag(point, !releasedInsideCanvas);
++    };
++
++    const handleDocumentPointerCancel = (event: PointerEvent): void => {
++      if (dragSessionRef.current?.pointerId === event.pointerId) {
++        resetDrag('cancelled');
++      }
++    };
++
++    function handleNativePointerUp(event: PointerEvent): void {
++      const pointerId = event.pointerId;
++      const session =
++        dragSessionRef.current?.pointerId === pointerId ? dragSessionRef.current : null;
++      const selectionPress =
++        selectionPressSessionRef.current?.pointerId === pointerId
++          ? selectionPressSessionRef.current
++          : null;
++      const marquee =
++        marqueeSessionRef.current?.pointerId === pointerId ? marqueeSessionRef.current : null;
++      const activeSession = session ?? selectionPress ?? marquee;
++      if (activeSession === null) {
++        return;
++      }
++      const bounds = activeSession.canvas.getBoundingClientRect();
++      const releasedInsideCanvas =
++        event.clientX >= bounds.left &&
++        event.clientX <= bounds.right &&
++        event.clientY >= bounds.top &&
++        event.clientY <= bounds.bottom;
++      if (session !== null) {
++        completeDrag(session.current, !releasedInsideCanvas);
++        return;
++      }
++      if (selectionPress !== null) {
++        resetSelectionPress();
++        if (releasedInsideCanvas) {
++          notifySelectNode(interactionConfigRef.current.onSelectNode, selectionPress.nodeId);
++        }
++        return;
++      }
++      if (releasedInsideCanvas) {
++        return;
++      }
++      queueMicrotask(() => {
++        if (isEffectDisposed()) {
++          return;
++        }
++        if (marqueeSessionRef.current?.pointerId === pointerId) {
++          resetMarquee('cancelled');
++        }
++      });
++    }
++
++    const handleKeyDown = (event: KeyboardEvent): void => {
++      if (
++        event.key === 'Escape' &&
++        (dragSessionRef.current !== null ||
++          selectionPressSessionRef.current !== null ||
++          marqueeSessionRef.current !== null)
++      ) {
++        event.preventDefault();
++        resetDrag('cancelled');
++        resetSelectionPress();
++        resetMarquee('cancelled');
++      }
++    };
++
++    const handleWindowBlur = (): void => {
++      resetDrag('cancelled');
++      resetSelectionPress();
++      resetMarquee('cancelled');
++    };
++
++    ownerDocument?.addEventListener('keydown', handleKeyDown);
++    ownerDocument?.addEventListener('pointermove', handleDocumentPointerMove, true);
++    ownerDocument?.addEventListener('pointerup', handleDocumentPointerUp, true);
++    ownerDocument?.addEventListener('pointercancel', handleDocumentPointerCancel, true);
++    ownerWindow?.addEventListener('blur', handleWindowBlur);
++
++    const flushRender = async (): Promise<void> => {
++      const chart = chartRef.current;
++      if (chart === undefined || isEffectDisposed() || rendering) {
++        return;
++      }
++
++      rendering = true;
++      try {
++        while (!isEffectDisposed()) {
++          const request = latestRequestRef.current;
++          if (request === undefined || request.id === attemptedRequestIdRef.current) {
++            break;
++          }
++
++          const attemptId = request.id;
++          let succeeded = false;
++          restoringPointerCapture = dragSessionRef.current !== null;
++          try {
++            chart.options(request.spec);
++            await chart.render();
++            succeeded = true;
++          } catch {
++            succeeded = false;
++          }
++          restoreDragPointerCapture();
++          if (restoringPointerCapture) {
++            const finishRestore = (): void => {
++              if (isEffectDisposed()) {
++                return;
++              }
++              restoreDragPointerCapture();
++              restoringPointerCapture = false;
++            };
++            if (
++              ownerWindow !== undefined &&
++              ownerWindow !== null &&
++              typeof ownerWindow.requestAnimationFrame === 'function'
++            ) {
++              ownerWindow.requestAnimationFrame(() =>
++                ownerWindow.requestAnimationFrame(finishRestore),
++              );
++            } else {
++              queueMicrotask(finishRestore);
++            }
++          }
++          if (isEffectDisposed()) {
++            return;
++          }
++          attemptedRequestIdRef.current = attemptId;
++          if (latestRequestRef.current?.id !== attemptId) {
++            continue;
++          }
++
++          if (succeeded) {
++            setRenderFailure(null);
++            notifyRenderIssue(onRenderErrorRef.current, null);
++          } else {
++            console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
++            setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
++            notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++          }
++          break;
++        }
++      } finally {
++        rendering = false;
++        const latest = latestRequestRef.current;
++        if (
++          !isEffectDisposed() &&
++          latest !== undefined &&
++          latest.id !== attemptedRequestIdRef.current
++        ) {
++          void flushRenderRef.current();
++        }
++      }
++    };
++    flushRenderRef.current = flushRender;
++
++    const initializeChart = async (): Promise<void> => {
++      const Chart = await loadChartConstructor();
++      if (isEffectDisposed()) {
++        return;
++      }
++      const host = hostRef.current;
++      if (host === null) {
++        throw new Error('Chart host is unavailable');
++      }
++
++      const chart = new Chart({ container: host, autoFit: true });
++      chartRef.current = chart;
++      const registrations: readonly ChartEventRegistration[] = [
++        { name: 'element:pointerdown', listener: handleElementPointerDown },
++        { name: 'element:pointerover', listener: handleElementPointerOver },
++        { name: 'element:pointermove', listener: handleElementPointerMove },
++        { name: 'element:pointerout', listener: handleElementPointerOut },
++        { name: 'plot:pointerdown', listener: handlePlotPointerDown },
++        { name: 'plot:pointermove', listener: handlePlotPointerMove },
++        { name: 'plot:pointerup', listener: handlePlotPointerUp },
++        { name: 'plot:pointerupoutside', listener: handlePlotPointerUpOutside },
++      ];
++      registrationsRef.current = registrations;
++      for (const registration of registrations) {
++        chart.on(registration.name, registration.listener);
++      }
++      await flushRender();
++    };
++
++    void initializeChart().catch(() => {
++      if (isEffectDisposed()) {
++        return;
++      }
++      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
++      const request = latestRequestRef.current;
++      if (request !== undefined) {
++        setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
++      }
++      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++    });
++
++    return () => {
++      cancelled = true;
++      ownerDocument?.removeEventListener('keydown', handleKeyDown);
++      ownerDocument?.removeEventListener('pointermove', handleDocumentPointerMove, true);
++      ownerDocument?.removeEventListener('pointerup', handleDocumentPointerUp, true);
++      ownerDocument?.removeEventListener('pointercancel', handleDocumentPointerCancel, true);
++      ownerWindow?.removeEventListener('blur', handleWindowBlur);
++      resetDrag();
++      resetSelectionPress();
++      resetMarquee();
++      cancelDragRef.current = () => null;
++      cancelSelectionPressRef.current = () => undefined;
++      cancelMarqueeRef.current = () => undefined;
++      cancelPointerFrame();
++      if (renderFrameRef.current !== null) {
++        renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
++        renderFrameRef.current = null;
++      }
++      applyPointerRef.current = () => undefined;
++      const chart = chartRef.current;
++      if (chart === undefined || destroyed) {
++        return;
++      }
++      for (const registration of registrationsRef.current) {
++        chart.off(registration.name, registration.listener);
++      }
++      registrationsRef.current = [];
++      destroyed = true;
++      try {
++        chart.destroy();
++      } catch {
++        console.error('tellplot chart cleanup failed at /chart');
++      } finally {
++        chartRef.current = undefined;
++      }
++    };
++  }, []);
++
++  useLayoutEffect(() => {
++    requestIdRef.current += 1;
++    latestRequestRef.current = {
++      id: requestIdRef.current,
++      projection,
++      spec: createCategoricalChartSpec({
++        projection,
++        chartType,
++        locale,
++        currency,
++        reducedMotion: shouldReduceMotion,
++        showValueLabels: shouldShowCategoricalValueLabels(projection),
++        annotations,
++        emphasis,
++        appearance,
++      }),
++    };
++    const chart = chartRef.current;
++    if (chart !== undefined) {
++      const ownerWindow = hostRef.current?.ownerDocument.defaultView;
++      const flushLatest = (): void => {
++        renderFrameRef.current = null;
++        const activeChart = chartRef.current;
++        if (activeChart === undefined) {
++          return;
++        }
++        finishActiveAnimations(activeChart);
++        void flushRenderRef.current();
++      };
++      if (
++        ownerWindow !== undefined &&
++        ownerWindow !== null &&
++        typeof ownerWindow.requestAnimationFrame === 'function'
++      ) {
++        if (renderFrameRef.current !== null) {
++          renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
++        }
++        const id = ownerWindow.requestAnimationFrame(flushLatest);
++        renderFrameRef.current = { ownerWindow, id };
++      } else {
++        queueMicrotask(flushLatest);
++      }
++    }
++  }, [
++    annotations,
++    appearance,
++    chartType,
++    currency,
++    emphasis,
++    locale,
++    projection,
++    shouldReduceMotion,
++  ]);
++
++  useLayoutEffect(() => {
++    const host = hostRef.current;
++    if (host === null) {
++      return;
++    }
++    const externalStarted =
++      previousExternalStateRef.current === 'idle' && externalPreview.state === 'dragging';
++    previousExternalStateRef.current = externalPreview.state;
++    if (interaction.state === 'dragging') {
++      host.removeAttribute('data-preview-source');
++      if (interactionTarget === null) {
++        host.removeAttribute('data-drop-indicator');
++        host.removeAttribute('data-drop-node-id');
++        setDropIndicatorCoordinate(host, axis, undefined);
++      }
++      return;
++    }
++    const target = externalPreview.state === 'dragging' ? externalPreview.target : null;
++    const chart = chartRef.current;
++    if (externalStarted && chart !== undefined) {
++      finishActiveAnimations(chart);
++    }
++    const targetCoordinate =
++      target === null || chart === undefined
++        ? undefined
++        : readChartTargetCoordinate(chart.getContext(), target.nodeId, target.edge, axis);
++    if (target === null || targetCoordinate === undefined || !targetCoordinate.ok) {
++      host.removeAttribute('data-drop-indicator');
++      host.removeAttribute('data-drop-node-id');
++      host.removeAttribute('data-preview-source');
++      setDropIndicatorCoordinate(host, axis, undefined);
++      return;
++    }
++    host.setAttribute('data-drop-indicator', target.edge);
++    host.setAttribute('data-drop-node-id', target.nodeId);
++    host.setAttribute('data-preview-source', 'outline');
++    setDropIndicatorCoordinate(host, axis, targetCoordinate.value);
++  }, [axis, externalPreview, interaction.state, interactionTarget]);
++
++  const externalInteractionActive =
++    interaction.state === 'idle' && externalPreview.state === 'dragging';
++  const currentGroupActionDatum =
++    groupActions === null
++      ? undefined
++      : projection.find(datum => datum.nodeId === groupActions.nodeId);
++  const currentGroupActionIds =
++    viewSpec === undefined || currentGroupActionDatum === undefined
++      ? null
++      : resolveChartGroupActionIds(projection, viewSpec, currentGroupActionDatum);
++  const visibleGroupActions =
++    groupActions !== null && currentGroupActionIds !== null
++      ? {
++          nodeId: groupActions.nodeId,
++          left: groupActions.left,
++          top: groupActions.top,
++          ...currentGroupActionIds,
++        }
++      : null;
++  const groupActionLabel = (groupId: GroupId): string =>
++    viewSpec === undefined ? '' : (ownGroup(viewSpec, groupId)?.label ?? '');
++
++  return (
++    <section
++      aria-labelledby={titleId}
++      className="tp-chart-stage"
++      data-interaction-state={externalInteractionActive ? 'dragging' : interaction.state}
++      data-testid="tellplot-chart-stage"
++      ref={stageRef}
++    >
++      <header className="tp-chart-stage__header">
++        <div>
++          <p className="tp-chart-stage__eyebrow">{copy.eyebrow}</p>
++          <h2 className="tp-chart-stage__title" id={titleId}>
++            {visibleTitle}
++          </h2>
++        </div>
++        <span className="tp-chart-stage__count">{copy.visibleNodes(projection.length)}</span>
++      </header>
++
++      {isEmpty ? <p className="tp-chart-stage__empty">{copy.empty}</p> : null}
++      {renderIssue === null ? null : (
++        <div className="tp-chart-stage__error" role="alert">
++          <strong>{renderIssue.code}</strong>
++          <code>{renderIssue.path}</code>
++        </div>
++      )}
++
++      <div className="tp-chart-stage__plot-shell">
++        <div
++          aria-hidden="true"
++          className="tp-chart-stage__plot"
++          data-category-axis={axis}
++          data-drop-indicator={
++            interaction.state === 'dragging' ? interaction.target?.edge : undefined
++          }
++          data-drop-node-id={
++            interaction.state === 'dragging' ? interaction.target?.nodeId : undefined
++          }
++          data-testid="tellplot-chart"
++          ref={hostRef}
++        />
++        {selectionRect === null ? null : (
++          <div
++            aria-hidden="true"
++            className="tp-chart-marquee"
++            data-testid="chart-marquee"
++            style={{
++              left: selectionRect.left,
++              top: selectionRect.top,
++              width: selectionRect.width,
++              height: selectionRect.height,
++            }}
++          />
++        )}
++        {visibleGroupActions === null ? null : (
++          <div
++            className="tp-chart-group-actions"
++            data-node-id={visibleGroupActions.nodeId}
++            style={{ left: visibleGroupActions.left, top: visibleGroupActions.top }}
++            onPointerDown={event => event.stopPropagation()}
++          >
++            {visibleGroupActions.expandGroupId === undefined ? null : (
++              <button
++                aria-label={`${copy.expandGroup}: ${groupActionLabel(visibleGroupActions.expandGroupId)}`}
++                title={`${copy.expandGroup}: ${groupActionLabel(visibleGroupActions.expandGroupId)}`}
++                type="button"
++                disabled={readOnly}
++                onClick={() => onToggleGroup?.(visibleGroupActions.expandGroupId as GroupId, false)}
++              >
++                <UnfoldVertical size={15} aria-hidden="true" />
++              </button>
++            )}
++            {visibleGroupActions.collapseGroupId === undefined ? null : (
++              <button
++                aria-label={`${copy.collapseGroup}: ${groupActionLabel(visibleGroupActions.collapseGroupId)}`}
++                title={`${copy.collapseGroup}: ${groupActionLabel(visibleGroupActions.collapseGroupId)}`}
++                type="button"
++                disabled={readOnly}
++                onClick={() =>
++                  onToggleGroup?.(visibleGroupActions.collapseGroupId as GroupId, true)
++                }
++              >
++                <FoldVertical size={15} aria-hidden="true" />
++              </button>
++            )}
++            {visibleGroupActions.ungroupGroupId === undefined ? null : (
++              <button
++                aria-label={`${copy.ungroup}: ${groupActionLabel(visibleGroupActions.ungroupGroupId)}`}
++                title={`${copy.ungroup}: ${groupActionLabel(visibleGroupActions.ungroupGroupId)}`}
++                type="button"
++                disabled={readOnly}
++                onClick={() => onUngroup?.(visibleGroupActions.ungroupGroupId as GroupId)}
++              >
++                <Ungroup size={15} aria-hidden="true" />
++              </button>
++            )}
++          </div>
++        )}
++      </div>
++      {interaction.state === 'dragging' ? (
++        <div
++          aria-hidden="true"
++          className="tp-chart-drag-overlay"
++          data-node-id={interaction.nodeId}
++          data-testid="chart-drag-overlay"
++          ref={overlayRef}
++        >
++          {interaction.label}
++        </div>
++      ) : null}
++
++      <AccessibleChartSummary
++        annotations={annotations}
++        chartType={chartType}
++        projection={projection}
++        title={visibleTitle}
++        locale={locale}
++        currency={currency}
++        numberFormat={resolvedAppearance.numberFormat}
++      />
++    </section>
++  );
++}
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+index 191c00e..f78ad3b 100644
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -9,8 +9,10 @@ import {
+   useState,
+ } from 'react';
+ 
++import { projectCategorical } from '../categorical/projectCategorical';
++import type { CategoricalProjection } from '../categorical/categoricalTypes';
+ import type { EditorCommand } from '../domain/commands';
+-import type { ValidationIssue } from '../domain/errors';
++import { validationIssue, type ValidationIssue } from '../domain/errors';
+ import { executeCommand } from '../domain/executeCommand';
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+ import { collectLeafSourceIds } from '../domain/viewTree';
+@@ -28,6 +30,7 @@ import type { FinancialChartEditorHandle, FinancialChartEditorProps } from '../r
+ import { useEditorController } from '../react/useEditorController';
+ import { projectWaterfall } from '../waterfall/projectWaterfall';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++import { CategoricalCanvas } from './CategoricalCanvas';
+ import { EditorToolbar } from './EditorToolbar';
+ import { editorMessages, type EditorMessages } from './editorMessages';
+ import { InspectorPanel } from './InspectorPanel';
+@@ -83,6 +86,62 @@ type ValidGroupSelection = Extract<GroupSelectionResult, { readonly ok: true }>;
+ 
+ const EMPTY_PROJECTION: WaterfallProjection = [];
+ 
++type EditorChartProjection =
++  | {
++      readonly family: 'waterfall';
++      readonly chartType: 'waterfall';
++      readonly projection: WaterfallProjection;
++    }
++  | {
++      readonly family: 'categorical';
++      readonly chartType: 'bar' | 'column';
++      readonly projection: CategoricalProjection;
++    };
++
++type EditorProjectionResult =
++  | { readonly ok: true; readonly value: EditorChartProjection }
++  | { readonly ok: false; readonly errors: readonly ValidationIssue[] };
++
++function projectEditorChart(
++  sourceData: FinancialChartEditorProps['sourceData'],
++  viewSpec: NonNullable<FinancialChartEditorProps['viewSpec']>,
++): EditorProjectionResult {
++  if (sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical') {
++    const result = projectCategorical(sourceData, viewSpec);
++    if (!result.ok) {
++      return result;
++    }
++    if (viewSpec.chartType !== 'bar' && viewSpec.chartType !== 'column') {
++      return {
++        ok: false,
++        errors: [validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType')],
++      };
++    }
++    return {
++      ok: true,
++      value: { family: 'categorical', chartType: viewSpec.chartType, projection: result.value },
++    };
++  }
++  const result = projectWaterfall(sourceData, viewSpec);
++  return result.ok
++    ? {
++        ok: true,
++        value: { family: 'waterfall', chartType: 'waterfall', projection: result.value },
++      }
++    : result;
++}
++
++function chartTitle(
++  messages: EditorMessages,
++  chartType: EditorChartProjection['chartType'],
++): string {
++  return chartType === 'bar'
++    ? messages.barTitle
++    : chartType === 'column'
++      ? messages.columnTitle
++      : messages.waterfallTitle;
++}
++
+ function componentIssues(
+   invalidMode: boolean,
+   issues: readonly ValidationIssue[],
+@@ -165,7 +224,7 @@ function CommandFeedback({
+   );
+ }
+ 
+-/** Embeddable financial waterfall workbench with immutable source/view boundaries. */
++/** Embeddable financial chart workbench with immutable source/view boundaries. */
+ export const FinancialChartEditor = forwardRef<
+   FinancialChartEditorHandle,
+   FinancialChartEditorProps
+@@ -202,7 +261,7 @@ export const FinancialChartEditor = forwardRef<
+     if (controller.viewSpec === null) {
+       return null;
+     }
+-    return projectWaterfall(props.sourceData, controller.viewSpec);
++    return projectEditorChart(props.sourceData, controller.viewSpec);
+   }, [controller.viewSpec, props.sourceData]);
+ 
+   const invalid =
+@@ -219,7 +278,9 @@ export const FinancialChartEditor = forwardRef<
+   );
+   const empty =
+     !invalid &&
+-    !props.sourceData.items.some(item => 'kind' in item && item.kind === 'contribution');
++    (props.sourceData.schemaVersion === '2.0.0' && props.sourceData.dataKind === 'categorical'
++      ? props.sourceData.items.length === 0
++      : !props.sourceData.items.some(item => 'kind' in item && item.kind === 'contribution'));
+   const modalOpen =
+     pendingChartGroup !== null ||
+     (!invalid && ((panels.outline && outlineOpen) || (panels.inspector && inspectorOpen)));
+@@ -294,17 +355,20 @@ export const FinancialChartEditor = forwardRef<
+     return previewResult.ok ? previewResult.viewSpec : controller.viewSpec;
+   }, [activeInteraction, controller.session, controller.viewSpec]);
+   const displayProjectionResult = useMemo(
+-    () => (previewViewSpec === null ? null : projectWaterfall(props.sourceData, previewViewSpec)),
++    () => (previewViewSpec === null ? null : projectEditorChart(props.sourceData, previewViewSpec)),
+     [previewViewSpec, props.sourceData],
+   );
+-  const canonicalProjection: WaterfallProjection =
++  const canonicalChart: EditorChartProjection | null =
+     canonicalProjectionResult !== null && canonicalProjectionResult.ok
+       ? canonicalProjectionResult.value
+-      : EMPTY_PROJECTION;
+-  const projection: WaterfallProjection =
++      : null;
++  const displayChart: EditorChartProjection | null =
+     displayProjectionResult !== null && displayProjectionResult.ok
+       ? displayProjectionResult.value
+-      : canonicalProjection;
++      : canonicalChart;
++  const canonicalProjection = canonicalChart?.projection ?? EMPTY_PROJECTION;
++  const activeChartType = displayChart?.chartType ?? canonicalChart?.chartType ?? 'waterfall';
++  const activeTitle = chartTitle(messages, activeChartType);
+ 
+   useEffect(() => {
+     mountedRef.current = true;
+@@ -322,7 +386,8 @@ export const FinancialChartEditor = forwardRef<
+         invalid ||
+         controller.viewSpec === null ||
+         root === null ||
+-        canonicalProjection.length === 0
++        canonicalChart === null ||
++        (canonicalChart.family === 'waterfall' && canonicalChart.projection.length === 0)
+       ) {
+         throw exportError('EXPORT_UNAVAILABLE', '/export');
+       }
+@@ -340,44 +405,78 @@ export const FinancialChartEditor = forwardRef<
+       const bounds = plot.getBoundingClientRect();
+       const width = bounds.width > 0 ? bounds.width : canvas.width;
+       const height = bounds.height > 0 ? bounds.height : canvas.height;
++      const title = chartTitle(messages, canonicalChart.chartType);
+       if (normalized.format === 'png') {
+-        return exportPngChart(
+-          {
++        return canonicalChart.family === 'categorical'
++          ? exportPngChart(
++              {
++                chartType: canonicalChart.chartType,
++                ownerDocument: root.ownerDocument,
++                projection: canonicalChart.projection,
++                title,
++                locale,
++                currency: props.sourceData.currency,
++                width,
++                height,
++                annotations: controller.viewSpec.annotations,
++                emphasis: controller.viewSpec.emphasis,
++                appearance: props.chartAppearance,
++              },
++              normalized,
++            )
++          : exportPngChart(
++              {
++                ownerDocument: root.ownerDocument,
++                projection: canonicalChart.projection,
++                title,
++                locale,
++                currency: props.sourceData.currency,
++                width,
++                height,
++                annotations: controller.viewSpec.annotations,
++                emphasis: controller.viewSpec.emphasis,
++                appearance: props.chartAppearance,
++              },
++              normalized,
++            );
++      }
++      return canonicalChart.family === 'categorical'
++        ? exportSvgChart({
++            chartType: canonicalChart.chartType,
+             ownerDocument: root.ownerDocument,
+-            projection: canonicalProjection,
+-            title: messages.waterfallTitle,
++            projection: canonicalChart.projection,
++            title,
+             locale,
+             currency: props.sourceData.currency,
+             width,
+             height,
++            background: normalized.background,
++            suggestedFilename: normalized.suggestedFilename,
+             annotations: controller.viewSpec.annotations,
+             emphasis: controller.viewSpec.emphasis,
+             appearance: props.chartAppearance,
+-          },
+-          normalized,
+-        );
+-      }
+-      return exportSvgChart({
+-        ownerDocument: root.ownerDocument,
+-        projection: canonicalProjection,
+-        title: messages.waterfallTitle,
+-        locale,
+-        currency: props.sourceData.currency,
+-        width,
+-        height,
+-        background: normalized.background,
+-        suggestedFilename: normalized.suggestedFilename,
+-        annotations: controller.viewSpec.annotations,
+-        emphasis: controller.viewSpec.emphasis,
+-        appearance: props.chartAppearance,
+-      });
++          })
++        : exportSvgChart({
++            ownerDocument: root.ownerDocument,
++            projection: canonicalChart.projection,
++            title,
++            locale,
++            currency: props.sourceData.currency,
++            width,
++            height,
++            background: normalized.background,
++            suggestedFilename: normalized.suggestedFilename,
++            annotations: controller.viewSpec.annotations,
++            emphasis: controller.viewSpec.emphasis,
++            appearance: props.chartAppearance,
++          });
+     },
+     [
+-      canonicalProjection,
++      canonicalChart,
+       controller.viewSpec,
+       invalid,
+       locale,
+-      messages.waterfallTitle,
++      messages,
+       props.sourceData.currency,
+       props.chartAppearance,
+     ],
+@@ -404,14 +503,14 @@ export const FinancialChartEditor = forwardRef<
+     (preview: OutlineInteractionPreview): void => {
+       setOutlineInteraction({ scope: interactionScope, preview });
+     },
+-    [interactionScope],
++    [interactionScope, setOutlineInteraction],
+   );
+ 
+   const handleChartInteractionChange = useCallback(
+     (preview: ChartInteractionPreview): void => {
+       setChartInteraction({ scope: interactionScope, preview });
+     },
+-    [interactionScope],
++    [interactionScope, setChartInteraction],
+   );
+ 
+   const nextActionId = useCallback((source: InteractionCommandSource): string => {
+@@ -467,7 +566,7 @@ export const FinancialChartEditor = forwardRef<
+       });
+       return true;
+     },
+-    [controller],
++    [controller, setFeedback],
+   );
+ 
+   const handleMove = useCallback(
+@@ -581,7 +680,7 @@ export const FinancialChartEditor = forwardRef<
+       setChartGroupLabel('');
+       setPendingChartGroup(result);
+     },
+-    [controller, props.sourceData],
++    [controller, props.sourceData, setChartGroupLabel, setFeedback, setPendingChartGroup],
+   );
+ 
+   const handleChartSelect = useCallback(
+@@ -624,14 +723,14 @@ export const FinancialChartEditor = forwardRef<
+         normalized === null ? 'annotationRemoved' : 'annotationSaved',
+       );
+     },
+-    [controller.viewSpec, dispatchInteraction, nextActionId],
++    [controller.viewSpec, dispatchInteraction, nextActionId, setFeedback],
+   );
+ 
+   const closeChartGroupDialog = useCallback((): void => {
+     setPendingChartGroup(null);
+     setChartGroupLabel('');
+     rootRef.current?.focus();
+-  }, []);
++  }, [setChartGroupLabel, setPendingChartGroup]);
+ 
+   const toggleGroup = useCallback(
+     (groupId: GroupId, expanded: boolean, source: 'direct' | 'outline'): boolean => {
+@@ -736,7 +835,7 @@ export const FinancialChartEditor = forwardRef<
+         tone: reason === 'cancelled' ? 'neutral' : 'error',
+       });
+     },
+-    [],
++    [setFeedback],
+   );
+ 
+   const handleHistory = useCallback(
+@@ -770,7 +869,7 @@ export const FinancialChartEditor = forwardRef<
+         source: 'direct',
+       });
+     },
+-    [controller, nextActionId],
++    [controller, nextActionId, setFeedback],
+   );
+ 
+   const outline =
+@@ -812,6 +911,7 @@ export const FinancialChartEditor = forwardRef<
+     <div
+       className="tp-editor"
+       data-tellplot="editor"
++      data-chart-type={activeChartType}
+       data-editor-state={editorState}
+       data-interaction-state={activeInteraction.preview.state}
+       data-interaction-source={
+@@ -865,24 +965,48 @@ export const FinancialChartEditor = forwardRef<
+           {panels.outline ? (
+             <aside className="tp-static-panel tp-outline-static">{outline}</aside>
+           ) : null}
+-          <WaterfallCanvas
+-            projection={projection}
+-            viewSpec={controller.viewSpec}
+-            readOnly={props.readOnly === true}
+-            locale={locale}
+-            currency={props.sourceData.currency}
+-            empty={empty}
+-            title={messages.waterfallTitle}
+-            appearance={props.chartAppearance}
+-            externalPreview={currentOutlineInteraction}
+-            onMove={handleMove}
+-            onMarqueeSelection={handleMarqueeSelection}
+-            onSelectNode={handleChartSelect}
+-            onToggleGroup={handleChartToggleGroup}
+-            onUngroup={handleChartUngroup}
+-            onInteractionChange={handleChartInteractionChange}
+-            onCancel={handleCancel}
+-          />
++          {displayChart?.family === 'categorical' ? (
++            <CategoricalCanvas
++              chartType={displayChart.chartType}
++              projection={displayChart.projection}
++              viewSpec={controller.viewSpec}
++              readOnly={props.readOnly === true}
++              locale={locale}
++              currency={props.sourceData.currency}
++              empty={empty}
++              title={activeTitle}
++              appearance={props.chartAppearance}
++              externalPreview={currentOutlineInteraction}
++              onMove={handleMove}
++              onMarqueeSelection={handleMarqueeSelection}
++              onSelectNode={handleChartSelect}
++              onToggleGroup={handleChartToggleGroup}
++              onUngroup={handleChartUngroup}
++              onInteractionChange={handleChartInteractionChange}
++              onCancel={handleCancel}
++            />
++          ) : (
++            <WaterfallCanvas
++              projection={
++                displayChart?.family === 'waterfall' ? displayChart.projection : EMPTY_PROJECTION
++              }
++              viewSpec={controller.viewSpec}
++              readOnly={props.readOnly === true}
++              locale={locale}
++              currency={props.sourceData.currency}
++              empty={empty}
++              title={activeTitle}
++              appearance={props.chartAppearance}
++              externalPreview={currentOutlineInteraction}
++              onMove={handleMove}
++              onMarqueeSelection={handleMarqueeSelection}
++              onSelectNode={handleChartSelect}
++              onToggleGroup={handleChartToggleGroup}
++              onUngroup={handleChartUngroup}
++              onInteractionChange={handleChartInteractionChange}
++              onCancel={handleCancel}
++            />
++          )}
+           {panels.inspector ? (
+             <aside
+               className="tp-static-panel tp-inspector-static"
+diff --git a/packages/editor/src/components/InspectorPanel.tsx b/packages/editor/src/components/InspectorPanel.tsx
+index ae248c0..aafe4aa 100644
+--- a/packages/editor/src/components/InspectorPanel.tsx
++++ b/packages/editor/src/components/InspectorPanel.tsx
+@@ -3,6 +3,7 @@ import { useId, useRef, useState } from 'react';
+ 
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
++import type { CategoricalProjection } from '../categorical/categoricalTypes';
+ import type { GroupSelectionResult } from '../interactions/groupSelection';
+ import type { SelectionState } from '../react/editorTypes';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+@@ -12,7 +13,7 @@ import { formatAmount, type EditorLocale } from './formatAmount';
+ interface InspectorPanelProps {
+   readonly sourceData: SourceData;
+   readonly viewSpec: ViewSpec;
+-  readonly projection: WaterfallProjection;
++  readonly projection: WaterfallProjection | CategoricalProjection;
+   readonly selection: SelectionState | null;
+   readonly groupSelection: GroupSelectionResult;
+   readonly readOnly: boolean;
+diff --git a/packages/editor/src/components/OutlinePanel.tsx b/packages/editor/src/components/OutlinePanel.tsx
+index 28fcecf..2ef6fd5 100644
+--- a/packages/editor/src/components/OutlinePanel.tsx
++++ b/packages/editor/src/components/OutlinePanel.tsx
+@@ -24,6 +24,7 @@ import {
+ 
+ import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
++import type { CategoricalDatum, CategoricalProjection } from '../categorical/categoricalTypes';
+ import { collectLeafSourceIds, locateViewNode } from '../domain/viewTree';
+ import {
+   resolveKeyboardMoveTarget,
+@@ -57,7 +58,7 @@ interface MoveTarget {
+ interface OutlinePanelProps {
+   readonly sourceData: SourceData;
+   readonly viewSpec: ViewSpec;
+-  readonly projection: WaterfallProjection;
++  readonly projection: WaterfallProjection | CategoricalProjection;
+   readonly locale: EditorLocale;
+   readonly messages: EditorMessages;
+   readonly selection: SelectionState | null;
+@@ -96,7 +97,7 @@ function ownGroup(viewSpec: ViewSpec, nodeId: string): ViewGroup | undefined {
+ 
+ function groupEntry(
+   group: ViewGroup,
+-  datum: WaterfallDatum | undefined,
++  datum: WaterfallDatum | CategoricalDatum | undefined,
+   expanded: boolean,
+   viewSpec: ViewSpec,
+   level: number,
+@@ -117,6 +118,23 @@ function groupEntry(
+ }
+ 
+ function outlineEntries(
++  viewSpec: ViewSpec,
++  projection: WaterfallProjection | CategoricalProjection,
++): readonly OutlineEntry[] {
++  if (isWaterfallProjection(projection)) {
++    return waterfallOutlineEntries(viewSpec, projection);
++  }
++
++  return categoricalOutlineEntries(viewSpec, projection);
++}
++
++function isWaterfallProjection(
++  projection: WaterfallProjection | CategoricalProjection,
++): projection is WaterfallProjection {
++  return projection.some(datum => 'start' in datum);
++}
++
++function waterfallOutlineEntries(
+   viewSpec: ViewSpec,
+   projection: WaterfallProjection,
+ ): readonly OutlineEntry[] {
+@@ -161,6 +179,62 @@ function outlineEntries(
+   return entries;
+ }
+ 
++function categoricalOutlineEntries(
++  viewSpec: ViewSpec,
++  projection: CategoricalProjection,
++): readonly OutlineEntry[] {
++  const entries: OutlineEntry[] = [];
++  const collapsedGroupIds = new Set(viewSpec.collapsedGroupIds);
++  const datumById = new Map(projection.map(datum => [datum.nodeId, datum]));
++  const visited = new Set<ViewNodeId>();
++
++  const visit = (nodeId: ViewNodeId, level: number): void => {
++    if (visited.has(nodeId)) {
++      return;
++    }
++    visited.add(nodeId);
++    const group = ownGroup(viewSpec, nodeId);
++    if (group !== undefined) {
++      const collapsed = collapsedGroupIds.has(group.id);
++      entries.push(
++        groupEntry(
++          group,
++          collapsed ? datumById.get(group.id) : undefined,
++          !collapsed,
++          viewSpec,
++          level,
++        ),
++      );
++      if (!collapsed) {
++        for (const childId of group.childIds) {
++          visit(childId, level + 1);
++        }
++      }
++      return;
++    }
++
++    const datum = datumById.get(nodeId);
++    if (datum === undefined) {
++      return;
++    }
++    entries.push({
++      nodeId: datum.nodeId,
++      label: datum.label,
++      amount: datum.amount,
++      sourceIds: [...datum.sourceIds],
++      locked: datum.locked,
++      level,
++      kind: datum.kind === 'positive' || datum.kind === 'negative' ? 'contribution' : 'anchor',
++    });
++  };
++
++  for (const nodeId of viewSpec.rootOrder) {
++    visit(nodeId, 1);
++  }
++
++  return entries;
++}
++
+ function selectedEntry(entry: OutlineEntry, selection: SelectionState | null): boolean {
+   return selection?.nodeIds.includes(entry.nodeId) === true;
+ }
+diff --git a/packages/editor/src/components/editorMessages.ts b/packages/editor/src/components/editorMessages.ts
+index 98ebeea..d076035 100644
+--- a/packages/editor/src/components/editorMessages.ts
++++ b/packages/editor/src/components/editorMessages.ts
+@@ -34,6 +34,8 @@ export interface EditorMessages {
+   readonly annotationRemoved: string;
+   readonly annotationTooLong: string;
+   readonly waterfallTitle: string;
++  readonly columnTitle: string;
++  readonly barTitle: string;
+   readonly groupLabel: string;
+   readonly createGroup: string;
+   readonly groupDialogTitle: string;
+@@ -97,6 +99,8 @@ const ZH_CN: EditorMessages = {
+   annotationRemoved: '注释已移除',
+   annotationTooLong: '注释不能超过 500 个字符',
+   waterfallTitle: '经营变动瀑布图',
++  columnTitle: '分类柱状图',
++  barTitle: '分类条形图',
+   groupLabel: '分组名称',
+   createGroup: '创建分组',
+   groupDialogTitle: '创建折叠分组',
+@@ -160,6 +164,8 @@ const EN_US: EditorMessages = {
+   annotationRemoved: 'Annotation removed',
+   annotationTooLong: 'Annotation cannot exceed 500 characters',
+   waterfallTitle: 'Operating bridge',
++  columnTitle: 'Category column chart',
++  barTitle: 'Category bar chart',
+   groupLabel: 'Group label',
+   createGroup: 'Create group',
+   groupDialogTitle: 'Create collapsed group',
+diff --git a/packages/editor/src/export/pngExport.ts b/packages/editor/src/export/pngExport.ts
+index aefacec..36aadf5 100644
+--- a/packages/editor/src/export/pngExport.ts
++++ b/packages/editor/src/export/pngExport.ts
+@@ -2,15 +2,19 @@ import type { Chart as G2Chart } from '@antv/g2';
+ 
+ import type { FinancialChartAppearance } from '../config/chartAppearance';
+ import type { ViewNodeId } from '../domain/ids';
+-import type { Annotation, Emphasis } from '../domain/model';
++import type { Annotation, ChartType, Emphasis } from '../domain/model';
++import {
++  createCategoricalChartSpec,
++  shouldShowCategoricalValueLabels,
++} from '../categorical/categoricalChartSpec';
++import type { CategoricalProjection } from '../categorical/categoricalTypes';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+ import type { EditorLocale } from '../components/formatAmount';
+ import { exportError, type ExportResult, type NormalizedExportOptions } from './exportTypes';
+ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from './waterfallChartSpec';
+ 
+-interface PngChartExportRequest {
++interface PngChartExportBaseRequest {
+   readonly ownerDocument: Document;
+-  readonly projection: WaterfallProjection;
+   readonly title: string;
+   readonly locale: EditorLocale;
+   readonly currency: string | undefined;
+@@ -21,6 +25,26 @@ interface PngChartExportRequest {
+   readonly appearance?: FinancialChartAppearance | undefined;
+ }
+ 
++type PngChartExportRequest = PngChartExportBaseRequest &
++  (
++    | { readonly chartType?: 'waterfall'; readonly projection: WaterfallProjection }
++    | {
++        readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++        readonly projection: CategoricalProjection;
++      }
++  );
++
++type CategoricalPngChartExportRequest = PngChartExportBaseRequest & {
++  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++  readonly projection: CategoricalProjection;
++};
++
++function isCategoricalRequest(
++  request: PngChartExportRequest,
++): request is CategoricalPngChartExportRequest {
++  return request.chartType === 'bar' || request.chartType === 'column';
++}
++
+ function canvasLogicalSize(canvas: HTMLCanvasElement): {
+   readonly width: number;
+   readonly height: number;
+@@ -125,17 +149,30 @@ export async function exportPngChart(
+     const { Chart } = await import('@antv/g2');
+     chart = new Chart({ container: host, width, height, autoFit: false });
+     chart.options(
+-      createWaterfallChartSpec({
+-        projection: request.projection,
+-        title: request.title,
+-        locale: request.locale,
+-        currency: request.currency,
+-        reducedMotion: true,
+-        showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+-        annotations: request.annotations,
+-        emphasis: request.emphasis,
+-        appearance: request.appearance,
+-      }),
++      isCategoricalRequest(request)
++        ? createCategoricalChartSpec({
++            projection: request.projection,
++            chartType: request.chartType,
++            title: request.title,
++            locale: request.locale,
++            currency: request.currency,
++            reducedMotion: true,
++            showValueLabels: shouldShowCategoricalValueLabels(request.projection),
++            annotations: request.annotations,
++            emphasis: request.emphasis,
++            appearance: request.appearance,
++          })
++        : createWaterfallChartSpec({
++            projection: request.projection,
++            title: request.title,
++            locale: request.locale,
++            currency: request.currency,
++            reducedMotion: true,
++            showValueLabels: shouldShowWaterfallValueLabels(request.projection),
++            annotations: request.annotations,
++            emphasis: request.emphasis,
++            appearance: request.appearance,
++          }),
+     );
+     await chart.render();
+     const canvas = host.querySelector('canvas');
+diff --git a/packages/editor/src/export/svgExport.ts b/packages/editor/src/export/svgExport.ts
+index 623f42d..39a25ab 100644
+--- a/packages/editor/src/export/svgExport.ts
++++ b/packages/editor/src/export/svgExport.ts
+@@ -2,7 +2,12 @@ import type { Chart as G2Chart } from '@antv/g2';
+ 
+ import type { FinancialChartAppearance } from '../config/chartAppearance';
+ import type { ViewNodeId } from '../domain/ids';
+-import type { Annotation, Emphasis } from '../domain/model';
++import type { Annotation, ChartType, Emphasis } from '../domain/model';
++import {
++  createCategoricalChartSpec,
++  shouldShowCategoricalValueLabels,
++} from '../categorical/categoricalChartSpec';
++import type { CategoricalProjection } from '../categorical/categoricalTypes';
+ import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+ import type { EditorLocale } from '../components/formatAmount';
+ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from './waterfallChartSpec';
+@@ -15,9 +20,8 @@ interface SvgResultOptions {
+   readonly suggestedFilename: string;
+ }
+ 
+-interface SvgChartExportRequest {
++interface SvgChartExportBaseRequest {
+   readonly ownerDocument: Document;
+-  readonly projection: WaterfallProjection;
+   readonly title: string;
+   readonly locale: EditorLocale;
+   readonly currency: string | undefined;
+@@ -30,6 +34,26 @@ interface SvgChartExportRequest {
+   readonly appearance?: FinancialChartAppearance | undefined;
+ }
+ 
++type SvgChartExportRequest = SvgChartExportBaseRequest &
++  (
++    | { readonly chartType?: 'waterfall'; readonly projection: WaterfallProjection }
++    | {
++        readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++        readonly projection: CategoricalProjection;
++      }
++  );
++
++type CategoricalSvgChartExportRequest = SvgChartExportBaseRequest & {
++  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++  readonly projection: CategoricalProjection;
++};
++
++function isCategoricalRequest(
++  request: SvgChartExportRequest,
++): request is CategoricalSvgChartExportRequest {
++  return request.chartType === 'bar' || request.chartType === 'column';
++}
++
+ const REMOVED_ELEMENTS = 'script, foreignObject, iframe, object, embed, image, use';
+ 
+ function sanitizeElement(element: Element): void {
+@@ -143,17 +167,30 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
+       renderer: new Renderer(),
+     });
+     chart.options(
+-      createWaterfallChartSpec({
+-        projection: request.projection,
+-        title: request.title,
+-        locale: request.locale,
+-        currency: request.currency,
+-        reducedMotion: true,
+-        showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+-        annotations: request.annotations,
+-        emphasis: request.emphasis,
+-        appearance: request.appearance,
+-      }),
++      isCategoricalRequest(request)
++        ? createCategoricalChartSpec({
++            projection: request.projection,
++            chartType: request.chartType,
++            title: request.title,
++            locale: request.locale,
++            currency: request.currency,
++            reducedMotion: true,
++            showValueLabels: shouldShowCategoricalValueLabels(request.projection),
++            annotations: request.annotations,
++            emphasis: request.emphasis,
++            appearance: request.appearance,
++          })
++        : createWaterfallChartSpec({
++            projection: request.projection,
++            title: request.title,
++            locale: request.locale,
++            currency: request.currency,
++            reducedMotion: true,
++            showValueLabels: shouldShowWaterfallValueLabels(request.projection),
++            annotations: request.annotations,
++            emphasis: request.emphasis,
++            appearance: request.appearance,
++          }),
+     );
+     await chart.render();
+     const svg = host.querySelector('svg');
+diff --git a/packages/editor/src/interactions/groupSelection.ts b/packages/editor/src/interactions/groupSelection.ts
+index 47a93f6..7b506d2 100644
+--- a/packages/editor/src/interactions/groupSelection.ts
++++ b/packages/editor/src/interactions/groupSelection.ts
+@@ -30,13 +30,14 @@ export function evaluateGroupSelection(
+     return { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
+   }
+   const leafIds = uniqueIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId));
++  const categoricalSource =
++    sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical';
+   if (
+     leafIds.some(itemId => {
+       const item = sourceItems.get(itemId);
+       return (
+         item === undefined ||
+-        !('kind' in item) ||
+-        item.kind !== 'contribution' ||
++        (!categoricalSource && (!('kind' in item) || item.kind !== 'contribution')) ||
+         viewSpec.pinnedItemIds.includes(itemId)
+       );
+     })
+diff --git a/packages/editor/src/styles/editor.css b/packages/editor/src/styles/editor.css
+index 6cbe59c..569a6ab 100644
+--- a/packages/editor/src/styles/editor.css
++++ b/packages/editor/src/styles/editor.css
+@@ -733,6 +733,17 @@
+   opacity: 1;
+ }
+ 
++.tp-chart-stage__plot[data-category-axis='y'] {
++  touch-action: pan-x;
++}
++
++.tp-chart-stage__plot[data-category-axis='y']::after {
++  inset: var(--tp-chart-drop-y, 0) 28px auto 10px;
++  width: auto;
++  height: 2px;
++  transform: translateY(-1px);
++}
++
+ .tp-chart-marquee {
+   position: absolute;
+   z-index: 5;
+diff --git a/packages/editor/tests/components/categorical-canvas.test.tsx b/packages/editor/tests/components/categorical-canvas.test.tsx
+new file mode 100644
+index 0000000..a063692
+--- /dev/null
++++ b/packages/editor/tests/components/categorical-canvas.test.tsx
+@@ -0,0 +1,273 @@
++import { render, screen, waitFor } from '@testing-library/react';
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++import { CategoricalCanvas } from '../../src/components/CategoricalCanvas';
++import type { CategoricalProjection } from '../../src/categorical/categoricalTypes';
++import type { ViewSpec } from '../../src/domain/model';
++
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    static instances: Chart[] = [];
++    static sceneElements: unknown[] = [];
++    static renderError: Error | undefined;
++
++    readonly options = vi.fn((): this => this);
++    readonly render = vi.fn((): Promise<void> =>
++      Chart.renderError === undefined ? Promise.resolve() : Promise.reject(Chart.renderError),
++    );
++    readonly on = vi.fn((name: string, listener: (event: unknown) => void): this => {
++      void name;
++      void listener;
++      return this;
++    });
++    readonly off = vi.fn((): this => this);
++    readonly finishAnimation = vi.fn((): void => undefined);
++    readonly getContext = vi.fn(() => ({
++      animations: [{ finish: this.finishAnimation }],
++      canvas: {
++        document: { getElementsByClassName: () => Chart.sceneElements },
++      },
++    }));
++    readonly destroy = vi.fn((): void => undefined);
++
++    constructor(readonly config: unknown) {
++      Chart.instances.push(this);
++    }
++  }
++  return { Chart };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
++
++const projection = [
++  {
++    nodeId: 'a',
++    label: 'Alpha',
++    amount: 10,
++    kind: 'positive',
++    sourceIds: ['a'],
++    locked: false,
++    order: 0,
++  },
++  {
++    nodeId: 'b',
++    label: 'Beta',
++    amount: 20,
++    kind: 'positive',
++    sourceIds: ['b'],
++    locked: false,
++    order: 1,
++  },
++  {
++    nodeId: 'c',
++    label: 'Gamma',
++    amount: -5,
++    kind: 'negative',
++    sourceIds: ['c'],
++    locked: false,
++    order: 2,
++  },
++] as const satisfies CategoricalProjection;
++
++const viewSpec = {
++  schemaVersion: '2.0.0',
++  datasetId: 'categorical-canvas-fixture',
++  chartType: 'bar',
++  revision: 0,
++  rootOrder: ['a', 'b', 'c'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++} as const satisfies ViewSpec;
++
++type MockChart = InstanceType<typeof g2Mock.Chart>;
++
++function emit(chart: MockChart, name: string, event: unknown): void {
++  const listener = chart.on.mock.calls.find(([registered]) => registered === name)?.[1];
++  if (listener === undefined) {
++    throw new Error(`Missing mocked G2 listener for ${name}`);
++  }
++  listener(event);
++}
++
++function appendCanvas(): HTMLCanvasElement {
++  const canvas = document.createElement('canvas');
++  Object.defineProperties(canvas, {
++    hasPointerCapture: { configurable: true, value: () => true },
++    releasePointerCapture: { configurable: true, value: vi.fn() },
++    setPointerCapture: { configurable: true, value: vi.fn() },
++  });
++  screen.getByTestId('tellplot-chart').append(canvas);
++  return canvas;
++}
++
++function elementEvent(
++  nodeId: string,
++  pointerId: number,
++  x: number,
++  y: number,
++  bounds: { readonly min: readonly [number, number]; readonly max: readonly [number, number] },
++): unknown {
++  return {
++    pointerId,
++    canvas: { x, y },
++    data: { data: { nodeId } },
++    target: { getBounds: () => bounds },
++  };
++}
++
++beforeEach(() => {
++  g2Mock.Chart.instances = [];
++  g2Mock.Chart.renderError = undefined;
++  g2Mock.Chart.sceneElements = [
++    {
++      __data__: { data: { nodeId: 'a' } },
++      getBounds: () => ({ min: [10, 20], max: [90, 60] }),
++    },
++    {
++      __data__: { data: { nodeId: 'b' } },
++      getBounds: () => ({ min: [10, 100], max: [90, 140] }),
++    },
++    {
++      __data__: { data: { nodeId: 'c' } },
++      getBounds: () => ({ min: [10, 180], max: [90, 220] }),
++    },
++  ];
++});
++
++describe('CategoricalCanvas', () => {
++  it('uses Y scene bounds for a bar drag and emits one semantic move target', async () => {
++    const onMove = vi.fn(() => true);
++    const onInteractionChange = vi.fn();
++    render(
++      <CategoricalCanvas
++        chartType="bar"
++        projection={projection}
++        viewSpec={viewSpec}
++        onInteractionChange={onInteractionChange}
++        onMove={onMove}
++      />,
++    );
++
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    appendCanvas();
++    const chart = g2Mock.Chart.instances[0] as MockChart;
++    emit(
++      chart,
++      'element:pointerdown',
++      elementEvent('b', 7, 40, 120, { min: [10, 100], max: [90, 140] }),
++    );
++    emit(chart, 'plot:pointermove', { pointerId: 7, canvas: { x: 900, y: 160 } });
++    emit(chart, 'plot:pointerup', { pointerId: 7, canvas: { x: -900, y: 160 } });
++
++    expect(onMove).toHaveBeenCalledWith('b', { containerId: 'root', index: 2 }, 'direct');
++    expect(onInteractionChange).toHaveBeenCalledWith({
++      state: 'dragging',
++      itemId: 'b',
++      target: { nodeId: 'c', edge: 'after' },
++    });
++  });
++
++  it('cancels a stale render revision instead of committing old scene bounds', async () => {
++    const onMove = vi.fn(() => true);
++    const onCancel = vi.fn();
++    const rendered = render(
++      <CategoricalCanvas
++        chartType="bar"
++        projection={projection}
++        viewSpec={viewSpec}
++        onCancel={onCancel}
++        onMove={onMove}
++      />,
++    );
++
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    appendCanvas();
++    const chart = g2Mock.Chart.instances[0] as MockChart;
++    emit(
++      chart,
++      'element:pointerdown',
++      elementEvent('b', 8, 40, 120, { min: [10, 100], max: [90, 140] }),
++    );
++    rendered.rerender(
++      <CategoricalCanvas
++        chartType="bar"
++        projection={[projection[0], projection[2], projection[1]]}
++        viewSpec={{ ...viewSpec, revision: 1, rootOrder: ['a', 'c', 'b'] }}
++        onCancel={onCancel}
++        onMove={onMove}
++      />,
++    );
++    emit(chart, 'plot:pointermove', { pointerId: 8, canvas: { x: 40, y: 160 } });
++    emit(chart, 'plot:pointerup', { pointerId: 8, canvas: { x: 40, y: 160 } });
++
++    expect(onMove).not.toHaveBeenCalled();
++    expect(onCancel).toHaveBeenCalledWith('cancelled');
++  });
++
++  it('keeps the accessible summary and reports only a structured render failure', async () => {
++    const onRenderError = vi.fn();
++    g2Mock.Chart.renderError = new Error('sensitive renderer detail');
++    render(
++      <CategoricalCanvas
++        chartType="column"
++        projection={projection}
++        viewSpec={{ ...viewSpec, chartType: 'column' }}
++        onRenderError={onRenderError}
++      />,
++    );
++
++    const alert = await screen.findByRole('alert');
++    expect(alert.textContent).toContain('CHART_RENDER_ERROR');
++    expect(alert.textContent).toContain('/chart');
++    expect(alert.textContent).not.toContain('sensitive renderer detail');
++    expect(screen.getByRole('region', { name: '图表摘要' }).textContent).toContain('Alpha');
++    expect(onRenderError).toHaveBeenCalledWith({
++      code: 'CHART_RENDER_ERROR',
++      path: '/chart',
++    });
++  });
++
++  it('selects on click but rejects a pinned drag with a stable reason', async () => {
++    const onCancel = vi.fn();
++    const onMove = vi.fn(() => true);
++    const onSelectNode = vi.fn();
++    const pinnedProjection: CategoricalProjection = [
++      projection[0],
++      { ...projection[1], locked: true },
++      projection[2],
++    ];
++    render(
++      <CategoricalCanvas
++        chartType="bar"
++        projection={pinnedProjection}
++        viewSpec={{ ...viewSpec, pinnedItemIds: ['b'] }}
++        onCancel={onCancel}
++        onMove={onMove}
++        onSelectNode={onSelectNode}
++      />,
++    );
++
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    appendCanvas();
++    const chart = g2Mock.Chart.instances[0] as MockChart;
++    emit(
++      chart,
++      'element:pointerdown',
++      elementEvent('a', 21, 40, 40, { min: [10, 20], max: [90, 60] }),
++    );
++    emit(chart, 'plot:pointerup', { pointerId: 21, canvas: { x: 40, y: 40 } });
++    expect(onSelectNode).toHaveBeenCalledWith('a');
++
++    emit(
++      chart,
++      'element:pointerdown',
++      elementEvent('b', 22, 40, 120, { min: [10, 100], max: [90, 140] }),
++    );
++    emit(chart, 'plot:pointermove', { pointerId: 22, canvas: { x: 40, y: 160 } });
++    expect(onCancel).toHaveBeenCalledWith('item-locked');
++    expect(onMove).not.toHaveBeenCalled();
++  });
++});
+diff --git a/packages/editor/tests/components/categorical-editor.test.tsx b/packages/editor/tests/components/categorical-editor.test.tsx
+new file mode 100644
+index 0000000..e6b478e
+--- /dev/null
++++ b/packages/editor/tests/components/categorical-editor.test.tsx
+@@ -0,0 +1,208 @@
++import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
++import { createRef, useState } from 'react';
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++import {
++  FinancialChartEditor,
++  createInitialViewSpec,
++  type CategoricalSourceData,
++  type FinancialChartEditorHandle,
++  type ViewSpec,
++} from '../../src';
++
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    static instances: Chart[] = [];
++
++    readonly options = vi.fn((options: unknown): this => {
++      void options;
++      return this;
++    });
++    readonly render = vi.fn((): Promise<void> => Promise.resolve());
++    readonly on = vi.fn((name: string, listener: (event: unknown) => void): this => {
++      void name;
++      void listener;
++      return this;
++    });
++    readonly off = vi.fn((): this => this);
++    readonly getContext = vi.fn(() => ({
++      animations: [],
++      canvas: { document: { getElementsByClassName: () => [] } },
++    }));
++    readonly destroy = vi.fn((): void => undefined);
++
++    constructor(readonly config: unknown) {
++      Chart.instances.push(this);
++    }
++  }
++  return { Chart };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
++
++const categoricalSource = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'categorical-editor-fixture',
++  currency: 'CNY',
++  items: [
++    { id: 'revenue', label: '收入', amount: 120 },
++    { id: 'cost', label: '成本', amount: -70 },
++    { id: 'profit', label: '利润', amount: 50 },
++  ],
++} as const satisfies CategoricalSourceData;
++
++const emptyCategoricalSource = {
++  ...categoricalSource,
++  datasetId: 'empty-categorical-editor-fixture',
++  items: [],
++} as const satisfies CategoricalSourceData;
++
++function categoricalView(chartType: 'bar' | 'column'): ViewSpec {
++  const result = createInitialViewSpec(categoricalSource, { chartType });
++  if (!result.ok) {
++    throw new Error('Expected a categorical view fixture');
++  }
++  return result.value;
++}
++
++beforeEach(() => {
++  g2Mock.Chart.instances = [];
++});
++
++describe('FinancialChartEditor categorical dispatch', () => {
++  it('renders a source-only column with logical outline and accessible summary order', async () => {
++    render(<FinancialChartEditor sourceData={categoricalSource} />);
++
++    await waitFor(() =>
++      expect(document.querySelector('[data-tellplot]')?.getAttribute('data-editor-state')).toBe(
++        'ready',
++      ),
++    );
++    expect(document.querySelector('[data-tellplot]')?.getAttribute('data-chart-type')).toBe(
++      'column',
++    );
++    expect(screen.getByText('分类柱状图')).toBeTruthy();
++    const outlineLabels = within(screen.getByRole('tree', { name: '结构大纲' }))
++      .getAllByRole('treeitem')
++      .map(row => row.getAttribute('data-node-id'));
++    expect(outlineLabels).toEqual(['revenue', 'cost', 'profit']);
++    const summary = screen.getByRole('region', { name: '图表摘要' });
++    expect(summary.textContent?.indexOf('收入')).toBeLessThan(
++      summary.textContent?.indexOf('成本') ?? -1,
++    );
++    expect(summary.textContent).toContain('正值分类');
++    expect(summary.textContent).toContain('负值分类');
++
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    expect(g2Mock.Chart.instances[0]?.options).toHaveBeenCalledWith(
++      expect.objectContaining({
++        children: [
++          expect.objectContaining({
++            encode: expect.objectContaining({ x: 'nodeId', y: 'amount', key: 'nodeId' }),
++          }),
++        ],
++      }),
++    );
++  });
++
++  it('renders an explicit bar with transpose and keeps controlled keyboard/history behavior', async () => {
++    function ControlledBar(): React.JSX.Element {
++      const [viewSpec, setViewSpec] = useState(categoricalView('bar'));
++      return (
++        <FinancialChartEditor
++          sourceData={categoricalSource}
++          viewSpec={viewSpec}
++          onViewSpecChange={setViewSpec}
++        />
++      );
++    }
++
++    render(<ControlledBar />);
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    expect(document.querySelector('[data-tellplot]')?.getAttribute('data-chart-type')).toBe('bar');
++    expect(screen.getByText('分类条形图')).toBeTruthy();
++    expect(g2Mock.Chart.instances[0]?.options).toHaveBeenCalledWith(
++      expect.objectContaining({
++        children: [expect.objectContaining({ coordinate: { transform: [{ type: 'transpose' }] } })],
++      }),
++    );
++
++    const revenue = screen.getByRole('treeitem', { name: /收入/ });
++    revenue.focus();
++    fireEvent.keyDown(revenue, { altKey: true, key: 'ArrowDown' });
++    await waitFor(() =>
++      expect(document.querySelector('[data-tellplot]')?.getAttribute('data-view-revision')).toBe(
++        '1',
++      ),
++    );
++    expect(
++      within(screen.getByRole('tree', { name: '结构大纲' }))
++        .getAllByRole('treeitem')
++        .map(row => row.getAttribute('data-node-id')),
++    ).toEqual(['cost', 'revenue', 'profit']);
++
++    fireEvent.click(screen.getByRole('button', { name: '撤销' }));
++    await waitFor(() =>
++      expect(
++        within(screen.getByRole('tree', { name: '结构大纲' }))
++          .getAllByRole('treeitem')
++          .map(row => row.getAttribute('data-node-id')),
++      ).toEqual(['revenue', 'cost', 'profit']),
++    );
++  });
++
++  it('renders an exportable empty categorical surface without treating it as invalid', async () => {
++    render(<FinancialChartEditor sourceData={emptyCategoricalSource} />);
++
++    await waitFor(() =>
++      expect(document.querySelector('[data-tellplot]')?.getAttribute('data-editor-state')).toBe(
++        'empty',
++      ),
++    );
++    expect(screen.getByText('暂无分类项')).toBeTruthy();
++    expect(screen.getByRole('region', { name: '图表摘要' }).textContent).toContain('0 个可见节点');
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++  });
++
++  it('rejects export while a categorical direct-manipulation preview is active', async () => {
++    const editorRef = createRef<FinancialChartEditorHandle>();
++    render(<FinancialChartEditor ref={editorRef} sourceData={categoricalSource} />);
++    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++
++    const canvas = document.createElement('canvas');
++    Object.defineProperties(canvas, {
++      hasPointerCapture: { configurable: true, value: () => true },
++      releasePointerCapture: { configurable: true, value: vi.fn() },
++      setPointerCapture: { configurable: true, value: vi.fn() },
++    });
++    screen.getByTestId('tellplot-chart').append(canvas);
++    const chart = g2Mock.Chart.instances[0];
++    const emit = (name: string, event: unknown): void => {
++      const listener = chart?.on.mock.calls.find(([registered]) => registered === name)?.[1];
++      if (listener === undefined) {
++        throw new Error(`Missing mocked G2 listener for ${name}`);
++      }
++      listener(event);
++    };
++
++    emit('element:pointerdown', {
++      pointerId: 12,
++      canvas: { x: 30, y: 40 },
++      data: { data: { nodeId: 'revenue' } },
++      target: { getBounds: () => ({ min: [10, 20], max: [50, 80] }) },
++    });
++    emit('plot:pointermove', { pointerId: 12, canvas: { x: 80, y: 40 } });
++    await waitFor(() =>
++      expect(
++        document.querySelector('[data-tellplot]')?.getAttribute('data-interaction-state'),
++      ).toBe('dragging'),
++    );
++
++    await expect(editorRef.current?.exportImage({ format: 'svg' })).rejects.toMatchObject({
++      code: 'EXPORT_UNAVAILABLE',
++      path: '/export',
++    });
++    fireEvent.keyDown(document, { key: 'Escape' });
++  });
++});
+diff --git a/packages/editor/tests/components/group-actions.test.tsx b/packages/editor/tests/components/group-actions.test.tsx
+index 6fa341a..e8d89a9 100644
+--- a/packages/editor/tests/components/group-actions.test.tsx
++++ b/packages/editor/tests/components/group-actions.test.tsx
+@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
+ import {
+   FinancialChartEditor,
+   createInitialViewSpec,
++  type CategoricalSourceData,
+   type CommandEvent,
+   type ViewSpec,
+ } from '../../src';
+@@ -34,6 +35,25 @@ function initialView(): ViewSpec {
+   return result.value;
+ }
+ 
++const categoricalSource = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'categorical-group-selection',
++  items: [
++    { id: 'category-a', label: 'Category A', amount: 10 },
++    { id: 'category-b', label: 'Category B', amount: 20 },
++    { id: 'category-c', label: 'Category C', amount: 30 },
++  ],
++} as const satisfies CategoricalSourceData;
++
++function categoricalView(): ViewSpec {
++  const result = createInitialViewSpec(categoricalSource);
++  if (!result.ok) {
++    throw new Error('Expected valid categorical grouping fixture');
++  }
++  return result.value;
++}
++
+ describe('group selection and actions', () => {
+   it('returns focus to the annotation field after saving without remounting the control', async () => {
+     const views: ViewSpec[] = [];
+@@ -157,6 +177,23 @@ describe('group selection and actions', () => {
+     ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
+   });
+ 
++  it('classifies plain categorical items as groupable while preserving pin rejection', () => {
++    expect(
++      evaluateGroupSelection(categoricalSource, categoricalView(), ['category-b', 'category-a']),
++    ).toEqual({
++      ok: true,
++      nodeIds: ['category-a', 'category-b'],
++      sourceIds: ['category-a', 'category-b'],
++    });
++    expect(
++      evaluateGroupSelection(
++        categoricalSource,
++        { ...categoricalView(), pinnedItemIds: ['category-b'] },
++        ['category-a', 'category-b'],
++      ),
++    ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
++  });
++
+   it('classifies contiguous recursive nodes only within the same parent', () => {
+     const viewSpec: ViewSpec = {
+       ...initialView(),
+diff --git a/packages/editor/tests/export/categorical-export.test.ts b/packages/editor/tests/export/categorical-export.test.ts
+new file mode 100644
+index 0000000..cf3e054
+--- /dev/null
++++ b/packages/editor/tests/export/categorical-export.test.ts
+@@ -0,0 +1,113 @@
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++import type { CategoricalProjection } from '../../src/categorical/categoricalTypes';
++import { exportSvgChart } from '../../src/export/svgExport';
++
++const svgG2Mock = vi.hoisted(() => {
++  class Chart {
++    static specs: unknown[] = [];
++
++    readonly container: HTMLElement;
++    spec: unknown;
++
++    constructor(config: unknown) {
++      this.container = (config as { readonly container: HTMLElement }).container;
++    }
++
++    options(spec: unknown): this {
++      this.spec = spec;
++      Chart.specs.push(spec);
++      return this;
++    }
++
++    render(): Promise<void> {
++      const svg = this.container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
++      const child = (
++        this.spec as { readonly children?: readonly { readonly data?: readonly unknown[] }[] }
++      ).children?.[0];
++      for (const datum of child?.data ?? []) {
++        const label = (datum as { readonly label?: unknown }).label;
++        if (typeof label === 'string') {
++          const text = this.container.ownerDocument.createElementNS(
++            'http://www.w3.org/2000/svg',
++            'text',
++          );
++          text.textContent = label;
++          svg.append(text);
++        }
++      }
++      this.container.append(svg);
++      return Promise.resolve();
++    }
++
++    destroy(): void {
++      return;
++    }
++  }
++  return { Chart };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: svgG2Mock.Chart }));
++vi.mock('@antv/g-svg', () => ({
++  Renderer: class Renderer {
++    readonly kind = 'svg';
++  },
++}));
++
++const projection = [
++  {
++    nodeId: 'first',
++    label: 'First category',
++    amount: 10,
++    kind: 'positive',
++    sourceIds: ['first'],
++    locked: false,
++    order: 0,
++  },
++  {
++    nodeId: 'second',
++    label: 'Second category',
++    amount: -4,
++    kind: 'negative',
++    sourceIds: ['second'],
++    locked: false,
++    order: 1,
++  },
++] as const satisfies CategoricalProjection;
++
++beforeEach(() => {
++  svgG2Mock.Chart.specs = [];
++});
++
++describe('categorical SVG export', () => {
++  it('uses the canonical categorical spec and preserves top-to-bottom bar order', async () => {
++    const result = await exportSvgChart({
++      chartType: 'bar',
++      ownerDocument: document,
++      projection,
++      title: 'Category bridge',
++      locale: 'en-US',
++      currency: 'USD',
++      width: 640,
++      height: 360,
++      background: '#ffffff',
++      suggestedFilename: 'categories.svg',
++      annotations: {},
++      emphasis: {},
++    });
++
++    const spec = svgG2Mock.Chart.specs.at(-1) as
++      | {
++          readonly children?: readonly {
++            readonly coordinate?: unknown;
++            readonly data?: readonly { readonly nodeId: string }[];
++            readonly scale?: { readonly x?: { readonly reverse?: boolean } };
++          }[];
++        }
++      | undefined;
++    expect(spec?.children?.[0]?.coordinate).toEqual({ transform: [{ type: 'transpose' }] });
++    expect(spec?.children?.[0]?.scale?.x?.reverse).toBe(true);
++    expect(spec?.children?.[0]?.data?.map(datum => datum.nodeId)).toEqual(['first', 'second']);
++    expect(await result.blob.text()).toContain('First category');
++  });
++});

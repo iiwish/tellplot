@@ -1,0 +1,3751 @@
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 6cefe90..3943357 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.19.0
++- Version: 0.21.0
+ - Status: Active
+ - Last updated: 2026-07-20
+-- Scope: T101-T115 已验收；T116 execution packet 已复核并等待用户批准执行
++- Scope: T101-T115 已验收；T116-A001 已完成并等待用户验收
+ 
+ ## T001 - 确认产品设计与项目章程
+ 
+@@ -137,9 +137,9 @@
+ | T113 - 分类投影与 G2 Spec | Accepted | clean review 后用户条件验收成立 |
+ | T114 - 方向感知分类轴交互 | Accepted | 用户条件验收成立；fresh review 与全部门禁通过 |
+ | T115 - 分类图编辑、导出与可访问性 | Accepted | 用户于 2026-07-20 明确验收实现、evidence 与已披露执行偏差 |
+-| T116 - 多图表内部架构收敛 | Ready | `EP-004-T116-A001` 已复核；等待用户明确批准执行 |
++| T116 - 多图表内部架构收敛 | Needs_Review | 实现、全量门禁、evidence 和三层 review 完成；等待用户验收 |
+ 
+ ## Next Gate
+ 
+-T115 已由用户明确验收，T116 execution packet `EP-004-T116-A001` 已生成并完成复核。下一闸门是用户
+-明确批准该 packet；批准前不开始架构收敛。旧仓库归档、npm publish 和正式版本发布保持独立闸门。
++T116-A001 已在已验收 dirty baseline 上完成，当前停在 `Needs_Review`。下一闸门是用户独立
++验收 T116；旧仓库归档、npm publish 和正式版本发布保持独立闸门。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/analysis.md b/.ai-platform/specs/004-categorical-chart-validation/analysis.md
+index 29ae4c7..ca06eb6 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/analysis.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/analysis.md
+@@ -2,14 +2,14 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.9.0
++- Version: 0.10.0
+ - Status: Completed
+ - Feature ID: `004-categorical-chart-validation`
+ - Last updated: 2026-07-20
+ - Inputs: constitution 0.3.0 Confirmed；product design 0.5.0 Confirmed；feature spec/data model/API
+-  contract 0.1.0、plan 0.2.0 Confirmed；tasks 0.12.0 Confirmed；requirements checklist 0.1.0
+-  Completed；T113/T114/T115 packet A001；T116 execution packet `EP-004-T116-A001`
+-- Analysis mode: artifact 一致性检查、T112-T115 验收结果复核，以及 T116 packet 独立可执行性复核
++  contract 0.2.0、plan 0.3.0 Confirmed；tasks 0.14.0 Confirmed；requirements checklist 0.2.0
++  Completed；T113/T114/T115 packet A001；T116 execution packet/evidence `EP-004-T116-A001`
++- Analysis mode: artifact 一致性、T112-T115 验收结果、T116 实现/evidence 与三层 review 复核
+ 
+ ## Result
+ 
+@@ -23,15 +23,17 @@
+ 完成实现、evidence 与三层 review；用户要求 clean review 后继续 T114，review 无 actionable finding，T113
+ 条件验收成立。T114 也已完成实现、evidence 与 fresh review；用户明确授权并完成 T115 长目标。T115 的
+ 实现、evidence、全部 blocking gates 与已披露 `groupSelection.ts` 执行偏差于 2026-07-20 获得用户明确验收。
+-T116 packet 已生成并复核，无 blocking finding；T116 尚未获得执行授权，也尚未执行。
++T116-A001 在用户明确授权后完成实现、evidence 和三层 review，无 unresolved
++Critical/High/Medium finding，当前为 `Needs_Review`。
+ 
+ ## Status And Placeholder Check
+ 
+ - `spec.md`、`data-model.md`、`contracts/editor-api.md`、`plan.md`、`tasks.md` 均为 `Confirmed`，与
+   2026-07-19 用户明确审批记录一致。
+ - `checklists/requirements.md` 为 `Completed`，只表示需求质量检查完成，正文保留独立 user review gate。
+-- T111-T115 为 `Accepted`，T116 为 `Ready`。
+-- T116 的依赖已满足，独立 execution packet 已生成并复核；实现等待用户明确批准，保持未开始。
++- T111-T115 为 `Accepted`，T116 为 `Needs_Review`。
++- T116 的实现、全量门禁、task-only evidence 和三层 review 已完成；只有用户能将其标记为
++  `Accepted`。
+ - artifacts 已通过模板残留检查，没有未填写的占位内容。
+ 
+ ## Requirement Coverage
+@@ -65,7 +67,7 @@ T116 packet 已生成并复核，无 blocking finding；T116 尚未获得执行
+ - T113/T114 在 T112 Accepted 后理论上可并行，allowed files 不重叠，均被 T115 join。当前 T112 验收基线
+   尚未提交，packet 因此默认顺序直执行；并行需要另行授权共同基线与隔离 worktree。
+ - T115 是用户可验证的 vertical integration，覆盖唯一 editor、export、a11y 和 browser workflow。
+-- T116 只有在 T115 Accepted 后执行，只抽取实际重复并运行全量 release-candidate gates。
++- T116 在 T115 Accepted 后执行，只抽取实际重复，全量 release-candidate gates 已完成。
+ 
+ 没有循环依赖。每个实现 task 都包含 priority、dependencies、blocks、requirement mapping、parallel/conflict、
+ goal、allowed files、test targets、deliverables、acceptance、Definition of Done、validation commands、TDD、packet
+@@ -125,6 +127,7 @@ path 和 evidence contract。
+ - G2 horizontal bar category scale 可能反转视觉顺序。
+ - Canvas lifecycle extraction 可能引发 render queue 或 cleanup regression。
+ - 200 个横向标签可能影响布局和软件 Canvas 性能。
++- 长浏览器矩阵后的高系统负载可能使单次 performance p95 抖动。
+ 
+ 这些风险分别由 strict union/round-trip、order parity、characterization/cleanup tests 和真实浏览器性能门禁控制。
+ 
+@@ -156,26 +159,31 @@ path 和 evidence contract。
+ - T116 packet 要求先运行 accepted characterization，再用缺失 runtime contract tests 形成 RED，逐消费者 GREEN，
+   最后删除单消费者 abstraction；覆盖 queue/stale/cleanup、screen/export parity、95% rendering coverage 与完整
+   release-candidate gates。
+-- 当前 T112-T115 accepted baseline 未提交。packet 要求在同一 worktree 顺序执行、编辑前外部快照、task-only
+-  diff/reverse-apply 证据，并禁止从不完整 HEAD 创建执行 worktree或擅自 reset/stage/commit。
++- T116 以外部 content snapshot 隔离未提交 T112-T115 baseline；task-only patch 不依赖当前 index
++  并通过 reverse-apply。执行中未 reset、stash、stage 或 commit。
++- 最终 runtime operations 都有两个生产 consumer；WaterfallCanvas/CategoricalCanvas 共用 screen
++  lifecycle，SVG/PNG 共用 offscreen lifecycle，没有 registry 或 speculative extension hook。
++- engineering review 发现 partial event registration failure 的显式 off 缺口；RED 复现后修正并纳入
++  98% 级 runtime coverage。
+ 
+ ## Artifact Validation Evidence
+ 
+-- AI Delivery Governor strict validator：通过，0 error、0 warning，包含 T113-T116 packet、现有 evidence 与
++- AI Delivery Governor strict task/feature validator：通过，0 error、0 warning，包含 T116 evidence 和
+   placeholder 检查。
+ - YAML parse：T113-T116 packet 均为合法 YAML。
+ - Prettier check：通过，feature artifacts 与 packets 均符合仓库格式。
+ - `git diff --check`：通过，无空白错误。
+ - Requirement ID parity：spec 与 tasks 均覆盖 CAT-FR-001 至 CAT-FR-009、CAT-NFR-001 至
+   CAT-NFR-006、CAT-AC-001 至 CAT-AC-009。
+-- Runtime tests：T115 scoped 170/170、full unit/coverage 380/380、三浏览器 132/132、a11y 27/27、React
+-  18/19、package 与 200-item performance 全绿；typecheck、build、lint、format、reverse patch 与 diff check 通过。
++- Runtime tests：T116 full unit/coverage 393/393；`rendering/g2` 四项覆盖为
++  98.07/98.36/100/98.07；current browsers 132/132、previous browsers 132/132、WebKit 18.4 44/44、
++  a11y 27/27、React 18/19、package 与 clean 200-item performance 通过。
+ 
+ ## Execution Readiness
+ 
+-结论：004 artifacts 已获用户明确批准并完成一致性复核，T112-T115 已由用户验收。T116 依赖闸门已满足，
+-独立 execution packet `EP-004-T116-A001` 已完整生成并复核，无 Critical/High/Medium/Low finding。T116 保持
+-`Ready`，必须等待用户明确批准 packet 后才可开始架构实现。
++结论：004 artifacts 与 T116-A001 实现一致。T112-T115 已由用户验收；T116 已完成
++characterization、RED/GREEN/refactor、全量门禁、fresh visual/export evidence 和三层 review，
++无 unresolved Critical/High/Medium finding。T116 保持 `Needs_Review`，等待用户明确验收。
+ 
+ T112 RED 后的 TypeScript 编译确认：`SourceData` 扩展为严格 union 后，现有 waterfall projector 必须在
+ canonical validation 成功后显式收窄 waterfall source，否则公共 union 无法通过严格类型检查。T112 allowed
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md b/.ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+index 79662eb..cbabf10 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Completed
+ - Source spec: `../spec.md` 0.1.0 Confirmed
+-- Last updated: 2026-07-19
++- Last updated: 2026-07-20
+ - Scope: 需求清晰度、完整性、一致性、可测试性、边界与非功能要求
+ 
+ ## Product And Scope
+@@ -97,4 +97,5 @@
+ ## User Review Gate
+ 
+ Checklist 已完成需求质量检查；用户于 2026-07-19 明确批准 `spec.md`、`data-model.md`、
+-`contracts/editor-api.md`、`plan.md` 与 `tasks.md`。当前只允许 T112 按 execution packet 进入实现。
++`contracts/editor-api.md`、`plan.md` 与 `tasks.md`。T112-T115 已验收；T116-A001 已完成交付
++检查并停在 `Needs_Review`，未经用户明确验收不得进入后续发布任务。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md b/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+index 19aa55e..5c24b60 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+@@ -2,11 +2,11 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+ - Feature ID: `004-categorical-chart-validation`
+ - Package: `@tellplot/editor`
+-- Last updated: 2026-07-19
++- Last updated: 2026-07-20
+ - Approval: 用户于 2026-07-19 明确批准分类图公共 API 合同
+ 
+ ## Public Surface Delta
+@@ -183,5 +183,6 @@ function parseViewSpec(
+ 
+ ## Approval Gate
+ 
+-本合同已于 2026-07-19 经用户明确批准。T112 只实现 data、view、initialization、validation、persistence
+-和 command policy 边界；组件渲染与初始化接入保留给 T115。
++本合同已于 2026-07-19 经用户明确批准并由 T112-T116 实现。公共入口、ESM/CJS
++与 declaration 继续仅暴露本文定义的数据、命令、editor 和 export 合同；chart family
++projection/spec、G2 runtime、scene adapter 和 registry 保持内部且不属于公共 API。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/data-model.md b/.ai-platform/specs/004-categorical-chart-validation/data-model.md
+index 92d76a6..ff39e02 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/data-model.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/data-model.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+ - Feature ID: `004-categorical-chart-validation`
+-- Last updated: 2026-07-19
++- Last updated: 2026-07-20
+ - Compatibility target: legacy schema `1.0.0` 与新增 schema `2.0.0`
+ - Approval: 用户于 2026-07-19 明确批准 schema v2、legacy compatibility 和 categorical data contract
+ 
+@@ -255,6 +255,6 @@ valid projection + chart type -> G2Spec
+ 
+ ## Approval Gate
+ 
+-本数据模型已于 2026-07-19 经用户明确批准。T112 只能按照已批准 compatibility matrix 修改
+-`SchemaVersion`、`SourceData`、`ViewSpec`、validator、persistence 和公共类型；任何 schema 或范围变化必须
+-重新进入用户审批。
++本数据模型已于 2026-07-19 经用户明确批准并在 T112-T116 实现中保持。当前 schema、
++compatibility matrix、persistence 和公共类型均为本文定义的 canonical contract；任何
++schema 或范围变化必须重新进入用户审批。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml b/.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml
+index f2e58b9..de3d896 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml
++++ b/.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml
+@@ -25,8 +25,8 @@ governance_inputs:
+     dependency_t115: Accepted by user on 2026-07-20, including the disclosed groupSelection variance
+     packet_generation: Requested by user on 2026-07-20
+     execution_authorization: >-
+-      Not granted. This packet may be reviewed and approved independently, but T116 implementation must not begin
+-      until the user explicitly authorizes execution after packet review.
++      Granted. The user explicitly replied "批准 EP-004-T116-A001 开始执行" on 2026-07-20. Execution is limited
++      to T116-A001 and must stop at Needs_Review without remote Git, publish or release actions.
+ 
+ work_unit:
+   title: 基于已验证重复收敛多图表内部架构
+@@ -199,7 +199,7 @@ forbidden_changes:
+ 
+ execution_constraints:
+   execution_mode: direct_sequential_after_user_approval
+-  authorization_state: awaiting_explicit_user_execution_approval
++  authorization_state: explicitly_authorized_by_user_2026-07-20
+   branch_or_worktree: codex/t112-categorical-data-contract
+   allowed_files:
+     - packages/editor/src/charts/**
+@@ -374,18 +374,19 @@ review_contract:
+     Critical/High/Medium finding. Only explicit user acceptance may mark T116 Accepted.
+ 
+ handoff:
+-  task_status: Ready
+-  packet_review_status: Reviewed_Needs_User_Execution_Approval
+-  execution_attempt: null
++  task_status: Needs_Review
++  packet_review_status: Approved_By_User_2026-07-20
++  execution_attempt: T116-A001
+   review_result: >-
+-    Packet review found no blocking scope, dependency, ownership, TDD, validation or evidence gap. Implementation has
+-    not started, and this review does not grant execution authorization.
+-  next_gate: User explicitly approves EP-004-T116-A001 for execution.
+-  downstream: After approval, execute only T116-A001 and stop at Needs_Review for independent user acceptance.
++    T116-A001 completed on the accepted dirty baseline. Characterization, RED/GREEN/refactor, full release-candidate
++    gates, fresh visual/export parity, task-only evidence and spec/engineering/QA review have no unresolved
++    Critical/High/Medium finding.
++  next_gate: User independently reviews and explicitly accepts or rejects T116; do not mark Accepted automatically.
++  downstream: T116 requires independent user acceptance after implementation and review.
+   remote_actions: Commit, push, pull request, merge, publish and release are not authorized.
+ 
+ stop_conditions:
+-  - User execution approval is absent, ambiguous or withdrawn.
++  - User execution approval is withdrawn or redirected.
+   - The accepted T112-T115 dirty baseline changes unexpectedly or cannot be snapshotted without overwriting user work.
+   - Correctness requires a schema, domain behavior, public API, visual, copy, animation timing or dependency change.
+   - A proposed shared runtime operation has only one production consumer or requires a plugin/registry abstraction.
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/plan.md b/.ai-platform/specs/004-categorical-chart-validation/plan.md
+index 33d1221..5e90514 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/plan.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/plan.md
+@@ -3,7 +3,7 @@
+ ## Metadata
+ 
+ - Feature ID: `004-categorical-chart-validation`
+-- Version: 0.2.0
++- Version: 0.3.0
+ - Status: Confirmed
+ - Last updated: 2026-07-20
+ - Depends on: T101-T110 Accepted
+@@ -292,12 +292,12 @@ projection、gesture、export 和 error contract。
+ ## Work Order
+ 
+ 1. T111-T115 已完成并由用户验收。
+-2. T116 execution packet 已生成并完成独立复核。
+-3. T116 仅在用户明确批准 packet 后收敛内部结构并执行全量门禁与三层 review。
+-4. T116 实现必须停在 `Needs_Review`，等待用户独立验收。
++2. T116-A001 已按用户批准的 execution packet 完成内部结构收敛。
++3. T116 的全量门禁、视觉/export parity、task-only evidence 与三层 review 已完成。
++4. T116 停在 `Needs_Review`，等待用户独立验收。
+ 
+ ## Approval Gate
+ 
+ 用户已于 2026-07-19 明确批准 `spec.md`、`data-model.md`、`contracts/editor-api.md`、本 Plan 和
+-`tasks.md`，并已于 2026-07-20 验收 T115。T116 依赖已满足，execution packet
+-`EP-004-T116-A001` 已生成并复核；在用户明确批准该 packet 前不得开始实现。
++`tasks.md`，并已于 2026-07-20 验收 T115。`EP-004-T116-A001` 已获批并完成执行，
++当前唯一闸门是用户对 T116 实现、evidence 与三层 review 的独立验收。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/spec.md b/.ai-platform/specs/004-categorical-chart-validation/spec.md
+index 87a58e2..3df07d9 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/spec.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/spec.md
+@@ -3,10 +3,10 @@
+ ## Metadata
+ 
+ - Feature ID: `004-categorical-chart-validation`
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+ - Source: 已确认的 `US-003`、`FR-005`、Phase 1A 分类图验证切片；2026-07-19 架构规划讨论
+-- Last updated: 2026-07-19
++- Last updated: 2026-07-20
+ - Approval: 用户于 2026-07-19 明确批准 004 artifacts 并授权生成 T112 执行包后开始实现
+ 
+ ## Goal
+@@ -227,5 +227,6 @@ ESM、CJS、类型声明、React 18.3/19、G2 5.4、当前 Chromium/Firefox/WebK
+ 
+ ## Approval Gate
+ 
+-本 Spec、`data-model.md` 与 `contracts/editor-api.md` 已于 2026-07-19 经用户明确批准，T112-T114 已由用户
+-验收。T115 是下一单一 governed task；T116 继续等待 T115 用户验收。
++本 Spec、`data-model.md` 与 `contracts/editor-api.md` 已于 2026-07-19 经用户明确批准。T112-T115
++均已验收；T116-A001 已按获批 packet 完成实现、全量验证、evidence 和三层 review，
++当前停在 `Needs_Review` 等待用户独立验收。
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/tasks.md b/.ai-platform/specs/004-categorical-chart-validation/tasks.md
+index 389aa9c..9ad89b3 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/tasks.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/tasks.md
+@@ -3,11 +3,11 @@
+ ## Metadata
+ 
+ - Feature ID: `004-categorical-chart-validation`
+-- Version: 0.12.0
++- Version: 0.14.0
+ - Status: Confirmed
+ - Last updated: 2026-07-20
+-- Approval: 用户于 2026-07-20 明确验收 T115
+-- Execution state: T111-T115 Accepted；T116 packet 已复核，等待用户批准执行
++- Approval: 用户于 2026-07-20 明确批准 `EP-004-T116-A001` 执行
++- Execution state: T111-T115 Accepted；T116-A001 已完成并停在 Needs_Review
+ 
+ ## Work Graph
+ 
+@@ -224,7 +224,7 @@ axis-neutral interaction primitives，二者不得修改同一文件。
+ 
+ ## T116 - 基于验证结果收敛多图表内部架构
+ 
+-- Status: Ready
++- Status: Needs_Review
+ - Priority: P0
+ - Dependencies: T115 Accepted
+ - Blocks: 分类图用户验收、Phase 1A 公共 API 稳定化、真实用户验证
+@@ -255,9 +255,14 @@ axis-neutral interaction primitives，二者不得修改同一文件。
+   最小重复并保持所有 tests green；REFACTOR 删除只为对称存在的抽象，更新 canonical architecture 文档。
+ - Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml`
+ - Packet review: `EP-004-T116-A001` 已完成 scope、dependency、ownership、TDD、validation 与 evidence
+-  复核，无 blocking finding；该复核不构成执行授权。
++  复核，无 blocking finding；用户于 2026-07-20 明确批准 `T116-A001` 开始执行。
+ - Evidence required: pre-refactor characterization、changed/moved files、全量命令与 exit code、coverage、当前/上一代
+   浏览器、React/package/a11y/performance、架构 dependency audit、三层 review、residual risk 和 final patch。
++- Review state: characterization 40/40；scoped 226/226；full unit/coverage 393/393；current browsers
++  132/132；previous browsers 132/132 与 WebKit 18.4 44/44；React 18/19、package、a11y 27/27、
++  performance clean run、visual/export parity 与 task-only reverse patch 通过；三层 review 无 unresolved
++  Critical/High/Medium finding。
++- Evidence: `.ai-platform/evidence/T116/`。
+ 
+ ## Traceability
+ 
+@@ -277,5 +282,5 @@ axis-neutral interaction primitives，二者不得修改同一文件。
+ ## Execution Gate
+ 
+ 用户已明确批准 feature contracts、Plan 与本任务图，并于 2026-07-20 验收 T115。T111-T115 均为
+-`Accepted`；T116 依赖已满足，状态为 `Ready`。独立 execution packet `EP-004-T116-A001` 已生成并复核，
+-实现必须等待用户明确批准该 packet。
++`Accepted`。`EP-004-T116-A001` 已按批准边界完成实现、evidence 与三层 review；T116 状态为
++`Needs_Review`，必须等待用户明确验收才能标记 `Accepted`。
+diff --git a/AGENTS.md b/AGENTS.md
+index 9effe14..f26589c 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -2,8 +2,7 @@
+ 
+ ## 项目状态
+ 
+-- 当前阶段：T101-T115 已验收；T116 状态为 `Ready`，execution packet `EP-004-T116-A001` 已复核，
+-  等待用户明确批准执行。
++- 当前阶段：T101-T115 已验收；T116-A001 实现、evidence 与三层 review 完整，状态为 `Needs_Review`。
+ - 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
+ - 产品 SSOT：`.ai-platform/docs/product-design.md`。
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 90c1382..d30b5ae 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -1,11 +1,11 @@
+ # TellPlot 架构概览
+ 
+-## 核心边界
++## 核心数据流
+ 
+-TellPlot 把原始财务事实、可编辑叙事状态、确定性操作和图表渲染分为四层。
++TellPlot 把原始财务事实、可编辑叙事状态、确定性操作、图表家族投影和 G2 渲染分开管理。
+ 
+ ```text
+-SourceData -> ViewSpec -> Command Executor -> Projection -> G2Spec -> G2
++SourceData -> ViewSpec -> Command Executor -> Chart Projection -> G2Spec -> G2 Runtime
+                   |              |
+                   |              +-> CommandLog / undo / redo
+                   +-> persistence / AI candidate commands
+@@ -13,34 +13,140 @@ SourceData -> ViewSpec -> Command Executor -> Projection -> G2Spec -> G2
+ 
+ ### SourceData
+ 
+-`SourceData` 保存稳定 ID、金额、类型、币种和来源引用。编辑操作不改写该对象。
++`SourceData` 是 `waterfall | categorical` 的严格可判别联合，保存稳定 ID、金额、币种和来源引用。编辑操作
++不得改写该对象。
+ 
+ ### ViewSpec
+ 
+-`ViewSpec` 保存顺序、递归分组树、折叠、锁定、注释和强调。它是可序列化、可校验的叙事状态，不包含 G2 chart instance 或任意渲染函数。
++`ViewSpec` 保存图表类型、顺序、递归分组树、折叠、固定、注释和强调。它是可序列化、可校验的叙事状态，
++不包含 G2 chart instance、像素边界或渲染函数。
+ 
+ ### Command Executor
+ 
+-直接操作、大纲、键盘和 AI 候选操作使用同一组类型化命令。执行器校验 revision、目标位置、锁定状态、递归树和来源覆盖不变量，并生成可撤销历史。
++直接操作、大纲、键盘和 AI 候选操作使用同一组类型化命令。执行器校验 revision、目标位置、固定状态、
++递归树和来源覆盖不变量，并生成可撤销历史。
+ 
+-### Projection And G2 Adapter
++`domain/chartPolicy.ts` 保持领域所有权。它只表达 waterfall anchor/segment 与 categorical movable-item 的
++命令约束，不是图表插件接口，也不依赖 projection 或 G2。
+ 
+-投影层把 `SourceData + ViewSpec` 转换为可见瀑布数据。G2 adapter 负责 `G2Spec`、Canvas 生命周期、场景边界、Pointer Events 和图形动画。领域状态不引用 G2。
++## 内部模块
++
++```text
++packages/editor/src/
++  domain/                         # schema、命令、历史、持久化、领域 policy
++  charts/
++    waterfall/
++      projection.ts              # waterfall SourceData + ViewSpec -> projection
++      spec.ts                    # waterfall projection -> G2Spec
++      types.ts
++    categorical/
++      projection.ts              # categorical SourceData + ViewSpec -> projection
++      spec.ts                    # bar/column projection -> G2Spec
++      types.ts
++  rendering/g2/
++    chartRuntime.ts              # screen Chart load/render/event/destroy lifecycle
++    exportRuntime.ts             # offscreen Canvas/SVG lifecycle
++  interactions/
++    categoryAxis.ts              # X/Y category-axis geometry and collision
++    chartPointer.ts              # G2 event/scene boundary adapter
++  components/
++    FinancialChartEditor.tsx     # 唯一 session、chart dispatch 与 UI orchestration
++    WaterfallCanvas.tsx          # waterfall gesture/presentation composition
++    CategoricalCanvas.tsx        # bar/column gesture/presentation composition
++  export/
++    svgExport.ts                 # SVG sanitizer 与序列化
++    pngExport.ts                 # PNG canvas encoding
++```
++
++依赖方向为：
++
++```text
++components/export -> charts -> domain/config
++components/export -> rendering/g2
++components -> interactions -> domain IDs
++rendering/g2 -> G2
++domain -X-> charts/rendering/components
++```
++
++`charts/**` 和 `rendering/g2/**` 都是包内部路径，不属于公共 import surface。
++
++`charts/**`、export 与 components 当前共用 `components/formatAmount.ts`。该文件是无 React
++依赖的纯格式化函数，不形成文件级循环依赖。本次收敛保留其路径，因为移动它不能减少已验证
++重复，也不改善运行时边界；后续只在格式化能力扩展为独立子系统时再调整 ownership。
++
++## G2 Runtime
++
++### Screen Runtime
++
++`chartRuntime.ts` 只拥有两类 Canvas 已共同使用的运行时职责：
++
++- 缓存并动态加载 G2 `Chart` constructor。
++- 为 mounted host 创建单一 chart instance。
++- 串行处理 options/render，并让最新 request 胜出。
++- 丢弃 stale render 结果，阻止卸载后的异步初始化复活 chart。
++- 在更新或直接操作前快速完成 active G2 animations。
++- 成对注册/注销 G2 events，隔离结果 callback，并执行 exact-once destroy。
++- 只向交互 adapter 提供 scene context，不把 chart instance 暴露给组件。
++
++Canvas 继续拥有 chart-family copy、projection/spec 选择、拖动状态、DOM overlay、group action 和
++pointer-capture composition。运行时不读取财务数据，也不决定图表类型。
++
++### Export Runtime
++
++`exportRuntime.ts` 创建隐藏 Canvas/SVG host，渲染调用方提供的内部 `G2Spec`，在限定 reader callback
++完成后销毁 chart 并移除 host。success、constructor/render failure 和 reader failure 使用同一 finally cleanup。
++
++SVG sanitizer/serialization 留在 `svgExport.ts`，PNG pixel-ratio/encoding 留在 `pngExport.ts`。chart-family
++spec 选择也留在 export orchestration，offscreen runtime 不认识 waterfall、bar 或 column。
++
++## 图表家族
++
++waterfall 与 categorical 各自拥有 projection、renderer-ready types 和 spec factory：
++
++- waterfall projection 保留 start/end/subtotal、segment、累计值和 anchor 不变量。
++- categorical projection 保留单序列金额、compensated group aggregation 和逻辑 `rootOrder`。
++- column 使用 X category axis；bar 通过 G2 transpose 使用 Y category axis。
++- screen、SVG、PNG 和无障碍摘要复用同一 family projection/spec 语义。
++
++家族目录不包含命令执行器、session、history、公共 plugin interface 或 renderer registry。
++
++## 交互边界
++
++`categoryAxis.ts` 是 waterfall、column 和 bar 的轴向几何原语。waterfall/column 传入 `x`，bar 传入 `y`。
++排序只读取 G2 scene `getBounds()` 投影出的 `min/center/max`，不猜测固定柱宽或行高，也不让 value-axis
++位移改变顺序。
++
++`chartPointer.ts` 只把 hostile G2 event/context 转换为结构化 point、datum 和 scene bounds。固定、同父级、
++segment、group 和 command eligibility 仍由领域 policy 与调用方冻结的 candidate set 决定。
+ 
+ ## 配置流
+ 
+ ```text
+ FinancialChartAppearance -> normalize -> resolved appearance
+-                                      -> screen G2Spec
+-                                      -> SVG/PNG G2Spec
++                                      -> family screen G2Spec
++                                      -> family SVG/PNG G2Spec
+                                       -> accessible chart summary
+ ```
+ 
+-公共配置只描述稳定的财务图表语义。内部 adapter 保留 `data`、`encode`、`key`、比例尺几何、事件注册和交互状态的所有权。
++公共配置只描述稳定的财务图表语义。内部 adapter 独占 `data`、`encode`、stable key、比例尺几何、renderer、
++事件注册和交互状态。
++
++## 公共边界
++
++`packages/editor/src/index.ts` 只导出稳定组件、数据/命令类型、session、validation、persistence 和 export
++合同。以下内容保持内部：
++
++- projection 与 G2 spec factory。
++- `G2Spec`、G2 `Chart`、scene context 和 runtime handles。
++- category-axis/pointer adapter 与 gesture state。
++- chart policy、chart registry 和 arbitrary spec transform。
++
++TellPlot 当前不提供公共或内部通用 chart plugin registry。新增图表家族先通过真实工作流证明领域、交互和
++导出边界，再决定是否存在可复用能力。
+ 
+-## 包边界
++## 仓库边界
+ 
+-- `packages/editor`：唯一产品包，包含领域、投影、React 工作台、G2 adapter、持久化和导出。
++- `packages/editor`：唯一产品包，包含领域、图表家族、React 工作台、G2 runtime、持久化和导出。
+ - `apps/playground`：示例数据和人工验收入口，不复制产品逻辑。
+ - `e2e`：真实浏览器、可访问性、导出和性能验证。
+-- `.ai-platform`：SSOT、feature spec、任务图、执行包和证据。
++- `.ai-platform`：SSOT、feature spec、任务图、execution packet 和 evidence。
+diff --git a/packages/editor/src/categorical/projectCategorical.ts b/packages/editor/src/charts/categorical/projection.ts
+similarity index 95%
+rename from packages/editor/src/categorical/projectCategorical.ts
+rename to packages/editor/src/charts/categorical/projection.ts
+index 97f428b..b94cdb2 100644
+--- a/packages/editor/src/categorical/projectCategorical.ts
++++ b/packages/editor/src/charts/categorical/projection.ts
+@@ -1,15 +1,15 @@
+-import { validationFailure, validationIssue, validationSuccess } from '../domain/errors';
+-import type { ViewNodeId } from '../domain/ids';
++import { validationFailure, validationIssue, validationSuccess } from '../../domain/errors';
++import type { ViewNodeId } from '../../domain/ids';
+ import type {
+   CategoricalSourceData,
+   CategoricalSourceItem,
+   SourceData,
+   ViewGroup,
+   ViewSpec,
+-} from '../domain/model';
+-import { validateViewSpec } from '../domain/validation';
+-import { collectLeafSourceIds } from '../domain/viewTree';
+-import type { CategoricalDatum, CategoricalProjectionResult } from './categoricalTypes';
++} from '../../domain/model';
++import { validateViewSpec } from '../../domain/validation';
++import { collectLeafSourceIds } from '../../domain/viewTree';
++import type { CategoricalDatum, CategoricalProjectionResult } from './types';
+ 
+ interface CompensatedAccumulator {
+   sum: number;
+diff --git a/packages/editor/src/categorical/categoricalChartSpec.ts b/packages/editor/src/charts/categorical/spec.ts
+similarity index 95%
+rename from packages/editor/src/categorical/categoricalChartSpec.ts
+rename to packages/editor/src/charts/categorical/spec.ts
+index 584c32f..f945296 100644
+--- a/packages/editor/src/categorical/categoricalChartSpec.ts
++++ b/packages/editor/src/charts/categorical/spec.ts
+@@ -5,15 +5,11 @@ import {
+   resolveFinancialChartAppearance,
+   type FinancialChartAppearance,
+   type ResolvedFinancialChartNumberFormat,
+-} from '../config/chartAppearance';
+-import type { ViewNodeId } from '../domain/ids';
+-import type { Annotation, ChartType, Emphasis } from '../domain/model';
+-import { formatAmount, type EditorLocale } from '../components/formatAmount';
+-import type {
+-  CategoricalDatum,
+-  CategoricalDatumKind,
+-  CategoricalProjection,
+-} from './categoricalTypes';
++} from '../../config/chartAppearance';
++import type { ViewNodeId } from '../../domain/ids';
++import type { Annotation, ChartType, Emphasis } from '../../domain/model';
++import { formatAmount, type EditorLocale } from '../../components/formatAmount';
++import type { CategoricalDatum, CategoricalDatumKind, CategoricalProjection } from './types';
+ 
+ const DENSE_CANVAS_THRESHOLD = 80;
+ const VALUE_LABEL_THRESHOLD = 40;
+diff --git a/packages/editor/src/categorical/categoricalTypes.ts b/packages/editor/src/charts/categorical/types.ts
+similarity index 81%
+rename from packages/editor/src/categorical/categoricalTypes.ts
+rename to packages/editor/src/charts/categorical/types.ts
+index 0823377..9887c91 100644
+--- a/packages/editor/src/categorical/categoricalTypes.ts
++++ b/packages/editor/src/charts/categorical/types.ts
+@@ -1,5 +1,5 @@
+-import type { ValidationResult } from '../domain/errors';
+-import type { SourceItemId, ViewNodeId } from '../domain/ids';
++import type { ValidationResult } from '../../domain/errors';
++import type { SourceItemId, ViewNodeId } from '../../domain/ids';
+ 
+ export type CategoricalDatumKind = 'positive' | 'negative' | 'group';
+ 
+diff --git a/packages/editor/src/waterfall/projectWaterfall.ts b/packages/editor/src/charts/waterfall/projection.ts
+similarity index 96%
+rename from packages/editor/src/waterfall/projectWaterfall.ts
+rename to packages/editor/src/charts/waterfall/projection.ts
+index 2595571..03d7347 100644
+--- a/packages/editor/src/waterfall/projectWaterfall.ts
++++ b/packages/editor/src/charts/waterfall/projection.ts
+@@ -1,5 +1,5 @@
+-import { validationFailure, validationIssue, validationSuccess } from '../domain/errors';
+-import type { GroupId, ViewNodeId } from '../domain/ids';
++import { validationFailure, validationIssue, validationSuccess } from '../../domain/errors';
++import type { GroupId, ViewNodeId } from '../../domain/ids';
+ import type {
+   LegacyWaterfallSourceData,
+   SourceData,
+@@ -7,14 +7,10 @@ import type {
+   ViewGroup,
+   ViewSpec,
+   WaterfallSourceData,
+-} from '../domain/model';
+-import { validateViewSpec } from '../domain/validation';
+-import { collectLeafSourceIds } from '../domain/viewTree';
+-import type {
+-  WaterfallDatum,
+-  WaterfallDatumKind,
+-  WaterfallProjectionResult,
+-} from './waterfallTypes';
++} from '../../domain/model';
++import { validateViewSpec } from '../../domain/validation';
++import { collectLeafSourceIds } from '../../domain/viewTree';
++import type { WaterfallDatum, WaterfallDatumKind, WaterfallProjectionResult } from './types';
+ 
+ const MAX_ULP_DISTANCE = 8n;
+ const FLOAT_SIGN_BIT = 1n << 63n;
+diff --git a/packages/editor/src/export/waterfallChartSpec.ts b/packages/editor/src/charts/waterfall/spec.ts
+similarity index 95%
+rename from packages/editor/src/export/waterfallChartSpec.ts
+rename to packages/editor/src/charts/waterfall/spec.ts
+index 9188c6c..c36fa47 100644
+--- a/packages/editor/src/export/waterfallChartSpec.ts
++++ b/packages/editor/src/charts/waterfall/spec.ts
+@@ -5,15 +5,11 @@ import {
+   resolveFinancialChartAppearance,
+   type FinancialChartAppearance,
+   type ResolvedFinancialChartNumberFormat,
+-} from '../config/chartAppearance';
+-import type { ViewNodeId } from '../domain/ids';
+-import type { Annotation, Emphasis } from '../domain/model';
+-import type {
+-  WaterfallDatum,
+-  WaterfallDatumKind,
+-  WaterfallProjection,
+-} from '../waterfall/waterfallTypes';
+-import { formatAmount, type EditorLocale } from '../components/formatAmount';
++} from '../../config/chartAppearance';
++import type { ViewNodeId } from '../../domain/ids';
++import type { Annotation, Emphasis } from '../../domain/model';
++import { formatAmount, type EditorLocale } from '../../components/formatAmount';
++import type { WaterfallDatum, WaterfallDatumKind, WaterfallProjection } from './types';
+ 
+ const DENSE_CANVAS_THRESHOLD = 80;
+ const VALUE_LABEL_THRESHOLD = 40;
+diff --git a/packages/editor/src/waterfall/waterfallTypes.ts b/packages/editor/src/charts/waterfall/types.ts
+similarity index 83%
+rename from packages/editor/src/waterfall/waterfallTypes.ts
+rename to packages/editor/src/charts/waterfall/types.ts
+index 79c7639..eb273f7 100644
+--- a/packages/editor/src/waterfall/waterfallTypes.ts
++++ b/packages/editor/src/charts/waterfall/types.ts
+@@ -1,5 +1,5 @@
+-import type { ValidationResult } from '../domain/errors';
+-import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
++import type { ValidationResult } from '../../domain/errors';
++import type { GroupId, SourceItemId, ViewNodeId } from '../../domain/ids';
+ 
+ export type WaterfallDatumKind = 'start' | 'positive' | 'negative' | 'subtotal' | 'group' | 'end';
+ 
+diff --git a/packages/editor/src/components/AccessibleChartSummary.tsx b/packages/editor/src/components/AccessibleChartSummary.tsx
+index c4d0714..4aaf6b5 100644
+--- a/packages/editor/src/components/AccessibleChartSummary.tsx
++++ b/packages/editor/src/components/AccessibleChartSummary.tsx
+@@ -4,13 +4,10 @@ import type { ResolvedFinancialChartNumberFormat } from '../config/chartAppearan
+ import {
+   formatCategoricalDatumAmount,
+   visibleCategoricalAnnotation,
+-} from '../categorical/categoricalChartSpec';
+-import type { CategoricalDatumKind, CategoricalProjection } from '../categorical/categoricalTypes';
+-import {
+-  formatWaterfallDatumAmount,
+-  visibleWaterfallAnnotation,
+-} from '../export/waterfallChartSpec';
+-import type { WaterfallDatumKind, WaterfallProjection } from '../waterfall/waterfallTypes';
++} from '../charts/categorical/spec';
++import type { CategoricalDatumKind, CategoricalProjection } from '../charts/categorical/types';
++import { formatWaterfallDatumAmount, visibleWaterfallAnnotation } from '../charts/waterfall/spec';
++import type { WaterfallDatumKind, WaterfallProjection } from '../charts/waterfall/types';
+ import type { EditorLocale } from './formatAmount';
+ 
+ interface AccessibleChartSummaryBaseProps {
+diff --git a/packages/editor/src/components/CategoricalCanvas.tsx b/packages/editor/src/components/CategoricalCanvas.tsx
+index 484bb63..4244928 100644
+--- a/packages/editor/src/components/CategoricalCanvas.tsx
++++ b/packages/editor/src/components/CategoricalCanvas.tsx
+@@ -1,4 +1,3 @@
+-import type { Chart as G2Chart, G2Spec } from '@antv/g2';
+ import { FoldVertical, Ungroup, UnfoldVertical } from 'lucide-react';
+ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+ 
+@@ -12,7 +11,7 @@ import { collectLeafSourceIds, locateViewNode, ownGroup } from '../domain/viewTr
+ import {
+   createCategoricalChartSpec,
+   shouldShowCategoricalValueLabels,
+-} from '../categorical/categoricalChartSpec';
++} from '../charts/categorical/spec';
+ import {
+   readChartElementBounds,
+   readChartCategoryElementPointer,
+@@ -30,7 +29,8 @@ import {
+   type ChartCategoryBounds,
+ } from '../interactions/categoryAxis';
+ import { resolvePointerMoveTarget, type MoveTargetEdge } from '../interactions/moveTargets';
+-import type { CategoricalDatum, CategoricalProjection } from '../categorical/categoricalTypes';
++import { createG2ChartRuntime, type G2ChartRuntime } from '../rendering/g2/chartRuntime';
++import type { CategoricalDatum, CategoricalProjection } from '../charts/categorical/types';
+ import type { EditorLocale } from './formatAmount';
+ import { AccessibleChartSummary } from './AccessibleChartSummary';
+ 
+@@ -41,24 +41,6 @@ const CHART_ERROR = { code: 'CHART_RENDER_ERROR', path: '/chart' } as const;
+ const EMPTY_EMPHASIS: Readonly<Record<ViewNodeId, Emphasis>> = {};
+ const EMPTY_ANNOTATIONS: Readonly<Record<ViewNodeId, Annotation>> = {};
+ 
+-type G2ChartConstructor = typeof G2Chart;
+-
+-let chartConstructorPromise: Promise<G2ChartConstructor> | undefined;
+-
+-function loadChartConstructor(): Promise<G2ChartConstructor> {
+-  if (chartConstructorPromise !== undefined) {
+-    return chartConstructorPromise;
+-  }
+-  const pending = import('@antv/g2').then(module => module.Chart);
+-  chartConstructorPromise = pending;
+-  void pending.catch(() => {
+-    if (chartConstructorPromise === pending) {
+-      chartConstructorPromise = undefined;
+-    }
+-  });
+-  return pending;
+-}
+-
+ interface ChartCopy {
+   readonly eyebrow: string;
+   readonly title: string;
+@@ -69,17 +51,6 @@ interface ChartCopy {
+   readonly ungroup: string;
+ }
+ 
+-interface ChartRenderRequest {
+-  readonly id: number;
+-  readonly projection: CategoricalProjection;
+-  readonly spec: G2Spec;
+-}
+-
+-interface ChartEventRegistration {
+-  readonly name: string;
+-  readonly listener: (event: unknown) => void;
+-}
+-
+ interface ChartMoveTarget {
+   readonly containerId: 'root' | GroupId;
+   readonly index: number;
+@@ -420,20 +391,6 @@ function draggableDatum(datum: CategoricalDatum | undefined): CategoricalDatum |
+     : undefined;
+ }
+ 
+-function finishActiveAnimations(chart: G2Chart): void {
+-  try {
+-    for (const animation of chart.getContext().animations ?? []) {
+-      try {
+-        animation.finish();
+-      } catch {
+-        // Finishing an already-disposed animation is best effort.
+-      }
+-    }
+-  } catch {
+-    // A renderer without an animation context does not block the next request.
+-  }
+-}
+-
+ /** Owns the real G2 canvas lifecycle for one immutable categorical projection. */
+ export function CategoricalCanvas({
+   chartType,
+@@ -460,12 +417,7 @@ export function CategoricalCanvas({
+   const stageRef = useRef<HTMLElement>(null);
+   const hostRef = useRef<HTMLDivElement>(null);
+   const overlayRef = useRef<HTMLDivElement>(null);
+-  const chartRef = useRef<G2Chart | undefined>(undefined);
+-  const requestIdRef = useRef(0);
+-  const attemptedRequestIdRef = useRef(0);
+-  const latestRequestRef = useRef<ChartRenderRequest | undefined>(undefined);
+-  const flushRenderRef = useRef<() => Promise<void>>(async () => undefined);
+-  const registrationsRef = useRef<readonly ChartEventRegistration[]>([]);
++  const chartRuntimeRef = useRef<G2ChartRuntime<CategoricalProjection> | undefined>(undefined);
+   const onRenderErrorRef = useRef(onRenderError);
+   const interactionConfigRef = useRef<ChartInteractionConfig>({
+     axis,
+@@ -483,7 +435,6 @@ export function CategoricalCanvas({
+   const marqueeSessionRef = useRef<ChartMarqueeSession | null>(null);
+   const pendingPointerRef = useRef<ChartPointerPoint | null>(null);
+   const animationFrameRef = useRef<number | null>(null);
+-  const renderFrameRef = useRef<{ readonly ownerWindow: Window; readonly id: number } | null>(null);
+   const applyPointerRef = useRef<() => void>(() => undefined);
+   const cancelDragRef = useRef<(reason?: ChartCancelReason) => ChartDragSession | null>(() => null);
+   const cancelSelectionPressRef = useRef<() => void>(() => undefined);
+@@ -564,8 +515,6 @@ export function CategoricalCanvas({
+ 
+   useLayoutEffect(() => {
+     let cancelled = false;
+-    let destroyed = false;
+-    let rendering = false;
+     let restoringPointerCapture = false;
+     const isEffectDisposed = (): boolean => cancelled;
+ 
+@@ -766,10 +715,7 @@ export function CategoricalCanvas({
+       if (isEffectDisposed()) {
+         return;
+       }
+-      const chart = chartRef.current;
+-      if (chart !== undefined) {
+-        finishActiveAnimations(chart);
+-      }
++      chartRuntimeRef.current?.finishAnimations();
+       const projectedDatum = config.projection.find(
+         candidate => candidate.nodeId === pointer.nodeId,
+       );
+@@ -806,7 +752,7 @@ export function CategoricalCanvas({
+       if (location === undefined) {
+         return;
+       }
+-      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
++      const sceneBounds = readChartElementBounds(chartRuntimeRef.current?.getContext());
+       const boundsByNode = new Map<ViewNodeId, ChartCategoryBounds>();
+       for (const bounds of sceneBounds) {
+         const categoryBounds = projectChartCategoryBounds(bounds, config.axis);
+@@ -942,8 +888,8 @@ export function CategoricalCanvas({
+       }
+       const config = interactionConfigRef.current;
+       const pointerResult = readChartCategoryElementPointer(event, config.axis);
+-      const chart = chartRef.current;
+-      if (!pointerResult.ok || config.viewSpec === undefined || chart === undefined) {
++      const runtime = chartRuntimeRef.current;
++      if (!pointerResult.ok || config.viewSpec === undefined || runtime === undefined) {
+         return;
+       }
+       const pointer = pointerResult.value;
+@@ -956,7 +902,7 @@ export function CategoricalCanvas({
+         setGroupActions(null);
+         return;
+       }
+-      const bounds = readChartElementBounds(chart.getContext()).find(
++      const bounds = readChartElementBounds(runtime.getContext()).find(
+         element => element.nodeId === datum.nodeId,
+       );
+       if (bounds === undefined) {
+@@ -991,8 +937,7 @@ export function CategoricalCanvas({
+       if (point === undefined || canvas === null || canvas === undefined) {
+         return;
+       }
+-      const chart = chartRef.current;
+-      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
++      const sceneBounds = readChartElementBounds(chartRuntimeRef.current?.getContext());
+       const pointHitsMark = sceneBounds.some(
+         bounds =>
+           point.x >= bounds.minX &&
+@@ -1123,10 +1068,10 @@ export function CategoricalCanvas({
+       if (marquee !== null && point !== undefined && point.pointerId === marquee.pointerId) {
+         marquee.current = point;
+         const bounds = marqueeRect(marquee.start, point);
+-        const chart = chartRef.current;
++        const runtime = chartRuntimeRef.current;
+         const config = interactionConfigRef.current;
+         resetMarquee();
+-        if (bounds.width < 4 || bounds.height < 4 || chart === undefined) {
++        if (bounds.width < 4 || bounds.height < 4 || runtime === undefined) {
+           notifyCancel(config.onCancel, 'cancelled');
+           return;
+         }
+@@ -1141,7 +1086,7 @@ export function CategoricalCanvas({
+             )
+             .map(datum => datum.nodeId),
+         );
+-        const selectedIds = readChartElementBounds(chart.getContext())
++        const selectedIds = readChartElementBounds(runtime.getContext())
+           .filter(
+             element =>
+               selectable.has(element.nodeId) &&
+@@ -1333,30 +1278,25 @@ export function CategoricalCanvas({
+     ownerDocument?.addEventListener('pointercancel', handleDocumentPointerCancel, true);
+     ownerWindow?.addEventListener('blur', handleWindowBlur);
+ 
+-    const flushRender = async (): Promise<void> => {
+-      const chart = chartRef.current;
+-      if (chart === undefined || isEffectDisposed() || rendering) {
+-        return;
+-      }
+-
+-      rendering = true;
+-      try {
+-        while (!isEffectDisposed()) {
+-          const request = latestRequestRef.current;
+-          if (request === undefined || request.id === attemptedRequestIdRef.current) {
+-            break;
+-          }
+-
+-          const attemptId = request.id;
+-          let succeeded = false;
++    if (host === null) {
++      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
++      setRenderFailure({ projection: interactionConfigRef.current.projection, issue: CHART_ERROR });
++      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++    } else {
++      const runtime = createG2ChartRuntime<CategoricalProjection>({
++        container: host,
++        events: [
++          { name: 'element:pointerdown', listener: handleElementPointerDown },
++          { name: 'element:pointerover', listener: handleElementPointerOver },
++          { name: 'element:pointermove', listener: handleElementPointerMove },
++          { name: 'element:pointerout', listener: handleElementPointerOut },
++          { name: 'plot:pointerdown', listener: handlePlotPointerDown },
++          { name: 'plot:pointermove', listener: handlePlotPointerMove },
++          { name: 'plot:pointerup', listener: handlePlotPointerUp },
++          { name: 'plot:pointerupoutside', listener: handlePlotPointerUpOutside },
++        ],
++        onRenderSettled: settlement => {
+           restoringPointerCapture = dragSessionRef.current !== null;
+-          try {
+-            chart.options(request.spec);
+-            await chart.render();
+-            succeeded = true;
+-          } catch {
+-            succeeded = false;
+-          }
+           restoreDragPointerCapture();
+           if (restoringPointerCapture) {
+             const finishRestore = (): void => {
+@@ -1378,78 +1318,27 @@ export function CategoricalCanvas({
+               queueMicrotask(finishRestore);
+             }
+           }
+-          if (isEffectDisposed()) {
++          if (isEffectDisposed() || !settlement.latest) {
+             return;
+           }
+-          attemptedRequestIdRef.current = attemptId;
+-          if (latestRequestRef.current?.id !== attemptId) {
+-            continue;
+-          }
+-
+-          if (succeeded) {
++          if (settlement.status === 'success') {
+             setRenderFailure(null);
+             notifyRenderIssue(onRenderErrorRef.current, null);
+-          } else {
+-            console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+-            setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
+-            notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++            return;
+           }
+-          break;
+-        }
+-      } finally {
+-        rendering = false;
+-        const latest = latestRequestRef.current;
+-        if (
+-          !isEffectDisposed() &&
+-          latest !== undefined &&
+-          latest.id !== attemptedRequestIdRef.current
+-        ) {
+-          void flushRenderRef.current();
+-        }
+-      }
+-    };
+-    flushRenderRef.current = flushRender;
+-
+-    const initializeChart = async (): Promise<void> => {
+-      const Chart = await loadChartConstructor();
+-      if (isEffectDisposed()) {
+-        return;
+-      }
+-      const host = hostRef.current;
+-      if (host === null) {
+-        throw new Error('Chart host is unavailable');
+-      }
+-
+-      const chart = new Chart({ container: host, autoFit: true });
+-      chartRef.current = chart;
+-      const registrations: readonly ChartEventRegistration[] = [
+-        { name: 'element:pointerdown', listener: handleElementPointerDown },
+-        { name: 'element:pointerover', listener: handleElementPointerOver },
+-        { name: 'element:pointermove', listener: handleElementPointerMove },
+-        { name: 'element:pointerout', listener: handleElementPointerOut },
+-        { name: 'plot:pointerdown', listener: handlePlotPointerDown },
+-        { name: 'plot:pointermove', listener: handlePlotPointerMove },
+-        { name: 'plot:pointerup', listener: handlePlotPointerUp },
+-        { name: 'plot:pointerupoutside', listener: handlePlotPointerUpOutside },
+-      ];
+-      registrationsRef.current = registrations;
+-      for (const registration of registrations) {
+-        chart.on(registration.name, registration.listener);
+-      }
+-      await flushRender();
+-    };
+-
+-    void initializeChart().catch(() => {
+-      if (isEffectDisposed()) {
+-        return;
+-      }
+-      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+-      const request = latestRequestRef.current;
+-      if (request !== undefined) {
+-        setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
+-      }
+-      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
+-    });
++          console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
++          setRenderFailure({ projection: settlement.value, issue: CHART_ERROR });
++          notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++        },
++        onCallbackError: () => {
++          console.error('tellplot chart runtime callback failed at /chart');
++        },
++        onCleanupError: () => {
++          console.error('tellplot chart cleanup failed at /chart');
++        },
++      });
++      chartRuntimeRef.current = runtime;
++    }
+ 
+     return () => {
+       cancelled = true;
+@@ -1465,35 +1354,15 @@ export function CategoricalCanvas({
+       cancelSelectionPressRef.current = () => undefined;
+       cancelMarqueeRef.current = () => undefined;
+       cancelPointerFrame();
+-      if (renderFrameRef.current !== null) {
+-        renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
+-        renderFrameRef.current = null;
+-      }
+       applyPointerRef.current = () => undefined;
+-      const chart = chartRef.current;
+-      if (chart === undefined || destroyed) {
+-        return;
+-      }
+-      for (const registration of registrationsRef.current) {
+-        chart.off(registration.name, registration.listener);
+-      }
+-      registrationsRef.current = [];
+-      destroyed = true;
+-      try {
+-        chart.destroy();
+-      } catch {
+-        console.error('tellplot chart cleanup failed at /chart');
+-      } finally {
+-        chartRef.current = undefined;
+-      }
++      chartRuntimeRef.current?.dispose();
++      chartRuntimeRef.current = undefined;
+     };
+   }, []);
+ 
+   useLayoutEffect(() => {
+-    requestIdRef.current += 1;
+-    latestRequestRef.current = {
+-      id: requestIdRef.current,
+-      projection,
++    chartRuntimeRef.current?.request({
++      value: projection,
+       spec: createCategoricalChartSpec({
+         projection,
+         chartType,
+@@ -1505,33 +1374,7 @@ export function CategoricalCanvas({
+         emphasis,
+         appearance,
+       }),
+-    };
+-    const chart = chartRef.current;
+-    if (chart !== undefined) {
+-      const ownerWindow = hostRef.current?.ownerDocument.defaultView;
+-      const flushLatest = (): void => {
+-        renderFrameRef.current = null;
+-        const activeChart = chartRef.current;
+-        if (activeChart === undefined) {
+-          return;
+-        }
+-        finishActiveAnimations(activeChart);
+-        void flushRenderRef.current();
+-      };
+-      if (
+-        ownerWindow !== undefined &&
+-        ownerWindow !== null &&
+-        typeof ownerWindow.requestAnimationFrame === 'function'
+-      ) {
+-        if (renderFrameRef.current !== null) {
+-          renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
+-        }
+-        const id = ownerWindow.requestAnimationFrame(flushLatest);
+-        renderFrameRef.current = { ownerWindow, id };
+-      } else {
+-        queueMicrotask(flushLatest);
+-      }
+-    }
++    });
+   }, [
+     annotations,
+     appearance,
+@@ -1561,14 +1404,14 @@ export function CategoricalCanvas({
+       return;
+     }
+     const target = externalPreview.state === 'dragging' ? externalPreview.target : null;
+-    const chart = chartRef.current;
+-    if (externalStarted && chart !== undefined) {
+-      finishActiveAnimations(chart);
++    const runtime = chartRuntimeRef.current;
++    if (externalStarted) {
++      runtime?.finishAnimations();
+     }
+     const targetCoordinate =
+-      target === null || chart === undefined
++      target === null || runtime === undefined
+         ? undefined
+-        : readChartTargetCoordinate(chart.getContext(), target.nodeId, target.edge, axis);
++        : readChartTargetCoordinate(runtime.getContext(), target.nodeId, target.edge, axis);
+     if (target === null || targetCoordinate === undefined || !targetCoordinate.ok) {
+       host.removeAttribute('data-drop-indicator');
+       host.removeAttribute('data-drop-node-id');
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+index f78ad3b..af6590e 100644
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -9,8 +9,8 @@ import {
+   useState,
+ } from 'react';
+ 
+-import { projectCategorical } from '../categorical/projectCategorical';
+-import type { CategoricalProjection } from '../categorical/categoricalTypes';
++import { projectCategorical } from '../charts/categorical/projection';
++import type { CategoricalProjection } from '../charts/categorical/types';
+ import type { EditorCommand } from '../domain/commands';
+ import { validationIssue, type ValidationIssue } from '../domain/errors';
+ import { executeCommand } from '../domain/executeCommand';
+@@ -28,8 +28,8 @@ import {
+ } from '../interactions/moveTargets';
+ import type { FinancialChartEditorHandle, FinancialChartEditorProps } from '../react/editorTypes';
+ import { useEditorController } from '../react/useEditorController';
+-import { projectWaterfall } from '../waterfall/projectWaterfall';
+-import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++import { projectWaterfall } from '../charts/waterfall/projection';
++import type { WaterfallProjection } from '../charts/waterfall/types';
+ import { CategoricalCanvas } from './CategoricalCanvas';
+ import { EditorToolbar } from './EditorToolbar';
+ import { editorMessages, type EditorMessages } from './editorMessages';
+diff --git a/packages/editor/src/components/InspectorPanel.tsx b/packages/editor/src/components/InspectorPanel.tsx
+index aafe4aa..ca4b17b 100644
+--- a/packages/editor/src/components/InspectorPanel.tsx
++++ b/packages/editor/src/components/InspectorPanel.tsx
+@@ -3,10 +3,10 @@ import { useId, useRef, useState } from 'react';
+ 
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
+-import type { CategoricalProjection } from '../categorical/categoricalTypes';
++import type { CategoricalProjection } from '../charts/categorical/types';
+ import type { GroupSelectionResult } from '../interactions/groupSelection';
+ import type { SelectionState } from '../react/editorTypes';
+-import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++import type { WaterfallProjection } from '../charts/waterfall/types';
+ import type { EditorMessages } from './editorMessages';
+ import { formatAmount, type EditorLocale } from './formatAmount';
+ 
+diff --git a/packages/editor/src/components/OutlinePanel.tsx b/packages/editor/src/components/OutlinePanel.tsx
+index 2ef6fd5..98e802c 100644
+--- a/packages/editor/src/components/OutlinePanel.tsx
++++ b/packages/editor/src/components/OutlinePanel.tsx
+@@ -24,7 +24,7 @@ import {
+ 
+ import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
+-import type { CategoricalDatum, CategoricalProjection } from '../categorical/categoricalTypes';
++import type { CategoricalDatum, CategoricalProjection } from '../charts/categorical/types';
+ import { collectLeafSourceIds, locateViewNode } from '../domain/viewTree';
+ import {
+   resolveKeyboardMoveTarget,
+@@ -34,7 +34,7 @@ import {
+   type MoveTargetEdge,
+ } from '../interactions/moveTargets';
+ import type { SelectionState } from '../react/editorTypes';
+-import type { WaterfallDatum, WaterfallProjection } from '../waterfall/waterfallTypes';
++import type { WaterfallDatum, WaterfallProjection } from '../charts/waterfall/types';
+ import type { EditorMessages } from './editorMessages';
+ import { formatAmount, type EditorLocale } from './formatAmount';
+ 
+diff --git a/packages/editor/src/components/WaterfallCanvas.tsx b/packages/editor/src/components/WaterfallCanvas.tsx
+index 18b3150..7c1ea88 100644
+--- a/packages/editor/src/components/WaterfallCanvas.tsx
++++ b/packages/editor/src/components/WaterfallCanvas.tsx
+@@ -1,4 +1,3 @@
+-import type { Chart as G2Chart, G2Spec } from '@antv/g2';
+ import { FoldVertical, Ungroup, UnfoldVertical } from 'lucide-react';
+ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+ 
+@@ -9,23 +8,24 @@ import {
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+ import type { Annotation, Emphasis, ViewSpec } from '../domain/model';
+ import { locateViewNode, ownGroup } from '../domain/viewTree';
++import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
++import type { WaterfallDatum, WaterfallProjection } from '../charts/waterfall/types';
+ import {
+-  createWaterfallChartSpec,
+-  shouldShowWaterfallValueLabels,
+-} from '../export/waterfallChartSpec';
++  projectChartCategoryBounds,
++  resolveChartCategoryDropTarget,
++  resolveChartCategoryMinimumTargetHit,
++  type ChartCategoryBounds,
++} from '../interactions/categoryAxis';
+ import {
++  readChartCategoryElementPointer,
+   readChartElementBounds,
+-  readChartElementPointer,
+   readChartPointerPoint,
+-  readChartTargetX,
+-  resolveChartMinimumTargetHit,
+-  resolveChartHorizontalDropTarget,
+-  type ChartElementPointer,
+-  type ChartHorizontalBounds,
++  readChartTargetCoordinate,
++  type ChartCategoryElementPointer,
+   type ChartPointerPoint,
+ } from '../interactions/chartPointer';
+ import { resolvePointerMoveTarget, type MoveTargetEdge } from '../interactions/moveTargets';
+-import type { WaterfallDatum, WaterfallProjection } from '../waterfall/waterfallTypes';
++import { createG2ChartRuntime, type G2ChartRuntime } from '../rendering/g2/chartRuntime';
+ import type { EditorLocale } from './formatAmount';
+ import { AccessibleChartSummary } from './AccessibleChartSummary';
+ 
+@@ -36,24 +36,6 @@ const CHART_ERROR = { code: 'CHART_RENDER_ERROR', path: '/chart' } as const;
+ const EMPTY_EMPHASIS: Readonly<Record<ViewNodeId, Emphasis>> = {};
+ const EMPTY_ANNOTATIONS: Readonly<Record<ViewNodeId, Annotation>> = {};
+ 
+-type G2ChartConstructor = typeof G2Chart;
+-
+-let chartConstructorPromise: Promise<G2ChartConstructor> | undefined;
+-
+-function loadChartConstructor(): Promise<G2ChartConstructor> {
+-  if (chartConstructorPromise !== undefined) {
+-    return chartConstructorPromise;
+-  }
+-  const pending = import('@antv/g2').then(module => module.Chart);
+-  chartConstructorPromise = pending;
+-  void pending.catch(() => {
+-    if (chartConstructorPromise === pending) {
+-      chartConstructorPromise = undefined;
+-    }
+-  });
+-  return pending;
+-}
+-
+ interface ChartCopy {
+   readonly eyebrow: string;
+   readonly title: string;
+@@ -64,17 +46,6 @@ interface ChartCopy {
+   readonly ungroup: string;
+ }
+ 
+-interface ChartRenderRequest {
+-  readonly id: number;
+-  readonly projection: WaterfallProjection;
+-  readonly spec: G2Spec;
+-}
+-
+-interface ChartEventRegistration {
+-  readonly name: string;
+-  readonly listener: (event: unknown) => void;
+-}
+-
+ interface ChartMoveTarget {
+   readonly containerId: 'root' | GroupId;
+   readonly index: number;
+@@ -123,7 +94,7 @@ interface ChartDragSession {
+   readonly label: string;
+   readonly canvas: HTMLCanvasElement;
+   readonly start: ChartPointerPoint;
+-  readonly orderedBounds: readonly ChartHorizontalBounds[];
++  readonly orderedBounds: readonly ChartCategoryBounds[];
+   current: ChartPointerPoint;
+   moved: boolean;
+   target: ChartDropTarget | null;
+@@ -374,20 +345,6 @@ function draggableDatum(datum: WaterfallDatum | undefined): WaterfallDatum | und
+     : undefined;
+ }
+ 
+-function finishActiveAnimations(chart: G2Chart): void {
+-  try {
+-    for (const animation of chart.getContext().animations ?? []) {
+-      try {
+-        animation.finish();
+-      } catch {
+-        // Finishing an already-disposed animation is best effort.
+-      }
+-    }
+-  } catch {
+-    // A renderer without an animation context does not block the next request.
+-  }
+-}
+-
+ /** Owns the real G2 canvas lifecycle for one immutable waterfall projection. */
+ export function WaterfallCanvas({
+   projection,
+@@ -412,12 +369,7 @@ export function WaterfallCanvas({
+   const stageRef = useRef<HTMLElement>(null);
+   const hostRef = useRef<HTMLDivElement>(null);
+   const overlayRef = useRef<HTMLDivElement>(null);
+-  const chartRef = useRef<G2Chart | undefined>(undefined);
+-  const requestIdRef = useRef(0);
+-  const attemptedRequestIdRef = useRef(0);
+-  const latestRequestRef = useRef<ChartRenderRequest | undefined>(undefined);
+-  const flushRenderRef = useRef<() => Promise<void>>(async () => undefined);
+-  const registrationsRef = useRef<readonly ChartEventRegistration[]>([]);
++  const chartRuntimeRef = useRef<G2ChartRuntime<WaterfallProjection> | undefined>(undefined);
+   const onRenderErrorRef = useRef(onRenderError);
+   const interactionConfigRef = useRef<ChartInteractionConfig>({
+     projection,
+@@ -434,7 +386,6 @@ export function WaterfallCanvas({
+   const marqueeSessionRef = useRef<ChartMarqueeSession | null>(null);
+   const pendingPointerRef = useRef<ChartPointerPoint | null>(null);
+   const animationFrameRef = useRef<number | null>(null);
+-  const renderFrameRef = useRef<{ readonly ownerWindow: Window; readonly id: number } | null>(null);
+   const applyPointerRef = useRef<() => void>(() => undefined);
+   const cancelDragRef = useRef<(reason?: ChartCancelReason) => ChartDragSession | null>(() => null);
+   const cancelSelectionPressRef = useRef<() => void>(() => undefined);
+@@ -509,8 +460,6 @@ export function WaterfallCanvas({
+ 
+   useLayoutEffect(() => {
+     let cancelled = false;
+-    let destroyed = false;
+-    let rendering = false;
+     const isEffectDisposed = (): boolean => cancelled;
+ 
+     const host = hostRef.current;
+@@ -692,15 +641,12 @@ export function WaterfallCanvas({
+       });
+     };
+ 
+-    const startElementPointerSession = (pointer: ChartElementPointer): void => {
++    const startElementPointerSession = (pointer: ChartCategoryElementPointer): void => {
+       const config = interactionConfigRef.current;
+       if (isEffectDisposed()) {
+         return;
+       }
+-      const chart = chartRef.current;
+-      if (chart !== undefined) {
+-        finishActiveAnimations(chart);
+-      }
++      chartRuntimeRef.current?.finishAnimations();
+       const projectedDatum = config.projection.find(
+         candidate => candidate.nodeId === pointer.nodeId,
+       );
+@@ -736,17 +682,21 @@ export function WaterfallCanvas({
+       if (location === undefined) {
+         return;
+       }
+-      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
+-      const boundsByNode = new Map<ViewNodeId, ChartHorizontalBounds>();
++      const sceneBounds = readChartElementBounds(chartRuntimeRef.current?.getContext());
++      const boundsByNode = new Map<ViewNodeId, ChartCategoryBounds>();
+       for (const bounds of sceneBounds) {
+-        boundsByNode.set(bounds.nodeId, bounds);
++        const categoryBounds = projectChartCategoryBounds(bounds, 'x');
++        if (categoryBounds !== undefined) {
++          boundsByNode.set(bounds.nodeId, categoryBounds);
++        }
+       }
+       boundsByNode.set(itemId, {
+         nodeId: itemId,
+-        minX: pointer.minX,
+-        maxX: pointer.maxX,
++        min: pointer.min,
++        center: (pointer.min + pointer.max) / 2,
++        max: pointer.max,
+       });
+-      const orderedBounds: ChartHorizontalBounds[] = [];
++      const orderedBounds: ChartCategoryBounds[] = [];
+       for (const nodeId of location.values) {
+         const bounds = boundsByNode.get(nodeId);
+         if (bounds !== undefined) {
+@@ -774,9 +724,9 @@ export function WaterfallCanvas({
+ 
+     const handleElementPointerDown = (event: unknown): void => {
+       setGroupActions(null);
+-      const pointer = readChartElementPointer(event);
+-      if (pointer !== undefined) {
+-        startElementPointerSession(pointer);
++      const pointer = readChartCategoryElementPointer(event, 'x');
++      if (pointer.ok) {
++        startElementPointerSession(pointer.value);
+       }
+     };
+ 
+@@ -802,25 +752,28 @@ export function WaterfallCanvas({
+       if (!session.moved && Math.abs(point.x - session.start.x) < 4) {
+         return true;
+       }
+-      const horizontalTarget = resolveChartHorizontalDropTarget({
++      const dropResult = resolveChartCategoryDropTarget({
++        axis: 'x',
+         itemId: session.itemId,
+-        startPointerX: session.start.x,
+-        pointerX: point.x,
++        startPointer: session.start,
++        pointer: point,
+         orderedBounds: session.orderedBounds,
++        boundsRevision: 0,
++        currentRevision: 0,
++        minimumDragDistance: 0,
+       });
+-      const target =
+-        horizontalTarget === null
+-          ? null
+-          : { nodeId: horizontalTarget.nodeId, edge: horizontalTarget.edge };
++      const target = !dropResult.ok
++        ? null
++        : { nodeId: dropResult.target.nodeId, edge: dropResult.target.edge };
+       const wasPending = !session.moved;
+       session.moved = true;
+       schedulePointer(point);
+       if (wasPending) {
+         session.target = target;
+-        if (horizontalTarget === null) {
++        if (!dropResult.ok) {
+           hostRef.current?.style.removeProperty('--tp-chart-drop-x');
+         } else {
+-          hostRef.current?.style.setProperty('--tp-chart-drop-x', `${horizontalTarget.targetX}px`);
++          hostRef.current?.style.setProperty('--tp-chart-drop-x', `${dropResult.target.target}px`);
+         }
+         publishInteraction({
+           state: 'dragging',
+@@ -829,7 +782,7 @@ export function WaterfallCanvas({
+         });
+         return true;
+       }
+-      publishTarget(target, horizontalTarget?.targetX);
++      publishTarget(target, dropResult.ok ? dropResult.target.target : undefined);
+       return true;
+     };
+ 
+@@ -852,12 +805,13 @@ export function WaterfallCanvas({
+       ) {
+         return;
+       }
+-      const pointer = readChartElementPointer(event);
++      const pointerResult = readChartCategoryElementPointer(event, 'x');
+       const config = interactionConfigRef.current;
+-      const chart = chartRef.current;
+-      if (pointer === undefined || config.viewSpec === undefined || chart === undefined) {
++      const runtime = chartRuntimeRef.current;
++      if (!pointerResult.ok || config.viewSpec === undefined || runtime === undefined) {
+         return;
+       }
++      const pointer = pointerResult.value;
+       const datum = config.projection.find(candidate => candidate.nodeId === pointer.nodeId);
+       if (datum === undefined) {
+         return;
+@@ -867,7 +821,7 @@ export function WaterfallCanvas({
+         setGroupActions(null);
+         return;
+       }
+-      const bounds = readChartElementBounds(chart.getContext()).find(
++      const bounds = readChartElementBounds(runtime.getContext()).find(
+         element => element.nodeId === datum.nodeId,
+       );
+       if (bounds === undefined) {
+@@ -902,8 +856,7 @@ export function WaterfallCanvas({
+       if (point === undefined || canvas === null || canvas === undefined) {
+         return;
+       }
+-      const chart = chartRef.current;
+-      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
++      const sceneBounds = readChartElementBounds(chartRuntimeRef.current?.getContext());
+       const pointHitsMark = sceneBounds.some(
+         bounds =>
+           point.x >= bounds.minX &&
+@@ -920,11 +873,19 @@ export function WaterfallCanvas({
+         typeof ownerWindow.matchMedia === 'function' &&
+         ownerWindow.matchMedia(MOBILE_VIEWPORT_QUERY).matches;
+       const expandedTarget = usesMinimumTargets
+-        ? resolveChartMinimumTargetHit(point, sceneBounds, MINIMUM_POINTER_TARGET_SIZE)
+-        : undefined;
+-      if (expandedTarget !== undefined) {
++        ? resolveChartCategoryMinimumTargetHit(point, sceneBounds, MINIMUM_POINTER_TARGET_SIZE, 'x')
++        : { ok: false as const, reason: 'NO_TARGET' as const };
++      if (expandedTarget.ok) {
+         resetMarquee('cancelled');
+-        startElementPointerSession(expandedTarget);
++        startElementPointerSession({
++          ...point,
++          axis: 'x',
++          nodeId: expandedTarget.hit.nodeId,
++          edge: expandedTarget.hit.edge,
++          min: expandedTarget.hit.min,
++          max: expandedTarget.hit.max,
++          target: expandedTarget.hit.target,
++        });
+         return;
+       }
+       if (
+@@ -1018,10 +979,10 @@ export function WaterfallCanvas({
+       if (marquee !== null && point !== undefined && point.pointerId === marquee.pointerId) {
+         marquee.current = point;
+         const bounds = marqueeRect(marquee.start, point);
+-        const chart = chartRef.current;
++        const runtime = chartRuntimeRef.current;
+         const config = interactionConfigRef.current;
+         resetMarquee();
+-        if (bounds.width < 4 || bounds.height < 4 || chart === undefined) {
++        if (bounds.width < 4 || bounds.height < 4 || runtime === undefined) {
+           notifyCancel(config.onCancel, 'cancelled');
+           return;
+         }
+@@ -1036,7 +997,7 @@ export function WaterfallCanvas({
+             )
+             .map(datum => datum.nodeId),
+         );
+-        const selectedIds = readChartElementBounds(chart.getContext())
++        const selectedIds = readChartElementBounds(runtime.getContext())
+           .filter(
+             element =>
+               selectable.has(element.nodeId) &&
+@@ -1171,101 +1132,45 @@ export function WaterfallCanvas({
+     ownerDocument?.addEventListener('keydown', handleKeyDown);
+     ownerWindow?.addEventListener('blur', handleWindowBlur);
+ 
+-    const flushRender = async (): Promise<void> => {
+-      const chart = chartRef.current;
+-      if (chart === undefined || isEffectDisposed() || rendering) {
+-        return;
+-      }
+-
+-      rendering = true;
+-      try {
+-        while (!isEffectDisposed()) {
+-          const request = latestRequestRef.current;
+-          if (request === undefined || request.id === attemptedRequestIdRef.current) {
+-            break;
+-          }
+-
+-          const attemptId = request.id;
+-          let succeeded = false;
+-          try {
+-            chart.options(request.spec);
+-            await chart.render();
+-            succeeded = true;
+-          } catch {
+-            succeeded = false;
+-          }
+-          if (isEffectDisposed()) {
++    if (host === null) {
++      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
++      setRenderFailure({ projection: interactionConfigRef.current.projection, issue: CHART_ERROR });
++      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++    } else {
++      const runtime = createG2ChartRuntime<WaterfallProjection>({
++        container: host,
++        events: [
++          { name: 'element:pointerdown', listener: handleElementPointerDown },
++          { name: 'element:pointerover', listener: handleElementPointerOver },
++          { name: 'element:pointermove', listener: handleElementPointerMove },
++          { name: 'element:pointerout', listener: handleElementPointerOut },
++          { name: 'plot:pointerdown', listener: handlePlotPointerDown },
++          { name: 'plot:pointermove', listener: handlePlotPointerMove },
++          { name: 'plot:pointerup', listener: handlePlotPointerUp },
++          { name: 'plot:pointerupoutside', listener: handlePlotPointerUpOutside },
++        ],
++        onRenderSettled: settlement => {
++          if (isEffectDisposed() || !settlement.latest) {
+             return;
+           }
+-          attemptedRequestIdRef.current = attemptId;
+-          if (latestRequestRef.current?.id !== attemptId) {
+-            continue;
+-          }
+-
+-          if (succeeded) {
++          if (settlement.status === 'success') {
+             setRenderFailure(null);
+             notifyRenderIssue(onRenderErrorRef.current, null);
+-          } else {
+-            console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+-            setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
+-            notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++            return;
+           }
+-          break;
+-        }
+-      } finally {
+-        rendering = false;
+-        const latest = latestRequestRef.current;
+-        if (
+-          !isEffectDisposed() &&
+-          latest !== undefined &&
+-          latest.id !== attemptedRequestIdRef.current
+-        ) {
+-          void flushRenderRef.current();
+-        }
+-      }
+-    };
+-    flushRenderRef.current = flushRender;
+-
+-    const initializeChart = async (): Promise<void> => {
+-      const Chart = await loadChartConstructor();
+-      if (isEffectDisposed()) {
+-        return;
+-      }
+-      const host = hostRef.current;
+-      if (host === null) {
+-        throw new Error('Chart host is unavailable');
+-      }
+-
+-      const chart = new Chart({ container: host, autoFit: true });
+-      chartRef.current = chart;
+-      const registrations: readonly ChartEventRegistration[] = [
+-        { name: 'element:pointerdown', listener: handleElementPointerDown },
+-        { name: 'element:pointerover', listener: handleElementPointerOver },
+-        { name: 'element:pointermove', listener: handleElementPointerMove },
+-        { name: 'element:pointerout', listener: handleElementPointerOut },
+-        { name: 'plot:pointerdown', listener: handlePlotPointerDown },
+-        { name: 'plot:pointermove', listener: handlePlotPointerMove },
+-        { name: 'plot:pointerup', listener: handlePlotPointerUp },
+-        { name: 'plot:pointerupoutside', listener: handlePlotPointerUpOutside },
+-      ];
+-      registrationsRef.current = registrations;
+-      for (const registration of registrations) {
+-        chart.on(registration.name, registration.listener);
+-      }
+-      await flushRender();
+-    };
+-
+-    void initializeChart().catch(() => {
+-      if (isEffectDisposed()) {
+-        return;
+-      }
+-      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+-      const request = latestRequestRef.current;
+-      if (request !== undefined) {
+-        setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
+-      }
+-      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
+-    });
++          console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
++          setRenderFailure({ projection: settlement.value, issue: CHART_ERROR });
++          notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
++        },
++        onCallbackError: () => {
++          console.error('tellplot chart runtime callback failed at /chart');
++        },
++        onCleanupError: () => {
++          console.error('tellplot chart cleanup failed at /chart');
++        },
++      });
++      chartRuntimeRef.current = runtime;
++    }
+ 
+     return () => {
+       cancelled = true;
+@@ -1278,35 +1183,15 @@ export function WaterfallCanvas({
+       cancelSelectionPressRef.current = () => undefined;
+       cancelMarqueeRef.current = () => undefined;
+       cancelPointerFrame();
+-      if (renderFrameRef.current !== null) {
+-        renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
+-        renderFrameRef.current = null;
+-      }
+       applyPointerRef.current = () => undefined;
+-      const chart = chartRef.current;
+-      if (chart === undefined || destroyed) {
+-        return;
+-      }
+-      for (const registration of registrationsRef.current) {
+-        chart.off(registration.name, registration.listener);
+-      }
+-      registrationsRef.current = [];
+-      destroyed = true;
+-      try {
+-        chart.destroy();
+-      } catch {
+-        console.error('tellplot chart cleanup failed at /chart');
+-      } finally {
+-        chartRef.current = undefined;
+-      }
++      chartRuntimeRef.current?.dispose();
++      chartRuntimeRef.current = undefined;
+     };
+   }, []);
+ 
+   useLayoutEffect(() => {
+-    requestIdRef.current += 1;
+-    latestRequestRef.current = {
+-      id: requestIdRef.current,
+-      projection,
++    chartRuntimeRef.current?.request({
++      value: projection,
+       spec: createWaterfallChartSpec({
+         projection,
+         locale,
+@@ -1317,33 +1202,7 @@ export function WaterfallCanvas({
+         emphasis,
+         appearance,
+       }),
+-    };
+-    const chart = chartRef.current;
+-    if (chart !== undefined) {
+-      const ownerWindow = hostRef.current?.ownerDocument.defaultView;
+-      const flushLatest = (): void => {
+-        renderFrameRef.current = null;
+-        const activeChart = chartRef.current;
+-        if (activeChart === undefined) {
+-          return;
+-        }
+-        finishActiveAnimations(activeChart);
+-        void flushRenderRef.current();
+-      };
+-      if (
+-        ownerWindow !== undefined &&
+-        ownerWindow !== null &&
+-        typeof ownerWindow.requestAnimationFrame === 'function'
+-      ) {
+-        if (renderFrameRef.current !== null) {
+-          renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
+-        }
+-        const id = ownerWindow.requestAnimationFrame(flushLatest);
+-        renderFrameRef.current = { ownerWindow, id };
+-      } else {
+-        queueMicrotask(flushLatest);
+-      }
+-    }
++    });
+   }, [annotations, appearance, currency, emphasis, locale, projection, shouldReduceMotion]);
+ 
+   useLayoutEffect(() => {
+@@ -1364,15 +1223,15 @@ export function WaterfallCanvas({
+       return;
+     }
+     const target = externalPreview.state === 'dragging' ? externalPreview.target : null;
+-    const chart = chartRef.current;
+-    if (externalStarted && chart !== undefined) {
+-      finishActiveAnimations(chart);
++    const runtime = chartRuntimeRef.current;
++    if (externalStarted) {
++      runtime?.finishAnimations();
+     }
+-    const targetX =
+-      target === null || chart === undefined
++    const targetCoordinate =
++      target === null || runtime === undefined
+         ? undefined
+-        : readChartTargetX(chart.getContext(), target.nodeId, target.edge);
+-    if (target === null || targetX === undefined) {
++        : readChartTargetCoordinate(runtime.getContext(), target.nodeId, target.edge, 'x');
++    if (target === null || targetCoordinate === undefined || !targetCoordinate.ok) {
+       host.removeAttribute('data-drop-indicator');
+       host.removeAttribute('data-drop-node-id');
+       host.removeAttribute('data-preview-source');
+@@ -1382,7 +1241,7 @@ export function WaterfallCanvas({
+     host.setAttribute('data-drop-indicator', target.edge);
+     host.setAttribute('data-drop-node-id', target.nodeId);
+     host.setAttribute('data-preview-source', 'outline');
+-    host.style.setProperty('--tp-chart-drop-x', `${targetX}px`);
++    host.style.setProperty('--tp-chart-drop-x', `${targetCoordinate.value}px`);
+   }, [externalPreview, interaction.state, interactionTarget]);
+ 
+   const externalInteractionActive =
+diff --git a/packages/editor/src/export/pngExport.ts b/packages/editor/src/export/pngExport.ts
+index 36aadf5..3893a9f 100644
+--- a/packages/editor/src/export/pngExport.ts
++++ b/packages/editor/src/export/pngExport.ts
+@@ -1,17 +1,16 @@
+-import type { Chart as G2Chart } from '@antv/g2';
+-
+ import type { FinancialChartAppearance } from '../config/chartAppearance';
+ import type { ViewNodeId } from '../domain/ids';
+ import type { Annotation, ChartType, Emphasis } from '../domain/model';
+ import {
+   createCategoricalChartSpec,
+   shouldShowCategoricalValueLabels,
+-} from '../categorical/categoricalChartSpec';
+-import type { CategoricalProjection } from '../categorical/categoricalTypes';
+-import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++} from '../charts/categorical/spec';
++import type { CategoricalProjection } from '../charts/categorical/types';
++import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
++import type { WaterfallProjection } from '../charts/waterfall/types';
++import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
+ import type { EditorLocale } from '../components/formatAmount';
+ import { exportError, type ExportResult, type NormalizedExportOptions } from './exportTypes';
+-import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from './waterfallChartSpec';
+ 
+ interface PngChartExportBaseRequest {
+   readonly ownerDocument: Document;
+@@ -134,64 +133,52 @@ export async function exportPngChart(
+     throw exportError('EXPORT_UNAVAILABLE', '/export/png');
+   }
+ 
+-  const host = request.ownerDocument.createElement('div');
+-  host.setAttribute('aria-hidden', 'true');
+-  host.style.position = 'fixed';
+-  host.style.left = '-10000px';
+-  host.style.top = '-10000px';
+-  host.style.width = `${width}px`;
+-  host.style.height = `${height}px`;
+-  host.style.pointerEvents = 'none';
+-  body.append(host);
+-
+-  let chart: G2Chart | undefined;
+   try {
+-    const { Chart } = await import('@antv/g2');
+-    chart = new Chart({ container: host, width, height, autoFit: false });
+-    chart.options(
+-      isCategoricalRequest(request)
+-        ? createCategoricalChartSpec({
+-            projection: request.projection,
+-            chartType: request.chartType,
+-            title: request.title,
+-            locale: request.locale,
+-            currency: request.currency,
+-            reducedMotion: true,
+-            showValueLabels: shouldShowCategoricalValueLabels(request.projection),
+-            annotations: request.annotations,
+-            emphasis: request.emphasis,
+-            appearance: request.appearance,
+-          })
+-        : createWaterfallChartSpec({
+-            projection: request.projection,
+-            title: request.title,
+-            locale: request.locale,
+-            currency: request.currency,
+-            reducedMotion: true,
+-            showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+-            annotations: request.annotations,
+-            emphasis: request.emphasis,
+-            appearance: request.appearance,
+-          }),
++    return await withOffscreenG2Render(
++      {
++        ownerDocument: request.ownerDocument,
++        parent: body,
++        renderer: 'canvas',
++        width,
++        height,
++        spec: isCategoricalRequest(request)
++          ? createCategoricalChartSpec({
++              projection: request.projection,
++              chartType: request.chartType,
++              title: request.title,
++              locale: request.locale,
++              currency: request.currency,
++              reducedMotion: true,
++              showValueLabels: shouldShowCategoricalValueLabels(request.projection),
++              annotations: request.annotations,
++              emphasis: request.emphasis,
++              appearance: request.appearance,
++            })
++          : createWaterfallChartSpec({
++              projection: request.projection,
++              title: request.title,
++              locale: request.locale,
++              currency: request.currency,
++              reducedMotion: true,
++              showValueLabels: shouldShowWaterfallValueLabels(request.projection),
++              annotations: request.annotations,
++              emphasis: request.emphasis,
++              appearance: request.appearance,
++            }),
++      },
++      host => {
++        const canvas = host.querySelector('canvas');
++        const ownerWindow = request.ownerDocument.defaultView;
++        if (ownerWindow === null || !(canvas instanceof ownerWindow.HTMLCanvasElement)) {
++          throw exportError('EXPORT_FAILED', '/export/png');
++        }
++        return exportPngCanvas(canvas, options);
++      },
+     );
+-    await chart.render();
+-    const canvas = host.querySelector('canvas');
+-    const ownerWindow = request.ownerDocument.defaultView;
+-    if (ownerWindow === null || !(canvas instanceof ownerWindow.HTMLCanvasElement)) {
+-      throw exportError('EXPORT_FAILED', '/export/png');
+-    }
+-    return exportPngCanvas(canvas, options);
+   } catch (error) {
+     if (isStructuredExportError(error)) {
+       throw error;
+     }
+     throw exportError('EXPORT_FAILED', '/export/png');
+-  } finally {
+-    try {
+-      chart?.destroy();
+-    } catch {
+-      // Cleanup failure must not expose renderer internals or financial data.
+-    }
+-    host.remove();
+   }
+ }
+diff --git a/packages/editor/src/export/svgExport.ts b/packages/editor/src/export/svgExport.ts
+index 39a25ab..3478d20 100644
+--- a/packages/editor/src/export/svgExport.ts
++++ b/packages/editor/src/export/svgExport.ts
+@@ -1,16 +1,15 @@
+-import type { Chart as G2Chart } from '@antv/g2';
+-
+ import type { FinancialChartAppearance } from '../config/chartAppearance';
+ import type { ViewNodeId } from '../domain/ids';
+ import type { Annotation, ChartType, Emphasis } from '../domain/model';
+ import {
+   createCategoricalChartSpec,
+   shouldShowCategoricalValueLabels,
+-} from '../categorical/categoricalChartSpec';
+-import type { CategoricalProjection } from '../categorical/categoricalTypes';
+-import type { WaterfallProjection } from '../waterfall/waterfallTypes';
++} from '../charts/categorical/spec';
++import type { CategoricalProjection } from '../charts/categorical/types';
++import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
++import type { WaterfallProjection } from '../charts/waterfall/types';
++import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
+ import type { EditorLocale } from '../components/formatAmount';
+-import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from './waterfallChartSpec';
+ import { exportError, type ExportResult } from './exportTypes';
+ 
+ interface SvgResultOptions {
+@@ -143,78 +142,57 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
+     throw exportError('EXPORT_UNAVAILABLE', '/export/svg');
+   }
+ 
+-  const host = request.ownerDocument.createElement('div');
+-  host.setAttribute('aria-hidden', 'true');
+-  host.style.position = 'fixed';
+-  host.style.left = '-10000px';
+-  host.style.top = '-10000px';
+-  host.style.width = `${width}px`;
+-  host.style.height = `${height}px`;
+-  host.style.pointerEvents = 'none';
+-  body.append(host);
+-
+-  let chart: G2Chart | undefined;
+   try {
+-    const [{ Chart }, { Renderer }] = await Promise.all([
+-      import('@antv/g2'),
+-      import('@antv/g-svg'),
+-    ]);
+-    chart = new Chart({
+-      container: host,
+-      width,
+-      height,
+-      autoFit: false,
+-      renderer: new Renderer(),
+-    });
+-    chart.options(
+-      isCategoricalRequest(request)
+-        ? createCategoricalChartSpec({
+-            projection: request.projection,
+-            chartType: request.chartType,
+-            title: request.title,
+-            locale: request.locale,
+-            currency: request.currency,
+-            reducedMotion: true,
+-            showValueLabels: shouldShowCategoricalValueLabels(request.projection),
+-            annotations: request.annotations,
+-            emphasis: request.emphasis,
+-            appearance: request.appearance,
+-          })
+-        : createWaterfallChartSpec({
+-            projection: request.projection,
+-            title: request.title,
+-            locale: request.locale,
+-            currency: request.currency,
+-            reducedMotion: true,
+-            showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+-            annotations: request.annotations,
+-            emphasis: request.emphasis,
+-            appearance: request.appearance,
+-          }),
++    return await withOffscreenG2Render(
++      {
++        ownerDocument: request.ownerDocument,
++        parent: body,
++        renderer: 'svg',
++        width,
++        height,
++        spec: isCategoricalRequest(request)
++          ? createCategoricalChartSpec({
++              projection: request.projection,
++              chartType: request.chartType,
++              title: request.title,
++              locale: request.locale,
++              currency: request.currency,
++              reducedMotion: true,
++              showValueLabels: shouldShowCategoricalValueLabels(request.projection),
++              annotations: request.annotations,
++              emphasis: request.emphasis,
++              appearance: request.appearance,
++            })
++          : createWaterfallChartSpec({
++              projection: request.projection,
++              title: request.title,
++              locale: request.locale,
++              currency: request.currency,
++              reducedMotion: true,
++              showValueLabels: shouldShowWaterfallValueLabels(request.projection),
++              annotations: request.annotations,
++              emphasis: request.emphasis,
++              appearance: request.appearance,
++            }),
++      },
++      host => {
++        const svg = host.querySelector('svg');
++        const ownerWindow = request.ownerDocument.defaultView;
++        if (ownerWindow === null || !(svg instanceof ownerWindow.SVGSVGElement)) {
++          throw exportError('EXPORT_FAILED', '/export/svg');
++        }
++        return createSafeSvgResult(svg, {
++          width,
++          height,
++          background: request.background,
++          suggestedFilename: request.suggestedFilename,
++        });
++      },
+     );
+-    await chart.render();
+-    const svg = host.querySelector('svg');
+-    const ownerWindow = request.ownerDocument.defaultView;
+-    if (ownerWindow === null || !(svg instanceof ownerWindow.SVGSVGElement)) {
+-      throw exportError('EXPORT_FAILED', '/export/svg');
+-    }
+-    return createSafeSvgResult(svg, {
+-      width,
+-      height,
+-      background: request.background,
+-      suggestedFilename: request.suggestedFilename,
+-    });
+   } catch (error) {
+     if (isStructuredExportError(error)) {
+       throw error;
+     }
+     throw exportError('EXPORT_FAILED', '/export/svg');
+-  } finally {
+-    try {
+-      chart?.destroy();
+-    } catch {
+-      // Cleanup failure must not expose renderer internals or financial data.
+-    }
+-    host.remove();
+   }
+ }
+diff --git a/packages/editor/src/interactions/chartPointer.ts b/packages/editor/src/interactions/chartPointer.ts
+index 0e26042..12b4831 100644
+--- a/packages/editor/src/interactions/chartPointer.ts
++++ b/packages/editor/src/interactions/chartPointer.ts
+@@ -2,8 +2,6 @@ import type { ViewNodeId } from '../domain/ids';
+ import {
+   categoryCoordinate,
+   projectChartCategoryBounds,
+-  resolveChartCategoryDropTarget,
+-  resolveChartCategoryMinimumTargetHit,
+   type CategoryAxis,
+   type ChartSceneRectangle,
+ } from './categoryAxis';
+@@ -15,14 +13,6 @@ export interface ChartPointerPoint {
+   readonly y: number;
+ }
+ 
+-export interface ChartElementPointer extends ChartPointerPoint {
+-  readonly nodeId: ViewNodeId;
+-  readonly edge: MoveTargetEdge;
+-  readonly minX: number;
+-  readonly maxX: number;
+-  readonly targetX: number;
+-}
+-
+ export interface ChartCategoryElementPointer extends ChartPointerPoint {
+   readonly axis: CategoryAxis;
+   readonly nodeId: ViewNodeId;
+@@ -46,25 +36,6 @@ export type ChartCategoryTargetReadResult =
+       readonly reason: 'INVALID_INPUT' | 'SOURCE_NOT_FOUND' | 'INVALID_BOUNDS';
+     };
+ 
+-export interface ChartHorizontalBounds {
+-  readonly nodeId: ViewNodeId;
+-  readonly minX: number;
+-  readonly maxX: number;
+-}
+-
+-export interface ChartHorizontalDropTarget {
+-  readonly nodeId: ViewNodeId;
+-  readonly edge: MoveTargetEdge;
+-  readonly targetX: number;
+-}
+-
+-export interface ChartHorizontalDropInput {
+-  readonly itemId: ViewNodeId;
+-  readonly startPointerX: number;
+-  readonly pointerX: number;
+-  readonly orderedBounds: readonly ChartHorizontalBounds[];
+-}
+-
+ type UnknownRecord = Readonly<Record<string, unknown>>;
+ 
+ function asRecord(value: unknown): UnknownRecord | undefined {
+@@ -97,26 +68,6 @@ function coordinatePair(value: unknown): readonly [number, number] | undefined {
+ 
+ export type ChartSceneElementBounds = ChartSceneRectangle;
+ 
+-/** Resolves a renderer-owned mark through a minimum square pointer target. */
+-export function resolveChartMinimumTargetHit(
+-  point: ChartPointerPoint,
+-  bounds: readonly ChartSceneElementBounds[],
+-  minimumTargetSize: number,
+-): ChartElementPointer | undefined {
+-  const result = resolveChartCategoryMinimumTargetHit(point, bounds, minimumTargetSize, 'x');
+-  if (!result.ok) {
+-    return undefined;
+-  }
+-  return {
+-    ...point,
+-    nodeId: result.hit.nodeId,
+-    edge: result.hit.edge,
+-    minX: result.hit.min,
+-    maxX: result.hit.max,
+-    targetX: result.hit.target,
+-  };
+-}
+-
+ function sceneRectangle(value: unknown, nodeId: ViewNodeId): ChartSceneElementBounds | undefined {
+   const bounds = asRecord(value);
+   const min = coordinatePair(read(bounds, 'min'));
+@@ -208,55 +159,6 @@ export function readChartCategoryElementPointer(
+   };
+ }
+ 
+-/** Preserves the accepted waterfall/column X-axis event adapter shape. */
+-export function readChartElementPointer(event: unknown): ChartElementPointer | undefined {
+-  const result = readChartCategoryElementPointer(event, 'x');
+-  if (!result.ok) {
+-    return undefined;
+-  }
+-  return {
+-    pointerId: result.value.pointerId,
+-    x: result.value.x,
+-    y: result.value.y,
+-    nodeId: result.value.nodeId,
+-    edge: result.value.edge,
+-    minX: result.value.min,
+-    maxX: result.value.max,
+-    targetX: result.value.target,
+-  };
+-}
+-
+-/** Resolves reorder collision from the translated bar rectangle and X coordinate only. */
+-export function resolveChartHorizontalDropTarget({
+-  itemId,
+-  startPointerX,
+-  pointerX,
+-  orderedBounds,
+-}: ChartHorizontalDropInput): ChartHorizontalDropTarget | null {
+-  const result = resolveChartCategoryDropTarget({
+-    axis: 'x',
+-    itemId,
+-    startPointer: { x: startPointerX, y: 0 },
+-    pointer: { x: pointerX, y: 0 },
+-    orderedBounds: orderedBounds.map(bounds => ({
+-      nodeId: bounds.nodeId,
+-      min: bounds.minX,
+-      center: (bounds.minX + bounds.maxX) / 2,
+-      max: bounds.maxX,
+-    })),
+-    boundsRevision: 0,
+-    currentRevision: 0,
+-    minimumDragDistance: 0,
+-  });
+-  return result.ok
+-    ? {
+-        nodeId: result.target.nodeId,
+-        edge: result.target.edge,
+-        targetX: result.target.target,
+-      }
+-    : null;
+-}
+-
+ /** Resolves a semantic chart target to its renderer-owned category-axis scene edge. */
+ export function readChartTargetCoordinate(
+   context: unknown,
+@@ -314,16 +216,6 @@ export function readChartTargetCoordinate(
+   return { ok: false, reason: 'SOURCE_NOT_FOUND' };
+ }
+ 
+-/** Preserves the accepted waterfall/column X-axis scene-edge lookup shape. */
+-export function readChartTargetX(
+-  context: unknown,
+-  nodeId: ViewNodeId,
+-  edge: MoveTargetEdge,
+-): number | undefined {
+-  const result = readChartTargetCoordinate(context, nodeId, edge, 'x');
+-  return result.ok ? result.value : undefined;
+-}
+-
+ /** Reads renderer-owned element bounds for hit testing and DOM overlay placement. */
+ export function readChartElementBounds(context: unknown): readonly ChartSceneElementBounds[] {
+   const contextRecord = asRecord(context);
+diff --git a/packages/editor/src/rendering/g2/chartRuntime.ts b/packages/editor/src/rendering/g2/chartRuntime.ts
+new file mode 100644
+index 0000000..9bfbc56
+--- /dev/null
++++ b/packages/editor/src/rendering/g2/chartRuntime.ts
+@@ -0,0 +1,275 @@
++import type { Chart as G2Chart, G2Spec } from '@antv/g2';
++
++type G2ChartConstructor = typeof G2Chart;
++
++let chartConstructorPromise: Promise<G2ChartConstructor> | undefined;
++
++async function importG2ChartConstructor(): Promise<G2ChartConstructor> {
++  try {
++    return (await import('@antv/g2')).Chart;
++  } catch (error) {
++    chartConstructorPromise = undefined;
++    throw error;
++  }
++}
++
++export function loadG2ChartConstructor(): Promise<G2ChartConstructor> {
++  if (chartConstructorPromise !== undefined) {
++    return chartConstructorPromise;
++  }
++  chartConstructorPromise = importG2ChartConstructor();
++  return chartConstructorPromise;
++}
++
++export interface G2ChartEventRegistration {
++  readonly name: string;
++  readonly listener: (event: unknown) => void;
++}
++
++export interface G2ChartRenderRequest<Value> {
++  readonly value: Value;
++  readonly spec: G2Spec;
++}
++
++export interface G2ChartRenderSettlement<Value> {
++  readonly value: Value;
++  readonly status: 'success' | 'failure';
++  readonly latest: boolean;
++}
++
++export interface G2ChartRuntimeOptions<Value> {
++  readonly container: HTMLElement;
++  readonly events: readonly G2ChartEventRegistration[];
++  readonly onRenderSettled: (settlement: G2ChartRenderSettlement<Value>) => void;
++  readonly onCallbackError?: (() => void) | undefined;
++  readonly onCleanupError?: (() => void) | undefined;
++}
++
++export interface G2ChartRuntime<Value> {
++  request(request: G2ChartRenderRequest<Value>): void;
++  finishAnimations(): void;
++  getContext(): unknown;
++  dispose(): void;
++}
++
++function finishAnimations(chart: G2Chart): void {
++  try {
++    for (const animation of chart.getContext().animations ?? []) {
++      try {
++        animation.finish();
++      } catch {
++        // Finishing an already-disposed animation is best effort.
++      }
++    }
++  } catch {
++    // A renderer without an animation context does not block the next request.
++  }
++}
++
++/** Owns the shared G2 constructor, render queue, event and teardown lifecycle. */
++export function createG2ChartRuntime<Value>(
++  options: G2ChartRuntimeOptions<Value>,
++): G2ChartRuntime<Value> {
++  let chart: G2Chart | undefined;
++  let disposed = false;
++  let rendering = false;
++  let requestId = 0;
++  let attemptedRequestId = 0;
++  let latestRequest:
++    | (G2ChartRenderRequest<Value> & {
++        readonly id: number;
++      })
++    | undefined;
++  let activeRegistrations: readonly G2ChartEventRegistration[] = [];
++  let scheduledFrame: { readonly ownerWindow: Window; readonly id: number } | undefined;
++  let scheduleToken = 0;
++
++  const notifyCallbackError = (): void => {
++    try {
++      options.onCallbackError?.();
++    } catch {
++      // A reporting callback cannot interrupt renderer progress.
++    }
++  };
++
++  const notifySettlement = (settlement: G2ChartRenderSettlement<Value>): void => {
++    try {
++      options.onRenderSettled(settlement);
++    } catch {
++      notifyCallbackError();
++    }
++  };
++
++  const cancelScheduledFlush = (): void => {
++    scheduleToken += 1;
++    if (scheduledFrame !== undefined) {
++      scheduledFrame.ownerWindow.cancelAnimationFrame(scheduledFrame.id);
++      scheduledFrame = undefined;
++    }
++  };
++
++  const releaseChart = (): void => {
++    const current = chart;
++    if (current === undefined) {
++      return;
++    }
++    chart = undefined;
++    let cleanupFailed = false;
++    for (const registration of activeRegistrations) {
++      try {
++        current.off(registration.name, registration.listener);
++      } catch {
++        cleanupFailed = true;
++      }
++    }
++    activeRegistrations = [];
++    try {
++      current.destroy();
++    } catch {
++      cleanupFailed = true;
++    }
++    if (cleanupFailed) {
++      try {
++        options.onCleanupError?.();
++      } catch {
++        // Cleanup reporting is best effort and must not expose renderer details.
++      }
++    }
++  };
++
++  const flush = async (): Promise<void> => {
++    const activeChart = chart;
++    if (activeChart === undefined || disposed || rendering) {
++      return;
++    }
++
++    rendering = true;
++    try {
++      while (!disposed) {
++        const request = latestRequest;
++        if (request === undefined || request.id === attemptedRequestId) {
++          break;
++        }
++
++        let status: G2ChartRenderSettlement<Value>['status'] = 'failure';
++        try {
++          activeChart.options(request.spec);
++          await activeChart.render();
++          status = 'success';
++        } catch {
++          status = 'failure';
++        }
++        if (disposed) {
++          return;
++        }
++
++        attemptedRequestId = request.id;
++        const latest = latestRequest?.id === request.id;
++        notifySettlement({ value: request.value, status, latest });
++        if (!latest) {
++          continue;
++        }
++        break;
++      }
++    } finally {
++      rendering = false;
++      if (
++        !disposed &&
++        chart !== undefined &&
++        latestRequest !== undefined &&
++        latestRequest.id !== attemptedRequestId
++      ) {
++        void flush();
++      }
++    }
++  };
++
++  const scheduleFlush = (): void => {
++    const activeChart = chart;
++    if (disposed || activeChart === undefined) {
++      return;
++    }
++    cancelScheduledFlush();
++    const token = scheduleToken;
++    const run = (): void => {
++      if (disposed || token !== scheduleToken) {
++        return;
++      }
++      scheduledFrame = undefined;
++      finishAnimations(activeChart);
++      void flush();
++    };
++    const ownerWindow = options.container.ownerDocument.defaultView;
++    if (ownerWindow !== null && typeof ownerWindow.requestAnimationFrame === 'function') {
++      const id = ownerWindow.requestAnimationFrame(run);
++      scheduledFrame = { ownerWindow, id };
++      return;
++    }
++    queueMicrotask(run);
++  };
++
++  const initialize = async (): Promise<void> => {
++    try {
++      const Chart = await loadG2ChartConstructor();
++      if (disposed) {
++        return;
++      }
++      const created = new Chart({ container: options.container, autoFit: true });
++      chart = created;
++      const registered: G2ChartEventRegistration[] = [];
++      activeRegistrations = registered;
++      for (const registration of options.events) {
++        created.on(registration.name, registration.listener);
++        registered.push(registration);
++      }
++      await flush();
++    } catch {
++      if (disposed) {
++        return;
++      }
++      releaseChart();
++      const request = latestRequest;
++      if (request !== undefined) {
++        attemptedRequestId = request.id;
++        notifySettlement({ value: request.value, status: 'failure', latest: true });
++      }
++    }
++  };
++
++  void initialize();
++
++  return {
++    request(request): void {
++      if (disposed) {
++        return;
++      }
++      requestId += 1;
++      latestRequest = { ...request, id: requestId };
++      scheduleFlush();
++    },
++    finishAnimations(): void {
++      if (chart !== undefined && !disposed) {
++        finishAnimations(chart);
++      }
++    },
++    getContext(): unknown {
++      if (chart === undefined || disposed) {
++        return undefined;
++      }
++      try {
++        return chart.getContext();
++      } catch {
++        return undefined;
++      }
++    },
++    dispose(): void {
++      if (disposed) {
++        return;
++      }
++      disposed = true;
++      latestRequest = undefined;
++      cancelScheduledFlush();
++      releaseChart();
++    },
++  };
++}
+diff --git a/packages/editor/src/rendering/g2/exportRuntime.ts b/packages/editor/src/rendering/g2/exportRuntime.ts
+new file mode 100644
+index 0000000..a1e629c
+--- /dev/null
++++ b/packages/editor/src/rendering/g2/exportRuntime.ts
+@@ -0,0 +1,65 @@
++import type { Chart as G2Chart, G2Spec } from '@antv/g2';
++
++import { loadG2ChartConstructor } from './chartRuntime';
++
++export interface OffscreenG2RenderRequest {
++  readonly ownerDocument: Document;
++  readonly parent: HTMLElement;
++  readonly renderer: 'canvas' | 'svg';
++  readonly width: number;
++  readonly height: number;
++  readonly spec: G2Spec;
++}
++
++function createOffscreenHost(request: OffscreenG2RenderRequest): HTMLDivElement {
++  const host = request.ownerDocument.createElement('div');
++  host.setAttribute('aria-hidden', 'true');
++  host.setAttribute('data-tellplot-offscreen-chart', request.renderer);
++  host.style.position = 'fixed';
++  host.style.left = '-10000px';
++  host.style.top = '-10000px';
++  host.style.width = `${request.width}px`;
++  host.style.height = `${request.height}px`;
++  host.style.pointerEvents = 'none';
++  request.parent.append(host);
++  return host;
++}
++
++/** Keeps the rendered surface alive only for the bounded format reader. */
++export async function withOffscreenG2Render<Result>(
++  request: OffscreenG2RenderRequest,
++  readResult: (host: HTMLDivElement) => Result | Promise<Result>,
++): Promise<Result> {
++  const host = createOffscreenHost(request);
++  let chart: G2Chart | undefined;
++  try {
++    const Chart = await loadG2ChartConstructor();
++    if (request.renderer === 'svg') {
++      const { Renderer } = await import('@antv/g-svg');
++      chart = new Chart({
++        container: host,
++        width: request.width,
++        height: request.height,
++        autoFit: false,
++        renderer: new Renderer(),
++      });
++    } else {
++      chart = new Chart({
++        container: host,
++        width: request.width,
++        height: request.height,
++        autoFit: false,
++      });
++    }
++    chart.options(request.spec);
++    await chart.render();
++    return await readResult(host);
++  } finally {
++    try {
++      chart?.destroy();
++    } catch {
++      // Cleanup failure must not expose renderer internals or financial data.
++    }
++    host.remove();
++  }
++}
+diff --git a/packages/editor/tests/categorical/categorical-invariants.test.ts b/packages/editor/tests/categorical/categorical-invariants.test.ts
+index c01b001..dfe7169 100644
+--- a/packages/editor/tests/categorical/categorical-invariants.test.ts
++++ b/packages/editor/tests/categorical/categorical-invariants.test.ts
+@@ -1,7 +1,7 @@
+ import { describe, expect, it } from 'vitest';
+ 
+ import type { CategoricalSourceData, CurrentViewSpec } from '../../src/domain/model';
+-import { projectCategorical } from '../../src/categorical/projectCategorical';
++import { projectCategorical } from '../../src/charts/categorical/projection';
+ 
+ const recursiveSource = {
+   schemaVersion: '2.0.0',
+diff --git a/packages/editor/tests/categorical/projectCategorical.test.ts b/packages/editor/tests/categorical/projectCategorical.test.ts
+index 8b1d45b..f3f116b 100644
+--- a/packages/editor/tests/categorical/projectCategorical.test.ts
++++ b/packages/editor/tests/categorical/projectCategorical.test.ts
+@@ -7,7 +7,7 @@ import type {
+   SourceData,
+   ViewSpec,
+ } from '../../src/domain/model';
+-import { projectCategorical } from '../../src/categorical/projectCategorical';
++import { projectCategorical } from '../../src/charts/categorical/projection';
+ import { financialSourceData } from '../fixtures/financialSourceData';
+ 
+ const categoricalSource = {
+diff --git a/packages/editor/tests/components/accessibility.test.tsx b/packages/editor/tests/components/accessibility.test.tsx
+index 6871f2f..058d5ac 100644
+--- a/packages/editor/tests/components/accessibility.test.tsx
++++ b/packages/editor/tests/components/accessibility.test.tsx
+@@ -9,7 +9,7 @@ import {
+   type ViewSpec,
+ } from '../../src';
+ import { AccessibleChartSummary } from '../../src/components/AccessibleChartSummary';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ import { commandSourceData } from '../fixtures/commandSourceData';
+ import { financialSourceData } from '../fixtures/financialSourceData';
+ 
+diff --git a/packages/editor/tests/components/categorical-canvas.test.tsx b/packages/editor/tests/components/categorical-canvas.test.tsx
+index a063692..4853559 100644
+--- a/packages/editor/tests/components/categorical-canvas.test.tsx
++++ b/packages/editor/tests/components/categorical-canvas.test.tsx
+@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
+ import { beforeEach, describe, expect, it, vi } from 'vitest';
+ 
+ import { CategoricalCanvas } from '../../src/components/CategoricalCanvas';
+-import type { CategoricalProjection } from '../../src/categorical/categoricalTypes';
++import type { CategoricalProjection } from '../../src/charts/categorical/types';
+ import type { ViewSpec } from '../../src/domain/model';
+ 
+ const g2Mock = vi.hoisted(() => {
+diff --git a/packages/editor/tests/components/categoryAxis.test.ts b/packages/editor/tests/components/categoryAxis.test.ts
+index c828034..db72efc 100644
+--- a/packages/editor/tests/components/categoryAxis.test.ts
++++ b/packages/editor/tests/components/categoryAxis.test.ts
+@@ -97,6 +97,25 @@ describe('category-axis projection', () => {
+ });
+ 
+ describe('category-axis drop collision', () => {
++  it('crosses at the exact renderer edge and uses the source mark width', () => {
++    const bounds = [
++      { nodeId: 'narrow', min: 100, center: 110, max: 120 },
++      { nodeId: 'wide', min: 180, center: 210, max: 240 },
++    ] as const satisfies readonly ChartCategoryBounds[];
++    const input = dropInput(
++      'x',
++      bounds,
++      { x: 105, y: 0 },
++      { x: 164.99, y: 0 },
++      { itemId: 'narrow', minimumDragDistance: 0 },
++    );
++    expect(resolveChartCategoryDropTarget(input)).toEqual({ ok: false, reason: 'NO_TARGET' });
++    expect(resolveChartCategoryDropTarget({ ...input, pointer: { x: 165, y: 0 } })).toEqual({
++      ok: true,
++      target: { nodeId: 'wide', edge: 'after', target: 240 },
++    });
++  });
++
+   it('returns the same logical target for equivalent X and top-to-bottom Y gestures', () => {
+     const xResult = resolveChartCategoryDropTarget(
+       dropInput(
+diff --git a/packages/editor/tests/components/chartPointer.test.ts b/packages/editor/tests/components/chartPointer.test.ts
+index 1a314e7..d97759c 100644
+--- a/packages/editor/tests/components/chartPointer.test.ts
++++ b/packages/editor/tests/components/chartPointer.test.ts
+@@ -3,155 +3,9 @@ import { describe, expect, it } from 'vitest';
+ import {
+   readChartCategoryElementPointer,
+   readChartElementBounds,
+-  readChartElementPointer,
+   readChartTargetCoordinate,
+-  readChartTargetX,
+-  resolveChartHorizontalDropTarget,
+-  resolveChartMinimumTargetHit,
+ } from '../../src/interactions/chartPointer';
+ 
+-const orderedBounds = [
+-  { nodeId: 'left', minX: 20, maxX: 60 },
+-  { nodeId: 'middle', minX: 100, maxX: 140 },
+-  { nodeId: 'right', minX: 180, maxX: 220 },
+-] as const;
+-
+-describe('chart horizontal drag geometry', () => {
+-  it('targets the next sibling when the dragged right edge reaches its left edge', () => {
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'middle',
+-        startPointerX: 120,
+-        pointerX: 159.99,
+-        orderedBounds,
+-      }),
+-    ).toBeNull();
+-
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'middle',
+-        startPointerX: 120,
+-        pointerX: 160,
+-        orderedBounds,
+-      }),
+-    ).toEqual({ nodeId: 'right', edge: 'after', targetX: 220 });
+-  });
+-
+-  it('targets the previous sibling when the dragged left edge reaches its right edge', () => {
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'middle',
+-        startPointerX: 120,
+-        pointerX: 80.01,
+-        orderedBounds,
+-      }),
+-    ).toBeNull();
+-
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'middle',
+-        startPointerX: 120,
+-        pointerX: 80,
+-        orderedBounds,
+-      }),
+-    ).toEqual({ nodeId: 'left', edge: 'before', targetX: 20 });
+-  });
+-
+-  it('selects the furthest crossed sibling and returns null at the origin', () => {
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'left',
+-        startPointerX: 40,
+-        pointerX: 40,
+-        orderedBounds,
+-      }),
+-    ).toBeNull();
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'left',
+-        startPointerX: 40,
+-        pointerX: 160,
+-        orderedBounds,
+-      }),
+-    ).toEqual({ nodeId: 'right', edge: 'after', targetX: 220 });
+-  });
+-
+-  it('selects the furthest crossed sibling when moving left', () => {
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'right',
+-        startPointerX: 200,
+-        pointerX: 80,
+-        orderedBounds,
+-      }),
+-    ).toEqual({ nodeId: 'left', edge: 'before', targetX: 20 });
+-  });
+-
+-  it('uses each rendered bar width instead of a fixed collision threshold', () => {
+-    const bounds = [
+-      { nodeId: 'narrow', minX: 100, maxX: 120 },
+-      { nodeId: 'wide', minX: 180, maxX: 240 },
+-    ] as const;
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'narrow',
+-        startPointerX: 105,
+-        pointerX: 164.99,
+-        orderedBounds: bounds,
+-      }),
+-    ).toBeNull();
+-    expect(
+-      resolveChartHorizontalDropTarget({
+-        itemId: 'narrow',
+-        startPointerX: 105,
+-        pointerX: 165,
+-        orderedBounds: bounds,
+-      }),
+-    ).toEqual({ nodeId: 'wide', edge: 'after', targetX: 240 });
+-  });
+-});
+-
+-describe('chart minimum pointer target', () => {
+-  it('expands a narrow rendered mark to a 32px target while preserving its real bounds', () => {
+-    expect(
+-      resolveChartMinimumTargetHit(
+-        { pointerId: 7, x: 92, y: 105 },
+-        [{ nodeId: 'narrow', minX: 100, minY: 100, maxX: 110, maxY: 110 }],
+-        32,
+-      ),
+-    ).toEqual({
+-      pointerId: 7,
+-      x: 92,
+-      y: 105,
+-      nodeId: 'narrow',
+-      edge: 'before',
+-      minX: 100,
+-      maxX: 110,
+-      targetX: 100,
+-    });
+-    expect(
+-      resolveChartMinimumTargetHit(
+-        { pointerId: 7, x: 83.99, y: 105 },
+-        [{ nodeId: 'narrow', minX: 100, minY: 100, maxX: 110, maxY: 110 }],
+-        32,
+-      ),
+-    ).toBeUndefined();
+-  });
+-
+-  it('chooses the nearest real mark when expanded targets overlap', () => {
+-    expect(
+-      resolveChartMinimumTargetHit(
+-        { pointerId: 8, x: 115, y: 105 },
+-        [
+-          { nodeId: 'left', minX: 100, minY: 100, maxX: 108, maxY: 110 },
+-          { nodeId: 'right', minX: 120, minY: 100, maxX: 128, maxY: 110 },
+-        ],
+-        32,
+-      )?.nodeId,
+-    ).toBe('right');
+-  });
+-});
+-
+ describe('chart category-axis G2 boundary', () => {
+   const event = {
+     pointerId: 9,
+@@ -162,7 +16,7 @@ describe('chart category-axis G2 boundary', () => {
+     },
+   };
+ 
+-  it('reads the same renderer event on X or Y and preserves the legacy X wrapper', () => {
++  it('reads the same renderer event on X or Y', () => {
+     expect(readChartCategoryElementPointer(event, 'x')).toEqual({
+       ok: true,
+       value: {
+@@ -191,16 +45,6 @@ describe('chart category-axis G2 boundary', () => {
+         target: 140,
+       },
+     });
+-    expect(readChartElementPointer(event)).toEqual({
+-      pointerId: 9,
+-      x: 110,
+-      y: 150,
+-      nodeId: 'node',
+-      edge: 'after',
+-      minX: 100,
+-      maxX: 120,
+-      targetX: 120,
+-    });
+   });
+ 
+   it('supports center/halfExtents bounds and returns structured hostile failures', () => {
+@@ -260,7 +104,6 @@ describe('chart category-axis scene lookup', () => {
+       ok: true,
+       value: 180,
+     });
+-    expect(readChartTargetX(context, 'node', 'after')).toBe(120);
+     expect(readChartElementBounds(context)).toEqual([
+       { nodeId: 'node', minX: 100, minY: 140, maxX: 120, maxY: 180 },
+     ]);
+diff --git a/packages/editor/tests/components/group-actions.test.tsx b/packages/editor/tests/components/group-actions.test.tsx
+index e8d89a9..f3ece98 100644
+--- a/packages/editor/tests/components/group-actions.test.tsx
++++ b/packages/editor/tests/components/group-actions.test.tsx
+@@ -10,7 +10,7 @@ import {
+   type ViewSpec,
+ } from '../../src';
+ import { evaluateGroupSelection } from '../../src/interactions/groupSelection';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ import { commandSourceData } from '../fixtures/commandSourceData';
+ 
+ const g2Mock = vi.hoisted(() => {
+diff --git a/packages/editor/tests/components/states.test.tsx b/packages/editor/tests/components/states.test.tsx
+index 4bc8104..edaada9 100644
+--- a/packages/editor/tests/components/states.test.tsx
++++ b/packages/editor/tests/components/states.test.tsx
+@@ -9,7 +9,7 @@ import {
+   type ViewSpec,
+ } from '../../src';
+ import { WaterfallCanvas } from '../../src/components/WaterfallCanvas';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ import { anchorsOnlySourceData, financialSourceData } from '../fixtures/financialSourceData';
+ import { commandSourceData } from '../fixtures/commandSourceData';
+ 
+diff --git a/packages/editor/tests/domain/schema-v2.test.ts b/packages/editor/tests/domain/schema-v2.test.ts
+index 6311d40..d23d786 100644
+--- a/packages/editor/tests/domain/schema-v2.test.ts
++++ b/packages/editor/tests/domain/schema-v2.test.ts
+@@ -14,7 +14,7 @@ import {
+   type WaterfallSourceData,
+ } from '../../src';
+ import { financialSourceData } from '../fixtures/financialSourceData';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ 
+ type UnknownRecord = Record<string, unknown>;
+ 
+diff --git a/packages/editor/tests/export/categorical-chart-spec.test.ts b/packages/editor/tests/export/categorical-chart-spec.test.ts
+index a17a8c1..dc2ced7 100644
+--- a/packages/editor/tests/export/categorical-chart-spec.test.ts
++++ b/packages/editor/tests/export/categorical-chart-spec.test.ts
+@@ -6,11 +6,8 @@ import {
+   formatCategoricalDatumAmount,
+   shouldShowCategoricalValueLabels,
+   visibleCategoricalAnnotation,
+-} from '../../src/categorical/categoricalChartSpec';
+-import type {
+-  CategoricalDatum,
+-  CategoricalProjection,
+-} from '../../src/categorical/categoricalTypes';
++} from '../../src/charts/categorical/spec';
++import type { CategoricalDatum, CategoricalProjection } from '../../src/charts/categorical/types';
+ import type { ViewNodeId } from '../../src/domain/ids';
+ 
+ const projection = [
+diff --git a/packages/editor/tests/export/categorical-export.test.ts b/packages/editor/tests/export/categorical-export.test.ts
+index cf3e054..b8ded44 100644
+--- a/packages/editor/tests/export/categorical-export.test.ts
++++ b/packages/editor/tests/export/categorical-export.test.ts
+@@ -1,6 +1,6 @@
+ import { beforeEach, describe, expect, it, vi } from 'vitest';
+ 
+-import type { CategoricalProjection } from '../../src/categorical/categoricalTypes';
++import type { CategoricalProjection } from '../../src/charts/categorical/types';
+ import { exportSvgChart } from '../../src/export/svgExport';
+ 
+ const svgG2Mock = vi.hoisted(() => {
+diff --git a/packages/editor/tests/export/chart-spec.test.ts b/packages/editor/tests/export/chart-spec.test.ts
+index e40f18a..1cd378b 100644
+--- a/packages/editor/tests/export/chart-spec.test.ts
++++ b/packages/editor/tests/export/chart-spec.test.ts
+@@ -1,9 +1,9 @@
+ import { describe, expect, it } from 'vitest';
+ 
+ import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
+-import { createWaterfallChartSpec } from '../../src/export/waterfallChartSpec';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+-import type { WaterfallDatum } from '../../src/waterfall/waterfallTypes';
++import { createWaterfallChartSpec } from '../../src/charts/waterfall/spec';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
++import type { WaterfallDatum } from '../../src/charts/waterfall/types';
+ import { financialSourceData } from '../fixtures/financialSourceData';
+ 
+ function styleAccessor(
+@@ -95,6 +95,53 @@ describe('waterfall chart emphasis', () => {
+     expect(child?.axis?.x?.['labelFill']).toBe('#5F6B65');
+     expect(child?.axis?.y?.['labelFill']).toBe('#5F6B65');
+   });
++
++  it('formats known and hostile axis values plus both value-label directions', () => {
++    const view = createInitialViewSpec(financialSourceData);
++    if (!view.ok) {
++      throw new Error('Expected a valid formatter fixture');
++    }
++    const projection = projectWaterfall(financialSourceData, view.value);
++    if (!projection.ok) {
++      throw new Error('Expected a valid formatter projection');
++    }
++    const spec = createWaterfallChartSpec({
++      projection: projection.value,
++      locale: 'en-US',
++      currency: 'USD',
++      reducedMotion: true,
++      showValueLabels: true,
++      annotations: {},
++      emphasis: {},
++    });
++    const child = (spec as { readonly children?: readonly unknown[] }).children?.[0] as
++      | {
++          readonly axis?: { readonly x?: Readonly<Record<string, unknown>> };
++          readonly labels?: readonly Readonly<Record<string, unknown>>[];
++        }
++      | undefined;
++    const xFormatter = child?.axis?.x?.['labelFormatter'];
++    const valueText = child?.labels?.[0]?.['text'];
++    const valuePosition = child?.labels?.[0]?.['position'];
++    if (
++      typeof xFormatter !== 'function' ||
++      typeof valueText !== 'function' ||
++      typeof valuePosition !== 'function'
++    ) {
++      throw new Error('Expected waterfall label accessors');
++    }
++    const positive = projection.value.find(datum => datum.end >= datum.start);
++    const negative = projection.value.find(datum => datum.end < datum.start);
++    if (positive === undefined || negative === undefined) {
++      throw new Error('Expected positive and negative waterfall marks');
++    }
++
++    expect((xFormatter as (value: unknown) => string)(positive.nodeId)).toBe(positive.label);
++    expect((xFormatter as (value: unknown) => string)('missing')).toBe('missing');
++    expect((valueText as (datum: WaterfallDatum) => string)(positive)).toContain('$');
++    expect((valuePosition as (datum: WaterfallDatum) => string)(positive)).toBe('top');
++    expect((valuePosition as (datum: WaterfallDatum) => string)(negative)).toBe('bottom');
++  });
+ });
+ 
+ describe('waterfall chart appearance', () => {
+diff --git a/packages/editor/tests/export/svg.test.ts b/packages/editor/tests/export/svg.test.ts
+index e759edc..840913e 100644
+--- a/packages/editor/tests/export/svg.test.ts
++++ b/packages/editor/tests/export/svg.test.ts
+@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
+ 
+ import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
+ import { createSafeSvgResult, exportSvgChart } from '../../src/export/svgExport';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ import { financialSourceData } from '../fixtures/financialSourceData';
+ 
+ const svgG2Mock = vi.hoisted(() => {
+diff --git a/packages/editor/tests/package/architecture-boundary.test.ts b/packages/editor/tests/package/architecture-boundary.test.ts
+new file mode 100644
+index 0000000..0f3a621
+--- /dev/null
++++ b/packages/editor/tests/package/architecture-boundary.test.ts
+@@ -0,0 +1,52 @@
++import { existsSync, readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++
++import { describe, expect, it } from 'vitest';
++
++const root = resolve(process.cwd(), 'packages/editor/src');
++
++function source(path: string): string {
++  return readFileSync(resolve(root, path), 'utf8');
++}
++
++describe('internal chart architecture boundary', () => {
++  it('owns projections and specs under chart-family modules', () => {
++    const required = [
++      'charts/waterfall/projection.ts',
++      'charts/waterfall/spec.ts',
++      'charts/waterfall/types.ts',
++      'charts/categorical/projection.ts',
++      'charts/categorical/spec.ts',
++      'charts/categorical/types.ts',
++    ];
++    const obsolete = [
++      'waterfall/projectWaterfall.ts',
++      'waterfall/waterfallTypes.ts',
++      'categorical/projectCategorical.ts',
++      'categorical/categoricalChartSpec.ts',
++      'categorical/categoricalTypes.ts',
++      'export/waterfallChartSpec.ts',
++    ];
++
++    expect(required.every(path => existsSync(resolve(root, path)))).toBe(true);
++    expect(obsolete.some(path => existsSync(resolve(root, path)))).toBe(false);
++  });
++
++  it('keeps raw G2 runtime imports out of components, exports and the public entrypoint', () => {
++    const boundaryFiles = [
++      'components/WaterfallCanvas.tsx',
++      'components/CategoricalCanvas.tsx',
++      'export/svgExport.ts',
++      'export/pngExport.ts',
++      'index.ts',
++    ];
++
++    for (const path of boundaryFiles) {
++      expect(source(path)).not.toContain("from '@antv/g2'");
++      expect(source(path)).not.toContain("import('@antv/g2')");
++    }
++    expect(source('index.ts')).not.toContain('rendering/g2');
++    expect(source('index.ts')).not.toContain('G2Spec');
++    expect(source('index.ts')).not.toContain('G2Chart');
++  });
++});
+diff --git a/packages/editor/tests/rendering/g2/chart-runtime.test.ts b/packages/editor/tests/rendering/g2/chart-runtime.test.ts
+new file mode 100644
+index 0000000..35d7936
+--- /dev/null
++++ b/packages/editor/tests/rendering/g2/chart-runtime.test.ts
+@@ -0,0 +1,421 @@
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++import {
++  createG2ChartRuntime,
++  loadG2ChartConstructor,
++} from '../../../src/rendering/g2/chartRuntime';
++
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    static instances: Chart[] = [];
++    static renderQueue: (() => Promise<void>)[] = [];
++    static onError: Error | undefined;
++    static onErrorName: string | undefined;
++    static offError: Error | undefined;
++    static destroyError: Error | undefined;
++    static contextMode: 'normal' | 'empty' | 'finish-error' | 'context-error' = 'normal';
++
++    readonly options = vi.fn((): this => this);
++    readonly render = vi.fn(
++      (): Promise<void> => Chart.renderQueue.shift()?.() ?? Promise.resolve(),
++    );
++    readonly on = vi.fn((name: string): this => {
++      if (
++        Chart.onError !== undefined &&
++        (Chart.onErrorName === undefined || name === Chart.onErrorName)
++      ) {
++        throw Chart.onError;
++      }
++      return this;
++    });
++    readonly off = vi.fn((): this => {
++      if (Chart.offError !== undefined) {
++        throw Chart.offError;
++      }
++      return this;
++    });
++    readonly finishAnimation = vi.fn((): void => {
++      if (Chart.contextMode === 'finish-error') {
++        throw new Error('disposed animation detail');
++      }
++    });
++    readonly getContext = vi.fn(() => {
++      if (Chart.contextMode === 'context-error') {
++        throw new Error('private context detail');
++      }
++      return {
++        ...(Chart.contextMode === 'empty'
++          ? {}
++          : { animations: [{ finish: this.finishAnimation }] }),
++        marker: 'scene-context',
++      };
++    });
++    readonly destroy = vi.fn((): void => {
++      if (Chart.destroyError !== undefined) {
++        throw Chart.destroyError;
++      }
++    });
++
++    constructor(readonly config: unknown) {
++      Chart.instances.push(this);
++    }
++  }
++
++  return { Chart };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
++
++interface Deferred {
++  readonly promise: Promise<void>;
++  readonly resolve: () => void;
++  readonly reject: (reason?: unknown) => void;
++}
++
++function deferred(): Deferred {
++  let resolve: () => void = () => undefined;
++  let reject: (reason?: unknown) => void = () => undefined;
++  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
++    resolve = () => resolvePromise();
++    reject = rejectPromise;
++  });
++  return { promise, resolve, reject };
++}
++
++beforeEach(() => {
++  g2Mock.Chart.instances = [];
++  g2Mock.Chart.renderQueue = [];
++  g2Mock.Chart.onError = undefined;
++  g2Mock.Chart.onErrorName = undefined;
++  g2Mock.Chart.offError = undefined;
++  g2Mock.Chart.destroyError = undefined;
++  g2Mock.Chart.contextMode = 'normal';
++  document.body.replaceChildren();
++});
++
++describe('G2 chart runtime', () => {
++  it('caches the dynamic constructor and skips initialization after immediate disposal', async () => {
++    expect(loadG2ChartConstructor()).toBe(loadG2ChartConstructor());
++
++    const host = document.createElement('div');
++    document.body.append(host);
++    const runtime = createG2ChartRuntime<string>({
++      container: host,
++      events: [],
++      onRenderSettled: vi.fn(),
++    });
++    runtime.request({ value: 'disposed', spec: { type: 'interval' } });
++    runtime.dispose();
++
++    await Promise.resolve();
++    await Promise.resolve();
++    expect(g2Mock.Chart.instances).toHaveLength(0);
++  });
++
++  it('reports only the newest render and exposes scene context without the chart instance', async () => {
++    const first = deferred();
++    g2Mock.Chart.renderQueue.push(
++      () => first.promise,
++      () => Promise.resolve(),
++    );
++    const host = document.createElement('div');
++    document.body.append(host);
++    const settled = vi.fn();
++    const runtime = createG2ChartRuntime<string>({
++      container: host,
++      events: [],
++      onRenderSettled: settled,
++    });
++    runtime.request({ value: 'first', spec: { type: 'interval', data: [1] } });
++
++    await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++    runtime.request({ value: 'latest', spec: { type: 'interval', data: [2] } });
++    await vi.waitFor(() =>
++      expect(g2Mock.Chart.instances[0]?.finishAnimation).toHaveBeenCalledOnce(),
++    );
++    first.reject(new Error('stale private failure'));
++
++    await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledTimes(2));
++    await vi.waitFor(() =>
++      expect(settled).toHaveBeenLastCalledWith({
++        value: 'latest',
++        status: 'success',
++        latest: true,
++      }),
++    );
++    expect(settled).toHaveBeenCalledWith({
++      value: 'first',
++      status: 'failure',
++      latest: false,
++    });
++    expect(runtime.getContext()).toEqual(expect.objectContaining({ marker: 'scene-context' }));
++  });
++
++  it('removes the exact event callbacks and destroys exactly once', async () => {
++    const host = document.createElement('div');
++    document.body.append(host);
++    const listener = vi.fn();
++    const runtime = createG2ChartRuntime<string>({
++      container: host,
++      events: [{ name: 'element:pointerdown', listener }],
++      onRenderSettled: vi.fn(),
++    });
++    runtime.request({ value: 'ready', spec: { type: 'interval' } });
++
++    await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    const chart = g2Mock.Chart.instances[0];
++    await vi.waitFor(() => expect(chart?.on).toHaveBeenCalledWith('element:pointerdown', listener));
++    runtime.dispose();
++    runtime.dispose();
++
++    expect(chart?.off).toHaveBeenCalledOnce();
++    expect(chart?.off).toHaveBeenCalledWith('element:pointerdown', listener);
++    expect(chart?.destroy).toHaveBeenCalledOnce();
++    expect(runtime.getContext()).toBeUndefined();
++  });
++
++  it('isolates a throwing settlement callback and still processes the next request', async () => {
++    const host = document.createElement('div');
++    document.body.append(host);
++    const callbackFailure = vi.fn();
++    const runtime = createG2ChartRuntime<string>({
++      container: host,
++      events: [],
++      onRenderSettled: () => {
++        throw new Error('host callback detail');
++      },
++      onCallbackError: callbackFailure,
++    });
++    runtime.request({ value: 'first', spec: { type: 'interval', data: [1] } });
++
++    await vi.waitFor(() => expect(callbackFailure).toHaveBeenCalledOnce());
++    runtime.request({ value: 'second', spec: { type: 'interval', data: [2] } });
++    await vi.waitFor(() => expect(callbackFailure).toHaveBeenCalledTimes(2));
++    expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledTimes(2);
++  });
++
++  it('contains initialization and cleanup failures with stable callbacks', async () => {
++    const initializationSettled = vi.fn();
++    g2Mock.Chart.onError = new Error('private event registration failure');
++    const failedRuntime = createG2ChartRuntime<string>({
++      container: document.body,
++      events: [{ name: 'plot:pointerdown', listener: vi.fn() }],
++      onRenderSettled: initializationSettled,
++    });
++    failedRuntime.request({ value: 'initialization', spec: { type: 'interval' } });
++
++    await vi.waitFor(() =>
++      expect(initializationSettled).toHaveBeenCalledWith({
++        value: 'initialization',
++        status: 'failure',
++        latest: true,
++      }),
++    );
++    expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
++    expect(failedRuntime.getContext()).toBeUndefined();
++
++    g2Mock.Chart.onError = undefined;
++    const cleanupFailure = vi.fn(() => {
++      throw new Error('cleanup reporting failure');
++    });
++    const runtime = createG2ChartRuntime<string>({
++      container: document.body,
++      events: [{ name: 'plot:pointerdown', listener: vi.fn() }],
++      onRenderSettled: vi.fn(),
++      onCleanupError: cleanupFailure,
++    });
++    runtime.request({ value: 'cleanup', spec: { type: 'interval' } });
++    await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
++    g2Mock.Chart.offError = new Error('private off failure');
++    g2Mock.Chart.destroyError = new Error('private destroy failure');
++
++    expect(() => runtime.dispose()).not.toThrow();
++    expect(cleanupFailure).toHaveBeenCalledOnce();
++    expect(g2Mock.Chart.instances[1]?.off).toHaveBeenCalledOnce();
++    expect(g2Mock.Chart.instances[1]?.destroy).toHaveBeenCalledOnce();
++  });
++
++  it('cleans up an initialization failure that has no pending request', async () => {
++    g2Mock.Chart.onError = new Error('private event registration failure');
++    const settled = vi.fn();
++    createG2ChartRuntime<string>({
++      container: document.body,
++      events: [{ name: 'plot:pointerdown', listener: vi.fn() }],
++      onRenderSettled: settled,
++    });
++
++    await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce());
++    expect(settled).not.toHaveBeenCalled();
++  });
++
++  it('unregisters events that succeeded before a later registration failure', async () => {
++    const firstListener = vi.fn();
++    const secondListener = vi.fn();
++    g2Mock.Chart.onError = new Error('private second registration failure');
++    g2Mock.Chart.onErrorName = 'plot:pointermove';
++    createG2ChartRuntime<string>({
++      container: document.body,
++      events: [
++        { name: 'plot:pointerdown', listener: firstListener },
++        { name: 'plot:pointermove', listener: secondListener },
++      ],
++      onRenderSettled: vi.fn(),
++    });
++
++    await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce());
++    expect(g2Mock.Chart.instances[0]?.off).toHaveBeenCalledOnce();
++    expect(g2Mock.Chart.instances[0]?.off).toHaveBeenCalledWith('plot:pointerdown', firstListener);
++  });
++
++  it('contains animation and context edge cases without blocking later cleanup', async () => {
++    const runtime = createG2ChartRuntime<string>({
++      container: document.body,
++      events: [],
++      onRenderSettled: vi.fn(),
++    });
++    runtime.request({ value: 'context', spec: { type: 'interval' } });
++    await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++
++    g2Mock.Chart.contextMode = 'empty';
++    expect(() => runtime.finishAnimations()).not.toThrow();
++    g2Mock.Chart.contextMode = 'finish-error';
++    expect(() => runtime.finishAnimations()).not.toThrow();
++    g2Mock.Chart.contextMode = 'context-error';
++    expect(() => runtime.finishAnimations()).not.toThrow();
++    expect(runtime.getContext()).toBeUndefined();
++
++    runtime.dispose();
++    runtime.request({ value: 'ignored', spec: { type: 'interval' } });
++    expect(() => runtime.finishAnimations()).not.toThrow();
++  });
++
++  it('flushes a request queued by the settlement callback', async () => {
++    const settled = vi.fn();
++    const runtime = createG2ChartRuntime<string>({
++      container: document.body,
++      events: [],
++      onRenderSettled: settlement => {
++        settled(settlement);
++        if (settlement.value === 'first') {
++          runtime?.request({ value: 'second', spec: { type: 'interval', data: [2] } });
++        }
++      },
++    });
++    runtime.request({ value: 'first', spec: { type: 'interval', data: [1] } });
++
++    await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledTimes(2));
++    expect(settled).toHaveBeenLastCalledWith({
++      value: 'second',
++      status: 'success',
++      latest: true,
++    });
++  });
++
++  it('uses a microtask scheduler when requestAnimationFrame is unavailable', async () => {
++    const descriptor = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame');
++    Object.defineProperty(window, 'requestAnimationFrame', {
++      configurable: true,
++      value: undefined,
++    });
++    try {
++      const runtime = createG2ChartRuntime<string>({
++        container: document.body,
++        events: [],
++        onRenderSettled: vi.fn(),
++      });
++      runtime.request({ value: 'first', spec: { type: 'interval', data: [1] } });
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++      runtime.request({ value: 'second', spec: { type: 'interval', data: [2] } });
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledTimes(2));
++    } finally {
++      if (descriptor === undefined) {
++        Reflect.deleteProperty(window, 'requestAnimationFrame');
++      } else {
++        Object.defineProperty(window, 'requestAnimationFrame', descriptor);
++      }
++    }
++  });
++
++  it('cancels superseded animation frames and ignores callbacks after disposal', async () => {
++    const requestDescriptor = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame');
++    const cancelDescriptor = Object.getOwnPropertyDescriptor(window, 'cancelAnimationFrame');
++    const callbacks = new Map<number, FrameRequestCallback>();
++    let nextFrameId = 0;
++    const cancelAnimationFrame = vi.fn();
++    Object.defineProperty(window, 'requestAnimationFrame', {
++      configurable: true,
++      value: (callback: FrameRequestCallback): number => {
++        nextFrameId += 1;
++        callbacks.set(nextFrameId, callback);
++        return nextFrameId;
++      },
++    });
++    Object.defineProperty(window, 'cancelAnimationFrame', {
++      configurable: true,
++      value: cancelAnimationFrame,
++    });
++
++    try {
++      const settled = vi.fn();
++      const runtime = createG2ChartRuntime<string>({
++        container: document.body,
++        events: [],
++        onRenderSettled: settled,
++      });
++      runtime.request({ value: 'first', spec: { type: 'interval', data: [1] } });
++      await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
++
++      runtime.request({ value: 'superseded', spec: { type: 'interval', data: [2] } });
++      runtime.request({ value: 'latest', spec: { type: 'interval', data: [3] } });
++      expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
++
++      callbacks.get(1)?.(0);
++      expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce();
++      callbacks.get(2)?.(0);
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledTimes(2));
++      expect(settled).toHaveBeenLastCalledWith({
++        value: 'latest',
++        status: 'success',
++        latest: true,
++      });
++
++      runtime.request({ value: 'disposed', spec: { type: 'interval', data: [4] } });
++      runtime.dispose();
++      expect(cancelAnimationFrame).toHaveBeenCalledWith(3);
++      callbacks.get(3)?.(0);
++      expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledTimes(2);
++    } finally {
++      if (requestDescriptor === undefined) {
++        Reflect.deleteProperty(window, 'requestAnimationFrame');
++      } else {
++        Object.defineProperty(window, 'requestAnimationFrame', requestDescriptor);
++      }
++      if (cancelDescriptor === undefined) {
++        Reflect.deleteProperty(window, 'cancelAnimationFrame');
++      } else {
++        Object.defineProperty(window, 'cancelAnimationFrame', cancelDescriptor);
++      }
++    }
++  });
++
++  it('suppresses a render settlement when disposed during an active render', async () => {
++    const pendingRender = deferred();
++    g2Mock.Chart.renderQueue.push(() => pendingRender.promise);
++    const settled = vi.fn();
++    const runtime = createG2ChartRuntime<string>({
++      container: document.body,
++      events: [],
++      onRenderSettled: settled,
++    });
++    runtime.request({ value: 'pending', spec: { type: 'interval' } });
++    await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++
++    runtime.dispose();
++    pendingRender.resolve();
++    await Promise.resolve();
++    await Promise.resolve();
++
++    expect(settled).not.toHaveBeenCalled();
++    expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
++  });
++});
+diff --git a/packages/editor/tests/rendering/g2/export-runtime.test.ts b/packages/editor/tests/rendering/g2/export-runtime.test.ts
+new file mode 100644
+index 0000000..c31b6db
+--- /dev/null
++++ b/packages/editor/tests/rendering/g2/export-runtime.test.ts
+@@ -0,0 +1,129 @@
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++import { withOffscreenG2Render } from '../../../src/rendering/g2/exportRuntime';
++
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    static instances: Chart[] = [];
++    static renderError: Error | undefined;
++
++    readonly options = vi.fn((): this => this);
++    readonly render = vi.fn((): Promise<void> => {
++      if (Chart.renderError !== undefined) {
++        return Promise.reject(Chart.renderError);
++      }
++      const host = (this.config as { readonly container: HTMLElement }).container;
++      host.append(document.createElement('canvas'));
++      return Promise.resolve();
++    });
++    readonly destroy = vi.fn((): void => undefined);
++
++    constructor(readonly config: unknown) {
++      Chart.instances.push(this);
++    }
++  }
++
++  return { Chart };
++});
++
++const svgMock = vi.hoisted(() => {
++  class Renderer {
++    readonly kind = 'svg';
++  }
++
++  return { Renderer };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
++vi.mock('@antv/g-svg', () => ({ Renderer: svgMock.Renderer }));
++
++beforeEach(() => {
++  g2Mock.Chart.instances = [];
++  g2Mock.Chart.renderError = undefined;
++  document.body.replaceChildren();
++});
++
++describe('offscreen G2 export runtime', () => {
++  it('awaits the format reader, then destroys the chart and removes the host', async () => {
++    let releaseReader: () => void = () => undefined;
++    const readerGate = new Promise<void>(resolve => {
++      releaseReader = resolve;
++    });
++    const pending = withOffscreenG2Render(
++      {
++        ownerDocument: document,
++        parent: document.body,
++        renderer: 'canvas',
++        width: 640,
++        height: 360,
++        spec: { type: 'interval' },
++      },
++      async host => {
++        expect(host.isConnected).toBe(true);
++        await readerGate;
++        return host.querySelector('canvas');
++      },
++    );
++
++    await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
++    const chart = g2Mock.Chart.instances[0];
++    expect(chart?.destroy).not.toHaveBeenCalled();
++    expect(document.body.querySelector('[data-tellplot-offscreen-chart]')).not.toBeNull();
++    releaseReader();
++
++    const surface = await pending;
++    expect(surface).toBeInstanceOf(HTMLCanvasElement);
++    expect(chart?.destroy).toHaveBeenCalledOnce();
++    expect(document.body.querySelector('[data-tellplot-offscreen-chart]')).toBeNull();
++  });
++
++  it.each(['render', 'reader'] as const)(
++    'cleans chart and host after a %s failure',
++    async phase => {
++      if (phase === 'render') {
++        g2Mock.Chart.renderError = new Error('private renderer failure');
++      }
++      const reader = vi.fn(() => {
++        if (phase === 'reader') {
++          throw new Error('private reader failure');
++        }
++        return undefined;
++      });
++
++      await expect(
++        withOffscreenG2Render(
++          {
++            ownerDocument: document,
++            parent: document.body,
++            renderer: 'canvas',
++            width: 320,
++            height: 180,
++            spec: { type: 'interval' },
++          },
++          reader,
++        ),
++      ).rejects.toThrow();
++
++      expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
++      expect(document.body.querySelector('[data-tellplot-offscreen-chart]')).toBeNull();
++    },
++  );
++
++  it('loads the SVG renderer only for SVG requests', async () => {
++    await withOffscreenG2Render(
++      {
++        ownerDocument: document,
++        parent: document.body,
++        renderer: 'svg',
++        width: 400,
++        height: 240,
++        spec: { type: 'interval' },
++      },
++      () => undefined,
++    );
++
++    expect(g2Mock.Chart.instances[0]?.config).toEqual(
++      expect.objectContaining({ renderer: expect.any(svgMock.Renderer) }),
++    );
++  });
++});
+diff --git a/packages/editor/tests/waterfall/anchors.test.ts b/packages/editor/tests/waterfall/anchors.test.ts
+index 147888c..c5ef832 100644
+--- a/packages/editor/tests/waterfall/anchors.test.ts
++++ b/packages/editor/tests/waterfall/anchors.test.ts
+@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
+ 
+ import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
+ import type { SourceData, SourceItem, ViewSpec } from '../../src/domain/model';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ 
+ function sourceData(items: readonly SourceItem[], datasetId = 'anchor-tests'): SourceData {
+   return {
+diff --git a/packages/editor/tests/waterfall/determinism.test.ts b/packages/editor/tests/waterfall/determinism.test.ts
+index 9d34c0c..b071a53 100644
+--- a/packages/editor/tests/waterfall/determinism.test.ts
++++ b/packages/editor/tests/waterfall/determinism.test.ts
+@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
+ 
+ import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
+ import type { SourceData, SourceItem, ViewSpec } from '../../src/domain/model';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ 
+ function sourceData(items: readonly SourceItem[], datasetId: string): SourceData {
+   return {
+diff --git a/packages/editor/tests/waterfall/groups.test.ts b/packages/editor/tests/waterfall/groups.test.ts
+index 4be18fe..0c5f6fd 100644
+--- a/packages/editor/tests/waterfall/groups.test.ts
++++ b/packages/editor/tests/waterfall/groups.test.ts
+@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
+ 
+ import type { SourceData, ViewSpec } from '../../src/domain/model';
+ import { validateViewSpec } from '../../src/domain/validation';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ import type {
+   WaterfallProjection,
+   WaterfallProjectionResult,
+-} from '../../src/waterfall/waterfallTypes';
++} from '../../src/charts/waterfall/types';
+ 
+ const GROUP_ID = 'drivers';
+ 
+diff --git a/packages/editor/tests/waterfall/projectWaterfall.test.ts b/packages/editor/tests/waterfall/projectWaterfall.test.ts
+index 15c2375..a72a480 100644
+--- a/packages/editor/tests/waterfall/projectWaterfall.test.ts
++++ b/packages/editor/tests/waterfall/projectWaterfall.test.ts
+@@ -1,11 +1,11 @@
+ import { describe, expect, it } from 'vitest';
+ 
+ import type { SourceData, ViewSpec } from '../../src/domain/model';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ import type {
+   WaterfallProjection,
+   WaterfallProjectionResult,
+-} from '../../src/waterfall/waterfallTypes';
++} from '../../src/charts/waterfall/types';
+ 
+ function expectProjection(result: WaterfallProjectionResult): WaterfallProjection {
+   expect(result.ok).toBe(true);
+diff --git a/packages/editor/tests/waterfall/recursive-groups.test.ts b/packages/editor/tests/waterfall/recursive-groups.test.ts
+index 9ccb76c..25ad127 100644
+--- a/packages/editor/tests/waterfall/recursive-groups.test.ts
++++ b/packages/editor/tests/waterfall/recursive-groups.test.ts
+@@ -1,7 +1,7 @@
+ import { describe, expect, it } from 'vitest';
+ 
+ import type { SourceData, ViewSpec } from '../../src/domain/model';
+-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
++import { projectWaterfall } from '../../src/charts/waterfall/projection';
+ 
+ const sourceData: SourceData = {
+   schemaVersion: '1.0.0',
+diff --git a/vitest.config.ts b/vitest.config.ts
+index f47ae79..cdc5054 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -24,6 +24,7 @@ export default defineConfig({
+           include: [
+             'packages/editor/tests/components/**/*.test.{ts,tsx}',
+             'packages/editor/tests/export/**/*.test.{ts,tsx}',
++            'packages/editor/tests/rendering/**/*.test.{ts,tsx}',
+           ],
+           environment: 'jsdom',
+           setupFiles: ['packages/editor/tests/setup.ts'],
+@@ -43,13 +44,19 @@ export default defineConfig({
+           functions: 95,
+           lines: 95,
+         },
+-        'packages/editor/src/waterfall/**': {
++        'packages/editor/src/charts/waterfall/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,
+           lines: 95,
+         },
+-        'packages/editor/src/categorical/**': {
++        'packages/editor/src/charts/categorical/**': {
++          statements: 95,
++          branches: 95,
++          functions: 95,
++          lines: 95,
++        },
++        'packages/editor/src/rendering/g2/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,

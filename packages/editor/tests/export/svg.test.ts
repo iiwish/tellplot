@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
 import { createSafeSvgResult, exportSvgChart } from '../../src/export/svgExport';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
 import { financialSourceData } from '../fixtures/financialSourceData';
 
 const svgG2Mock = vi.hoisted(() => {
@@ -234,5 +234,56 @@ describe('SVG export safety', () => {
     expect(spec?.children?.[0]?.scale?.color?.range?.[1]).toBe('#00A36C');
     expect(spec?.children?.[0]?.axis?.y).toBe(false);
     expect(spec?.children?.[0]?.labels).toEqual([]);
+  });
+
+  it('passes expanded group regions into the shared SVG chart spec', async () => {
+    const view = createInitialViewSpec(financialSourceData);
+    if (!view.ok) {
+      throw new Error('Expected a valid SVG group-region fixture');
+    }
+    const projection = projectWaterfall(financialSourceData, view.value);
+    if (!projection.ok || projection.value[1] === undefined || projection.value[2] === undefined) {
+      throw new Error('Expected visible SVG group-region endpoints');
+    }
+    await exportSvgChart({
+      ownerDocument: document,
+      projection: projection.value,
+      title: 'Grouped bridge',
+      locale: 'en-US',
+      currency: 'USD',
+      width: 960,
+      height: 520,
+      background: '#ffffff',
+      suggestedFilename: 'grouped.svg',
+      annotations: {},
+      emphasis: {},
+      groupRegions: [
+        {
+          regionId: 'group-region:growth',
+          groupId: 'growth',
+          label: 'Growth',
+          depth: 1,
+          startNodeId: projection.value[1].nodeId,
+          endNodeId: projection.value[2].nodeId,
+          valueStart: Math.min(
+            projection.value[1].start,
+            projection.value[1].end,
+            projection.value[2].start,
+            projection.value[2].end,
+          ),
+          valueEnd: Math.max(
+            projection.value[1].start,
+            projection.value[1].end,
+            projection.value[2].start,
+            projection.value[2].end,
+          ),
+          labelValue: Math.max(projection.value[1].start, projection.value[1].end),
+        },
+      ],
+    });
+    const spec = svgG2Mock.Chart.specs.at(-1) as
+      { readonly children?: readonly { readonly type?: unknown }[] } | undefined;
+
+    expect(spec?.children?.map(child => child.type)).toEqual(['range', 'interval', 'text', 'text']);
   });
 });

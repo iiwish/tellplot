@@ -1,6 +1,21 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
+
+const editorAliases = [
+  {
+    find: '@tellplot/editor/styles.css',
+    replacement: fileURLToPath(new URL('./packages/editor/src/styles/editor.css', import.meta.url)),
+  },
+  {
+    find: '@tellplot/editor',
+    replacement: fileURLToPath(new URL('./packages/editor/src/index.ts', import.meta.url)),
+  },
+] as const;
 
 export default defineConfig({
+  resolve: {
+    alias: editorAliases,
+  },
   test: {
     testTimeout: 15_000,
     projects: [
@@ -12,6 +27,7 @@ export default defineConfig({
             'packages/editor/tests/package/**/*.test.ts',
             'packages/editor/tests/domain/**/*.test.ts',
             'packages/editor/tests/waterfall/**/*.test.ts',
+            'packages/editor/tests/categorical/**/*.test.ts',
           ],
           environment: 'node',
         },
@@ -23,10 +39,22 @@ export default defineConfig({
           include: [
             'packages/editor/tests/components/**/*.test.{ts,tsx}',
             'packages/editor/tests/export/**/*.test.{ts,tsx}',
+            'packages/editor/tests/rendering/**/*.test.{ts,tsx}',
           ],
           environment: 'jsdom',
           setupFiles: ['packages/editor/tests/setup.ts'],
           passWithNoTests: true,
+        },
+      },
+      {
+        resolve: {
+          alias: editorAliases,
+        },
+        test: {
+          name: 'playground-unit',
+          testTimeout: 15_000,
+          include: ['apps/playground/tests/**/*.test.ts'],
+          environment: 'node',
         },
       },
     ],
@@ -42,7 +70,19 @@ export default defineConfig({
           functions: 95,
           lines: 95,
         },
-        'packages/editor/src/waterfall/**': {
+        'packages/editor/src/charts/waterfall/**': {
+          statements: 95,
+          branches: 95,
+          functions: 95,
+          lines: 95,
+        },
+        'packages/editor/src/charts/categorical/**': {
+          statements: 95,
+          branches: 95,
+          functions: 95,
+          lines: 95,
+        },
+        'packages/editor/src/rendering/g2/**': {
           statements: 95,
           branches: 95,
           functions: 95,

@@ -2,14 +2,11 @@ import { createRef, StrictMode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  FinancialChartEditor,
-  createInitialViewSpec,
-  type FinancialChartEditorHandle,
-  type ViewSpec,
-} from '../../src';
+import { createInitialViewSpec, type ViewSpec } from '../../src';
 import { AccessibleChartSummary } from '../../src/components/AccessibleChartSummary';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { FinancialChartEditor } from '../../src/components/FinancialChartEditor';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
+import type { FinancialChartEditorHandle } from '../../src/react/editorTypes';
 import { commandSourceData } from '../fixtures/commandSourceData';
 import { financialSourceData } from '../fixtures/financialSourceData';
 

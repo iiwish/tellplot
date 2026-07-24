@@ -3,13 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  FinancialChartEditor,
   createInitialViewSpec,
+  type CategoricalSourceData,
   type CommandEvent,
   type ViewSpec,
 } from '../../src';
+import { FinancialChartEditor } from '../../src/components/FinancialChartEditor';
 import { evaluateGroupSelection } from '../../src/interactions/groupSelection';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
 import { commandSourceData } from '../fixtures/commandSourceData';
 
 const g2Mock = vi.hoisted(() => {
@@ -34,7 +35,52 @@ function initialView(): ViewSpec {
   return result.value;
 }
 
+const categoricalSource = {
+  schemaVersion: '2.0.0',
+  dataKind: 'categorical',
+  datasetId: 'categorical-group-selection',
+  items: [
+    { id: 'category-a', label: 'Category A', amount: 10 },
+    { id: 'category-b', label: 'Category B', amount: 20 },
+    { id: 'category-c', label: 'Category C', amount: 30 },
+  ],
+} as const satisfies CategoricalSourceData;
+
+function categoricalView(): ViewSpec {
+  const result = createInitialViewSpec(categoricalSource);
+  if (!result.ok) {
+    throw new Error('Expected valid categorical grouping fixture');
+  }
+  return result.value;
+}
+
 describe('group selection and actions', () => {
+  it('shows group creation only for multi-selection and keeps a selected group contextual', async () => {
+    const groupedView: ViewSpec = {
+      ...initialView(),
+      rootOrder: ['group-ab', 'c', 'd', 'e'],
+      groups: {
+        'group-ab': { id: 'group-ab', label: 'Existing group', childIds: ['a', 'b'] },
+      },
+    };
+    render(<FinancialChartEditor sourceData={commandSourceData} defaultViewSpec={groupedView} />);
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Existing group/ }));
+    expect(screen.queryByRole('textbox', { name: '分组名称' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '创建分组' })).toBeNull();
+    expect(screen.getByRole('button', { name: '取消分组' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('treeitem', { name: /Gamma confidential/ }));
+    expect(screen.queryByRole('textbox', { name: '分组名称' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '创建分组' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('treeitem', { name: /Delta confidential/ }), {
+      ctrlKey: true,
+    });
+    expect(screen.getByRole('textbox', { name: '分组名称' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '创建分组' })).toBeDefined();
+  });
+
   it('returns focus to the annotation field after saving without remounting the control', async () => {
     const views: ViewSpec[] = [];
     render(
@@ -154,6 +200,23 @@ describe('group selection and actions', () => {
         'a',
         'b',
       ]),
+    ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
+  });
+
+  it('classifies plain categorical items as groupable while preserving pin rejection', () => {
+    expect(
+      evaluateGroupSelection(categoricalSource, categoricalView(), ['category-b', 'category-a']),
+    ).toEqual({
+      ok: true,
+      nodeIds: ['category-a', 'category-b'],
+      sourceIds: ['category-a', 'category-b'],
+    });
+    expect(
+      evaluateGroupSelection(
+        categoricalSource,
+        { ...categoricalView(), pinnedItemIds: ['category-b'] },
+        ['category-a', 'category-b'],
+      ),
     ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
   });
 
@@ -460,7 +523,7 @@ describe('group selection and actions', () => {
     expect(onViewSpecChange).not.toHaveBeenCalled();
   });
 
-  it('keeps a single-item selection disabled with zero command commit', async () => {
+  it('hides group creation for a single-item selection with zero command commit', async () => {
     const onCommand = vi.fn();
     const onViewSpecChange = vi.fn();
     render(
@@ -472,13 +535,8 @@ describe('group selection and actions', () => {
     );
 
     fireEvent.click(await screen.findByRole('treeitem', { name: /Alpha confidential/ }));
-    fireEvent.change(screen.getByRole('textbox', { name: '分组名称' }), {
-      target: { value: '单项分组' },
-    });
-    const button = screen.getByRole('button', { name: '创建分组' });
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(button.getAttribute('title')).toContain('至少');
-    fireEvent.click(button);
+    expect(screen.queryByRole('textbox', { name: '分组名称' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '创建分组' })).toBeNull();
     expect(onCommand).not.toHaveBeenCalled();
     expect(onViewSpecChange).not.toHaveBeenCalled();
   });

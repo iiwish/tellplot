@@ -86,7 +86,7 @@ Rules:
 ```typescript
 interface CommandMeta {
   readonly id: string;
-  readonly source: 'direct' | 'outline' | 'keyboard' | 'host' | 'ai';
+  readonly source: 'direct' | 'outline' | 'keyboard' | 'host';
   readonly baseRevision: number;
 }
 

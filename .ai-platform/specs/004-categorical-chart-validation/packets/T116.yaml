@@ -1,0 +1,400 @@
+schema_version: 1
+packet_id: EP-004-T116-A001
+task_id: T116
+feature_id: 004-categorical-chart-validation
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_spec: .ai-platform/specs/004-categorical-chart-validation/spec.md
+  data_model: .ai-platform/specs/004-categorical-chart-validation/data-model.md
+  public_api_contract: .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+  requirements_checklist: .ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+  feature_plan: .ai-platform/specs/004-categorical-chart-validation/plan.md
+  work_graph: .ai-platform/specs/004-categorical-chart-validation/tasks.md
+  analysis: .ai-platform/specs/004-categorical-chart-validation/analysis.md
+  approval_gates:
+    constitution: Confirmed
+    product_contract: Confirmed
+    feature_contracts: Confirmed by user on 2026-07-19
+    requirements_checklist: Completed with 0 Critical/High/Medium findings
+    technical_plan_and_work_graph: Confirmed by user on 2026-07-19
+    dependency_t115: Accepted by user on 2026-07-20, including the disclosed groupSelection variance
+    packet_generation: Requested by user on 2026-07-20
+    execution_authorization: >-
+      Granted. The user explicitly replied "批准 EP-004-T116-A001 开始执行" on 2026-07-20. Execution is limited
+      to T116-A001 and must stop at Needs_Review without remote Git, publish or release actions.
+
+work_unit:
+  title: 基于已验证重复收敛多图表内部架构
+  goal: >-
+    在 T112-T115 已验收行为保持 deep-equal 的前提下，把 waterfall 与 categorical 已证明重复的 G2
+    chart lifecycle 和 offscreen export lifecycle 收敛为最小内部运行时，建立清晰的 chart-family module
+    ownership，统一 category-axis 内部调用，并完成发布候选级全量验证与三层 review。
+  epic: E004
+  stories:
+    - S004-4
+  requirements:
+    - CAT-NFR-001
+    - CAT-NFR-002
+    - CAT-NFR-003
+    - CAT-NFR-004
+    - CAT-NFR-005
+    - CAT-NFR-006
+    - CAT-AC-006
+    - CAT-AC-007
+    - CAT-AC-008
+    - CAT-AC-009
+    - P-006
+    - P-009
+    - P-010
+  priority: P0
+  depends_on:
+    - T115 Accepted
+  blocks:
+    - 分类图用户独立验收
+    - Phase 1A 公共 API 稳定化
+    - 真实用户验证
+  parallel: false
+  conflicts_with:
+    - Every other implementation task in the same worktree
+    - Public chart plugin or renderer registry work
+    - Product behavior, visual design, schema or public API changes
+    - Dependency upgrades or a second rendering/animation engine
+    - Commit, push, pull request, merge, npm publish or release work
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  accepted_baseline:
+    branch: codex/t112-categorical-data-contract
+    state: T112-T115 user-accepted and intentionally uncommitted in the current worktree
+    constraints:
+      - Preserve all accepted runtime, test and evidence changes already present in the dirty worktree.
+      - Execute sequentially in this worktree; HEAD alone does not contain the accepted T112-T115 baseline.
+      - Do not reset, stash, stage, commit or create a worktree from HEAD without separate user authorization.
+      - Capture a pre-edit allowed-file manifest and content snapshot outside the repository for task-only diff evidence.
+  relevant_files:
+    - packages/editor/src/components/WaterfallCanvas.tsx
+    - packages/editor/src/components/CategoricalCanvas.tsx
+    - packages/editor/src/components/FinancialChartEditor.tsx
+    - packages/editor/src/components/AccessibleChartSummary.tsx
+    - packages/editor/src/components/OutlinePanel.tsx
+    - packages/editor/src/components/InspectorPanel.tsx
+    - packages/editor/src/waterfall/projectWaterfall.ts
+    - packages/editor/src/waterfall/waterfallTypes.ts
+    - packages/editor/src/categorical/projectCategorical.ts
+    - packages/editor/src/categorical/categoricalChartSpec.ts
+    - packages/editor/src/categorical/categoricalTypes.ts
+    - packages/editor/src/export/waterfallChartSpec.ts
+    - packages/editor/src/export/svgExport.ts
+    - packages/editor/src/export/pngExport.ts
+    - packages/editor/src/interactions/categoryAxis.ts
+    - packages/editor/src/interactions/chartPointer.ts
+    - packages/editor/src/index.ts
+    - packages/editor/tests/components/categorical-canvas.test.tsx
+    - packages/editor/tests/components/categorical-editor.test.tsx
+    - packages/editor/tests/components/chartPointer.test.ts
+    - packages/editor/tests/components/categoryAxis.test.ts
+    - packages/editor/tests/export/chart-spec.test.ts
+    - packages/editor/tests/export/categorical-chart-spec.test.ts
+    - packages/editor/tests/export/svg.test.ts
+    - packages/editor/tests/export/png.test.ts
+    - packages/editor/tests/export/categorical-export.test.ts
+    - packages/editor/tests/package/public-api.test.ts
+    - e2e/waterfall-editor.spec.ts
+    - e2e/categorical-editor.spec.ts
+    - e2e/export.spec.ts
+    - e2e/accessibility.spec.ts
+    - e2e/performance.spec.ts
+    - vitest.config.ts
+    - docs/architecture.md
+  proven_duplication:
+    - Both Canvas components independently cache the dynamic @antv/g2 Chart constructor.
+    - Both Canvas components own equivalent render request sequencing, stale discard and render flush queues.
+    - Both Canvas components finish active animations before replacement or teardown.
+    - Both Canvas components repeat options/render error mapping, event registration cleanup, destroy and callback isolation.
+    - SVG and PNG exporters independently create, render, inspect, destroy and remove hidden G2 hosts.
+    - Waterfall still consumes legacy horizontal wrappers while categorical consumes the accepted axis-neutral primitives.
+  ownership_findings:
+    - Waterfall projection/types belong to a waterfall chart module, not a top-level waterfall compatibility folder.
+    - Categorical projection/spec/types belong to a categorical chart module.
+    - waterfallChartSpec serves screen and export and therefore does not belong to export ownership.
+    - SVG sanitization/serialization and PNG encoding are format-specific and remain in export modules.
+    - chart-specific marks, projection, copy, gestures and label placement remain outside the shared runtime.
+    - domain/chartPolicy.ts remains domain-owned unless execution proves a move reduces real coupling without making domain import chart modules.
+  public_contract:
+    - packages/editor/src/index.ts export names and types must remain unchanged.
+    - Raw G2Spec, Chart, runtime handles and renderer callbacks remain internal and absent from generated declarations.
+    - SourceData, ViewSpec, command wire shapes, error codes, appearance options and export options remain deep-equal.
+
+required_design:
+  chart_modules:
+    target:
+      - packages/editor/src/charts/waterfall/projection.ts
+      - packages/editor/src/charts/waterfall/spec.ts
+      - packages/editor/src/charts/waterfall/types.ts
+      - packages/editor/src/charts/categorical/projection.ts
+      - packages/editor/src/charts/categorical/spec.ts
+      - packages/editor/src/charts/categorical/types.ts
+    rules:
+      - Move existing family-owned code and update imports; do not rewrite projection or spec semantics during the move.
+      - Remove obsolete top-level waterfall/categorical and export/waterfallChartSpec paths only after all consumers migrate.
+      - Do not add barrel files unless at least two current consumers benefit and the barrel does not create a public surface.
+      - Keep domain chart policy in domain unless dependency evidence proves a family move improves direction without duplication.
+  chart_runtime:
+    target: packages/editor/src/rendering/g2/chartRuntime.ts
+    responsibilities:
+      - Cache and load the @antv/g2 Chart constructor.
+      - Create one chart per mounted host and serialize options/render requests.
+      - Discard stale queued requests and prevent late async initialization from reviving an unmounted chart.
+      - Finish active G2 animations before a superseding render or teardown when required by accepted behavior.
+      - Register and unregister G2 events deterministically.
+      - Isolate consumer callbacks and map load/options/render failures to the existing safe render-issue contract.
+      - Destroy the chart exactly once and leave no pending RAF, event or callback work after disposal.
+    exclusions:
+      - No chart type registry, plugin contract, projection dispatch or public extension hook.
+      - No chart-specific marks, labels, appearance policy, gesture state, overlays or financial data.
+      - No hand-drawn mark animation or replacement of G2 animation ownership.
+      - Do not expose the G2 Chart instance outside the rendering boundary solely for convenience.
+  export_runtime:
+    target: packages/editor/src/rendering/g2/exportRuntime.ts
+    responsibilities:
+      - Create a hidden Canvas or SVG host with the accepted dimensions and ownerDocument.
+      - Render a caller-supplied internal G2 spec using the shared constructor lifecycle.
+      - Make the rendered surface available only inside a bounded format-reader callback and await sync or async readers.
+      - Destroy G2 and remove the host in finally paths for success, load failure, render failure and reader failure.
+    exclusions:
+      - Keep SVG sanitization/serialization in svgExport.ts.
+      - Keep PNG canvas encoding, Blob creation and browser error mapping in pngExport.ts.
+      - Do not move chart-family spec selection into export runtime or return raw G2 objects.
+  category_axis:
+    - Migrate WaterfallCanvas to categoryAxis axis-neutral coordinate/bounds/drop primitives with axis x.
+    - Preserve accepted threshold, collision, pointer capture, stale revision and semantic target behavior deep-equal.
+    - Remove legacy horizontal wrappers from chartPointer only after all internal consumers and regression tests migrate.
+    - Do not move domain eligibility, locked/pinned/group rules into geometry helpers.
+  documentation:
+    - Rewrite docs/architecture.md as the canonical current multi-chart architecture and dependency direction.
+    - Document why runtime boundaries are internal, evidence-driven and intentionally not a plugin system.
+    - Document retained exceptions when the implemented structure differs from the plan target for lower coupling.
+  test_configuration:
+    - Route packages/editor/tests/rendering/g2 tests through the jsdom component project so DOM lifecycle is exercised.
+    - Replace obsolete waterfall/categorical coverage globs after module moves with charts/waterfall and charts/categorical.
+    - Add rendering/g2 thresholds at 95% statements, branches, functions and lines without weakening domain thresholds.
+
+forbidden_changes:
+  - Do not alter source/view schemas, validation, commands, history, session, persistence, chart policy behavior or financial invariants.
+  - Do not alter user-visible copy, visual appearance, animation timing, selectors, keyboard behavior or screenshots.
+  - Do not add chart types, chart switching, multi-series, stacked/grouped bars, mobile product scope or AI behavior.
+  - Do not add, remove or upgrade dependencies and do not change package manager or build tooling.
+  - Do not introduce a public/internal generic registry, unused hook, service locator or framework-shaped abstraction.
+  - Do not expose raw G2 types or runtime instances through index.ts, props, handles or generated declarations.
+  - Do not weaken, delete or skip accepted tests, coverage thresholds, browser gates, accessibility gates or performance budgets.
+  - Do not update visual baselines to hide a refactor regression.
+  - Do not use any, @ts-ignore or @ts-expect-error.
+  - Do not begin publish, release, remote Git or unrelated cleanup work.
+
+execution_constraints:
+  execution_mode: direct_sequential_after_user_approval
+  authorization_state: explicitly_authorized_by_user_2026-07-20
+  branch_or_worktree: codex/t112-categorical-data-contract
+  allowed_files:
+    - packages/editor/src/charts/**
+    - packages/editor/src/rendering/g2/**
+    - packages/editor/src/components/WaterfallCanvas.tsx
+    - packages/editor/src/components/CategoricalCanvas.tsx
+    - packages/editor/src/components/FinancialChartEditor.tsx
+    - packages/editor/src/components/AccessibleChartSummary.tsx
+    - packages/editor/src/components/OutlinePanel.tsx
+    - packages/editor/src/components/InspectorPanel.tsx
+    - packages/editor/src/waterfall/**
+    - packages/editor/src/categorical/**
+    - packages/editor/src/export/waterfallChartSpec.ts
+    - packages/editor/src/export/svgExport.ts
+    - packages/editor/src/export/pngExport.ts
+    - packages/editor/src/interactions/categoryAxis.ts
+    - packages/editor/src/interactions/chartPointer.ts
+    - packages/editor/tests/**
+    - e2e/**
+    - apps/playground/**
+    - vitest.config.ts
+    - playwright.config.ts
+    - docs/architecture.md
+    - .ai-platform/specs/004-categorical-chart-validation/**
+    - .ai-platform/evidence/T116/**
+  read_only_files:
+    - packages/editor/src/index.ts
+    - packages/editor/src/domain/**
+    - packages/editor/src/react/**
+    - packages/editor/src/config/chartAppearance.ts
+    - packages/editor/src/export/exportOptions.ts
+    - packages/editor/src/export/exportTypes.ts
+    - packages/editor/src/interactions/groupSelection.ts
+    - packages/editor/src/interactions/moveTargets.ts
+    - package.json
+    - pnpm-lock.yaml
+  ownership_notes:
+    - Narrow import-only changes outside the allowlist require a packet variance before editing; behavior changes require stopping.
+    - apps/playground and existing E2E files are allowed only for deterministic regression evidence, not feature changes.
+    - vitest.config.ts may add rendering/g2 coverage at 95% minimum for statements, branches, functions and lines.
+    - playwright.config.ts may change only if a deterministic current/previous browser evidence gap is proven.
+    - Delete obsolete modules only in the same green step that migrates every internal import and test.
+
+tdd_plan:
+  required: true
+  exception: null
+  characterization:
+    purpose: Establish accepted pre-refactor behavior before moving ownership.
+    files:
+      - packages/editor/tests/components/categorical-canvas.test.tsx
+      - packages/editor/tests/components/categorical-editor.test.tsx
+      - packages/editor/tests/components/chartPointer.test.ts
+      - packages/editor/tests/export/chart-spec.test.ts
+      - packages/editor/tests/export/categorical-chart-spec.test.ts
+      - packages/editor/tests/export/svg.test.ts
+      - packages/editor/tests/export/png.test.ts
+      - packages/editor/tests/export/categorical-export.test.ts
+    expected_signal: Existing waterfall/categorical screen, interaction and export tests pass before any source move.
+  red:
+    new_files:
+      - packages/editor/tests/rendering/g2/chart-runtime.test.ts
+      - packages/editor/tests/rendering/g2/export-runtime.test.ts
+      - packages/editor/tests/package/architecture-boundary.test.ts
+    sequence:
+      - Lock constructor caching, newest-request-wins, stale initialization discard and exact-once destroy contracts.
+      - Lock animation finish, event off, callback isolation and safe load/options/render error delivery.
+      - Lock Canvas/SVG hidden-host removal for success plus constructor, render and reader failures.
+      - Lock internal ownership and the absence of raw G2 runtime exports/import leakage.
+    expected_failure: >-
+      New tests fail because rendering/g2 modules and chart-family ownership paths do not exist and lifecycle behavior
+      still lives separately in both Canvas and export implementations. The accepted characterization suite stays green.
+  green:
+    sequence:
+      - Implement chartRuntime with only the lifecycle operations consumed by both accepted Canvas components.
+      - Migrate WaterfallCanvas, verify scoped tests, then migrate CategoricalCanvas and verify deep-equal behavior.
+      - Implement exportRuntime and migrate SVG then PNG while preserving format-specific sanitizer/encoder ownership.
+      - Move family projection/spec/types into charts ownership one family at a time and update all internal/test imports.
+      - Migrate waterfall X-axis calls to categoryAxis and remove compatibility wrappers only when unreferenced.
+      - Add rendering coverage thresholds and update canonical architecture documentation.
+    expected_signal: Every new contract test and all accepted behavior tests pass without public or visual changes.
+  refactor:
+    boundaries:
+      - Compare every shared runtime member against at least two production consumers and delete one-consumer symmetry APIs.
+      - Keep Canvas gesture composition and export format work outside rendering/g2.
+      - Remove obsolete files/imports without introducing barrels or a registry.
+      - Keep domain/public contracts untouched and run package declaration checks after final naming cleanup.
+
+validation_loop:
+  scoped_commands:
+    - pnpm exec vitest run packages/editor/tests/rendering packages/editor/tests/components packages/editor/tests/export packages/editor/tests/package
+    - pnpm exec vitest run packages/editor/tests/waterfall packages/editor/tests/categorical
+    - pnpm typecheck
+    - pnpm lint
+    - pnpm format:check
+  full_commands:
+    - pnpm format:check
+    - pnpm lint
+    - pnpm typecheck
+    - pnpm test:unit
+    - pnpm test:coverage
+    - pnpm build
+    - pnpm test:package
+    - pnpm test:react-matrix
+    - pnpm test:e2e
+    - pnpm test:a11y
+    - pnpm test:performance
+    - pnpm test:browser-previous
+    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T116 --strict
+    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --strict
+    - git diff --check
+  expected_signals:
+    - Rendering runtime tests prove queue, stale work, animation, events, error callbacks and cleanup on every exit path.
+    - Waterfall and categorical component behavior, selectors, rootOrder, group actions, undo/redo and export remain deep-equal.
+    - SVG/PNG remain nonblank and preserve chart type, order, appearance, sanitizer and canonical-state guarantees.
+    - rendering/g2 coverage is at least 95% for statements, branches, functions and lines.
+    - ESM/CJS/types and React 18/19 pass with index.ts and generated declarations free of raw G2 runtime types.
+    - Current Chromium/Firefox/WebKit and previous browser gates pass without screenshot or behavior baseline changes.
+    - Axe reports no serious/critical violations and 200-item performance remains inside the accepted budget.
+    - Architecture dependency audit finds no obsolete ownership paths, cycles, unused runtime APIs or public registry.
+  retry_budget: 3
+  failure_policy:
+    first_failure: Fix only a demonstrated T116 ownership or lifecycle defect and rerun its smallest reproducer.
+    second_failure: Compare against the accepted T115 baseline and separate refactor regression from environment flake.
+    third_failure: Stop broadening the abstraction, revert only the failing T116 step from the external snapshot and record the blocker.
+    beyond_budget: Never weaken a gate or change product behavior to claim architectural completion.
+
+visual_qa:
+  required_views:
+    - waterfall ready and grouped states
+    - column ready and collapsed states
+    - bar ready and collapsed states
+    - waterfall, column and bar SVG/PNG exports
+  checks:
+    - Fresh current-browser screenshots and exported assets remain behaviorally and visually equivalent to accepted T115 evidence.
+    - Chart canvases contain nontrivial painted pixels and no empty/stale render after rapid updates or unmount.
+    - First logical waterfall/column item stays leftmost and first logical bar item stays topmost.
+    - Toolbar, canvas, outline, inspector, targets and feedback do not overlap or resize unexpectedly.
+    - No visual baseline is updated; any visible difference is a stop condition requiring separate approval.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T116
+  summary: .ai-platform/evidence/T116/summary.md
+  diff: .ai-platform/evidence/T116/diff.patch
+  test_results: .ai-platform/evidence/T116/test-results.md
+  required:
+    - Task ID, packet ID, attempt, executor, branch/worktree and explicit execution authorization record
+    - Pre-edit dirty-baseline manifest plus external content-snapshot method used to isolate T116 changes
+    - Characterization, RED, GREEN and REFACTOR receipts with exact commands, failures, fixes and exit codes
+    - Final moved/deleted/created file map and production-consumer count for each shared runtime operation
+    - Runtime queue, stale request, animation, event, callback, destroy and offscreen cleanup behavior matrix
+    - Screen/export parity, public API/declaration, dependency direction and privacy audits
+    - Full coverage/type/lint/format/build/package/React/current-browser/previous-browser/a11y/performance results
+    - Required fresh screenshots/exports and comparison against accepted T115 behavior without baseline replacement
+    - Spec-compliance, engineering and QA reviews with findings, resolutions and residual risks
+    - Task-only final patch that excludes T112-T115 baseline changes and passes reverse-apply verification
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - Every shared runtime responsibility has two real production consumers and no speculative extension surface.
+    - Render ordering, stale async work, active animation, event cleanup and exact-once destroy survive rapid updates/unmount.
+    - Offscreen export removes chart and host on all success/failure paths without moving sanitizer or encoder ownership.
+    - Chart module moves improve dependency direction and do not change projection/spec results or duplicate domain policy.
+    - Waterfall X-axis migration is semantically identical and keeps G2 scene bounds as the sole geometry source.
+    - Public exports, schema, commands, errors, appearance, visuals, a11y, performance and privacy remain unchanged.
+    - Full release-candidate gates and task-only evidence are reproducible from the accepted dirty baseline.
+  acceptance_rule: >-
+    T116 may move to Needs_Review only after all blocking gates and all three review passes have no unresolved
+    Critical/High/Medium finding. Only explicit user acceptance may mark T116 Accepted.
+
+handoff:
+  task_status: Accepted
+  packet_review_status: Approved_By_User_2026-07-20
+  execution_attempt: T116-A001
+  review_result: >-
+    T116-A001 completed on the accepted dirty baseline. Characterization, RED/GREEN/refactor, full release-candidate
+    gates, fresh visual/export parity, task-only evidence and spec/engineering/QA review have no unresolved
+    Critical/High/Medium finding.
+  next_gate: Completed. The user explicitly accepted T116 on 2026-07-20.
+  downstream: New work requires an independently approved goal; this packet does not authorize downstream execution.
+  remote_actions: Commit, push, pull request, merge, publish and release are not authorized.
+
+stop_conditions:
+  - User execution approval is withdrawn or redirected.
+  - The accepted T112-T115 dirty baseline changes unexpectedly or cannot be snapshotted without overwriting user work.
+  - Correctness requires a schema, domain behavior, public API, visual, copy, animation timing or dependency change.
+  - A proposed shared runtime operation has only one production consumer or requires a plugin/registry abstraction.
+  - G2 Chart or G2Spec would need to cross the internal rendering boundary into the package public surface.
+  - Canvas or export cleanup cannot be made deterministic without changing accepted user behavior.
+  - Waterfall/category-axis migration changes collision, threshold, ordering, locking or stale-revision semantics.
+  - Current or previous browser, package, React, accessibility, performance or 95% rendering coverage gates remain red.
+  - A visible difference appears and would require updating an accepted screenshot or export baseline.
+  - Task-only evidence cannot distinguish T116 from the uncommitted accepted T112-T115 baseline.
+  - An unrelated user change appears in an allowed file and cannot be safely preserved.
+  - Strict artifact validation reports an unresolved Critical/High finding or missing packet field.

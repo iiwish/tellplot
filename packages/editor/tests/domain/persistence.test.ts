@@ -96,7 +96,7 @@ describe('ViewSpec persistence', () => {
 
   it('rejects unsupported major schema versions without migration', () => {
     const parsed = JSON.parse(serializeViewSpec(initialView())) as Record<string, unknown>;
-    parsed['schemaVersion'] = '2.0.0';
+    parsed['schemaVersion'] = '3.0.0';
 
     expectIssue(parseViewSpec(JSON.stringify(parsed), financialSourceData), {
       code: 'UNSUPPORTED_SCHEMA_VERSION',

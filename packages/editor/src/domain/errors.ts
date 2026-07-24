@@ -1,4 +1,5 @@
 export type ValidationErrorCode =
+  | 'INVALID_CHART_CONFIG'
   | 'INVALID_SOURCE_DATA'
   | 'INVALID_VIEW_SPEC'
   | 'INVALID_SESSION_OPTIONS'
@@ -18,9 +19,12 @@ export type ValidationIssueReason =
   | 'NON_FINITE_AMOUNT'
   | 'UNSAFE_AMOUNT'
   | 'INVALID_SOURCE_ITEM_KIND'
+  | 'INVALID_DATA_KIND'
   | 'INVALID_METADATA_VALUE'
   | 'INVALID_ANCHOR'
   | 'DATASET_ID_MISMATCH'
+  | 'SCHEMA_VERSION_MISMATCH'
+  | 'INCOMPATIBLE_CHART_TYPE'
   | 'INVALID_CHART_TYPE'
   | 'INVALID_REVISION'
   | 'INVALID_HISTORY_LIMIT'
@@ -79,14 +83,17 @@ const ISSUE_MESSAGES: Readonly<Record<ValidationIssueReason, string>> = {
   NON_FINITE_AMOUNT: 'Amount must be finite.',
   UNSAFE_AMOUNT: 'Amount exceeds the supported numeric range.',
   INVALID_SOURCE_ITEM_KIND: 'Source item kind is not supported.',
+  INVALID_DATA_KIND: 'Source data kind is not supported.',
   INVALID_METADATA_VALUE: 'Metadata value is not JSON-compatible.',
   INVALID_ANCHOR: 'Source anchors are invalid.',
   DATASET_ID_MISMATCH: 'View and source datasets do not match.',
+  SCHEMA_VERSION_MISMATCH: 'View and source schema generations do not match.',
+  INCOMPATIBLE_CHART_TYPE: 'Chart type is incompatible with the source data.',
   INVALID_CHART_TYPE: 'Chart type is not supported.',
   INVALID_REVISION: 'Revision must be a non-negative safe integer.',
   INVALID_HISTORY_LIMIT: 'History limit must be a non-negative safe integer.',
   UNKNOWN_SOURCE_REFERENCE: 'View references an unknown source item.',
-  MISSING_SOURCE_REFERENCE: 'View does not cover every contribution.',
+  MISSING_SOURCE_REFERENCE: 'View does not cover every narrative source item.',
   DUPLICATE_VIEW_NODE: 'View node appears more than once.',
   LOCKED_ANCHOR_REFERENCE: 'Locked anchors cannot appear in root order.',
   ANCHOR_SEGMENT_ORDER: 'View order crosses a subtotal anchor.',
@@ -95,14 +102,14 @@ const ISSUE_MESSAGES: Readonly<Record<ValidationIssueReason, string>> = {
   GROUP_SOURCE_ID_CONFLICT: 'Group identifier conflicts with a source identifier.',
   GROUP_TOO_SMALL: 'A group requires at least two child nodes.',
   DUPLICATE_GROUP_CHILD: 'A group child appears more than once.',
-  INVALID_GROUP_CHILD: 'Only contribution items and groups can be grouped.',
+  INVALID_GROUP_CHILD: 'Only narrative source items and groups can be grouped.',
   GROUP_CROSSES_ANCHOR: 'Group children cannot cross a subtotal anchor.',
-  DUPLICATE_GROUP_MEMBERSHIP: 'A contribution cannot belong to multiple groups.',
+  DUPLICATE_GROUP_MEMBERSHIP: 'A narrative source item cannot belong to multiple groups.',
   CYCLIC_GROUP_REFERENCE: 'Group references must not form a cycle.',
   ORPHAN_GROUP: 'Every group must appear in root order.',
   DUPLICATE_REFERENCE: 'Reference appears more than once.',
   UNKNOWN_GROUP_REFERENCE: 'View references an unknown group.',
-  INVALID_PIN_REFERENCE: 'Only contribution items can be pinned.',
+  INVALID_PIN_REFERENCE: 'Only narrative source items can be pinned.',
   INVALID_ANNOTATION: 'Annotation must contain text.',
   ANNOTATION_TOO_LONG: 'Annotation exceeds the supported length.',
   UNKNOWN_NODE_REFERENCE: 'View references an unknown node.',

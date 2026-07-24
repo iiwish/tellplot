@@ -1,0 +1,179 @@
+schema_version: 1
+packet_id: EP-G004-T120-A001
+task_id: T120
+feature_id: 008-public-beta-release
+mode: execute_goal
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  goal_spec: .ai-platform/specs/008-public-beta-release/spec.md
+  goal_plan: .ai-platform/specs/008-public-beta-release/plan.md
+  goal_graph: .ai-platform/specs/008-public-beta-release/tasks.md
+  requirements_checklist: .ai-platform/specs/008-public-beta-release/checklists/requirements.md
+  analysis: .ai-platform/specs/008-public-beta-release/analysis.md
+  execution_authorization: >-
+    Not granted. T120 remains blocked until G002, G002-R1, G002-R2 and G002-R3 are accepted and the user explicitly
+    re-approves G004. Remote Git, repository visibility, production deployment, DNS, Git tag, GitHub Release and npm
+    publish require separate explicit authorization before T121.
+
+work_unit:
+  title: 本地发布硬化与可复现候选
+  goal: >-
+    Form an architecture-gated, stable and clean-clone reproducible public Beta candidate from the accepted TellPlot
+    work without changing product behavior or performing remote actions.
+  depends_on:
+    - G002 T117 Accepted
+    - G002-R1 T118 Accepted
+    - G002-R2 T119 Accepted
+    - G002-R3 T122 Accepted
+  requirements:
+    - REL-FR-001
+    - REL-FR-002
+    - REL-FR-003
+    - REL-FR-004
+    - REL-FR-005
+    - REL-FR-006
+    - REL-FR-007
+    - REL-NFR-001
+    - REL-NFR-002
+    - REL-NFR-003
+    - REL-NFR-004
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  accepted_baseline:
+    branch: codex/t112-categorical-data-contract
+    state: G002 through G002-R3 must be accepted before this packet can execute
+    constraints:
+      - Preserve every accepted change.
+      - Do not reset, stash, stage, commit, push, publish or deploy.
+      - Build T120 evidence against a recorded local snapshot.
+  architecture:
+    data_flow: SourceData -> ViewSpec -> Command Executor -> Chart Projection -> G2Spec -> G2 Runtime
+    public_entry: packages/editor/src/index.ts
+    layers:
+      - packages/editor/src/domain
+      - packages/editor/src/charts
+      - packages/editor/src/rendering/g2
+      - packages/editor/src/interactions
+      - packages/editor/src/react
+      - packages/editor/src/components
+      - packages/editor/src/export
+    preserve:
+      - G2 owns marks, encode, scene bounds, renderer and chart animation.
+      - Domain has no React or G2 dependency.
+      - There is no ChartPlugin registry or raw G2 public escape hatch.
+      - Screen and export share chart-family projection/spec semantics.
+  relevant_files:
+    - packages/editor/src/index.ts
+    - packages/editor/tests/package/architecture-boundary.test.ts
+    - packages/editor/tests/package/public-api.test.ts
+    - packages/editor/tests/package/pack-contract.mjs
+    - e2e/live-code-editor.spec.ts
+    - playwright.config.ts
+    - packages/editor/package.json
+    - packages/editor/README.md
+    - README.md
+    - docs/architecture.md
+
+execution_constraints:
+  allowed_files:
+    - .ai-platform/**
+    - .github/**
+    - AGENTS.md
+    - README.md
+    - CHANGELOG.md
+    - CONTRIBUTING.md
+    - SECURITY.md
+    - CODE_OF_CONDUCT.md
+    - docs/**
+    - package.json
+    - playwright.config.ts
+    - packages/editor/package.json
+    - packages/editor/README.md
+    - packages/editor/LICENSE
+    - packages/editor/tests/package/**
+    - apps/playground/**
+    - e2e/**
+    - scripts/release/**
+  forbidden_changes:
+    - No core domain, projection, command or interaction behavior change.
+    - No public API, schema, chart family or runtime dependency change.
+    - No refactor of WaterfallCanvas, CategoricalCanvas or FinancialChartEditor.
+    - No remote Git, repository visibility, DNS, deployment, tag, release or publish.
+    - No secret or credential in files, logs or evidence.
+    - No any, @ts-ignore or @ts-expect-error.
+
+tdd_plan:
+  red:
+    - Add architecture dependency/cycle checks that expose the current coverage gap.
+    - Reproduce the WebKit full-matrix navigation timeout under controlled load.
+    - Add release-rehearsal checks for dirty source, broken public links and tarball identity.
+  green:
+    - Implement the smallest test, script or configuration changes that satisfy the release contract.
+    - Preserve all product behavior and existing public exports.
+  refactor:
+    - Remove only proven test or release-script duplication.
+    - Do not refactor family Canvas components during G004.
+
+validation_commands:
+  - pnpm install --frozen-lockfile
+  - pnpm format:check
+  - pnpm lint
+  - pnpm typecheck
+  - pnpm test:coverage
+  - pnpm build
+  - pnpm test:package
+  - pnpm test:react-matrix
+  - pnpm test:e2e
+  - pnpm test:a11y
+  - pnpm test:performance
+  - pnpm test:browser-previous
+  - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 008-public-beta-release --task-id T120 --strict
+  - git diff --check
+
+validation_loop:
+  focused_red:
+    - Run architecture, release-rehearsal and controlled WebKit checks before implementation and record failures.
+  focused_green:
+    - Run the same checks after each minimal correction.
+  regression:
+    - Run the complete release matrix from the working tree and a clean-clone rehearsal without weakening thresholds.
+  failure_policy:
+    - Fix failures only within allowed files.
+    - Stop if a fix requires product behavior, public API, schema, dependencies, credentials or remote actions.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T120
+  required:
+    - summary.md
+    - test-results.md
+    - architecture-review.md
+    - pack-manifest.json
+    - clean-clone.md
+    - diff.patch
+    - review.md
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - release_qa_acceptance
+  acceptance_rule: >-
+    T120 may move to Needs_Review only when local success criteria and full gates pass with no unresolved Critical,
+    High or Medium finding. T121 remains Blocked until the user separately authorizes remote actions.
+
+stop_conditions:
+  - A product behavior, public API, schema, dependency or large component refactor is required.
+  - The accepted dirty baseline cannot be preserved.
+  - The WebKit failure cannot be reproduced, fixed or honestly classified.
+  - Fresh clone, package consumer or architecture gates fail.
+  - Credentials or any remote action are required.
+
+handoff:
+  remote_actions_authorized: false
+  finish_state: Needs_Review

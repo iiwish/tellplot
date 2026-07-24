@@ -1,0 +1,314 @@
+schema_version: 1
+packet_id: EP-004-T115-A001
+task_id: T115
+feature_id: 004-categorical-chart-validation
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_spec: .ai-platform/specs/004-categorical-chart-validation/spec.md
+  data_model: .ai-platform/specs/004-categorical-chart-validation/data-model.md
+  public_api_contract: .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+  requirements_checklist: .ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+  feature_plan: .ai-platform/specs/004-categorical-chart-validation/plan.md
+  work_graph: .ai-platform/specs/004-categorical-chart-validation/tasks.md
+  analysis: .ai-platform/specs/004-categorical-chart-validation/analysis.md
+  approval_gates:
+    constitution: Confirmed
+    product_contract: Confirmed
+    feature_contracts: Confirmed by user on 2026-07-19
+    requirements_checklist: Completed with 0 Critical/High/Medium findings
+    technical_plan_and_work_graph: Confirmed by user on 2026-07-19
+    dependency_t113: Accepted by user on 2026-07-19
+    dependency_t114: Accepted by user after a clean fresh review on 2026-07-19
+    execution_authorization: >-
+      User explicitly requested a six-to-seven-hour long-running goal after a clean T114 review. The goal is
+      limited to the already approved T115 task and must stop at Needs_Review without starting T116.
+
+work_unit:
+  title: 完成分类图编辑、导出与可访问性闭环
+  goal: >-
+    把 T113 categorical projection/G2 spec 和 T114 category-axis interaction 接入唯一
+    FinancialChartEditor，在不复制 domain/session/command/history 的前提下交付可真实操作、导出、访问和验证的
+    column/bar 纵向切片，并保持已验收 waterfall 行为不变。
+  epic: E004
+  stories:
+    - S004-2
+    - S004-3
+  requirements:
+    - CAT-FR-005
+    - CAT-FR-006
+    - CAT-FR-007
+    - CAT-FR-008
+    - CAT-FR-009
+    - CAT-NFR-001
+    - CAT-NFR-002
+    - CAT-NFR-003
+    - CAT-NFR-004
+    - CAT-NFR-005
+    - CAT-NFR-006
+    - CAT-AC-001
+    - CAT-AC-002
+    - CAT-AC-003
+    - CAT-AC-004
+    - CAT-AC-005
+    - CAT-AC-006
+    - CAT-AC-007
+    - CAT-AC-008
+  priority: P0
+  depends_on:
+    - T113 Accepted
+    - T114 Accepted
+  blocks:
+    - T116
+  parallel: false
+  conflicts_with:
+    - T116 shared runtime extraction
+    - Domain schema, command, history, chart policy or persistence changes
+    - Categorical projection/spec and category-axis primitive changes
+    - A second editor state, command, history, outline or gesture engine
+    - Raw G2Spec/chart instance public exposure or a new rendering/animation dependency
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - packages/editor/src/components/FinancialChartEditor.tsx
+    - packages/editor/src/components/WaterfallCanvas.tsx
+    - packages/editor/src/components/AccessibleChartSummary.tsx
+    - packages/editor/src/components/OutlinePanel.tsx
+    - packages/editor/src/components/EditorToolbar.tsx
+    - packages/editor/src/components/editorMessages.ts
+    - packages/editor/src/react/useEditorController.ts
+    - packages/editor/src/react/editorTypes.ts
+    - packages/editor/src/categorical/projectCategorical.ts
+    - packages/editor/src/categorical/categoricalChartSpec.ts
+    - packages/editor/src/interactions/categoryAxis.ts
+    - packages/editor/src/interactions/chartPointer.ts
+    - packages/editor/src/interactions/moveTargets.ts
+    - packages/editor/src/export/svgExport.ts
+    - packages/editor/src/export/pngExport.ts
+    - packages/editor/src/export/exportTypes.ts
+    - packages/editor/src/export/waterfallChartSpec.ts
+    - apps/playground/src/App.tsx
+    - apps/playground/src/fixtures.ts
+    - e2e/waterfall-editor.spec.ts
+    - e2e/export.spec.ts
+    - e2e/accessibility.spec.ts
+    - e2e/performance.spec.ts
+  existing_patterns:
+    - FinancialChartEditor owns one controller, selection, preview, feedback, outline, inspector, history and export orchestration; chart dispatch must stay inside this component boundary.
+    - useEditorController already validates compatible source/view unions and owns controlled/uncontrolled behavior; T115 must not create a categorical controller.
+    - WaterfallCanvas is the accepted reference for dynamic G2 loading, request ordering, error isolation, native event registration, pointer capture, RAF, Escape/blur/unmount cancellation, marquee and group action overlays.
+    - T116 owns shared G2 lifecycle extraction. T115 may build a separate CategoricalCanvas with local lifecycle code but must not introduce a generic runtime or move waterfall modules.
+    - projectCategorical returns deterministic logical rootOrder data for both chart types; createCategoricalChartSpec changes only G2 direction and appearance semantics.
+    - categoryAxis/chartPointer provide axis-neutral G2 event, bounds, collision, threshold and stale-revision primitives; moveTargets converts node plus before/after to existing commands.
+    - OutlinePanel, InspectorPanel, EditorToolbar and useEditorController are chart-family-neutral unless their visible copy or item assumptions prove otherwise.
+    - Existing SVG/PNG export sanitization, encoding, filename and error contracts remain authoritative; categorical export must select the matching projection/spec without forking public ExportOptions.
+    - The playground is a thin host. It may select approved fixtures but must not own chart editing behavior.
+  interfaces_or_contracts:
+    - SourceData/ViewSpec are closed discriminated unions. current categorical source accepts only current bar/column view; no implicit migration or chart switching command exists.
+    - CategoricalCanvas receives projection, chartType, annotations, emphasis, appearance and existing editor callbacks; it emits only semantic nodeId plus before/after targets.
+    - Column uses X as category axis. Bar uses Y with logical rootOrder top-to-bottom. Value-axis movement never changes reorder targets.
+    - Screen and export use createCategoricalChartSpec from the same canonical projection. Export disables Tooltip and animation/reduced-motion behavior as already specified.
+    - Active chart or outline preview is never exportable; export uses the canonical accepted view only.
+    - Empty, invalid and render error surfaces expose stable diagnostics without raw labels, amounts, sourceRef or metadata.
+
+required_design:
+  - Add a dedicated internal CategoricalCanvas rather than branching WaterfallCanvas into one large conditional component.
+  - Reuse the accepted G2 native interval spec, scene bounds and event model. Do not hand-draw chart marks or animate them outside G2.
+  - Dispatch source/view to projectWaterfall or projectCategorical only after controller compatibility validation; preserve strict narrowing and structured invalid state.
+  - Keep one previewViewSpec path. Chart, outline and keyboard interactions resolve through moveTargets and executeCommand against the same session.
+  - Freeze eligible same-parent renderer bounds and a render revision at pointer-down; cancel when the revision becomes stale. Locked/pinned rejection remains domain-authoritative and uses existing feedback codes.
+  - Preserve pointer capture, 4px category-axis threshold, RAF coalescing, Escape/blur/unmount cancellation, click selection, minimum target and group actions for the categorical surface.
+  - Keep the first bar datum visually topmost and the first column datum visually leftmost across canvas, outline, accessible summary and export.
+  - Make export chart-neutral internally while retaining the current public handle and ExportOptions. SVG/PNG must use canonical data and the matching spec factory.
+  - Provide chart-type-aware accessible title/summary and logical order. Keyboard and outline operations continue to work without pixel collision.
+  - Add thin playground categorical fixtures and deterministic test selection so Playwright can exercise source-only column and explicit bar without changing package behavior.
+  - Preserve existing waterfall selectors, screenshots, interaction expectations and default playground workflow unless a test explicitly selects a categorical fixture.
+  - Verify dense 200-item categorical rendering and interaction in a real Chromium canvas; label density may be reduced through the approved spec behavior, not DOM guessing.
+
+forbidden_changes:
+  - Do not modify domain/**, categorical/**, interactions/**, waterfall/**, chartAppearance.ts, vitest.config.ts or dependencies.
+  - Do not introduce setChartType, multi-series, stacked/grouped bars, dual axes, mobile-specific product scope or new public raw renderer types.
+  - Do not copy session, history, command execution, group tree transforms, OutlinePanel state or source aggregation.
+  - Do not read clientWidth/offsetWidth as a substitute for G2 scene bounds or assume a fixed bar width/row height.
+  - Do not export active previews, mutate SourceData or log financial labels, amounts, sourceRef or metadata.
+  - Do not use any, @ts-ignore or @ts-expect-error.
+  - Do not begin T116, move modules for architectural symmetry, or extract a generic G2 runtime.
+
+execution_constraints:
+  execution_mode: direct_authorized_long_goal
+  direct_reason: User explicitly requested a long-running SOL execution goal; subagent delegation and parallel task execution were not requested.
+  branch_or_worktree: codex/t112-categorical-data-contract
+  baseline_requirement: >-
+    T112-T114 are user-accepted but uncommitted in this worktree. Preserve them as the accepted baseline, execute only
+    T115 sequentially, and do not reset, stage or commit unrelated changes.
+  allowed_files:
+    - packages/editor/src/components/**
+    - packages/editor/src/react/**
+    - packages/editor/src/export/**
+    - packages/editor/src/styles/editor.css
+    - packages/editor/src/index.ts
+    - packages/editor/tests/components/**
+    - packages/editor/tests/export/**
+    - packages/editor/tests/package/**
+    - apps/playground/**
+    - e2e/**
+    - playwright.config.ts
+    - .ai-platform/evidence/T115/**
+  read_only_files:
+    - packages/editor/src/domain/**
+    - packages/editor/src/categorical/**
+    - packages/editor/src/interactions/**
+    - packages/editor/src/waterfall/**
+    - packages/editor/src/config/chartAppearance.ts
+    - vitest.config.ts
+    - package.json
+    - pnpm-lock.yaml
+  ownership_notes:
+    - FinancialChartEditor.tsx contains accepted T112 compatibility narrowing; work with it and do not revert it.
+    - WaterfallCanvas.tsx is inside the component allowlist but should remain unchanged unless a narrow chart-neutral type/callback fix is required; generic lifecycle extraction is forbidden.
+    - Existing component/export/E2E files may be extended for categorical coverage without weakening waterfall assertions.
+    - Stop if correct behavior requires changing an approved T113/T114 primitive or domain contract.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    files:
+      - packages/editor/tests/components/categorical-editor.test.tsx
+      - packages/editor/tests/components/categorical-canvas.test.tsx
+      - packages/editor/tests/export/categorical-export.test.ts
+      - e2e/categorical-editor.spec.ts
+    sequence:
+      - Lock source-only column and explicit bar dispatch, real G2 render, logical summary and empty/invalid/render-error states.
+      - Lock X/Y direct reorder, selection, cancel, pinned rejection, group/collapse/expand/ungroup and shared undo/redo behavior.
+      - Lock canonical screen/export spec parity, SVG/PNG contents and active-preview export rejection.
+      - Lock keyboard/outline/aria-live/reduced-motion, real-browser bar/column order and 200-item performance.
+    expected_failure: >-
+      New tests fail because FinancialChartEditor still always calls projectWaterfall, CategoricalCanvas and chart-neutral
+      export do not exist, and the playground has no selectable categorical workflow. Existing waterfall tests remain green.
+  green:
+    sequence:
+      - Implement the smallest chart-family dispatch and CategoricalCanvas needed for component render and summary tests.
+      - Connect T114 category-axis gestures to the existing preview/command path, then add group and cancellation behavior.
+      - Generalize internal export requests without changing the public handle, then wire playground fixtures and browser flows.
+    expected_signal: New categorical tests pass while all previously accepted waterfall expectations remain unchanged.
+  refactor:
+    boundaries:
+      - Remove only T115-local duplication that does not belong to T116 runtime extraction.
+      - Keep chart-specific copy, projection, spec and gesture composition in their family component.
+      - Preserve public API, schema, command wire shapes and default visual behavior.
+
+validation_loop:
+  commands:
+    - pnpm exec vitest run packages/editor/tests/components packages/editor/tests/export packages/editor/tests/package
+    - pnpm test:unit
+    - pnpm test:coverage
+    - pnpm typecheck
+    - pnpm lint
+    - pnpm format:check
+    - pnpm build
+    - pnpm test:package
+    - pnpm test:react-matrix
+    - pnpm test:e2e
+    - pnpm test:a11y
+    - pnpm test:performance
+    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T115 --strict
+    - git diff --check
+  expected_signals:
+    - Unit/component tests prove source/view dispatch, controlled/uncontrolled updates, one session/history path and waterfall regression.
+    - Real G2 Canvas renders nonblank column and bar marks with rootOrder left-to-right/top-to-bottom and stable node IDs.
+    - Equivalent X/Y pointer gestures commit the same semantic move; click, threshold, Escape, blur, stale render and pinned failures are deterministic.
+    - Outline, keyboard, group, collapse, expand, ungroup, undo and redo update the same view and remain visible in canvas/summary.
+    - SVG/PNG export is nonblank, uses canonical accepted state, matches chart type/order/appearance and rejects an active preview.
+    - Axe has no serious/critical violations; summaries, focus, aria-live and reduced motion remain meaningful for both layouts.
+    - 200 visible categorical items meet the existing real-browser performance budget without excessive React commits.
+    - ESM/CJS/types, React 18/19 and current Chromium/Firefox/WebKit pass with no raw G2 public export.
+  retry_budget: 3
+  failure_policy:
+    first_failure: Read exact output and fix only behavior owned by T115.
+    second_failure: Separate implementation defects from flaky browser/environment evidence; rerun only after a justified fix or deterministic isolation.
+    third_failure: Stop widening scope, record the blocker and preserve partial RED/GREEN evidence.
+    beyond_budget: Mark blocked only under the active-goal blocked policy; never skip or weaken a gate to claim completion.
+
+visual_qa:
+  required_views:
+    - column ready state at desktop viewport
+    - bar ready state at desktop viewport
+    - categorical group/collapsed state
+    - categorical empty or invalid state
+    - SVG and PNG export nonblank/order evidence
+  checks:
+    - Canvas has a nontrivial painted-pixel count and actual category marks.
+    - First logical bar is topmost; first logical column is leftmost.
+    - Toolbar, canvas, outline, inspector and overlays do not overlap at desktop and existing mobile regression viewports.
+    - Long labels remain readable or are deterministically hidden by approved chart behavior.
+    - Active targets, focus and feedback remain visible and do not resize stable controls.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T115
+  summary: .ai-platform/evidence/T115/summary.md
+  diff: .ai-platform/evidence/T115/diff.patch
+  test_results: .ai-platform/evidence/T115/test-results.md
+  required:
+    - task ID, attempt, executor, branch/worktree and long-goal authorization
+    - exact changed files and explicit confirmation of read-only boundaries
+    - RED/GREEN/REFACTOR receipts with commands and exit codes
+    - chart dispatch, X/Y interaction, history/group, export and accessibility behavior matrix
+    - full unit/coverage/type/lint/format/build/package/React/browser/a11y/performance results
+    - required screenshots, painted-pixel/nonblank checks and screen/export order evidence
+    - public API and privacy boundary audit
+    - spec-compliance, engineering and QA findings
+    - residual risks and task-only final patch that passes reverse apply check
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - The same source/view/session/command/history path serves waterfall, column and bar without domain duplication.
+    - G2 remains the renderer and animation owner; T115 does not hand-draw marks or preempt T116 runtime extraction.
+    - rootOrder is identical across canvas, outline, summary and export, including top-to-bottom bar order.
+    - Direct manipulation uses renderer scene bounds, frozen eligible candidates and T114 X/Y primitives without guessed dimensions.
+    - Export uses canonical state and the same spec semantics; active previews and hostile states are rejected safely.
+    - Public types remain closed and do not expose G2Spec/chart; errors/logs do not leak financial content.
+    - Waterfall, package, React, current browser, a11y and performance regressions remain green.
+  acceptance_rule: T115 moves to Needs_Review only after all blocking gates and reviews pass; only explicit user acceptance can mark it Accepted.
+
+handoff:
+  task_status: Accepted
+  packet_review_status: Accepted_By_User_2026-07-20
+  execution_attempt: T115-A001
+  red_receipt: >-
+    Confirmed on 2026-07-19: missing CategoricalCanvas, waterfall-only FinancialChartEditor dispatch and
+    waterfall-only SVG export caused the expected failures while the new tests expressed the approved behavior.
+  execution_variance: >-
+    One minimal change was required in read-only packages/editor/src/interactions/groupSelection.ts because the
+    accepted shared evaluator classified every current categorical leaf as locked solely due to the absence of the
+    waterfall-only kind field. The fix is chart-family-aware, preserves waterfall anchor and pinned rejection, has a
+    dedicated regression test, and avoids duplicating group policy in FinancialChartEditor. This variance stays inside
+    the approved T115 grouping behavior and was explicitly accepted by the user with T115 on 2026-07-20.
+  validation_receipt: >-
+    Scoped 170/170, full unit/coverage 380/380, current Chromium/Firefox/WebKit 132/132, a11y 27/27,
+    package, React 18/19, type, lint, format, build and 200-item performance all pass. Evidence and the task-only
+    reverse-applicable patch are complete under .ai-platform/evidence/T115.
+  acceptance_record: User explicitly replied "验收 T115" on 2026-07-20, accepting the implementation, evidence and disclosed groupSelection variance.
+  next_gate: Generate and review the independent T116 execution packet before any architecture implementation.
+  downstream: T116 is Ready for packetization; implementation has not started.
+  remote_actions: Commit, push, pull request, merge, publish and release are not authorized.
+
+stop_conditions:
+  - A required behavior needs domain, categorical, interaction, waterfall, dependency or public raw-renderer contract changes.
+  - G2 5.4 does not expose stable event/bounds behavior needed for real categorical interaction under the approved design.
+  - Correct export requires replacing the existing sanitizer/encoder contract or exporting a preview state.
+  - Current source/view compatibility cannot dispatch without implicit migration or a new chart-switching command.
+  - T115 cannot keep waterfall expectations deep-equal or introduces a second session/history/command path.
+  - A serious/critical accessibility issue or performance budget failure remains after the retry budget.
+  - An unrelated user change appears in an allowed runtime or test file and cannot be safely preserved.
+  - Strict artifact validation reports an unresolved Critical/High finding or missing packet field.

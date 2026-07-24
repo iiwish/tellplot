@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { SourceData, ViewSpec } from '../../src/domain/model';
 import { validateViewSpec } from '../../src/domain/validation';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
 import type {
   WaterfallProjection,
   WaterfallProjectionResult,
-} from '../../src/waterfall/waterfallTypes';
+} from '../../src/charts/waterfall/types';
 
 const GROUP_ID = 'drivers';
 

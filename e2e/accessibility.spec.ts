@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
+
 const EDITOR = '[data-tellplot="editor"]';
 const COMMAND_FEEDBACK = '.tp-command-feedback';
 const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
@@ -8,7 +10,7 @@ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
 
 async function openEditor(page: Page, mobile = false): Promise<void> {
   await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('/playground');
   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
 }
 
@@ -47,8 +49,10 @@ async function createGroup(page: Page): Promise<void> {
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
 }
 
@@ -88,6 +92,85 @@ test('export menu supports roving keyboard focus and returns focus on Escape', a
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu', { name: '导出格式' })).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test('desktop usage code and right panel rail are visible by default', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          document.documentElement.dataset['copiedText'] = value;
+        },
+      },
+    });
+  });
+  await openEditor(page);
+
+  const trigger = page.getByRole('button', { name: '隐藏使用代码' });
+  const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
+  const chart = page.getByTestId('tellplot-chart-stage');
+  const editorRail = page.getByRole('complementary', { name: '结构大纲 / 检查器' });
+  await expect(guide).toBeVisible();
+  await expect(guide.getByRole('textbox', { name: 'TellPlot 图表配置' })).toBeVisible();
+  await guide.getByRole('tab', { name: '接入示例' }).click();
+  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText(
+    'pnpm add @tellplot/editor @antv/g2 react react-dom',
+  );
+
+  const guideBox = await guide.boundingBox();
+  const chartBox = await chart.boundingBox();
+  const railBox = await editorRail.boundingBox();
+  expect((guideBox?.x ?? 0) + (guideBox?.width ?? 0)).toBeLessThanOrEqual(chartBox?.x ?? 0);
+  expect(railBox?.x ?? 0).toBeGreaterThanOrEqual((chartBox?.x ?? 0) + (chartBox?.width ?? 0) - 1);
+
+  await guide.getByRole('tab', { name: 'React' }).click();
+  await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText('ChartEditor');
+  await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
+    "import '@tellplot/editor/styles.css'",
+  );
+
+  await guide.getByRole('tab', { name: '配置', exact: true }).click();
+  const configPanel = guide.getByRole('tabpanel', { name: '配置', exact: true });
+  await expect(configPanel).toContainText('appearance');
+  await expect(configPanel).toContainText('colors');
+  await expect(configPanel).toContainText('groupRegion');
+  await configPanel.getByRole('button', { name: '复制配置代码' }).click();
+  await expect(guide.getByRole('status', { name: '代码复制状态' })).toHaveText('已复制');
+  await expect(page.locator('html')).toHaveAttribute('data-copied-text', /appearance/);
+  const inspectorTab = editorRail.getByRole('tab', { name: '检查器' });
+  await inspectorTab.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(editorRail.getByRole('tab', { name: '结构大纲' })).toBeFocused();
+  await expectNoSeriousOrCritical(page, 'desktop developer layout');
+
+  await trigger.click();
+  await expect(guide).toBeHidden();
+  await expect(page.getByRole('button', { name: '显示使用代码' })).toBeFocused();
+});
+
+test('usage guide stays inside the mobile viewport', async ({ page }) => {
+  await openEditor(page, true);
+  const trigger = page.getByRole('button', { name: '显示使用代码' });
+  const triggerBox = await trigger.boundingBox();
+  expect(triggerBox?.width ?? 0).toBeGreaterThanOrEqual(32);
+  expect(triggerBox?.height ?? 0).toBeGreaterThanOrEqual(32);
+
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: '在项目中使用 TellPlot' });
+  const dialogBox = await dialog.boundingBox();
+  expect(dialogBox).not.toBeNull();
+  expect(dialogBox?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect(dialogBox?.y ?? -1).toBeGreaterThanOrEqual(0);
+  expect((dialogBox?.x ?? 0) + (dialogBox?.width ?? 0)).toBeLessThanOrEqual(390);
+  expect((dialogBox?.y ?? 0) + (dialogBox?.height ?? 0)).toBeLessThanOrEqual(844);
+  await expect(dialog.getByRole('textbox', { name: 'TellPlot 图表配置' })).toBeVisible();
+  await dialog.getByRole('tab', { name: '接入示例' }).click();
+  await expect(dialog.getByRole('tab', { name: '配置', exact: true })).toBeVisible();
+  await expectNoSeriousOrCritical(page, 'mobile usage guide');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
 });
 
@@ -151,7 +234,7 @@ test('invalid imported ViewSpec remains accessible and exposes only stable diagn
   });
 
   const status = page.getByRole('status', { name: '文件状态' });
-  await expect(status).toContainText('UNSUPPORTED_SCHEMA_VERSION');
+  await expect(status).toContainText('SOURCE_CONFLICT');
   await expect(status).toContainText('/schemaVersion');
   await expect(status).not.toContainText('销量增长');
   await expectNoSeriousOrCritical(page, 'invalid ViewSpec import');
@@ -211,11 +294,71 @@ test('mobile outline sheet keeps the interaction controls reachable', async ({ p
       color: getComputedStyle(element).color,
       background: getComputedStyle(element).backgroundColor,
     })),
-  ).toEqual({ color: 'rgb(255, 255, 255)', background: 'rgb(18, 110, 87)' });
+  ).toEqual({ color: 'rgb(255, 255, 255)', background: 'rgb(18, 103, 229)' });
   await expectNoSeriousOrCritical(page, 'mobile enabled group action');
   await createGroupButton.click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   expect(await inspectorSheet.evaluate(element => element.contains(document.activeElement))).toBe(
     true,
   );
+});
+
+for (const layout of ['column', 'bar'] as const) {
+  test(`categorical ${layout} keeps ordered keyboard, summary, and live-region equivalents`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/playground?fixture=categorical-${layout}`);
+    await expect(
+      page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="${layout}"]`),
+    ).toBeVisible();
+    await expectNoSeriousOrCritical(page, `categorical ${layout}`);
+
+    const tree = page.getByRole('tree', { name: '结构大纲' });
+    await expect(tree.getByRole('treeitem')).toHaveCount(8);
+    const first = tree.getByRole('treeitem', { name: /企业订阅/ });
+    await expect(first).toHaveAttribute('aria-level', '1');
+    await expect(first).toHaveAttribute('aria-selected', 'false');
+    await first.focus();
+    await expect(first).toBeFocused();
+
+    const summary = page.getByRole('region', { name: '图表摘要' });
+    await expect(summary).toContainText(layout === 'bar' ? '分类条形图' : '分类柱状图');
+    const summaryLabels = await summary
+      .locator('li')
+      .evaluateAll(items => items.map(item => item.textContent?.split(',')[0] ?? ''));
+    expect(summaryLabels.slice(0, 3)).toEqual(['企业订阅', '个人订阅', '专业服务']);
+
+    await page.keyboard.press('Alt+ArrowDown');
+    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+    await expect(page.locator(COMMAND_FEEDBACK)).toHaveAttribute('aria-live', 'polite');
+    await expect(page.locator(COMMAND_FEEDBACK)).toContainText('已移动');
+    const reorderedLabels = await summary
+      .locator('li')
+      .evaluateAll(items => items.map(item => item.textContent?.split(',')[0] ?? ''));
+    expect(reorderedLabels.slice(0, 3)).toEqual(['个人订阅', '企业订阅', '专业服务']);
+    await expectNoSeriousOrCritical(page, `categorical ${layout} reordered`);
+  });
+}
+
+for (const websitePage of [
+  { path: '/', heading: 'TellPlot', state: 'showcase home' },
+  { path: '/examples', heading: '图表示例', state: 'showcase examples' },
+  { path: '/docs', heading: '开发者文档', state: 'showcase docs' },
+] as const) {
+  test(`${websitePage.state} has no serious or critical violations`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(websitePage.path);
+    await expect(page.getByRole('heading', { level: 1, name: websitePage.heading })).toBeVisible();
+    await expectNoSeriousOrCritical(page, websitePage.state);
+  });
+}
+
+test('showcase mobile navigation remains accessible when expanded', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: '打开导航菜单' }).click();
+  await expect(page.getByRole('navigation', { name: '移动导航' })).toBeVisible();
+  await expectNoSeriousOrCritical(page, 'showcase mobile navigation');
 });

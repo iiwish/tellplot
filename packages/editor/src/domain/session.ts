@@ -8,6 +8,7 @@ import {
 } from './errors';
 import type { HistoryEntry } from './history';
 import type { SourceData, ViewSpec } from './model';
+import { sourceDataKind } from './chartPolicy';
 import { validateSourceData, validateViewSpec } from './validation';
 
 const DEFAULT_HISTORY_LIMIT = 100;
@@ -128,15 +129,17 @@ function parseSessionOptions(options: unknown): ValidationResult<ParsedSessionOp
 }
 
 function sourceFingerprint(sourceData: SourceData): string {
+  const waterfall = sourceDataKind(sourceData) === 'waterfall';
   const canonicalSource = {
     schemaVersion: sourceData.schemaVersion,
+    ...(sourceData.schemaVersion === '2.0.0' ? { dataKind: sourceData.dataKind } : {}),
     datasetId: sourceData.datasetId,
     ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
     items: sourceData.items.map(item => ({
       id: item.id,
       label: item.label,
       amount: item.amount,
-      kind: item.kind,
+      ...(waterfall && 'kind' in item ? { kind: item.kind } : {}),
       ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
       ...(item.metadata === undefined
         ? {}

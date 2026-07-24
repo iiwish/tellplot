@@ -1,20 +1,24 @@
-import { FinancialChartEditor } from '@tellplot/editor';
+import { ChartEditor } from '@tellplot/editor';
 import '@tellplot/editor/styles.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
 import './host.css';
 
-const sourceData = {
-  schemaVersion: '1.0.0',
-  datasetId: 'react-runtime-consumer',
-  currency: 'CNY',
-  items: [
-    { id: 'opening-profit', label: 'Opening profit', amount: 1_000, kind: 'start' },
-    { id: 'sales-growth', label: 'Sales growth', amount: 200, kind: 'contribution' },
-    { id: 'cost-pressure', label: 'Cost pressure', amount: -120, kind: 'contribution' },
-    { id: 'ending-profit', label: 'Ending profit', amount: 1_080, kind: 'end' },
-  ],
+const baseConfig = {
+  type: 'waterfall',
+  data: {
+    schemaVersion: '1.0.0',
+    datasetId: 'react-runtime-consumer',
+    currency: 'CNY',
+    items: [
+      { id: 'opening-profit', label: 'Opening profit', amount: 1_000, kind: 'start' },
+      { id: 'sales-growth', label: 'Sales growth', amount: 200, kind: 'contribution' },
+      { id: 'cost-pressure', label: 'Cost pressure', amount: -120, kind: 'contribution' },
+      { id: 'ending-profit', label: 'Ending profit', amount: 1_080, kind: 'end' },
+    ],
+  },
+  height: 680,
 };
 
 const host = document.querySelector('#root');
@@ -23,12 +27,13 @@ if (!(host instanceof HTMLElement)) {
 }
 
 const root = createRoot(host);
-const renderEditor = chartAppearance => {
+const renderEditor = appearance => {
   root.render(
-    React.createElement(FinancialChartEditor, {
-      chartAppearance,
-      height: 680,
-      sourceData,
+    React.createElement(ChartEditor, {
+      config: {
+        ...baseConfig,
+        appearance,
+      },
     }),
   );
 };
@@ -39,7 +44,7 @@ globalThis.__tellplotReactMatrix = {
   configure() {
     renderEditor({
       title: 'Configured bridge',
-      palette: {
+      colors: {
         start: '#d946ef',
         positive: '#d946ef',
         negative: '#d946ef',
@@ -47,8 +52,8 @@ globalThis.__tellplotReactMatrix = {
         group: '#d946ef',
         end: '#d946ef',
       },
-      axis: { x: false, y: true },
-      valueLabels: 'never',
+      axes: { category: false, value: true },
+      labels: { value: 'never' },
       tooltip: true,
       animation: { enabled: false, duration: 0 },
       numberFormat: {

@@ -24,16 +24,18 @@ import {
 
 import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
 import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
+import type { CategoricalDatum, CategoricalProjection } from '../charts/categorical/types';
 import { collectLeafSourceIds, locateViewNode } from '../domain/viewTree';
 import {
   resolveKeyboardMoveTarget,
+  resolvePointerDropPlacement,
   resolvePointerMoveTarget,
   type InteractionCommandSource,
   type KeyboardMoveDirection,
-  type MoveTargetEdge,
+  type MoveTargetPlacement,
 } from '../interactions/moveTargets';
 import type { SelectionState } from '../react/editorTypes';
-import type { WaterfallDatum, WaterfallProjection } from '../waterfall/waterfallTypes';
+import type { WaterfallDatum, WaterfallProjection } from '../charts/waterfall/types';
 import type { EditorMessages } from './editorMessages';
 import { formatAmount, type EditorLocale } from './formatAmount';
 
@@ -57,7 +59,7 @@ interface MoveTarget {
 interface OutlinePanelProps {
   readonly sourceData: SourceData;
   readonly viewSpec: ViewSpec;
-  readonly projection: WaterfallProjection;
+  readonly projection: WaterfallProjection | CategoricalProjection;
   readonly locale: EditorLocale;
   readonly messages: EditorMessages;
   readonly selection: SelectionState | null;
@@ -76,7 +78,7 @@ interface OutlinePanelProps {
 
 interface DropTargetState {
   readonly nodeId: ViewNodeId;
-  readonly edge: MoveTargetEdge;
+  readonly placement: MoveTargetPlacement;
 }
 
 export type OutlineInteractionPreview =
@@ -96,7 +98,7 @@ function ownGroup(viewSpec: ViewSpec, nodeId: string): ViewGroup | undefined {
 
 function groupEntry(
   group: ViewGroup,
-  datum: WaterfallDatum | undefined,
+  datum: WaterfallDatum | CategoricalDatum | undefined,
   expanded: boolean,
   viewSpec: ViewSpec,
   level: number,
@@ -117,6 +119,23 @@ function groupEntry(
 }
 
 function outlineEntries(
+  viewSpec: ViewSpec,
+  projection: WaterfallProjection | CategoricalProjection,
+): readonly OutlineEntry[] {
+  if (isWaterfallProjection(projection)) {
+    return waterfallOutlineEntries(viewSpec, projection);
+  }
+
+  return categoricalOutlineEntries(viewSpec, projection);
+}
+
+function isWaterfallProjection(
+  projection: WaterfallProjection | CategoricalProjection,
+): projection is WaterfallProjection {
+  return projection.some(datum => 'start' in datum);
+}
+
+function waterfallOutlineEntries(
   viewSpec: ViewSpec,
   projection: WaterfallProjection,
 ): readonly OutlineEntry[] {
@@ -161,6 +180,62 @@ function outlineEntries(
   return entries;
 }
 
+function categoricalOutlineEntries(
+  viewSpec: ViewSpec,
+  projection: CategoricalProjection,
+): readonly OutlineEntry[] {
+  const entries: OutlineEntry[] = [];
+  const collapsedGroupIds = new Set(viewSpec.collapsedGroupIds);
+  const datumById = new Map(projection.map(datum => [datum.nodeId, datum]));
+  const visited = new Set<ViewNodeId>();
+
+  const visit = (nodeId: ViewNodeId, level: number): void => {
+    if (visited.has(nodeId)) {
+      return;
+    }
+    visited.add(nodeId);
+    const group = ownGroup(viewSpec, nodeId);
+    if (group !== undefined) {
+      const collapsed = collapsedGroupIds.has(group.id);
+      entries.push(
+        groupEntry(
+          group,
+          collapsed ? datumById.get(group.id) : undefined,
+          !collapsed,
+          viewSpec,
+          level,
+        ),
+      );
+      if (!collapsed) {
+        for (const childId of group.childIds) {
+          visit(childId, level + 1);
+        }
+      }
+      return;
+    }
+
+    const datum = datumById.get(nodeId);
+    if (datum === undefined) {
+      return;
+    }
+    entries.push({
+      nodeId: datum.nodeId,
+      label: datum.label,
+      amount: datum.amount,
+      sourceIds: [...datum.sourceIds],
+      locked: datum.locked,
+      level,
+      kind: datum.kind === 'positive' || datum.kind === 'negative' ? 'contribution' : 'anchor',
+    });
+  };
+
+  for (const nodeId of viewSpec.rootOrder) {
+    visit(nodeId, 1);
+  }
+
+  return entries;
+}
+
 function selectedEntry(entry: OutlineEntry, selection: SelectionState | null): boolean {
   return selection?.nodeIds.includes(entry.nodeId) === true;
 }
@@ -184,7 +259,7 @@ interface SortableRowProps {
   readonly readOnly: boolean;
   readonly selected: boolean;
   readonly tabIndex: 0 | -1;
-  readonly dropEdge: MoveTargetEdge | null;
+  readonly dropPlacement: MoveTargetPlacement | null;
   readonly active: boolean;
   readonly sourceData: SourceData;
   readonly locale: EditorLocale;
@@ -205,7 +280,7 @@ function SortableRow({
   readOnly,
   selected,
   tabIndex,
-  dropEdge,
+  dropPlacement,
   active,
   sourceData,
   locale,
@@ -240,7 +315,10 @@ function SortableRow({
       {...listeners}
       className="tp-outline-row"
       data-draggable={disabled ? 'false' : 'true'}
-      data-drop-indicator={dropEdge ?? undefined}
+      data-drop-indicator={
+        dropPlacement === 'before' || dropPlacement === 'after' ? dropPlacement : undefined
+      }
+      data-drop-inside={dropPlacement === 'inside' ? 'true' : undefined}
       data-interaction-state={interactionState}
       data-level={entry.level}
       data-node-id={entry.nodeId}
@@ -606,15 +684,24 @@ export function OutlinePanel({
       const activeCenter =
         pointerY ??
         (translated === null ? event.over.rect.top : translated.top + translated.height / 2);
-      const edge: MoveTargetEdge =
+      const fallback =
         activeCenter < event.over.rect.top + event.over.rect.height / 2 ? 'before' : 'after';
+      const targetNodeId = String(event.over.id) as ViewNodeId;
+      const placement = resolvePointerDropPlacement(
+        viewSpec,
+        targetNodeId,
+        event.over.rect.height <= 0
+          ? Number.NaN
+          : (activeCenter - event.over.rect.top) / event.over.rect.height,
+        fallback,
+      );
       const next: DropTargetState = {
-        nodeId: String(event.over.id) as ViewNodeId,
-        edge,
+        nodeId: targetNodeId,
+        placement,
       };
       if (
         dropTargetRef.current?.nodeId === next.nodeId &&
-        dropTargetRef.current.edge === next.edge
+        dropTargetRef.current.placement === next.placement
       ) {
         return;
       }
@@ -626,7 +713,7 @@ export function OutlinePanel({
         target: next,
       });
     },
-    [onInteractionPreviewChange],
+    [onInteractionPreviewChange, viewSpec],
   );
 
   const handleDragCancel = useCallback((): void => {
@@ -653,7 +740,7 @@ export function OutlinePanel({
       const resolved = resolvePointerMoveTarget(viewSpec, {
         itemId,
         targetNodeId: semanticTarget.nodeId,
-        edge: semanticTarget.edge,
+        placement: semanticTarget.placement,
       });
       if (!resolved.ok) {
         onCancel('invalid-target');
@@ -795,8 +882,8 @@ export function OutlinePanel({
                 <SortableRow
                   active={visibleActiveId === entry.nodeId}
                   disabled={!draggable}
-                  dropEdge={
-                    visibleDropTarget?.nodeId === entry.nodeId ? visibleDropTarget.edge : null
+                  dropPlacement={
+                    visibleDropTarget?.nodeId === entry.nodeId ? visibleDropTarget.placement : null
                   }
                   entry={entry}
                   key={entry.nodeId}

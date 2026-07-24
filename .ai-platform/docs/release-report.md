@@ -2,42 +2,92 @@
 
 ## Metadata
 
-- Version: 0.4.0
+- Version: 1.0.0
 - Status: Not_Released
-- Last updated: 2026-07-19
-- Branch: `main`
+- Last updated: 2026-07-23
+- Working branch: `codex/t112-categorical-data-contract`
 
 ## Current State
 
-TellPlot 是面向财务分析与汇报场景的可编辑叙事图表基础设施。瀑布图基础切片 T101-T108、独立仓库迁移 T109 和安全图表配置层 T110 均已验收。当前仓库提供长期产品/架构/配置文档，以及不暴露 G2 内部实现的 `FinancialChartAppearance` 公共契约。npm publish、正式版本发布和旧仓库处置不在当前授权范围。
+TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 已验收；G002、G002-R1、G002-R2、G002-R3 与 G004
+已完成实现并统一等待验收。`@tellplot/editor@1.0.0` 是通过本地发布门禁的稳定版候选，不是已经
+发布到 npm 或 GitHub 的公开版本。当前包提供瀑布图、分类条形图和分类柱状图，以及共享数据/视图模型、
+确定性命令、结构大纲、历史、持久化、安全语义配置、SVG/PNG 导出和无障碍支持。
 
-## Release Scope
+公共 React 入口使用 `ChartEditor` 和判别式 `ChartConfig`。普通接入通过 `config.data`、
+`config.appearance` 与 `config.editor` 声明图表；高级受控编辑状态使用独立 `ViewSpec`。playground
+在桌面端默认显示左侧亮色公共配置、中央图表和右侧大纲/检查器，紧凑视口使用 dialog。左栏分别编辑
+`tellplot.config.json` 和 `tellplot.view.json`，合法 JSON 经过公共校验后更新图形，右侧确定性命令只反向
+更新视图文件；非法草稿不改变最后一次合法图表。
 
-首个 release scope 是已批准的瀑布图端到端基础切片 T101-T108。只有领域、投影、React/G2、交互、持久化、导出、可访问性、包质量和真实浏览器证据全部通过后，才形成 release candidate。
+标签配置支持字符串显示策略简写和对象式 value/group 配置。对象式配置提供显示、内外位置、有限偏移、
+颜色、字号、字重和可选背景，并由同一 G2 spec 用于屏幕、SVG 与 PNG。移动端 `auto` 主动控制密度，
+`always` 保留显式覆盖；formatter、逐项 callback、无效碰撞开关和 raw G2 spec 不进入公共合同。
+
+本地网站提供真实图表驱动的 TellPlot 首页、当前三个图表家族的可搜索示例中心、开发者文档入口和连续
+在线工作台。首页采用高留白产品舞台，示例中心采用可扩展分类侧栏与等权真实图表网格；首页与示例预览
+直接消费 `ChartEditor`。网站内容目录保持在 playground，未形成核心 chart registry。站点支持
+直接 URL、浏览器前进/后退、移动导航、分类筛选和准确页面元数据。
+
+G2 继续独占图形渲染、场景边界、事件和动画。TellPlot 不包含 Dashboard、第二渲染引擎或通用图表
+plugin registry。
+
+## Accepted Scope
+
+- T101-T108：瀑布图端到端基础能力、包质量和真实浏览器验证。
+- T109：TellPlot 品牌与独立仓库迁移。
+- T110：长期文档与 `FinancialChartAppearance` 安全语义配置。
+- T111-T115：分类数据合同、bar/column projection、X/Y 交互、编辑器、导出与可访问性。
+- T116：chart-family ownership、shared G2 screen/export runtime 和多图表架构收敛。
+
+## Needs Review Scope
+
+- G002 / T117：Beta 公共 API、package README/LICENSE、developer docs、tarball 与双向开发者编辑器。
+- G002-R1 / T118：分组上下文、跨层拖拽、自动解散和展开分组区域。
+- G002-R2 / T119：真实图表首页、示例中心、开发者文档入口、连续工作台与响应式视觉体验。
+- G002-R3 / T122：`ChartEditor`、`ChartConfig`、运行时配置校验、config/view 双文件工作台与迁移文档。
+- G004 / T123：1.0.0 稳定合同、维护文档、架构/发布审计、隔离源码复演与本地 tarball。
+
+## Blocked Release Goal
+
+- G005：等待 G002 系列与 G004 目标级验收，以及 remote Git、visibility、deploy、DNS、tag、
+  GitHub Release 和 npm publish 的逐类明确授权。
 
 ## Validation Evidence
 
-- 仓库保留文件范围经过文件清单检查。
-- 文档路径与 README 引用目标存在。
-- `git diff --check` 无空白错误。
-- AI Delivery Governor artifact validator 用于检查核心文档和任务字段。
-- T101 package 通过 ESM/CJS import、format-matched declarations、publint 与 Are The Types Wrong 检查。
-- T102 domain model/validator 通过 97 tests 与四项 95% coverage 门槛。
-- T103 command/session/history 通过 140 tests、四项 95% aggregate coverage、独立 review、ESM/CJS/types/package 检查。
-- T104 waterfall projection 通过 32 个目标测试、172 个全量测试、waterfall 四项 99%/100% coverage、独立 review、ESM/CJS/types/package 检查。
-- T105 React/G2 工作台通过 22 个组件测试、194 个全量测试、Chromium 三视口 3/3、真实 Canvas 像素、构建、包消费与独立 engineering/test/visual review；无 Critical、High 或 Medium finding。
-- T106 交互通过 70 个组件测试、242 个全量测试、21/21 real Chromium、5 个 axe 场景、200 项 30 样本 p95 30.0ms、同目标 root commit delta 0、构建与包消费；行正文拖拽取代 grip-only 命中，最终 review 无 Critical、High 或 Medium finding。
-- T106-CR001 通过 292 个 unit/component tests、32/32 production Chromium、7/7 axe、200 项 p95 26.4ms、递归不变量、真实柱宽 X-only 排序、锁定锚点与包质量门禁；用户已验收。
-- T107 通过 295 个 unit/component tests、90.30% statements coverage、13/13 selected Chromium、真实双密度 PNG、离屏 G2 SVG、递归 JSON round-trip、真实 SVG highlight/muted 样式、活动手势一致性门禁、axe、ESM/CJS/types package consumers 与独立复审；无未解决 Critical、High 或 Medium finding。
-- T108 的 314/314 unit/coverage、current Playwright non-performance 108/108、isolated performance 1/1、previous compatibility 144/144、React 18.3/19.2 真实 tarball consumers（均绘制 88,744 pixels 并 clean unmount）、21/21 axe、200 项 30 样本 raw p95 77.20000004768372ms、package/build/static、canonical annotation/export/import/keyboard quickstart、四张原始截图、final evidence 与独立复审全部通过。
-- T109 在 `@tellplot/editor` 身份下通过 321/321 tests、四项 coverage、package consumers、React 18/19、108 current-browser、144 previous-browser、21 axe、产品 profile p95 79.2ms、GitHub-hosted software-Canvas p95 292.4ms、Node 22/24 CI 和干净 clone 验证；旧远端 refs 与仓库状态保持不变。
-- T110 通过 330/330 unit/component tests、配置模块四项 100% coverage、React 18.3/19.2 + G2 5.4.8 真实 tarball 配置重绘、108/108 current-browser、21/21 axe、package/build/static checks 和 200 项 30 样本 p95 71.1ms；公共入口只导出类型化语义配置，不导出 G2Spec、chart instance 或内部解析器。
+- 标签配置扩展 fresh unit：52 files / 447 tests；format、lint、typecheck、build、package 和 React
+  18/19 matrix 通过。
+- 标签/演示相关 Chromium live-code、rendering、export、showcase 20/20；a11y 三浏览器 45/45。
+- 标签扩展后 200-item performance：waterfall p95 84ms；categorical p95 111.6ms；预算 150ms。
+
+- fresh unit/coverage：436/436；statements 85.57%、branches 80.08%、functions 88.08%、lines 85.72%，
+  受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+- current Chromium/Firefox/WebKit：177/177；accessibility：45/45。
+- previous browser release：177/177；WebKit 18.4：59/59。
+- React 18.3.1 / 19.2.7、ESM/CJS/types、compile-checked quickstart 与 package checks 通过。
+- 200-item fresh performance：waterfall p95 67.3ms；categorical p95 66.6ms；预算 150ms。
+- architecture audit：47 个源码文件、240 条 import edge、0 个 runtime cycle；release audit：
+  11 个 runtime export、19 个公开文件。
+- 隔离源码复演：280 个源码文件，frozen install、architecture、audit、typecheck、436 个 unit、
+  build 与 package 全部通过。
+- tarball 为 `@tellplot/editor@1.0.0`，仅包含 13 个 dist/metadata/README/LICENSE 文件；
+  SHA-256 为 `ccc4b112015fe5184727d1346b8608d545e6205a87f271dae115c3e76985e437`。
+- strict artifact validator、format、lint、typecheck、build、release audit 和 diff checks 通过。
+
+详细结果和残余风险见 `.ai-platform/evidence/T117/`、`.ai-platform/evidence/T118/`、
+`.ai-platform/evidence/T119/`、`.ai-platform/evidence/T122/` 与 `.ai-platform/evidence/T123/`。
 
 ## Known Limitations
 
-- 当前 GitHub 计划不支持私有仓库的 branch protection/rulesets，API 返回 HTTP 403；仓库保持私有，`main` 暂时无法在服务端强制 required checks。
-- Actions 使用 major tags 且 GitHub 提示这些版本仍以已弃用的 Node 20 为目标；完整 commit SHA pinning 与 action major 升级属于后续 supply-chain hardening。
+- 当前 T112-T122 工作仍位于未提交的 working branch；stage、commit、push、PR 和 merge 未获授权。
+- `@tellplot/editor@1.0.0` 只完成本地稳定候选验证，npm publish、GitHub Release 和正式部署未执行。
+- playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
+- 200-item performance 继续保留 150ms 阻断预算和真实浏览器监测，不弱化预算。
+- GitHub 私有仓库计划无法强制 branch protection/rulesets；服务端 required checks 仍受外部计划限制。
+- 当前未包含生产网站部署；未来 history URL 托管需要配置 SPA fallback。
+- 网站文档是可扫描入口；生产托管、SPA fallback 和公开链接验证归入 G005。
 
-## Release Decision
+## Next Gate
 
-结论：TellPlot release candidate 具备已验收的瀑布图编辑、独立仓库和安全宿主配置基础。下一产品切片进入分类条形图与柱状图设计；npm publish、正式版本发布以及旧仓库处置必须获得单独授权。
+统一验收 G002、G002-R1、G002-R2、G002-R3 与 G004。验收后可单独审批 G005；远程 Git、仓库公开、
+网站部署、DNS、Git tag、GitHub Release 和 npm publish 继续保持独立闸门。

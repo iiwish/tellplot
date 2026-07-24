@@ -1,11 +1,16 @@
-import type { Chart as G2Chart } from '@antv/g2';
-
 import type { FinancialChartAppearance } from '../config/chartAppearance';
 import type { ViewNodeId } from '../domain/ids';
-import type { Annotation, Emphasis } from '../domain/model';
-import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+import type { Annotation, ChartType, Emphasis } from '../domain/model';
+import {
+  createCategoricalChartSpec,
+  shouldShowCategoricalValueLabels,
+} from '../charts/categorical/spec';
+import type { CategoricalProjection } from '../charts/categorical/types';
+import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
+import type { WaterfallProjection } from '../charts/waterfall/types';
+import type { ExpandedGroupRegion } from '../charts/groupRegions';
+import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
 import type { EditorLocale } from '../components/formatAmount';
-import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from './waterfallChartSpec';
 import { exportError, type ExportResult } from './exportTypes';
 
 interface SvgResultOptions {
@@ -15,9 +20,8 @@ interface SvgResultOptions {
   readonly suggestedFilename: string;
 }
 
-interface SvgChartExportRequest {
+interface SvgChartExportBaseRequest {
   readonly ownerDocument: Document;
-  readonly projection: WaterfallProjection;
   readonly title: string;
   readonly locale: EditorLocale;
   readonly currency: string | undefined;
@@ -28,6 +32,27 @@ interface SvgChartExportRequest {
   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
   readonly appearance?: FinancialChartAppearance | undefined;
+  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+}
+
+type SvgChartExportRequest = SvgChartExportBaseRequest &
+  (
+    | { readonly chartType?: 'waterfall'; readonly projection: WaterfallProjection }
+    | {
+        readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+        readonly projection: CategoricalProjection;
+      }
+  );
+
+type CategoricalSvgChartExportRequest = SvgChartExportBaseRequest & {
+  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+  readonly projection: CategoricalProjection;
+};
+
+function isCategoricalRequest(
+  request: SvgChartExportRequest,
+): request is CategoricalSvgChartExportRequest {
+  return request.chartType === 'bar' || request.chartType === 'column';
 }
 
 const REMOVED_ELEMENTS = 'script, foreignObject, iframe, object, embed, image, use';
@@ -119,65 +144,59 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
     throw exportError('EXPORT_UNAVAILABLE', '/export/svg');
   }
 
-  const host = request.ownerDocument.createElement('div');
-  host.setAttribute('aria-hidden', 'true');
-  host.style.position = 'fixed';
-  host.style.left = '-10000px';
-  host.style.top = '-10000px';
-  host.style.width = `${width}px`;
-  host.style.height = `${height}px`;
-  host.style.pointerEvents = 'none';
-  body.append(host);
-
-  let chart: G2Chart | undefined;
   try {
-    const [{ Chart }, { Renderer }] = await Promise.all([
-      import('@antv/g2'),
-      import('@antv/g-svg'),
-    ]);
-    chart = new Chart({
-      container: host,
-      width,
-      height,
-      autoFit: false,
-      renderer: new Renderer(),
-    });
-    chart.options(
-      createWaterfallChartSpec({
-        projection: request.projection,
-        title: request.title,
-        locale: request.locale,
-        currency: request.currency,
-        reducedMotion: true,
-        showValueLabels: shouldShowWaterfallValueLabels(request.projection),
-        annotations: request.annotations,
-        emphasis: request.emphasis,
-        appearance: request.appearance,
-      }),
+    return await withOffscreenG2Render(
+      {
+        ownerDocument: request.ownerDocument,
+        parent: body,
+        renderer: 'svg',
+        width,
+        height,
+        spec: isCategoricalRequest(request)
+          ? createCategoricalChartSpec({
+              projection: request.projection,
+              chartType: request.chartType,
+              title: request.title,
+              locale: request.locale,
+              currency: request.currency,
+              reducedMotion: true,
+              showValueLabels: shouldShowCategoricalValueLabels(request.projection),
+              annotations: request.annotations,
+              emphasis: request.emphasis,
+              appearance: request.appearance,
+              groupRegions: request.groupRegions,
+            })
+          : createWaterfallChartSpec({
+              projection: request.projection,
+              title: request.title,
+              locale: request.locale,
+              currency: request.currency,
+              reducedMotion: true,
+              showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+              annotations: request.annotations,
+              emphasis: request.emphasis,
+              appearance: request.appearance,
+              groupRegions: request.groupRegions,
+            }),
+      },
+      host => {
+        const svg = host.querySelector('svg');
+        const ownerWindow = request.ownerDocument.defaultView;
+        if (ownerWindow === null || !(svg instanceof ownerWindow.SVGSVGElement)) {
+          throw exportError('EXPORT_FAILED', '/export/svg');
+        }
+        return createSafeSvgResult(svg, {
+          width,
+          height,
+          background: request.background,
+          suggestedFilename: request.suggestedFilename,
+        });
+      },
     );
-    await chart.render();
-    const svg = host.querySelector('svg');
-    const ownerWindow = request.ownerDocument.defaultView;
-    if (ownerWindow === null || !(svg instanceof ownerWindow.SVGSVGElement)) {
-      throw exportError('EXPORT_FAILED', '/export/svg');
-    }
-    return createSafeSvgResult(svg, {
-      width,
-      height,
-      background: request.background,
-      suggestedFilename: request.suggestedFilename,
-    });
   } catch (error) {
     if (isStructuredExportError(error)) {
       throw error;
     }
     throw exportError('EXPORT_FAILED', '/export/svg');
-  } finally {
-    try {
-      chart?.destroy();
-    } catch {
-      // Cleanup failure must not expose renderer internals or financial data.
-    }
-    host.remove();
   }
 }

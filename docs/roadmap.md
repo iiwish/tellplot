@@ -2,55 +2,90 @@
 
 ## North Star
 
-TellPlot 让财务分析人员直接编排图表叙事，在不改写原始金额和来源关系的前提下完成排序、分组、折叠、强调、保存和演示文稿输出。
+TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图表，并把渲染、动画、交互和导出的复杂度
+留在基于 G2 的内部实现中。
 
-## Now
+## Planning Model
 
-### 瀑布图基础能力
+路线图以大目标为交付和验收单位。每个目标可以包含多个工程任务；用户批准目标后，内部任务连续
+执行并在目标完成时统一汇报，不逐项请求验收。
 
-- 可嵌入 React 编辑器与薄参考应用。
-- 确定性 `SourceData`、`ViewSpec`、命令历史和财务不变量。
-- 图表拖拽、框选分组、递归折叠、大纲编辑和键盘操作。
-- SVG、PNG、持久化、可访问性和浏览器兼容性。
-- TellPlot 品牌、独立仓库和发布候选验证。
+以下变化仍需要独立批准：新增产品范围、breaking public API、schema、依赖、远程 Git、npm publish
+和正式发布。
 
-### 安全图表配置
+## G001 多图表基础能力
 
-- 通过 TellPlot 语义配置控制标题、财务语义色、坐标轴、数值标签、Tooltip、数字格式和动画。
-- 屏幕、导出和无障碍摘要共享一致的显示语义。
-- 数据、编码、稳定 ID、命中目标和交互事件保持内部所有权。
+- Status: Accepted
+- Outcome: `@tellplot/editor` 已提供瀑布图、分类条形图和分类柱状图。
+- Capability: 类型化数据、G2 渲染与动画、排序、递归分组、折叠、固定、历史、持久化、SVG/PNG、
+  可访问性和安全语义配置。
+- Architecture: chart-family modules、shared G2 screen/export runtime 和 X/Y category-axis 边界已通过
+  多图表真实使用验证。
+- Evidence: T101-T116 已完成验证并由用户验收。
 
-## Next
+## G002 轻量图表库 Beta
 
-### 分类图验证切片
+- Status: Needs_Review
+- Goal: 把当前三个图表家族整理成开发者可以直接安装、理解和稳定集成的 beta 版本。
+- Included outcomes:
+  - 收敛并记录公共组件、数据、配置、事件、持久化和导出 API。
+  - 完善最小安装示例、图表用法、受控/非受控模式和常见错误说明。
+  - 验证发布 tarball、React 18/19、类型、浏览器、可访问性、性能和导出。
+  - 确定 beta 版本、变更记录和迁移规则。
+- Excluded: 新图表类型、通用插件系统、Dashboard 和服务端能力。
+- Acceptance: 与 G002-R1、G002-R2、G002-R3 一起进行目标级验收。
 
-- 单序列分类条形图与分类柱状图共享分类编辑模型。
-- 验证排序、固定、分组、折叠、恢复默认顺序和导出。
-- 验证瀑布图与分类图是否具备可抽取的公共配置和命令边界。
+## G002-R1 分组与跨层编辑体验
 
-### 真实用户验证
+- Status: Needs_Review
+- Goal: 让分组选择、跨层拖拽和展开区域在结构大纲与图表中具有一致、可理解的编辑反馈。
+- Outcome: 已完成上下文选择、跨层移动、最小分组自动解散和可配置展开分组背景区域。
+- Boundary: 所有动作继续进入共享确定性命令，原始数据与 G2 runtime ownership 保持不变。
 
-- 至少 3 名财务分析用户完成一张汇报图的编排和导出。
-- 相比工作流基线，中位完成时间降低至少 30%。
-- 根据真实任务修正默认值和配置优先级，不用通用 BI 功能列表驱动范围。
+## G002-R2 开源官网与示例中心
 
-## Later
+- Status: Needs_Review
+- Goal: 用真实图表首页、示例中心、开发者文档入口和连续工作台承载 TellPlot 的开源使用体验。
+- Outcome: `/`、`/examples`、`/docs` 和 `/playground` 已覆盖当前三个图表家族及 beta 接入路径。
+- Extension model: 新图表示例进入 playground 内容目录，不形成核心或公共 plugin registry。
+- Boundary: 当前目标不包含新图表、远程内容、登录、搜索服务、npm publish 或网站部署。
 
-### AI 辅助编排
+## G002-R3 公共配置 API v1
 
-- 自然语言转换为可解释的候选命令。
-- 候选修改可预览、拒绝、确认、撤销和审计。
-- AI 不负责金额计算，不绕过财务不变量。
+- Status: Needs_Review
+- Goal: 使用 `ChartEditor` 和一份判别式 `ChartConfig` 完成普通接入，并把可编辑 `ViewSpec` 作为独立高级状态。
+- Outcome: 类型和运行时配置校验、公开 facade、config/view 双文件工作台、迁移说明和发布候选回归。
+- Boundary: 不增加图表家族、schema、依赖、raw G2Spec 或第二套领域状态。
 
-### 发布与集成
+## G003 基础图表扩展
 
-- 稳定公共 API、版本策略和迁移说明。
-- npm 包发布、宿主集成示例和文档站。
-- 按真实汇报工作流评估 PowerPoint 集成，不承诺第一阶段可编辑 PPT 对象。
+- Status: Candidate
+- Goal: 根据明确使用需求增加下一组基础图表，并保持数据、配置、动画、交互和导出体验一致。
+- Entry criteria:
+  - 明确目标图表、使用场景和数据合同。
+  - 证明 G2 原生能力可以满足核心渲染与交互。
+  - 不要求公共 registry、第二渲染引擎或破坏现有 API。
+- Execution rule: 每个图表扩展目标包含设计、实现、测试、示例和兼容性验证，完成后整体验收。
+
+## G004 首个稳定版 1.0 候选
+
+- Status: Needs_Review
+- Goal: 形成可复现、可审计的 `@tellplot/editor@1.0.0` 本地稳定候选。
+- Included outcomes: 1.x 兼容合同、架构/cycle 门禁、稳定版文档、开源维护资料、tarball 审计、
+  隔离源码 frozen-install 复演和完整兼容矩阵。
+- Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，等待目标级验收。
+- Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；不执行远程发布。
+
+## G005 公开稳定版发布
+
+- Status: Blocked
+- Goal: 从干净 commit 将 1.0.0 公开为 GitHub、生产网站、tag/release 和 npm `latest`。
+- Entry condition: G002 系列与 G004 验收；remote Git、visibility、deploy、DNS、tag、GitHub Release 和
+  npm publish 获得独立明确授权；scope、2FA/Trusted Publishing 和托管权限可用。
 
 ## Decision Gates
 
-- 分类图完成前不抽取通用图表 SDK。
-- 真实用户验证前不扩展到折线图、饼图、散点图或 Dashboard。
-- AI 候选命令闭环完成前不允许 AI 自动执行编辑。
-- 原始 G2 options 不进入稳定公共 API；高级扩展只在语义配置无法覆盖真实集成需求时重新评估。
+- G004 验收前不增加通用插件或拆分 `@tellplot/core`。
+- 新图表只在 G003 的具体目标获得批准后实现。
+- 原始 G2 options、G2 Chart instance 和内部 runtime handle 不进入公共 API。
+- 项目不规划 Dashboard、通用插件平台或第二渲染引擎。

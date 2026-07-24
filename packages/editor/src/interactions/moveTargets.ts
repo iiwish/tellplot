@@ -3,7 +3,8 @@ import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
 import type { ViewSpec } from '../domain/model';
 import { locateViewNode, ownGroup } from '../domain/viewTree';
 
-export type MoveTargetEdge = 'before' | 'after';
+export type MoveTargetPlacement = 'before' | 'after' | 'inside';
+export type MoveTargetEdge = Exclude<MoveTargetPlacement, 'inside'>;
 export type KeyboardMoveDirection = 'before' | 'after' | 'into' | 'out';
 export type InteractionCommandSource = Extract<CommandSource, 'direct' | 'outline' | 'keyboard'>;
 
@@ -23,7 +24,22 @@ export type MoveTargetResolution =
 export interface PointerMoveIntent {
   readonly itemId: ViewNodeId;
   readonly targetNodeId: ViewNodeId;
-  readonly edge: MoveTargetEdge;
+  readonly placement: MoveTargetPlacement;
+}
+
+/** Maps the middle half of a group target to an explicit "move inside" intent. */
+export function resolvePointerDropPlacement(
+  viewSpec: ViewSpec,
+  targetNodeId: ViewNodeId,
+  positionWithinTarget: number,
+  fallback: MoveTargetEdge,
+): MoveTargetPlacement {
+  return ownGroup(viewSpec, targetNodeId) !== undefined &&
+    Number.isFinite(positionWithinTarget) &&
+    positionWithinTarget >= 0.25 &&
+    positionWithinTarget <= 0.75
+    ? 'inside'
+    : fallback;
 }
 
 export interface MoveItemCommandInput {
@@ -105,6 +121,20 @@ export function resolvePointerMoveTarget(
     return { ok: false, reason: 'INVALID_TARGET' };
   }
 
+  if (intent.placement === 'inside') {
+    const targetGroup = ownGroup(viewSpec, intent.targetNodeId);
+    if (targetGroup === undefined) {
+      return { ok: false, reason: 'INVALID_TARGET' };
+    }
+    return {
+      ok: true,
+      target: {
+        containerId: targetGroup.id,
+        index: targetGroup.childIds.length - (source.containerId === targetGroup.id ? 1 : 0),
+      },
+    };
+  }
+
   const remaining = destination.items.filter(
     nodeId => !(destination.containerId === source.containerId && nodeId === intent.itemId),
   );
@@ -116,7 +146,7 @@ export function resolvePointerMoveTarget(
     ok: true,
     target: {
       containerId: destination.containerId,
-      index: targetIndex + (intent.edge === 'after' ? 1 : 0),
+      index: targetIndex + (intent.placement === 'after' ? 1 : 0),
     },
   };
 }

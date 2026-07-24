@@ -34,10 +34,8 @@ export function cloneViewSpec(view: ViewSpec): ViewSpec {
     ]),
   );
 
-  return {
-    schemaVersion: view.schemaVersion,
+  const narrativeFields = {
     datasetId: view.datasetId,
-    chartType: view.chartType,
     revision: view.revision,
     rootOrder: [...view.rootOrder],
     groups,
@@ -46,6 +44,10 @@ export function cloneViewSpec(view: ViewSpec): ViewSpec {
     annotations: { ...view.annotations },
     emphasis: { ...view.emphasis },
   };
+
+  return view.schemaVersion === '1.0.0'
+    ? { ...narrativeFields, schemaVersion: '1.0.0', chartType: 'waterfall' }
+    : { ...narrativeFields, schemaVersion: '2.0.0', chartType: view.chartType };
 }
 
 /** Appends an entry while evicting the oldest entries beyond the configured limit. */

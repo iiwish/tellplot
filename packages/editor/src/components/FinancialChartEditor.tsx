@@ -9,8 +9,11 @@ import {
   useState,
 } from 'react';
 
+import { projectCategorical } from '../charts/categorical/projection';
+import { projectExpandedGroupRegions } from '../charts/groupRegions';
+import type { CategoricalProjection } from '../charts/categorical/types';
 import type { EditorCommand } from '../domain/commands';
-import type { ValidationIssue } from '../domain/errors';
+import { validationIssue, type ValidationIssue } from '../domain/errors';
 import { executeCommand } from '../domain/executeCommand';
 import type { GroupId, ViewNodeId } from '../domain/ids';
 import { collectLeafSourceIds } from '../domain/viewTree';
@@ -26,13 +29,15 @@ import {
 } from '../interactions/moveTargets';
 import type { FinancialChartEditorHandle, FinancialChartEditorProps } from '../react/editorTypes';
 import { useEditorController } from '../react/useEditorController';
-import { projectWaterfall } from '../waterfall/projectWaterfall';
-import type { WaterfallProjection } from '../waterfall/waterfallTypes';
+import { projectWaterfall } from '../charts/waterfall/projection';
+import type { WaterfallProjection } from '../charts/waterfall/types';
+import { CategoricalCanvas } from './CategoricalCanvas';
 import { EditorToolbar } from './EditorToolbar';
 import { editorMessages, type EditorMessages } from './editorMessages';
 import { InspectorPanel } from './InspectorPanel';
 import { OutlinePanel, type OutlineInteractionPreview } from './OutlinePanel';
 import { PanelOverlay } from './PanelOverlay';
+import { PanelRail } from './PanelRail';
 import { WaterfallCanvas, type ChartInteractionPreview } from './WaterfallCanvas';
 
 interface VisibleIssue {
@@ -82,6 +87,62 @@ interface ScopedInteraction<T> {
 type ValidGroupSelection = Extract<GroupSelectionResult, { readonly ok: true }>;
 
 const EMPTY_PROJECTION: WaterfallProjection = [];
+
+type EditorChartProjection =
+  | {
+      readonly family: 'waterfall';
+      readonly chartType: 'waterfall';
+      readonly projection: WaterfallProjection;
+    }
+  | {
+      readonly family: 'categorical';
+      readonly chartType: 'bar' | 'column';
+      readonly projection: CategoricalProjection;
+    };
+
+type EditorProjectionResult =
+  | { readonly ok: true; readonly value: EditorChartProjection }
+  | { readonly ok: false; readonly errors: readonly ValidationIssue[] };
+
+function projectEditorChart(
+  sourceData: FinancialChartEditorProps['sourceData'],
+  viewSpec: NonNullable<FinancialChartEditorProps['viewSpec']>,
+): EditorProjectionResult {
+  if (sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical') {
+    const result = projectCategorical(sourceData, viewSpec);
+    if (!result.ok) {
+      return result;
+    }
+    if (viewSpec.chartType !== 'bar' && viewSpec.chartType !== 'column') {
+      return {
+        ok: false,
+        errors: [validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType')],
+      };
+    }
+    return {
+      ok: true,
+      value: { family: 'categorical', chartType: viewSpec.chartType, projection: result.value },
+    };
+  }
+  const result = projectWaterfall(sourceData, viewSpec);
+  return result.ok
+    ? {
+        ok: true,
+        value: { family: 'waterfall', chartType: 'waterfall', projection: result.value },
+      }
+    : result;
+}
+
+function chartTitle(
+  messages: EditorMessages,
+  chartType: EditorChartProjection['chartType'],
+): string {
+  return chartType === 'bar'
+    ? messages.barTitle
+    : chartType === 'column'
+      ? messages.columnTitle
+      : messages.waterfallTitle;
+}
 
 function componentIssues(
   invalidMode: boolean,
@@ -165,7 +226,7 @@ function CommandFeedback({
   );
 }
 
-/** Embeddable financial waterfall workbench with immutable source/view boundaries. */
+/** Embeddable financial chart workbench with immutable source/view boundaries. */
 export const FinancialChartEditor = forwardRef<
   FinancialChartEditorHandle,
   FinancialChartEditorProps
@@ -179,6 +240,8 @@ export const FinancialChartEditor = forwardRef<
     inspector: props.panels?.inspector ?? true,
     toolbar: props.panels?.toolbar ?? true,
   };
+  const outlinePlacement = props.layout?.outlinePlacement ?? 'left';
+  const inspectorMode = props.layout?.inspectorMode ?? 'static';
   const [outlineOpen, setOutlineOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [feedback, setFeedback] = useState<CommandFeedbackState>({
@@ -202,7 +265,7 @@ export const FinancialChartEditor = forwardRef<
     if (controller.viewSpec === null) {
       return null;
     }
-    return projectWaterfall(props.sourceData, controller.viewSpec);
+    return projectEditorChart(props.sourceData, controller.viewSpec);
   }, [controller.viewSpec, props.sourceData]);
 
   const invalid =
@@ -217,7 +280,11 @@ export const FinancialChartEditor = forwardRef<
         ? canonicalProjectionResult.errors
         : [],
   );
-  const empty = !invalid && !props.sourceData.items.some(item => item.kind === 'contribution');
+  const empty =
+    !invalid &&
+    (props.sourceData.schemaVersion === '2.0.0' && props.sourceData.dataKind === 'categorical'
+      ? props.sourceData.items.length === 0
+      : !props.sourceData.items.some(item => 'kind' in item && item.kind === 'contribution'));
   const modalOpen =
     pendingChartGroup !== null ||
     (!invalid && ((panels.outline && outlineOpen) || (panels.inspector && inspectorOpen)));
@@ -273,7 +340,7 @@ export const FinancialChartEditor = forwardRef<
     const resolved = resolvePointerMoveTarget(controller.viewSpec, {
       itemId: activeInteraction.preview.itemId,
       targetNodeId: activeInteraction.preview.target.nodeId,
-      edge: activeInteraction.preview.target.edge,
+      placement: activeInteraction.preview.target.placement,
     });
     if (!resolved.ok) {
       return controller.viewSpec;
@@ -292,17 +359,27 @@ export const FinancialChartEditor = forwardRef<
     return previewResult.ok ? previewResult.viewSpec : controller.viewSpec;
   }, [activeInteraction, controller.session, controller.viewSpec]);
   const displayProjectionResult = useMemo(
-    () => (previewViewSpec === null ? null : projectWaterfall(props.sourceData, previewViewSpec)),
+    () => (previewViewSpec === null ? null : projectEditorChart(props.sourceData, previewViewSpec)),
     [previewViewSpec, props.sourceData],
   );
-  const canonicalProjection: WaterfallProjection =
+  const canonicalChart: EditorChartProjection | null =
     canonicalProjectionResult !== null && canonicalProjectionResult.ok
       ? canonicalProjectionResult.value
-      : EMPTY_PROJECTION;
-  const projection: WaterfallProjection =
+      : null;
+  const displayChart: EditorChartProjection | null =
     displayProjectionResult !== null && displayProjectionResult.ok
       ? displayProjectionResult.value
-      : canonicalProjection;
+      : canonicalChart;
+  const canonicalProjection = canonicalChart?.projection ?? EMPTY_PROJECTION;
+  const canonicalGroupRegions = useMemo(
+    () =>
+      controller.viewSpec === null || canonicalChart === null
+        ? []
+        : projectExpandedGroupRegions(controller.viewSpec, canonicalChart.projection),
+    [canonicalChart, controller.viewSpec],
+  );
+  const activeChartType = displayChart?.chartType ?? canonicalChart?.chartType ?? 'waterfall';
+  const activeTitle = chartTitle(messages, activeChartType);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -320,7 +397,8 @@ export const FinancialChartEditor = forwardRef<
         invalid ||
         controller.viewSpec === null ||
         root === null ||
-        canonicalProjection.length === 0
+        canonicalChart === null ||
+        (canonicalChart.family === 'waterfall' && canonicalChart.projection.length === 0)
       ) {
         throw exportError('EXPORT_UNAVAILABLE', '/export');
       }
@@ -338,44 +416,83 @@ export const FinancialChartEditor = forwardRef<
       const bounds = plot.getBoundingClientRect();
       const width = bounds.width > 0 ? bounds.width : canvas.width;
       const height = bounds.height > 0 ? bounds.height : canvas.height;
+      const title = chartTitle(messages, canonicalChart.chartType);
       if (normalized.format === 'png') {
-        return exportPngChart(
-          {
+        return canonicalChart.family === 'categorical'
+          ? exportPngChart(
+              {
+                chartType: canonicalChart.chartType,
+                ownerDocument: root.ownerDocument,
+                projection: canonicalChart.projection,
+                title,
+                locale,
+                currency: props.sourceData.currency,
+                width,
+                height,
+                annotations: controller.viewSpec.annotations,
+                emphasis: controller.viewSpec.emphasis,
+                appearance: props.chartAppearance,
+                groupRegions: canonicalGroupRegions,
+              },
+              normalized,
+            )
+          : exportPngChart(
+              {
+                ownerDocument: root.ownerDocument,
+                projection: canonicalChart.projection,
+                title,
+                locale,
+                currency: props.sourceData.currency,
+                width,
+                height,
+                annotations: controller.viewSpec.annotations,
+                emphasis: controller.viewSpec.emphasis,
+                appearance: props.chartAppearance,
+                groupRegions: canonicalGroupRegions,
+              },
+              normalized,
+            );
+      }
+      return canonicalChart.family === 'categorical'
+        ? exportSvgChart({
+            chartType: canonicalChart.chartType,
             ownerDocument: root.ownerDocument,
-            projection: canonicalProjection,
-            title: messages.waterfallTitle,
+            projection: canonicalChart.projection,
+            title,
             locale,
             currency: props.sourceData.currency,
             width,
             height,
+            background: normalized.background,
+            suggestedFilename: normalized.suggestedFilename,
             annotations: controller.viewSpec.annotations,
             emphasis: controller.viewSpec.emphasis,
             appearance: props.chartAppearance,
-          },
-          normalized,
-        );
-      }
-      return exportSvgChart({
-        ownerDocument: root.ownerDocument,
-        projection: canonicalProjection,
-        title: messages.waterfallTitle,
-        locale,
-        currency: props.sourceData.currency,
-        width,
-        height,
-        background: normalized.background,
-        suggestedFilename: normalized.suggestedFilename,
-        annotations: controller.viewSpec.annotations,
-        emphasis: controller.viewSpec.emphasis,
-        appearance: props.chartAppearance,
-      });
+            groupRegions: canonicalGroupRegions,
+          })
+        : exportSvgChart({
+            ownerDocument: root.ownerDocument,
+            projection: canonicalChart.projection,
+            title,
+            locale,
+            currency: props.sourceData.currency,
+            width,
+            height,
+            background: normalized.background,
+            suggestedFilename: normalized.suggestedFilename,
+            annotations: controller.viewSpec.annotations,
+            emphasis: controller.viewSpec.emphasis,
+            appearance: props.chartAppearance,
+            groupRegions: canonicalGroupRegions,
+          });
     },
     [
-      canonicalProjection,
+      canonicalChart,
+      canonicalGroupRegions,
       controller.viewSpec,
       invalid,
       locale,
-      messages.waterfallTitle,
+      messages,
       props.sourceData.currency,
       props.chartAppearance,
     ],
@@ -402,14 +519,14 @@ export const FinancialChartEditor = forwardRef<
     (preview: OutlineInteractionPreview): void => {
       setOutlineInteraction({ scope: interactionScope, preview });
     },
-    [interactionScope],
+    [interactionScope, setOutlineInteraction],
   );
 
   const handleChartInteractionChange = useCallback(
     (preview: ChartInteractionPreview): void => {
       setChartInteraction({ scope: interactionScope, preview });
     },
-    [interactionScope],
+    [interactionScope, setChartInteraction],
   );
 
   const nextActionId = useCallback((source: InteractionCommandSource): string => {
@@ -465,7 +582,7 @@ export const FinancialChartEditor = forwardRef<
       });
       return true;
     },
-    [controller],
+    [controller, setFeedback],
   );
 
   const handleMove = useCallback(
@@ -579,7 +696,7 @@ export const FinancialChartEditor = forwardRef<
       setChartGroupLabel('');
       setPendingChartGroup(result);
     },
-    [controller, props.sourceData],
+    [controller, props.sourceData, setChartGroupLabel, setFeedback, setPendingChartGroup],
   );
 
   const handleChartSelect = useCallback(
@@ -622,14 +739,14 @@ export const FinancialChartEditor = forwardRef<
         normalized === null ? 'annotationRemoved' : 'annotationSaved',
       );
     },
-    [controller.viewSpec, dispatchInteraction, nextActionId],
+    [controller.viewSpec, dispatchInteraction, nextActionId, setFeedback],
   );
 
   const closeChartGroupDialog = useCallback((): void => {
     setPendingChartGroup(null);
     setChartGroupLabel('');
     rootRef.current?.focus();
-  }, []);
+  }, [setChartGroupLabel, setPendingChartGroup]);
 
   const toggleGroup = useCallback(
     (groupId: GroupId, expanded: boolean, source: 'direct' | 'outline'): boolean => {
@@ -734,7 +851,7 @@ export const FinancialChartEditor = forwardRef<
         tone: reason === 'cancelled' ? 'neutral' : 'error',
       });
     },
-    [],
+    [setFeedback],
   );
 
   const handleHistory = useCallback(
@@ -768,7 +885,7 @@ export const FinancialChartEditor = forwardRef<
         source: 'direct',
       });
     },
-    [controller, nextActionId],
+    [controller, nextActionId, setFeedback],
   );
 
   const outline =
@@ -805,17 +922,136 @@ export const FinancialChartEditor = forwardRef<
         onUngroup={handleUngroup}
       />
     ) : null;
+  const currentView = controller.viewSpec;
+  const chart =
+    currentView === null ? null : displayChart?.family === 'categorical' ? (
+      <CategoricalCanvas
+        chartType={displayChart.chartType}
+        projection={displayChart.projection}
+        viewSpec={currentView}
+        readOnly={props.readOnly === true}
+        locale={locale}
+        currency={props.sourceData.currency}
+        empty={empty}
+        title={activeTitle}
+        appearance={props.chartAppearance}
+        externalPreview={currentOutlineInteraction}
+        onMove={handleMove}
+        onMarqueeSelection={handleMarqueeSelection}
+        onSelectNode={handleChartSelect}
+        onToggleGroup={handleChartToggleGroup}
+        onUngroup={handleChartUngroup}
+        onInteractionChange={handleChartInteractionChange}
+        onCancel={handleCancel}
+      />
+    ) : (
+      <WaterfallCanvas
+        projection={
+          displayChart?.family === 'waterfall' ? displayChart.projection : EMPTY_PROJECTION
+        }
+        viewSpec={currentView}
+        readOnly={props.readOnly === true}
+        locale={locale}
+        currency={props.sourceData.currency}
+        empty={empty}
+        title={activeTitle}
+        appearance={props.chartAppearance}
+        externalPreview={currentOutlineInteraction}
+        onMove={handleMove}
+        onMarqueeSelection={handleMarqueeSelection}
+        onSelectNode={handleChartSelect}
+        onToggleGroup={handleChartToggleGroup}
+        onUngroup={handleChartUngroup}
+        onInteractionChange={handleChartInteractionChange}
+        onCancel={handleCancel}
+      />
+    );
+
+  const staticOutline = panels.outline ? (
+    <aside className="tp-static-panel tp-outline-static">{outline}</aside>
+  ) : null;
+  const staticInspector = panels.inspector ? (
+    <aside
+      className="tp-static-panel tp-inspector-static"
+      role="complementary"
+      aria-label={messages.inspector}
+    >
+      {inspector}
+    </aside>
+  ) : null;
+  const tabbedRail =
+    inspectorMode === 'tab' ? (
+      <PanelRail
+        outline={panels.outline ? outline : null}
+        inspector={panels.inspector ? inspector : null}
+        outlineLabel={messages.outline}
+        inspectorLabel={messages.inspector}
+        side={outlinePlacement}
+      />
+    ) : null;
+  const tabbedRailKind =
+    panels.outline && panels.inspector
+      ? 'tabs'
+      : panels.outline
+        ? 'outline'
+        : panels.inspector
+          ? 'inspector'
+          : 'none';
+  const leftPanel =
+    inspectorMode === 'tab'
+      ? outlinePlacement === 'left'
+        ? tabbedRail
+        : null
+      : outlinePlacement === 'left'
+        ? staticOutline
+        : staticInspector;
+  const rightPanel =
+    inspectorMode === 'tab'
+      ? outlinePlacement === 'right'
+        ? tabbedRail
+        : null
+      : outlinePlacement === 'right'
+        ? staticOutline
+        : staticInspector;
+  const leftPanelKind =
+    inspectorMode === 'tab'
+      ? outlinePlacement === 'left'
+        ? tabbedRailKind
+        : 'none'
+      : outlinePlacement === 'left'
+        ? panels.outline
+          ? 'outline'
+          : 'none'
+        : panels.inspector
+          ? 'inspector'
+          : 'none';
+  const rightPanelKind =
+    inspectorMode === 'tab'
+      ? outlinePlacement === 'right'
+        ? tabbedRailKind
+        : 'none'
+      : outlinePlacement === 'right'
+        ? panels.outline
+          ? 'outline'
+          : 'none'
+        : panels.inspector
+          ? 'inspector'
+          : 'none';
 
   return (
     <div
       className="tp-editor"
       data-tellplot="editor"
+      data-chart-type={activeChartType}
       data-editor-state={editorState}
       data-interaction-state={activeInteraction.preview.state}
       data-interaction-source={
         activeInteraction.preview.state === 'dragging' ? activeInteraction.source : undefined
       }
       data-read-only={props.readOnly === true ? 'true' : 'false'}
+      data-outline-placement={outlinePlacement}
+      data-inspector-mode={inspectorMode}
+      data-toolbar-visible={panels.toolbar ? 'true' : 'false'}
       data-overlay-open={modalOpen ? 'true' : undefined}
       data-view-revision={controller.viewSpec?.revision ?? -1}
       ref={rootRef}
@@ -859,37 +1095,16 @@ export const FinancialChartEditor = forwardRef<
           <InvalidStage issues={visibleIssues} title={messages.invalidData} />
         </main>
       ) : (
-        <main className="tp-workbench">
-          {panels.outline ? (
-            <aside className="tp-static-panel tp-outline-static">{outline}</aside>
-          ) : null}
-          <WaterfallCanvas
-            projection={projection}
-            viewSpec={controller.viewSpec}
-            readOnly={props.readOnly === true}
-            locale={locale}
-            currency={props.sourceData.currency}
-            empty={empty}
-            title={messages.waterfallTitle}
-            appearance={props.chartAppearance}
-            externalPreview={currentOutlineInteraction}
-            onMove={handleMove}
-            onMarqueeSelection={handleMarqueeSelection}
-            onSelectNode={handleChartSelect}
-            onToggleGroup={handleChartToggleGroup}
-            onUngroup={handleChartUngroup}
-            onInteractionChange={handleChartInteractionChange}
-            onCancel={handleCancel}
-          />
-          {panels.inspector ? (
-            <aside
-              className="tp-static-panel tp-inspector-static"
-              role="complementary"
-              aria-label={messages.inspector}
-            >
-              {inspector}
-            </aside>
-          ) : null}
+        <main
+          className="tp-workbench"
+          data-outline-placement={outlinePlacement}
+          data-inspector-mode={inspectorMode}
+          data-left-panel={leftPanelKind}
+          data-right-panel={rightPanelKind}
+        >
+          {leftPanel}
+          {chart}
+          {rightPanel}
         </main>
       )}
 

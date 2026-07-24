@@ -1,0 +1,167 @@
+schema_version: 1
+packet_id: EP-G002-R1-A001
+task_id: T118
+feature_id: 006-group-cross-level-experience
+mode: execute_goal
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  goal_spec: .ai-platform/specs/006-group-cross-level-experience/spec.md
+  goal_plan: .ai-platform/specs/006-group-cross-level-experience/plan.md
+  goal_graph: .ai-platform/specs/006-group-cross-level-experience/tasks.md
+  requirements_checklist: .ai-platform/specs/006-group-cross-level-experience/checklists/requirements.md
+  analysis: .ai-platform/specs/006-group-cross-level-experience/analysis.md
+  execution_authorization: >-
+    Granted. The user explicitly approved and requested completion of G002-R1 on 2026-07-20. Internal workstreams
+    may execute continuously and must stop at goal-level Needs_Review. Dependency, schema, remote Git, npm publish
+    and formal release changes are not authorized.
+
+work_unit:
+  title: 分组与跨层编辑体验
+  goal: >-
+    Deliver contextual group selection, cross-container before/after/inside drag semantics, atomic source-group
+    dissolution and configurable G2-rendered expanded group regions across waterfall, column and bar.
+  depends_on:
+    - G001 Accepted
+    - G002 T117 release candidate complete
+  requirements:
+    - R1-FR-001
+    - R1-FR-002
+    - R1-FR-003
+    - R1-FR-004
+    - R1-FR-005
+    - R1-FR-006
+    - R1-FR-007
+    - R1-NFR-001
+    - R1-NFR-002
+    - R1-NFR-003
+    - R1-NFR-004
+    - R1-NFR-005
+    - R1-NFR-006
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  accepted_baseline:
+    branch: codex/t112-categorical-data-contract
+    state: G001 accepted and G002 release candidate intentionally uncommitted in the current worktree
+    constraints:
+      - Preserve all accepted and release-candidate changes already present in the dirty worktree.
+      - Do not use HEAD as baseline and do not reset, stash, stage or commit.
+      - Generate task-only evidence against the external G002-R1 snapshot.
+  relevant_files:
+    - packages/editor/src/components/InspectorPanel.tsx
+    - packages/editor/src/components/OutlinePanel.tsx
+    - packages/editor/src/components/WaterfallCanvas.tsx
+    - packages/editor/src/components/CategoricalCanvas.tsx
+    - packages/editor/src/interactions/moveTargets.ts
+    - packages/editor/src/interactions/chartPointer.ts
+    - packages/editor/src/domain/executeCommand.ts
+    - packages/editor/src/domain/viewTree.ts
+    - packages/editor/src/config/chartAppearance.ts
+    - packages/editor/src/charts/waterfall/spec.ts
+    - packages/editor/src/charts/categorical/spec.ts
+    - packages/editor/src/export/svgExport.ts
+    - packages/editor/src/export/pngExport.ts
+
+baseline:
+  snapshot: /tmp/tellplot-G002-R1-baseline.y3LKch/worktree
+  manifest: /tmp/tellplot-G002-R1-baseline.y3LKch/manifest.sha256
+  file_count: 314
+  manifest_sha256: 367c1074a1c0021c78e9859405d4f49d76e55ba0815da9bc380e922c5cd3564c
+
+execution_constraints:
+  allowed_files:
+    - .ai-platform/**
+    - AGENTS.md
+    - docs/**
+    - packages/editor/src/config/**
+    - packages/editor/src/charts/**
+    - packages/editor/src/components/**
+    - packages/editor/src/domain/**
+    - packages/editor/src/export/**
+    - packages/editor/src/index.ts
+    - packages/editor/src/interactions/**
+    - packages/editor/src/styles/**
+    - packages/editor/tests/**
+    - apps/playground/**
+    - e2e/**
+  forbidden_changes:
+    - No dependency manifest or lockfile change.
+    - No SourceData or ViewSpec schema wire change.
+    - No new chart family, multi-series, data editing or multi-node batch drag.
+    - No raw G2Spec, chart instance, internal runtime or drop callback public API.
+    - No remote Git, npm publish, GitHub release, merge or tag.
+    - No any, @ts-ignore or @ts-expect-error.
+
+tdd_plan:
+  red:
+    - Require Inspector to hide create-group validation for single item/group selections.
+    - Require inside resolution and cross-container chart/outline targets.
+    - Require a two-child source group to dissolve atomically and undo/redo exactly.
+    - Require deterministic expanded regions and bounded groupRegion appearance.
+    - Require value-bounded range backgrounds, first-member label anchors and independent foreground group/value
+      text marks in waterfall/column/bar shared screen/export specs.
+  green:
+    - Implement the minimum contextual UI, resolver, executor, region projection and appearance/spec mapping.
+  refactor:
+    - Extract only the region projection/spec helpers consumed by all current chart families.
+
+validation_commands:
+  - pnpm format:check
+  - pnpm lint
+  - pnpm typecheck
+  - pnpm test:unit
+  - pnpm test:coverage
+  - pnpm build
+  - pnpm test:package
+  - pnpm test:react-matrix
+  - pnpm test:e2e
+  - pnpm test:a11y
+  - pnpm test:performance
+  - mise exec node@22.20.0 -- pnpm test:browser-previous
+  - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 006-group-cross-level-experience --task-id T118 --strict
+  - git diff --check
+
+validation_loop:
+  focused_red:
+    - Run the relevant component, interaction, domain and chart-spec tests and record expected failures.
+  focused_green:
+    - Run the same focused suites after each minimal implementation slice.
+  regression:
+    - Run the complete validation command matrix without weakening thresholds or browser budgets.
+  failure_policy:
+    - Fix failures caused by T118 within the allowed files.
+    - Stop if a fix requires dependency, schema, breaking API, new chart family or remote action.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T118
+  required:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+    - visual desktop/mobile screen and export evidence
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: >-
+    G002-R1 may move to Needs_Review only when all success criteria and full gates pass with no unresolved
+    Critical, High or Medium finding. Only the user can mark the goal Accepted.
+
+stop_conditions:
+  - Any source/view schema or dependency change is required.
+  - Any public command wire change is required.
+  - Existing dirty baseline cannot be preserved.
+  - A Critical or High cross-artifact or review finding remains unresolved.
+  - Full validation requires weakening an existing test, threshold or browser gate.
+
+handoff:
+  remote_actions_authorized: false
+  finish_state: Needs_Review

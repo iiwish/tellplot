@@ -1,6 +1,6 @@
-import { readFile } from 'node:fs/promises';
-
 import { expect, test, type Locator, type Page } from '@playwright/test';
+
+import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
 
 const EDITOR = '[data-tellplot="editor"]';
 const COMMAND_FEEDBACK = '.tp-command-feedback';
@@ -19,7 +19,7 @@ interface BarPoint {
 
 async function openEditor(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('/playground');
   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
   await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
 }
@@ -35,18 +35,12 @@ async function rootOrder(page: Page): Promise<readonly string[]> {
     );
 }
 
-async function exportedViewSpecBytes(page: Page): Promise<Buffer> {
-  await page.getByRole('button', { name: '导出' }).click();
-  const item = page.getByRole('menuitem', { name: 'ViewSpec JSON' });
-  const downloadPromise = page.waitForEvent('download');
-  await item.click();
-  const download = await downloadPromise;
-  const path = await download.path();
-  expect(path).not.toBeNull();
-  if (path === null) {
-    throw new Error('Expected a local ViewSpec download path');
-  }
-  return readFile(path);
+async function serializedViewSpecBytes(page: Page): Promise<Buffer> {
+  const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
+  await guide.getByRole('tab', { name: '视图状态' }).click();
+  const input = page.getByRole('textbox', { name: 'TellPlot 视图状态' });
+  await expect(input).toBeVisible();
+  return Buffer.from(await input.inputValue());
 }
 
 async function paintedPixelCount(canvas: Locator): Promise<number> {
@@ -133,11 +127,10 @@ async function waterfallBarPoints(canvas: Locator): Promise<readonly BarPoint[]>
       return [];
     }
     const palette = [
-      [95, 107, 101],
-      [22, 131, 99],
-      [213, 82, 74],
-      [49, 92, 140],
-      [164, 104, 18],
+      [47, 124, 246],
+      [18, 183, 106],
+      [240, 68, 100],
+      [20, 184, 166],
     ];
     const pixels = context.getImageData(0, 0, element.width, element.height).data;
     const ysByX: number[][] = Array.from({ length: element.width }, () => []);
@@ -299,7 +292,7 @@ test('chart, outline, and keyboard produce the same post-removal move result', a
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(outlineCanvas, 'outline');
   const outlineOrder = await rootOrder(page);
-  const outlineViewSpec = await exportedViewSpecBytes(page);
+  const outlineViewSpec = await serializedViewSpecBytes(page);
 
   await openEditor(page);
   const keyboardCanvas = await markCanvas(page, 'keyboard');
@@ -309,7 +302,7 @@ test('chart, outline, and keyboard produce the same post-removal move result', a
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(keyboardCanvas, 'keyboard');
   const keyboardOrder = await rootOrder(page);
-  const keyboardViewSpec = await exportedViewSpecBytes(page);
+  const keyboardViewSpec = await serializedViewSpecBytes(page);
 
   await openEditor(page);
   const chartCanvas = await markCanvas(page, 'chart');
@@ -317,7 +310,7 @@ test('chart, outline, and keyboard produce the same post-removal move result', a
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(chartCanvas, 'chart');
   const chartOrder = await rootOrder(page);
-  const chartViewSpec = await exportedViewSpecBytes(page);
+  const chartViewSpec = await serializedViewSpecBytes(page);
 
   expect(outlineOrder).toEqual(keyboardOrder);
   expect(chartOrder).toEqual(keyboardOrder);
@@ -348,8 +341,10 @@ test('creates, collapses, expands, and ungroups a conserved group from the real 
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(canvas, 'group-flow');
 
@@ -363,14 +358,16 @@ test('creates, collapses, expands, and ungroups a conserved group from the real 
     'false',
   );
   await expect(page.getByRole('treeitem', { name: /销量增长/ })).toBeHidden();
-  await expect(groupRow).toContainText('1,280');
+  await expect(groupRow).toContainText('1,520');
 
   await page.getByRole('button', { name: '展开 增长驱动' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '3');
   await expectCanvasRetained(canvas, 'group-flow');
   await expect(page.getByRole('treeitem', { name: /销量增长/ })).toBeVisible();
   await groupRow.click();
+  await activateInspectorPanel(page);
   await page.getByRole('button', { name: '取消分组' }).click();
+  await activateOutlinePanel(page);
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '4');
   await expectCanvasRetained(canvas, 'group-flow');
   await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveCount(0);
@@ -386,13 +383,17 @@ test('creates a nested group from contiguous sibling nodes and preserves recursi
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
 
+  await activateOutlinePanel(page);
   await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
   await page.getByRole('button', { name: '创建分组' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+  await activateOutlinePanel(page);
 
   const outer = page.getByRole('treeitem', { name: /经营桥/ });
   const inner = page.getByRole('treeitem', { name: /增长驱动/ });

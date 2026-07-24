@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
 import type { SourceData, SourceItem, ViewSpec } from '../../src/domain/model';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
 
 function sourceData(items: readonly SourceItem[], datasetId: string): SourceData {
   return {

@@ -34,6 +34,8 @@ export interface EditorMessages {
   readonly annotationRemoved: string;
   readonly annotationTooLong: string;
   readonly waterfallTitle: string;
+  readonly columnTitle: string;
+  readonly barTitle: string;
   readonly groupLabel: string;
   readonly createGroup: string;
   readonly groupDialogTitle: string;
@@ -97,6 +99,8 @@ const ZH_CN: EditorMessages = {
   annotationRemoved: '注释已移除',
   annotationTooLong: '注释不能超过 500 个字符',
   waterfallTitle: '经营变动瀑布图',
+  columnTitle: '分类柱状图',
+  barTitle: '分类条形图',
   groupLabel: '分组名称',
   createGroup: '创建分组',
   groupDialogTitle: '创建折叠分组',
@@ -160,6 +164,8 @@ const EN_US: EditorMessages = {
   annotationRemoved: 'Annotation removed',
   annotationTooLong: 'Annotation cannot exceed 500 characters',
   waterfallTitle: 'Operating bridge',
+  columnTitle: 'Category column chart',
+  barTitle: 'Category bar chart',
   groupLabel: 'Group label',
   createGroup: 'Create group',
   groupDialogTitle: 'Create collapsed group',

@@ -5,25 +5,40 @@ import {
   type ValidationIssue,
   type ValidationResult,
 } from './errors';
-import type { SourceData, SourceItem, SourceItemKind, ViewSpec } from './model';
+import { createNarrativeChartPolicy, sourceDataKind } from './chartPolicy';
+import type {
+  ChartType,
+  SchemaVersion,
+  SourceData,
+  SourceDataItem,
+  SourceItemKind,
+  ViewSpec,
+} from './model';
 
 type UnknownRecord = Record<string, unknown>;
 
 const SOURCE_ITEM_KINDS: readonly SourceItemKind[] = ['start', 'contribution', 'subtotal', 'end'];
 
-const SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
+const LEGACY_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
   'schemaVersion',
   'datasetId',
   'currency',
   'items',
 ]);
-const SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
+const CURRENT_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
+  ...LEGACY_SOURCE_DATA_FIELDS,
+  'dataKind',
+]);
+const SOURCE_ITEM_BASE_FIELDS: ReadonlySet<string> = new Set([
   'id',
   'label',
   'amount',
-  'kind',
   'sourceRef',
   'metadata',
+]);
+const WATERFALL_SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
+  ...SOURCE_ITEM_BASE_FIELDS,
+  'kind',
 ]);
 const VIEW_SPEC_FIELDS: ReadonlySet<string> = new Set([
   'schemaVersion',
@@ -142,19 +157,27 @@ function isSourceItemKind(value: unknown): value is SourceItemKind {
   return typeof value === 'string' && SOURCE_ITEM_KINDS.includes(value as SourceItemKind);
 }
 
+function isChartType(value: unknown): value is ChartType {
+  return value === 'waterfall' || value === 'bar' || value === 'column';
+}
+
 function validateSchemaVersion(
   record: UnknownRecord,
   code: 'INVALID_SOURCE_DATA' | 'INVALID_VIEW_SPEC',
   errors: ValidationIssue[],
-): void {
+): SchemaVersion | undefined {
   const value = ownDataValue(record, 'schemaVersion');
   if (typeof value !== 'string') {
     errors.push(validationIssue(code, 'INVALID_TYPE', '/schemaVersion'));
-  } else if (value !== '1.0.0') {
+    return undefined;
+  }
+  if (value !== '1.0.0' && value !== '2.0.0') {
     errors.push(
       validationIssue('UNSUPPORTED_SCHEMA_VERSION', 'UNSUPPORTED_SCHEMA_VERSION', '/schemaVersion'),
     );
+    return undefined;
   }
+  return value;
 }
 
 function validateSourceItem(
@@ -162,6 +185,7 @@ function validateSourceItem(
   index: number,
   seenIds: Set<string>,
   errors: ValidationIssue[],
+  waterfall: boolean,
 ): void {
   const itemPath = pointer('/items', index);
   if (!isPlainRecord(value)) {
@@ -169,7 +193,13 @@ function validateSourceItem(
     return;
   }
 
-  inspectRecord(value, itemPath, 'INVALID_SOURCE_DATA', errors, SOURCE_ITEM_FIELDS);
+  inspectRecord(
+    value,
+    itemPath,
+    'INVALID_SOURCE_DATA',
+    errors,
+    waterfall ? WATERFALL_SOURCE_ITEM_FIELDS : SOURCE_ITEM_BASE_FIELDS,
+  );
 
   const id = ownDataValue(value, 'id');
   if (typeof id !== 'string') {
@@ -208,7 +238,7 @@ function validateSourceItem(
     );
   }
 
-  if (!isSourceItemKind(ownDataValue(value, 'kind'))) {
+  if (waterfall && !isSourceItemKind(ownDataValue(value, 'kind'))) {
     errors.push(
       validationIssue('INVALID_SOURCE_DATA', 'INVALID_SOURCE_ITEM_KIND', pointer(itemPath, 'kind')),
     );
@@ -306,8 +336,20 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
   }
 
   const errors: ValidationIssue[] = [];
-  inspectRecord(input, '', 'INVALID_SOURCE_DATA', errors, SOURCE_DATA_FIELDS);
-  validateSchemaVersion(input, 'INVALID_SOURCE_DATA', errors);
+  const schemaValue = ownDataValue(input, 'schemaVersion');
+  inspectRecord(
+    input,
+    '',
+    'INVALID_SOURCE_DATA',
+    errors,
+    schemaValue === '2.0.0' ? CURRENT_SOURCE_DATA_FIELDS : LEGACY_SOURCE_DATA_FIELDS,
+  );
+  const schemaVersion = validateSchemaVersion(input, 'INVALID_SOURCE_DATA', errors);
+
+  const dataKind = ownDataValue(input, 'dataKind');
+  if (schemaVersion === '2.0.0' && dataKind !== 'waterfall' && dataKind !== 'categorical') {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_DATA_KIND', '/dataKind'));
+  }
 
   const datasetId = ownDataValue(input, 'datasetId');
   if (typeof datasetId !== 'string') {
@@ -323,11 +365,14 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
 
   const items = readArray(ownDataValue(input, 'items'), '/items', 'INVALID_SOURCE_DATA', errors);
   if (items !== undefined) {
+    const waterfall = schemaVersion !== '2.0.0' || dataKind === 'waterfall';
     const seenIds = new Set<string>();
     for (let index = 0; index < items.length; index += 1) {
-      validateSourceItem(items[index], index, seenIds, errors);
+      validateSourceItem(items[index], index, seenIds, errors, waterfall);
     }
-    validateAnchors(items, errors);
+    if (waterfall) {
+      validateAnchors(items, errors);
+    }
   }
 
   return errors.length === 0
@@ -345,28 +390,32 @@ export function validateSourceData(input: unknown): ValidationResult<SourceData>
 }
 
 interface SourceIndexes {
-  readonly itemsById: ReadonlyMap<string, SourceItem>;
-  readonly contributionIds: readonly string[];
+  readonly itemsById: ReadonlyMap<string, SourceDataItem>;
+  readonly narrativeItemIds: readonly string[];
+  readonly narrativeItemIdSet: ReadonlySet<string>;
   readonly segmentById: ReadonlyMap<string, number>;
 }
 
 function indexSource(sourceData: SourceData): SourceIndexes {
-  const itemsById = new Map<string, SourceItem>();
-  const contributionIds: string[] = [];
+  const itemsById = new Map<string, SourceDataItem>();
+  const narrativeItemIds: string[] = [];
+  const narrativeItemIdSet = new Set<string>();
   const segmentById = new Map<string, number>();
+  const policy = createNarrativeChartPolicy(sourceData);
   let segment = 0;
 
   for (const item of sourceData.items) {
     itemsById.set(item.id, item);
-    if (item.kind === 'contribution') {
-      contributionIds.push(item.id);
+    if (policy.isMovableItem(sourceData, item.id)) {
+      narrativeItemIds.push(item.id);
+      narrativeItemIdSet.add(item.id);
       segmentById.set(item.id, segment);
-    } else if (item.kind === 'subtotal') {
+    } else if ('kind' in item && item.kind === 'subtotal') {
       segment += 1;
     }
   }
 
-  return { itemsById, contributionIds, segmentById };
+  return { itemsById, narrativeItemIds, narrativeItemIdSet, segmentById };
 }
 
 interface GroupIndexes {
@@ -478,7 +527,7 @@ function validateGroups(
       const child = children[childIndex] as string;
       const childPath = pointer(pointer(pointer('/groups', groupId), 'childIds'), childIndex);
       const sourceItem = source.itemsById.get(child);
-      if (sourceItem !== undefined && sourceItem.kind !== 'contribution') {
+      if (sourceItem !== undefined && !source.narrativeItemIdSet.has(child)) {
         errors.push(validationIssue('INVALID_VIEW_SPEC', 'INVALID_GROUP_CHILD', childPath));
         continue;
       }
@@ -545,7 +594,7 @@ function validateGroups(
     for (const child of childrenByGroupId.get(groupId) ?? []) {
       if (groupIds.has(child)) {
         leaves.push(...leavesFor(child, nextActive));
-      } else if (source.itemsById.get(child)?.kind === 'contribution') {
+      } else if (source.narrativeItemIdSet.has(child)) {
         leaves.push(child);
       }
     }
@@ -559,7 +608,7 @@ function validateGroups(
       const childId = children[childIndex] as string;
       const childLeaves = groupIds.has(childId)
         ? leavesFor(childId, new Set())
-        : source.itemsById.get(childId)?.kind === 'contribution'
+        : source.narrativeItemIdSet.has(childId)
           ? [childId]
           : [];
       const childSegments = new Set(
@@ -602,7 +651,7 @@ function validateRootOrder(
   }
 
   const rootNodes = new Set<string>();
-  const directContributionIds = new Set<string>();
+  const directNarrativeItemIds = new Set<string>();
   const rootedGroupIds = new Set<string>();
   let previousSegment = 0;
 
@@ -632,11 +681,11 @@ function validateRootOrder(
         errors.push(validationIssue('SOURCE_CONFLICT', 'UNKNOWN_SOURCE_REFERENCE', nodePath));
         continue;
       }
-      if (sourceItem.kind !== 'contribution') {
+      if (!source.narrativeItemIdSet.has(nodeId)) {
         errors.push(validationIssue('INVALID_VIEW_SPEC', 'LOCKED_ANCHOR_REFERENCE', nodePath));
         continue;
       }
-      directContributionIds.add(nodeId);
+      directNarrativeItemIds.add(nodeId);
       if (groups.childIds.has(nodeId)) {
         errors.push(validationIssue('INVALID_VIEW_SPEC', 'DUPLICATE_VIEW_NODE', nodePath));
       }
@@ -660,11 +709,11 @@ function validateRootOrder(
     }
   }
 
-  const coveredContributions = new Set([
-    ...directContributionIds,
+  const coveredNarrativeItems = new Set([
+    ...directNarrativeItemIds,
     ...[...groups.childIds].filter(nodeId => source.segmentById.has(nodeId)),
   ]);
-  if (source.contributionIds.some(id => !coveredContributions.has(id))) {
+  if (source.narrativeItemIds.some(id => !coveredNarrativeItems.has(id))) {
     errors.push(validationIssue('SOURCE_CONFLICT', 'MISSING_SOURCE_REFERENCE', '/rootOrder'));
   }
 }
@@ -714,7 +763,7 @@ function validatePinnedItems(
       errors.push(validationIssue('INVALID_VIEW_SPEC', 'DUPLICATE_REFERENCE', path));
     } else {
       seen.add(itemId);
-      if (source.itemsById.get(itemId)?.kind !== 'contribution') {
+      if (!source.narrativeItemIdSet.has(itemId)) {
         errors.push(validationIssue('INVALID_VIEW_SPEC', 'INVALID_PIN_REFERENCE', path));
       }
     }
@@ -777,7 +826,10 @@ function validateViewSpecInternal(
 
   const errors: ValidationIssue[] = [];
   inspectRecord(input, '', 'INVALID_VIEW_SPEC', errors, VIEW_SPEC_FIELDS);
-  validateSchemaVersion(input, 'INVALID_VIEW_SPEC', errors);
+  const schemaVersion = validateSchemaVersion(input, 'INVALID_VIEW_SPEC', errors);
+  if (schemaVersion !== undefined && schemaVersion !== sourceData.schemaVersion) {
+    errors.push(validationIssue('SOURCE_CONFLICT', 'SCHEMA_VERSION_MISMATCH', '/schemaVersion'));
+  }
 
   const datasetId = ownDataValue(input, 'datasetId');
   if (typeof datasetId !== 'string') {
@@ -788,8 +840,15 @@ function validateViewSpecInternal(
     errors.push(validationIssue('SOURCE_CONFLICT', 'DATASET_ID_MISMATCH', '/datasetId'));
   }
 
-  if (ownDataValue(input, 'chartType') !== 'waterfall') {
+  const chartType = ownDataValue(input, 'chartType');
+  const validChartType = isChartType(chartType);
+  if (!validChartType || (schemaVersion === '1.0.0' && chartType !== 'waterfall')) {
     errors.push(validationIssue('INVALID_VIEW_SPEC', 'INVALID_CHART_TYPE', '/chartType'));
+  } else if (
+    (sourceDataKind(sourceData) === 'categorical' && chartType === 'waterfall') ||
+    (sourceDataKind(sourceData) === 'waterfall' && chartType !== 'waterfall')
+  ) {
+    errors.push(validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'));
   }
 
   const revision = ownDataValue(input, 'revision');

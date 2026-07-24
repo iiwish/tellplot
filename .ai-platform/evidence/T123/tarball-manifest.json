@@ -1,0 +1,46 @@
+{
+  "name": "@tellplot/editor",
+  "version": "1.0.0",
+  "filename": "tellplot-editor-1.0.0.tgz",
+  "files": [
+    {
+      "path": "dist/index.cjs"
+    },
+    {
+      "path": "dist/index.cjs.map"
+    },
+    {
+      "path": "dist/index.d.cts"
+    },
+    {
+      "path": "dist/index.d.ts"
+    },
+    {
+      "path": "dist/index.js"
+    },
+    {
+      "path": "dist/index.js.map"
+    },
+    {
+      "path": "dist/styles.css"
+    },
+    {
+      "path": "dist/styles.css.map"
+    },
+    {
+      "path": "dist/styles.d.cts"
+    },
+    {
+      "path": "dist/styles.d.ts"
+    },
+    {
+      "path": "LICENSE"
+    },
+    {
+      "path": "package.json"
+    },
+    {
+      "path": "README.md"
+    }
+  ]
+}

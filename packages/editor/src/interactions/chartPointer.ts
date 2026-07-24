@@ -1,4 +1,10 @@
 import type { ViewNodeId } from '../domain/ids';
+import {
+  categoryCoordinate,
+  projectChartCategoryBounds,
+  type CategoryAxis,
+  type ChartSceneRectangle,
+} from './categoryAxis';
 import type { MoveTargetEdge } from './moveTargets';
 
 export interface ChartPointerPoint {
@@ -7,32 +13,28 @@ export interface ChartPointerPoint {
   readonly y: number;
 }
 
-export interface ChartElementPointer extends ChartPointerPoint {
+export interface ChartCategoryElementPointer extends ChartPointerPoint {
+  readonly axis: CategoryAxis;
   readonly nodeId: ViewNodeId;
   readonly edge: MoveTargetEdge;
-  readonly minX: number;
-  readonly maxX: number;
-  readonly targetX: number;
+  readonly min: number;
+  readonly max: number;
+  readonly target: number;
 }
 
-export interface ChartHorizontalBounds {
-  readonly nodeId: ViewNodeId;
-  readonly minX: number;
-  readonly maxX: number;
-}
+export type ChartCategoryPointerResult =
+  | { readonly ok: true; readonly value: ChartCategoryElementPointer }
+  | {
+      readonly ok: false;
+      readonly reason: 'INVALID_INPUT' | 'SOURCE_NOT_FOUND' | 'INVALID_BOUNDS';
+    };
 
-export interface ChartHorizontalDropTarget {
-  readonly nodeId: ViewNodeId;
-  readonly edge: MoveTargetEdge;
-  readonly targetX: number;
-}
-
-export interface ChartHorizontalDropInput {
-  readonly itemId: ViewNodeId;
-  readonly startPointerX: number;
-  readonly pointerX: number;
-  readonly orderedBounds: readonly ChartHorizontalBounds[];
-}
+export type ChartCategoryTargetReadResult =
+  | { readonly ok: true; readonly value: number }
+  | {
+      readonly ok: false;
+      readonly reason: 'INVALID_INPUT' | 'SOURCE_NOT_FOUND' | 'INVALID_BOUNDS';
+    };
 
 type UnknownRecord = Readonly<Record<string, unknown>>;
 
@@ -64,104 +66,14 @@ function coordinatePair(value: unknown): readonly [number, number] | undefined {
   return x === undefined || y === undefined ? undefined : [x, y];
 }
 
-interface HorizontalBounds {
-  readonly minX: number;
-  readonly centerX: number;
-  readonly maxX: number;
-}
+export type ChartSceneElementBounds = ChartSceneRectangle;
 
-export interface ChartSceneElementBounds {
-  readonly nodeId: ViewNodeId;
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
-
-function distanceToRange(value: number, min: number, max: number): number {
-  return value < min ? min - value : value > max ? value - max : 0;
-}
-
-/** Resolves a renderer-owned mark through a minimum square pointer target. */
-export function resolveChartMinimumTargetHit(
-  point: ChartPointerPoint,
-  bounds: readonly ChartSceneElementBounds[],
-  minimumTargetSize: number,
-): ChartElementPointer | undefined {
-  if (!Number.isFinite(minimumTargetSize) || minimumTargetSize <= 0) {
-    return undefined;
-  }
-  let best:
-    | {
-        readonly bounds: ChartSceneElementBounds;
-        readonly distance: number;
-        readonly centerDistance: number;
-      }
-    | undefined;
-  for (const candidate of bounds) {
-    const values = [candidate.minX, candidate.minY, candidate.maxX, candidate.maxY];
-    if (
-      values.some(value => !Number.isFinite(value)) ||
-      candidate.minX > candidate.maxX ||
-      candidate.minY > candidate.maxY
-    ) {
-      continue;
-    }
-    const paddingX = Math.max(0, (minimumTargetSize - (candidate.maxX - candidate.minX)) / 2);
-    const paddingY = Math.max(0, (minimumTargetSize - (candidate.maxY - candidate.minY)) / 2);
-    if (
-      point.x < candidate.minX - paddingX ||
-      point.x > candidate.maxX + paddingX ||
-      point.y < candidate.minY - paddingY ||
-      point.y > candidate.maxY + paddingY
-    ) {
-      continue;
-    }
-    const dx = distanceToRange(point.x, candidate.minX, candidate.maxX);
-    const dy = distanceToRange(point.y, candidate.minY, candidate.maxY);
-    const distance = dx * dx + dy * dy;
-    const centerX = (candidate.minX + candidate.maxX) / 2;
-    const centerY = (candidate.minY + candidate.maxY) / 2;
-    const centerDistance = (point.x - centerX) ** 2 + (point.y - centerY) ** 2;
-    if (
-      best === undefined ||
-      distance < best.distance ||
-      (distance === best.distance && centerDistance < best.centerDistance)
-    ) {
-      best = { bounds: candidate, distance, centerDistance };
-    }
-  }
-  if (best === undefined) {
-    return undefined;
-  }
-  const centerX = (best.bounds.minX + best.bounds.maxX) / 2;
-  const edge: MoveTargetEdge = point.x < centerX ? 'before' : 'after';
-  return {
-    ...point,
-    nodeId: best.bounds.nodeId,
-    edge,
-    minX: best.bounds.minX,
-    maxX: best.bounds.maxX,
-    targetX: edge === 'before' ? best.bounds.minX : best.bounds.maxX,
-  };
-}
-
-function rectangularBounds(value: unknown): Omit<ChartSceneElementBounds, 'nodeId'> | undefined {
-  const bounds = asRecord(value);
-  const min = coordinatePair(read(bounds, 'min'));
-  const max = coordinatePair(read(bounds, 'max'));
-  if (min === undefined || max === undefined) {
-    return undefined;
-  }
-  return { minX: min[0], minY: min[1], maxX: max[0], maxY: max[1] };
-}
-
-function horizontalBounds(value: unknown): HorizontalBounds | undefined {
+function sceneRectangle(value: unknown, nodeId: ViewNodeId): ChartSceneElementBounds | undefined {
   const bounds = asRecord(value);
   const min = coordinatePair(read(bounds, 'min'));
   const max = coordinatePair(read(bounds, 'max'));
   if (min !== undefined && max !== undefined) {
-    return { minX: min[0], centerX: (min[0] + max[0]) / 2, maxX: max[0] };
+    return { nodeId, minX: min[0], minY: min[1], maxX: max[0], maxY: max[1] };
   }
 
   const center = coordinatePair(read(bounds, 'center'));
@@ -169,9 +81,11 @@ function horizontalBounds(value: unknown): HorizontalBounds | undefined {
   return center === undefined || halfExtents === undefined
     ? undefined
     : {
+        nodeId,
         minX: center[0] - halfExtents[0],
-        centerX: center[0],
+        minY: center[1] - halfExtents[1],
         maxX: center[0] + halfExtents[0],
+        maxY: center[1] + halfExtents[1],
       };
 }
 
@@ -191,10 +105,13 @@ export function readChartPointerPoint(event: unknown): ChartPointerPoint | undef
  * Adapts the locked G2 5.4 event boundary: datum at data.data, scene bounds on
  * target.getBounds(), and pointer coordinates at canvas.x/y.
  */
-export function readChartElementPointer(event: unknown): ChartElementPointer | undefined {
+export function readChartCategoryElementPointer(
+  event: unknown,
+  axis: CategoryAxis,
+): ChartCategoryPointerResult {
   const point = readChartPointerPoint(event);
-  if (point === undefined) {
-    return undefined;
+  if (point === undefined || categoryCoordinate(point, axis) === undefined) {
+    return { ok: false, reason: 'INVALID_INPUT' };
   }
 
   const record = asRecord(event);
@@ -202,127 +119,75 @@ export function readChartElementPointer(event: unknown): ChartElementPointer | u
   const datum = asRecord(read(data, 'data'));
   const nodeId = read(datum, 'nodeId');
   if (typeof nodeId !== 'string' || nodeId.length === 0) {
-    return undefined;
+    return { ok: false, reason: 'SOURCE_NOT_FOUND' };
   }
 
   const target = asRecord(read(record, 'target'));
   const getBounds = read(target, 'getBounds');
   if (target === undefined || typeof getBounds !== 'function') {
-    return undefined;
+    return { ok: false, reason: 'INVALID_BOUNDS' };
   }
 
-  let bounds: HorizontalBounds | undefined;
+  let rectangle: ChartSceneElementBounds | undefined;
   try {
-    bounds = horizontalBounds(Reflect.apply(getBounds, target, []));
+    rectangle = sceneRectangle(Reflect.apply(getBounds, target, []), nodeId);
   } catch {
-    bounds = undefined;
+    rectangle = undefined;
   }
-  if (bounds === undefined) {
-    return undefined;
+  if (rectangle === undefined) {
+    return { ok: false, reason: 'INVALID_BOUNDS' };
   }
 
-  const edge: MoveTargetEdge = point.x < bounds.centerX ? 'before' : 'after';
+  const bounds = projectChartCategoryBounds(rectangle, axis);
+  const coordinate = categoryCoordinate(point, axis);
+  if (bounds === undefined || coordinate === undefined) {
+    return { ok: false, reason: 'INVALID_BOUNDS' };
+  }
+  const edge: MoveTargetEdge = coordinate < bounds.center ? 'before' : 'after';
 
   return {
-    ...point,
-    nodeId,
-    edge,
-    minX: bounds.minX,
-    maxX: bounds.maxX,
-    targetX: edge === 'before' ? bounds.minX : bounds.maxX,
+    ok: true,
+    value: {
+      ...point,
+      axis,
+      nodeId,
+      edge,
+      min: bounds.min,
+      max: bounds.max,
+      target: edge === 'before' ? bounds.min : bounds.max,
+    },
   };
 }
 
-function validHorizontalBounds(
-  bounds: ChartHorizontalBounds | undefined,
-): bounds is ChartHorizontalBounds {
-  return (
-    bounds !== undefined &&
-    Number.isFinite(bounds.minX) &&
-    Number.isFinite(bounds.maxX) &&
-    bounds.minX <= bounds.maxX
-  );
-}
-
-/** Resolves reorder collision from the translated bar rectangle and X coordinate only. */
-export function resolveChartHorizontalDropTarget({
-  itemId,
-  startPointerX,
-  pointerX,
-  orderedBounds,
-}: ChartHorizontalDropInput): ChartHorizontalDropTarget | null {
-  if (!Number.isFinite(startPointerX) || !Number.isFinite(pointerX)) {
-    return null;
-  }
-  const sourceIndex = orderedBounds.findIndex(bounds => bounds.nodeId === itemId);
-  const source = orderedBounds[sourceIndex];
-  const deltaX = pointerX - startPointerX;
-  if (!validHorizontalBounds(source) || deltaX === 0) {
-    return null;
-  }
-
-  if (deltaX > 0) {
-    const draggedRight = source.maxX + deltaX;
-    let target: ChartHorizontalBounds | undefined;
-    for (let index = sourceIndex + 1; index < orderedBounds.length; index += 1) {
-      const candidate = orderedBounds[index];
-      if (!validHorizontalBounds(candidate)) {
-        continue;
-      }
-      if (draggedRight >= candidate.minX) {
-        target = candidate;
-      } else {
-        break;
-      }
-    }
-    return target === undefined
-      ? null
-      : { nodeId: target.nodeId, edge: 'after', targetX: target.maxX };
-  }
-
-  const draggedLeft = source.minX + deltaX;
-  let target: ChartHorizontalBounds | undefined;
-  for (let index = sourceIndex - 1; index >= 0; index -= 1) {
-    const candidate = orderedBounds[index];
-    if (!validHorizontalBounds(candidate)) {
-      continue;
-    }
-    if (draggedLeft <= candidate.maxX) {
-      target = candidate;
-    } else {
-      break;
-    }
-  }
-  return target === undefined
-    ? null
-    : { nodeId: target.nodeId, edge: 'before', targetX: target.minX };
-}
-
-/** Resolves a semantic chart target to its rendered G2 scene edge. */
-export function readChartTargetX(
+/** Resolves a semantic chart target to its renderer-owned category-axis scene edge. */
+export function readChartTargetCoordinate(
   context: unknown,
   nodeId: ViewNodeId,
   edge: MoveTargetEdge,
-): number | undefined {
+  axis: CategoryAxis,
+): ChartCategoryTargetReadResult {
+  if (categoryCoordinate({ x: 0, y: 0 }, axis) === undefined) {
+    return { ok: false, reason: 'INVALID_INPUT' };
+  }
   const contextRecord = asRecord(context);
   const canvas = asRecord(read(contextRecord, 'canvas'));
   const sceneDocument = asRecord(read(canvas, 'document'));
   const getElementsByClassName = read(sceneDocument, 'getElementsByClassName');
   if (sceneDocument === undefined || typeof getElementsByClassName !== 'function') {
-    return undefined;
+    return { ok: false, reason: 'INVALID_INPUT' };
   }
 
   let elements: unknown;
   try {
     elements = Reflect.apply(getElementsByClassName, sceneDocument, ['element']);
   } catch {
-    return undefined;
+    return { ok: false, reason: 'INVALID_INPUT' };
   }
 
   const collection = asRecord(elements);
   const length = finiteNumber(read(collection, 'length'));
   if (collection === undefined || length === undefined || !Number.isInteger(length) || length < 0) {
-    return undefined;
+    return { ok: false, reason: 'INVALID_INPUT' };
   }
 
   for (let index = 0; index < length; index += 1) {
@@ -334,17 +199,21 @@ export function readChartTargetX(
     }
     const getBounds = read(element, 'getBounds');
     if (element === undefined || typeof getBounds !== 'function') {
-      return undefined;
+      return { ok: false, reason: 'INVALID_BOUNDS' };
     }
     try {
-      const bounds = horizontalBounds(Reflect.apply(getBounds, element, []));
-      return bounds === undefined ? undefined : edge === 'before' ? bounds.minX : bounds.maxX;
+      const rectangle = sceneRectangle(Reflect.apply(getBounds, element, []), nodeId);
+      const bounds =
+        rectangle === undefined ? undefined : projectChartCategoryBounds(rectangle, axis);
+      return bounds === undefined
+        ? { ok: false, reason: 'INVALID_BOUNDS' }
+        : { ok: true, value: edge === 'before' ? bounds.min : bounds.max };
     } catch {
-      return undefined;
+      return { ok: false, reason: 'INVALID_BOUNDS' };
     }
   }
 
-  return undefined;
+  return { ok: false, reason: 'SOURCE_NOT_FOUND' };
 }
 
 /** Reads renderer-owned element bounds for hit testing and DOM overlay placement. */
@@ -378,9 +247,9 @@ export function readChartElementBounds(context: unknown): readonly ChartSceneEle
       continue;
     }
     try {
-      const bounds = rectangularBounds(Reflect.apply(getBounds, element, []));
-      if (bounds !== undefined) {
-        result.push({ nodeId, ...bounds });
+      const bounds = sceneRectangle(Reflect.apply(getBounds, element, []), nodeId);
+      if (bounds !== undefined && projectChartCategoryBounds(bounds, 'x') !== undefined) {
+        result.push(bounds);
       }
     } catch {
       continue;
