@@ -17,15 +17,15 @@
 | `pnpm format:check` | passed |
 | `pnpm lint` | passed，0 warning |
 | `pnpm typecheck` | editor 与 playground passed |
-| `pnpm test:unit` | 52 files；453/453 passed |
-| `pnpm test:coverage` | 453/453；statements 86.98%；branches 81.90%；functions 90.05%；lines 87.10% |
+| `pnpm test:unit` | 52 files；455/455 passed |
+| `pnpm test:coverage` | 455/455；statements 86.99%；branches 81.88%；functions 90.05%；lines 87.10% |
 | constrained domain/chart/G2 coverage | all >=95% |
 | `pnpm build` | passed；仅保留既有 G2 chunk-size warning |
 | `pnpm test:package` | publint、ATTW、ESM、CJS、types、quickstart、tarball contract passed |
-| `pnpm test:react-matrix` | React 18.3.1 / 19.2.7；各 87405 painted pixels；clean unmount |
+| `pnpm test:react-matrix` | React 18.3.1 / 19.2.7；89114 / 87405 painted pixels；clean unmount |
 | `pnpm test:e2e` | current Chromium/Firefox/WebKit 180/180 passed |
 | `pnpm test:a11y` | 45/45 passed |
-| `pnpm test:performance` | waterfall p95 69.6ms；categorical p95 96.3ms；budget 150ms |
+| `pnpm test:performance` | waterfall p95 101.4ms；categorical p95 75.4ms；budget 150ms |
 | previous Playwright release | Chromium 148、Firefox 150.0.2、WebKit 26.4；180/180 passed |
 | WebKit previous major | WebKit 18.4；60/60 passed |
 | `pnpm audit --prod --registry=https://registry.npmjs.org/` | no known vulnerabilities |
@@ -42,7 +42,7 @@
   可移植占位符后，306 个文件通过审计。
 - Node 24 启动的完整门禁在 previous-browser 阶段按设计拒绝；Node 22.20.0 下整套
   `pnpm release:check` 通过。
-- 最终 isolated source 运行 52 个 unit 文件和 453 个测试，不读取工作树预生成 `dist`。
+- 最终 isolated source 运行 52 个 unit 文件和 455 个测试，不读取工作树预生成 `dist`。
 
 ## Artifact And Package Checks
 
@@ -53,6 +53,6 @@
 
 ## Post-Candidate Additive Label Verification
 
-用户批准的对象式标签配置与分组边界退出/click-drag correction 均保持公共合同向后兼容，并已纳入
-上述 453 个 unit、当前/旧版浏览器、a11y、performance、package 与隔离源码门禁。未执行 publish、
-tag、GitHub Release 或部署。
+用户批准的对象式标签配置、分组边界退出/click-drag correction 与实时分组背景预览均保持公共合同
+向后兼容，并已纳入上述 455 个 unit、当前/旧版浏览器、a11y、performance、package 与隔离源码门禁。
+未执行 publish、tag、GitHub Release 或部署。

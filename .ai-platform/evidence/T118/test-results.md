@@ -27,6 +27,8 @@
 | GREEN | waterfall/categorical value-label frameless style | 62/62 passed |
 | RED | group label uses the same frameless visual contract | 1 expected failure / 5 passes |
 | GREEN | group/value label visual contract slice | 68/68 passed |
+| RED | 拖拽边界预览中的 group region 仍读取 canonical ViewSpec | 2 expected component failures |
+| GREEN | waterfall/categorical region 与柱形共享 preview ViewSpec | focused 58/58；三浏览器关键回归 36/36 passed |
 
 ## Full Gates
 
@@ -35,8 +37,8 @@
 | `pnpm format:check` | passed |
 | `pnpm lint` | passed；0 warning |
 | `pnpm typecheck` | editor/playground strict TypeScript passed |
-| `pnpm test:unit` | 52 files；453/453 passed |
-| `pnpm test:coverage` | 453/453 passed；statements 86.98%、branches 81.90%、functions 90.05%、lines 87.10% |
+| `pnpm test:unit` | 52 files；455/455 passed |
+| `pnpm test:coverage` | 455/455 passed；statements 86.99%、branches 81.88%、functions 90.05%、lines 87.10% |
 | `pnpm build` | editor ESM/CJS/DTS/CSS 与 playground production build passed；既有 G2 chunk warning retained |
 | `pnpm test:package` | publint、ATTW、ESM、CJS、types、pack contract passed |
 | `pnpm test:react-matrix` | React 18.3.1 / 19.2.7；各 87,405 painted pixels；clean unmount |
@@ -51,15 +53,16 @@
 - task-only patch：`.ai-platform/evidence/T118/diff.patch`，4,141 lines，47 files。
 - SHA-256：`9eba21699fe47b4a2ddf13b22eeacf2f1aadef8dc48481788b6c188c2e22e5a6`。
 - `git apply --check --reverse` passed；外部 baseline 314-file manifest 复核通过。
-- 分组边界退出与 click/drag correction 由本地 commit `42c0342` 记录，并通过当前 1.0 完整门禁。
+- 分组边界退出与 click/drag correction 由本地 commit `42c0342` 记录；实时背景预览由 `5f0dcb9`
+  记录，并通过当前 1.0 完整门禁。
 - package manifests 与 lockfile 对 baseline 逐字节一致；T118 source 未引入 `any`、`@ts-ignore` 或
   `@ts-expect-error`。
 
 ## Coverage Focus
 
-- `groupRegions.ts`：statements 96.49%、branches 85.71%、lines 96.42%。
-- categorical spec：lines 100%、branches 94.31%。
-- waterfall spec：lines 100%、branches 98.50%。
+- `groupRegions.ts`：statements 96.66%、branches 86.84%、lines 96.61%。
+- categorical spec：lines 100%、branches 94.50%。
+- waterfall spec：lines 100%、branches 98.57%。
 - `executeCommand.ts`：lines 93.95%、branches 87.72%。
 - validation：lines 99.29%、branches 98.02%。
 - shared G2 runtime：lines 97.72%、branches 98.30%。
@@ -67,7 +70,7 @@
 ## Performance
 
 150ms product budget、30 samples 和 assertion 未修改。2026-07-24 的聚合 exact command clean pass 为
-waterfall 69.6ms、categorical 96.3ms，root commit delta 均为 0。此前高系统负载诊断样本保留如下：
+waterfall 101.4ms、categorical 75.4ms，root commit delta 均为 0。此前高系统负载诊断样本保留如下：
 
 | Run | Waterfall p95 | Categorical p95 | Root commit delta | Result |
 | --- | ---: | ---: | ---: | --- |
@@ -89,6 +92,8 @@ assertion，也没有修改性能测试或公共行为来规避门禁。
 - 来源 group 的 G2 scene bounds 在 drag start 固化；边界内成员重排与边界外 group before/after 退出
   分离；指针进入外部 mark 后标准碰撞重新接管，边界不会持续吸附。首成员柱 click 保留折叠/取消分组
   动作，达到 4px drag intent 后隐藏。unit/component 与三浏览器真实 G2 回归 passed。
+- 柱形与分组背景均从相同 preview ViewSpec 投影；三成员 group 的末成员越界时，G2 `range` mark 在
+  pointer up 前从末成员缩到第二成员，放手前无 `onViewSpecChange`，放手后画布 hash 与预览一致。
 - two-child dissolve、three-child retain、nested replacement、locked/segment/cycle、one-step undo/redo：passed。
 - default/disabled/opacity/label/nested/collapsed regions、bounded value extent 和 G2 `range → interval → text`
   mark order：passed。

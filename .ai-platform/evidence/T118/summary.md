@@ -15,6 +15,8 @@ SVG/PNG 和宿主调用继续进入同一套确定性 ViewSpec 命令与历史�
 - 图表在 pointer down 时从 G2 scene bounds 投影来源分组边界；成员边缘内继续排序，指针越过展开分组
   边界即以该 group 的 before/after 退出，不必先碰撞下一个外部柱；继续命中外部柱后恢复标准目标
   碰撞。嵌套分组按实际跨越的最外层边界退出。
+- 拖拽预览中的柱形投影与展开分组背景读取同一份临时 ViewSpec；越过分组边界后，背景在 pointer up
+  前立即缩小或解散，而正式 ViewSpec、revision 与 undo 历史仍只在放手提交时改变。
 - 首成员柱的折叠和取消分组动作在普通 click 后保持可见；只有指针位移达到 4px 拖拽阈值后才隐藏。
 - 跨容器移动使来源 group 只剩一个直接子节点时，命令原子替换并清理 group-only 状态；一次 undo/redo
   完整恢复或重放。
@@ -35,16 +37,16 @@ SVG/PNG 和宿主调用继续进入同一套确定性 ViewSpec 命令与历史�
 - `SourceData` / `ViewSpec` wire schema：未修改。
 - 公共 command wire：未修改。
 - `any`、`@ts-ignore`、`@ts-expect-error`：未引入。
-- correction commit：`42c0342`；remote Git、push、PR、publish、release 未执行。
+- correction commits：`42c0342`、`5f0dcb9`；remote Git、push、PR、publish、release 未执行。
 
 ## Quality
 
-- full unit/coverage：52 files，453/453 passed；总 lines 87.10%、branches 81.90%。
+- full unit/coverage：52 files，455/455 passed；总 lines 87.10%、branches 81.88%。
 - current Chromium/Firefox/WebKit：180/180；a11y：45/45。
 - previous Playwright release：180/180；WebKit 18.4：60/60。
 - React 18.3.1 / 19.2.7、publint、ATTW、ESM/CJS/types、tarball contract、build 全部通过。
 - 三层 review 无 unresolved Critical/High/Medium finding。
-- 聚合 `pnpm test:performance` clean exact-command pass：waterfall p95 69.6ms，categorical p95 96.3ms，
+- 聚合 `pnpm test:performance` clean exact-command pass：waterfall p95 101.4ms，categorical p95 75.4ms，
   30 samples、root commit delta 0，均低于 150ms 预算。
 
 ## Residual Risks

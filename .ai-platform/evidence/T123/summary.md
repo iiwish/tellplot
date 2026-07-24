@@ -34,6 +34,8 @@
 - package 固定 public access 和 npm 官方 registry，避免开发机全局 registry 污染发布目标。
 - 来源分组拖拽使用 G2 scene bounds 区分区域内排序与跨边界退出；首成员柱 click 保留分组动作，
   达到拖拽阈值后才隐藏。公共 API、schema 和命令合同保持不变。
+- 拖拽中的柱形与展开分组背景使用同一临时 ViewSpec 实时投影；pointer up 前只更新 G2 预览，
+  canonical ViewSpec、revision 和 undo 历史保持不变。
 
 ## TDD Receipt
 
@@ -41,22 +43,22 @@
   暴露 43 个含个人/临时路径的文件。
 - GREEN：package contract 4/4，release audit 306 files，Node 22.20.0 下完整
   `pnpm release:check` 通过。
-- REGRESSION：unit 453/453、current 180/180、previous 180/180、WebKit 18.4 60/60、a11y 45/45；
-  200-item waterfall/categorical p95 为 69.6ms / 96.3ms，预算 150ms。
-- REHEARSAL：隔离 285 个源码文件完成 frozen install、architecture、audit、typecheck、453 unit、
+- REGRESSION：unit 455/455、current 180/180、previous 180/180、WebKit 18.4 60/60、a11y 45/45；
+  200-item waterfall/categorical p95 为 101.4ms / 75.4ms，预算 150ms。
+- REHEARSAL：隔离 285 个源码文件完成 frozen install、architecture、audit、typecheck、455 unit、
   build 与 package。
 
 ## Package Evidence
 
 - Tarball: [tellplot-editor-1.0.0.tgz](artifacts/tellplot-editor-1.0.0.tgz)
 - Manifest: [tarball-manifest.json](tarball-manifest.json)
-- Size: 486233 bytes
-- SHA-256: `cdc9ec9469a41e549c99a60bf73261aff8c133838cfe7e982108f94b84b6abc7`
+- Size: 486637 bytes
+- SHA-256: `99124b1ec5dcd21d3233851ee7073d9f780b0af44f8b84f2385c8465418475f0`
 - Contents: 10 个 dist 文件、LICENSE、package.json 和 README，共 13 个文件。
 
 ## Source Evidence
 
-- 1.0 candidate commits: `bf8f007`、`90af6f2`、`42c0342`
+- 1.0 candidate commits: `bf8f007`、`90af6f2`、`42c0342`、`5f0dcb9`
 - Task patch: [diff.patch](diff.patch)
 - `diff.patch` 保留 G004 初始稳定化范围；后续发布门禁与分组交互 correction 由上述本地 commits
   和当前 evidence 记录。

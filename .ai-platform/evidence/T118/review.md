@@ -11,7 +11,7 @@
   cycle 和单步 undo/redo 均有不变量测试。
 - R1-SC-004：默认、关闭、透明度边界、label、嵌套和折叠祖先通过 config/spec/export/rendering tests。
 - R1-SC-005：unit/coverage、package、React、current/previous browser、a11y、export gates 通过；聚合
-  `pnpm test:performance` clean pass 为 waterfall 69.6ms、categorical 96.3ms，均低于 150ms 预算。
+  `pnpm test:performance` clean pass 为 waterfall 101.4ms、categorical 75.4ms，均低于 150ms 预算。
 
 Result: implementation PASS；delivery gate PASS；Critical/High/Medium code findings 0。
 
@@ -23,6 +23,9 @@ Result: implementation PASS；delivery gate PASS；Critical/High/Medium code fin
   之外的 mark 后，标准 collision target 重新接管。
 - 分组动作状态不再被 G2 冒泡的 plot pointerdown 提前清除；普通 click 保留动作，4px drag intent
   才清除，明确区分 click 与 drag。
+- chart interaction、命令校验与 group actions 始终读取 canonical ViewSpec；只有柱形投影和 G2
+  group region mark 读取临时 preview ViewSpec。拖拽过程因此实时反映未来分组范围，又不会提前增加
+  revision、写入受控状态或污染 undo/redo。
 - destination index 使用原有 `{ containerId, index }` contract，并在来源 group 替换后执行插入；没有新增
   public command 字段。
 - group region 从 canonical projection 的 leaf membership 推导；collapsed group 及被 collapsed ancestor
@@ -49,7 +52,7 @@ Result: PASS；actionable findings 0。
 
 ## QA Acceptance
 
-- 453 unit tests、180 current-browser tests、180 previous-browser tests、WebKit 18.4 60 tests 和
+- 455 unit tests、180 current-browser tests、180 previous-browser tests、WebKit 18.4 60 tests 和
   45 a11y tests 全绿。
 - manual desktop browser QA 观察到真实 G2 有界分组矩形、前景 label、单 group 的唯一取消分组动作，以及
   把“产品结构”拖入“增长驱动”后的 revision、层级和成功反馈；嵌套分组 `233` / `123` 标签均未被柱形
@@ -61,7 +64,7 @@ Result: PASS；actionable findings 0。
   光晕，保留独立前景 text mark、端点锚定和交互中立性。
 - collapsed ancestor export 泄露内部 group label 的 review finding 已修复并加入 unit/E2E regression。
 - mobile Inspector action replacement 的焦点边界 finding 已修复并加入 unit/E2E regression。
-- correction commit 为 `42c0342`；没有执行 remote Git、push、publish 或 release。
+- correction commits 为 `42c0342`、`5f0dcb9`；没有执行 remote Git、push、publish 或 release。
 
 Result: product QA PASS；performance delivery gate PASS；G002-R1 / T118 进入 `Needs_Review`。
 
