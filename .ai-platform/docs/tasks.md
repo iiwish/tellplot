@@ -169,8 +169,8 @@ G002 已由用户批准并以 T117 连续完成。发布包、文档、兼容性
 
 ## G002-R1 Execution
 
-G002-R1 已由用户批准并以 T118 连续完成。上下文选择、跨层移动、原子解散和展开分组区域 evidence
-完整；目标等待 G002 系列统一验收。权威目标图位于
+G002-R1 已由用户批准并以 T118 连续完成。上下文选择、区域边界退出、click/drag 动作区分、跨层移动、
+原子解散和展开分组区域 evidence 完整；目标等待 G002 系列统一验收。权威目标图位于
 `.ai-platform/specs/006-group-cross-level-experience/tasks.md`。
 
 ## G002-R2 Execution

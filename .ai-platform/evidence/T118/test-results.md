@@ -4,6 +4,9 @@
 
 | Phase | Scope | Result |
 | --- | --- | --- |
+| RED | 来源分组边界退出、click 保留动作、drag 隐藏动作 | unit/component 旧行为按预期失败 |
+| GREEN | waterfall/categorical axis、canvas 和 state correction slice | 67/67 passed |
+| BROWSER | 分组首柱 click 与跨边界退出真实 G2 流程 | Chromium/Firefox/WebKit 3/3 passed |
 | RED | contextual Inspector、inside resolver、cross-level move、atomic dissolve、group region config/spec | 新断言在旧行为上按预期失败 |
 | GREEN | 10 个聚焦 component/domain/render/export files | 77/77 passed |
 | GREEN | inside/cross-level 3-file slice | 22/22 passed |
@@ -32,14 +35,14 @@
 | `pnpm format:check` | passed |
 | `pnpm lint` | passed；0 warning |
 | `pnpm typecheck` | editor/playground strict TypeScript passed |
-| `pnpm test:unit` | 45 files；410/410 passed |
-| `pnpm test:coverage` | 410/410 passed；statements 86.03%、branches 80.92%、functions 88.58%、lines 86.18% |
+| `pnpm test:unit` | 52 files；453/453 passed |
+| `pnpm test:coverage` | 453/453 passed；statements 86.98%、branches 81.90%、functions 90.05%、lines 87.10% |
 | `pnpm build` | editor ESM/CJS/DTS/CSS 与 playground production build passed；既有 G2 chunk warning retained |
 | `pnpm test:package` | publint、ATTW、ESM、CJS、types、pack contract passed |
 | `pnpm test:react-matrix` | React 18.3.1 / 19.2.7；各 87,405 painted pixels；clean unmount |
-| `pnpm test:e2e` | current Chromium/Firefox/WebKit 132/132 passed |
-| `pnpm test:a11y` | Chromium/Firefox/WebKit 27/27 passed；无 serious/critical axe violation |
-| `mise exec node@22.20.0 -- pnpm test:browser-previous` | previous Chromium/Firefox/WebKit 132/132；WebKit 18.4 44/44 passed |
+| `pnpm test:e2e` | current Chromium/Firefox/WebKit 180/180 passed |
+| `pnpm test:a11y` | Chromium/Firefox/WebKit 45/45 passed；无 serious/critical axe violation |
+| `mise exec node@22.20.0 -- pnpm test:browser-previous` | previous Chromium/Firefox/WebKit 180/180；WebKit 18.4 60/60 passed |
 | strict artifact validator | feature/task strict validation passed；0 error / 0 warning |
 | `git diff --check` | passed |
 
@@ -48,6 +51,7 @@
 - task-only patch：`.ai-platform/evidence/T118/diff.patch`，4,141 lines，47 files。
 - SHA-256：`9eba21699fe47b4a2ddf13b22eeacf2f1aadef8dc48481788b6c188c2e22e5a6`。
 - `git apply --check --reverse` passed；外部 baseline 314-file manifest 复核通过。
+- 分组边界退出与 click/drag correction 由本地 commit `42c0342` 记录，并通过当前 1.0 完整门禁。
 - package manifests 与 lockfile 对 baseline 逐字节一致；T118 source 未引入 `any`、`@ts-ignore` 或
   `@ts-expect-error`。
 
@@ -62,8 +66,8 @@
 
 ## Performance
 
-150ms product budget、30 samples 和 assertion 未修改。2026-07-22 的聚合 exact command clean pass 为
-waterfall 79.6ms、categorical 117.6ms，root commit delta 均为 0。此前高系统负载诊断样本保留如下：
+150ms product budget、30 samples 和 assertion 未修改。2026-07-24 的聚合 exact command clean pass 为
+waterfall 69.6ms、categorical 96.3ms，root commit delta 均为 0。此前高系统负载诊断样本保留如下：
 
 | Run | Waterfall p95 | Categorical p95 | Root commit delta | Result |
 | --- | ---: | ---: | ---: | --- |
@@ -82,6 +86,9 @@ assertion，也没有修改性能测试或公共行为来规避门禁。
 
 - single item/group Inspector context、非法多选、ungroup：component + E2E passed。
 - outline real DnD into group、chart cross-container scene bounds、before/after/inside synchronized preview：passed。
+- 来源 group 的 G2 scene bounds 在 drag start 固化；边界内成员重排与边界外 group before/after 退出
+  分离；指针进入外部 mark 后标准碰撞重新接管，边界不会持续吸附。首成员柱 click 保留折叠/取消分组
+  动作，达到 4px drag intent 后隐藏。unit/component 与三浏览器真实 G2 回归 passed。
 - two-child dissolve、three-child retain、nested replacement、locked/segment/cycle、one-step undo/redo：passed。
 - default/disabled/opacity/label/nested/collapsed regions、bounded value extent 和 G2 `range → interval → text`
   mark order：passed。

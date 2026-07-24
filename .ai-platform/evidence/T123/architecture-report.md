@@ -7,7 +7,7 @@
 | Metric | Result |
 | --- | --- |
 | TypeScript / TSX source files | 48 |
-| Runtime import edges | 243 |
+| Runtime import edges | 245 |
 | Runtime cycles | 0 |
 | Public entry | `packages/editor/src/index.ts` |
 | Runtime exports | 11 |
@@ -40,7 +40,8 @@
 - `pnpm-lock.yaml` 与依赖集合保持不变。
 - editor package 固定 1.0.0 身份、public access 和 npm 官方 registry。
 - 发布聚合门禁覆盖全部稳定版阻断项，当前与旧版 Playwright 配置使用两个 worker 隔离 WebKit 长队列。
-- runtime source、schema、command、projection、interaction、G2 runtime 与 export implementation 未改变。
+- schema、command、projection、G2 runtime 与 export implementation 未改变；分组边界交互 correction
+  保持在既有 interactions/components 层内，没有新增公共出口或越层依赖。
 - source alias 只消除测试对预生成 `dist` 的隐式依赖。
 
 ## Conclusion

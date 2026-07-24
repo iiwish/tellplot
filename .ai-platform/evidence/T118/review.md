@@ -5,18 +5,24 @@
 - R1-SC-001：Inspector 按选择上下文显示动作；单 item/group 不再暴露创建分组错误，非法多选只约束
   创建动作。
 - R1-SC-002：outline、waterfall、column 和 bar 共享 before/after/inside resolver；真实 outline DnD、G2
-  scene bounds 和同步 preview 覆盖跨分组主流程。
+  scene bounds 和同步 preview 覆盖跨分组主流程。来源分组 scene bounds 独立于成员碰撞，越过区域边界
+  即退出分组，区域内部仍保持成员排序。
 - R1-SC-003：两成员来源 group 原子解散并清理 collapsed/annotation/emphasis；三成员、嵌套、锁定、segment、
   cycle 和单步 undo/redo 均有不变量测试。
 - R1-SC-004：默认、关闭、透明度边界、label、嵌套和折叠祖先通过 config/spec/export/rendering tests。
 - R1-SC-005：unit/coverage、package、React、current/previous browser、a11y、export gates 通过；聚合
-  `pnpm test:performance` clean pass 为 waterfall 79.6ms、categorical 117.6ms，均低于 150ms 预算。
+  `pnpm test:performance` clean pass 为 waterfall 69.6ms、categorical 96.3ms，均低于 150ms 预算。
 
 Result: implementation PASS；delivery gate PASS；Critical/High/Medium code findings 0。
 
 ## Bug And Code Quality
 
 - 移动命令只在跨 container 且来源 group 恰有两个直接子节点时解散；同 container 重排不受影响。
+- drag start 快照可见 mark 的 G2 bounds，并由 leaf membership 投影 direct-to-outer 来源分组边界；
+  resolver 选择指针实际跨越的最外层边界，不依赖 DOM 尺寸、固定间距或下一个外部柱；命中来源分组
+  之外的 mark 后，标准 collision target 重新接管。
+- 分组动作状态不再被 G2 冒泡的 plot pointerdown 提前清除；普通 click 保留动作，4px drag intent
+  才清除，明确区分 click 与 drag。
 - destination index 使用原有 `{ containerId, index }` contract，并在来源 group 替换后执行插入；没有新增
   public command 字段。
 - group region 从 canonical projection 的 leaf membership 推导；collapsed group 及被 collapsed ancestor
@@ -43,7 +49,8 @@ Result: PASS；actionable findings 0。
 
 ## QA Acceptance
 
-- 410 unit tests、132 current-browser tests、176 previous-browser tests 和 27 a11y tests 全绿。
+- 453 unit tests、180 current-browser tests、180 previous-browser tests、WebKit 18.4 60 tests 和
+  45 a11y tests 全绿。
 - manual desktop browser QA 观察到真实 G2 有界分组矩形、前景 label、单 group 的唯一取消分组动作，以及
   把“产品结构”拖入“增长驱动”后的 revision、层级和成功反馈；嵌套分组 `233` / `123` 标签均未被柱形
   遮挡。
@@ -54,7 +61,7 @@ Result: PASS；actionable findings 0。
   光晕，保留独立前景 text mark、端点锚定和交互中立性。
 - collapsed ancestor export 泄露内部 group label 的 review finding 已修复并加入 unit/E2E regression。
 - mobile Inspector action replacement 的焦点边界 finding 已修复并加入 unit/E2E regression。
-- 没有执行 stage、commit、remote Git、publish 或 release。
+- correction commit 为 `42c0342`；没有执行 remote Git、push、publish 或 release。
 
 Result: product QA PASS；performance delivery gate PASS；G002-R1 / T118 进入 `Needs_Review`。
 

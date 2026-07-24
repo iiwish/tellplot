@@ -32,6 +32,8 @@
 - 把复杂命令一致性 E2E 改为读取实时同步的公开 ViewSpec 文件；下载能力继续由独立 export E2E 覆盖。
 - 当前与旧版浏览器矩阵使用双 worker，避免 WebKit 长队列进程资源耗尽。
 - package 固定 public access 和 npm 官方 registry，避免开发机全局 registry 污染发布目标。
+- 来源分组拖拽使用 G2 scene bounds 区分区域内排序与跨边界退出；首成员柱 click 保留分组动作，
+  达到拖拽阈值后才隐藏。公共 API、schema 和命令合同保持不变。
 
 ## TDD Receipt
 
@@ -39,30 +41,32 @@
   暴露 43 个含个人/临时路径的文件。
 - GREEN：package contract 4/4，release audit 306 files，Node 22.20.0 下完整
   `pnpm release:check` 通过。
-- REGRESSION：unit 448/448、current 177/177、previous 177/177、WebKit 18.4 59/59、a11y 45/45；
-  200-item waterfall/categorical p95 为 69.4ms / 69.6ms，预算 150ms。
-- REHEARSAL：隔离 285 个源码文件完成 frozen install、architecture、audit、typecheck、448 unit、
+- REGRESSION：unit 453/453、current 180/180、previous 180/180、WebKit 18.4 60/60、a11y 45/45；
+  200-item waterfall/categorical p95 为 69.6ms / 96.3ms，预算 150ms。
+- REHEARSAL：隔离 285 个源码文件完成 frozen install、architecture、audit、typecheck、453 unit、
   build 与 package。
 
 ## Package Evidence
 
 - Tarball: [tellplot-editor-1.0.0.tgz](artifacts/tellplot-editor-1.0.0.tgz)
 - Manifest: [tarball-manifest.json](tarball-manifest.json)
-- Size: 485037 bytes
-- SHA-256: `359ea2910a881c8f1f09c211b0173617be6a85337ccb699a11d76483100dd7c9`
+- Size: 486233 bytes
+- SHA-256: `cdc9ec9469a41e549c99a60bf73261aff8c133838cfe7e982108f94b84b6abc7`
 - Contents: 10 个 dist 文件、LICENSE、package.json 和 README，共 13 个文件。
 
 ## Source Evidence
 
-- 1.0 candidate commit: `bf8f007`
+- 1.0 candidate commits: `bf8f007`、`90af6f2`、`42c0342`
 - Task patch: [diff.patch](diff.patch)
-- 发布复核修复与规范化后的 evidence 位于当前本地分支提交。
+- `diff.patch` 保留 G004 初始稳定化范围；后续发布门禁与分组交互 correction 由上述本地 commits
+  和当前 evidence 记录。
 - patch 与审计排除 `.git`、node_modules、dist、coverage、Playwright output 和测试运行产物。
 
 ## Delivery Boundary
 
 lockfile 与依赖集合保持不变；editor package 固定 1.0.0、public access 和 npm 官方 registry。
-没有修改 domain、schema、commands、projection、interactions、G2 runtime 或 export implementation。
+没有修改 domain、schema、commands、projection、G2 runtime 或 export implementation。交互 correction
+只在既有 chart pointer/session 与 move target 合同内完成。
 没有执行 push、PR、merge、visibility、deploy、DNS、tag、GitHub Release 或 npm publish。
 
 G004 / T123 进入 `Needs_Review`。公开发布仍属于 G005，必须在目标验收后逐类取得远程授权。

@@ -19,8 +19,8 @@
 6. `pnpm build`
 7. `pnpm test:package`
 
-最终结果为 architecture 48 files / 243 edges / 0 cycles，isolated release audit 191 files，
-unit 52 files / 448 tests，package
+最终结果为 architecture 48 files / 245 edges / 0 cycles，isolated release audit 191 files，
+unit 52 files / 453 tests，package
 `@tellplot/editor@1.0.0` 的 publint、ATTW、ESM、CJS、types 和 tarball contract 全部通过。
 
 ## Finding Closed During Rehearsal

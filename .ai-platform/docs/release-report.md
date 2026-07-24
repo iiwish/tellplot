@@ -20,6 +20,10 @@ TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 已验收；G002�
 `tellplot.config.json` 和 `tellplot.view.json`，合法 JSON 经过公共校验后更新图形，右侧确定性命令只反向
 更新视图文件；非法草稿不改变最后一次合法图表。
 
+展开分组的图表拖拽以 G2 scene bounds 为准：区域内部命中负责成员排序，越过来源分组边界的空白间隙
+负责退出分组，继续命中外部柱后恢复标准目标碰撞。首成员柱的折叠与取消分组动作在普通 click 后保持
+可见，达到拖拽阈值后隐藏。
+
 标签配置支持字符串显示策略简写和对象式 value/group 配置。对象式配置提供显示、内外位置、有限偏移、
 颜色、字号、字重和可选背景，并由同一 G2 spec 用于屏幕、SVG 与 PNG。移动端 `auto` 主动控制密度，
 `always` 保留显式覆盖；formatter、逐项 callback、无效碰撞开关和 raw G2 spec 不进入公共合同。
@@ -58,20 +62,20 @@ plugin registry。
 - Node 22.20.0 下的 `pnpm release:check` 完整通过；聚合门禁覆盖 architecture、release audit、
   format、lint、typecheck、coverage、build、package、React matrix、current E2E、a11y、performance、
   previous-browser matrix 和 isolated-source rehearsal。
-- unit/coverage：52 files / 448 tests；statements 85.68%、branches 80.41%、functions 88.16%、
-  lines 85.83%，受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
-- current Chromium/Firefox/WebKit：177/177；accessibility：45/45。
-- previous Playwright release：177/177；WebKit 18.4：59/59。
+- unit/coverage：52 files / 453 tests；statements 86.98%、branches 81.90%、functions 90.05%、
+  lines 87.10%，受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+- current Chromium/Firefox/WebKit：180/180；accessibility：45/45。
+- previous Playwright release：180/180；WebKit 18.4：60/60。
 - React 18.3.1 / 19.2.7、ESM/CJS/types、compile-checked quickstart 与 package checks 通过。
-- 200-item performance：waterfall p95 69.4ms；categorical p95 69.6ms；预算 150ms。
-- architecture audit：48 个源码文件、243 条 import edge、0 个 runtime cycle；release audit：
+- 200-item performance：waterfall p95 69.6ms；categorical p95 96.3ms；预算 150ms。
+- architecture audit：48 个源码文件、245 条 import edge、0 个 runtime cycle；release audit：
   11 个 runtime export、19 个公开文件、306 个源码与交付记录文件。
-- 隔离源码复演：285 个源码文件，frozen install、architecture、audit、typecheck、448 个 unit、
+- 隔离源码复演：285 个源码文件，frozen install、architecture、audit、typecheck、453 个 unit、
   build 与 package 全部通过。
 - 官方 npm registry 生产依赖审计无已知漏洞；package `publishConfig` 固定 public access 与
   `https://registry.npmjs.org/`。
 - tarball 为 `@tellplot/editor@1.0.0`，仅包含 13 个 dist/metadata/README/LICENSE 文件；
-  485037 bytes，SHA-256 为 `359ea2910a881c8f1f09c211b0173617be6a85337ccb699a11d76483100dd7c9`。
+  486233 bytes，SHA-256 为 `cdc9ec9469a41e549c99a60bf73261aff8c133838cfe7e982108f94b84b6abc7`。
 - strict artifact validator、format、lint、typecheck、build、release audit 和 diff checks 通过。
 
 详细结果和残余风险见 `.ai-platform/evidence/T117/`、`.ai-platform/evidence/T118/`、

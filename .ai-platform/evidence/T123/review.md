@@ -20,9 +20,9 @@
 
 - 1.0 runtime export 固定为 11 个，声明文件不泄漏 G2 或内部 adapter 类型。
 - `ChartEditor + ChartConfig` 与独立 `ViewSpec` 继续是唯一公共普通/高级状态模型。
-- AST import graph 证明 48 个源码文件、243 条 runtime edge 中没有 cycle 或新增越层依赖。
-- G004 复核没有修改 dependency、lockfile、schema、command、projection、interaction、runtime 或
-  export behavior。
+- AST import graph 证明 48 个源码文件、245 条 runtime edge 中没有 cycle 或新增越层依赖。
+- 当前候选没有修改 dependency、lockfile、schema、command、projection、runtime 或 export behavior；
+  分组交互 correction 保持在既有 interaction/component ownership 内。
 - versioning、deprecation、support、security、contribution 和 migration 文档形成一致的 1.x 承诺。
 
 ## QA And Release Review
@@ -32,12 +32,12 @@
 - M-001：`release:check` 只覆盖部分稳定门禁，可能形成假绿。当前聚合门禁覆盖 coverage、React、
   current/previous browser、a11y、performance 和 rehearsal 等全部阻断项。
 - M-002：单 worker WebKit 长队列会在完整矩阵中耗尽进程资源。当前与旧版 Playwright 矩阵使用两个
-  worker 隔离负载；current 177/177、previous 177/177、WebKit 18.4 59/59 通过。
+  worker 隔离负载；current 180/180、previous 180/180、WebKit 18.4 60/60 通过。
 - M-003：package 未固定 npm registry，开发机的镜像配置可能把 publish 指向错误端点。当前
   `publishConfig` 固定 public access 和 npm 官方 registry，并由 package contract 锁定。
 - M-004：发布审计没有覆盖 `.ai-platform`，历史 evidence 含个人和临时绝对路径。当前审计覆盖该目录，
   306 个文件通过，仓库内不再保留这些绝对路径。
-- tarball 13 个文件、485037 bytes，SHA-256 与 manifest 已记录。
+- tarball 13 个文件、486233 bytes，SHA-256 与 manifest 已记录。
 
 ## Residual Low Risks
 
