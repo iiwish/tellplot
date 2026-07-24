@@ -26,7 +26,7 @@
 | `pnpm build` | 0 | editor ESM/CJS/DTS/CSS 与 playground production build 通过。 |
 | `pnpm lint` | 0 | ESLint 0 warning。 |
 | `pnpm format:check` | 0 | 全仓 Prettier 通过。 |
-| `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T113 --strict` | 0 | 最终 strict artifact validation 通过。 |
+| `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T113 --strict` | 0 | 最终 strict artifact validation 通过。 |
 | `git diff --check` | 0 | 无 whitespace error。 |
 
 ## Public Boundary

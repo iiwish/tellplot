@@ -8,6 +8,7 @@ import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './rele
 const findings = [];
 const packagePath = resolve(repositoryRoot, 'packages/editor/package.json');
 const packageManifest = JSON.parse(readFileSync(packagePath, 'utf8'));
+const publishConfig = packageManifest.publishConfig ?? {};
 const requiredFiles = [
   'README.md',
   'CHANGELOG.md',
@@ -35,6 +36,12 @@ if (packageManifest.version !== '1.0.0') {
 }
 if (!/^\d+\.\d+\.\d+$/u.test(String(packageManifest.version))) {
   findings.push('package version must not contain a prerelease suffix');
+}
+if (publishConfig.access !== 'public') {
+  findings.push('package publishConfig.access must be public');
+}
+if (publishConfig.registry !== 'https://registry.npmjs.org/') {
+  findings.push('package publishConfig.registry must use the official npm registry');
 }
 for (const path of requiredFiles) {
   if (!existsSync(resolve(repositoryRoot, path))) {
@@ -113,8 +120,13 @@ for (const markdownPath of markdownFiles) {
 const auditRoots = ['apps', 'docs', 'packages/editor/src', 'scripts', '.github'].map(path =>
   resolve(repositoryRoot, path),
 );
+const governanceAuditExtensions = new Set(['.json', '.md', '.patch', '.yaml', '.yml']);
+const governanceAuditFiles = walkFiles(resolve(repositoryRoot, '.ai-platform')).filter(path =>
+  governanceAuditExtensions.has(extname(path)),
+);
 const auditFiles = [
   ...auditRoots.flatMap(path => walkFiles(path, { excludedNames: ['dist'] })),
+  ...governanceAuditFiles,
   ...requiredFiles.slice(0, 6).map(path => resolve(repositoryRoot, path)),
   resolve(repositoryRoot, 'package.json'),
   packagePath,
@@ -125,6 +137,7 @@ const sensitivePatterns = [
   { name: 'npm token', pattern: /\bnpm_[A-Za-z0-9]{20,}\b/u },
   { name: 'AWS access key', pattern: /\bAKIA[0-9A-Z]{16}\b/u },
   { name: 'personal absolute path', pattern: /(?:\/Users\/|\/home\/|[A-Z]:\\Users\\)/u },
+  { name: 'temporary absolute path', pattern: /(?:\/private)?\/var\/folders\//u },
 ];
 for (const path of new Set(auditFiles)) {
   const text = readFileSync(path, 'utf8');

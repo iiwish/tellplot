@@ -307,8 +307,8 @@ validation_loop:
     - pnpm test:a11y
     - pnpm test:performance
     - pnpm test:browser-previous
-    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T116 --strict
-    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --strict
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T116 --strict
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --strict
     - git diff --check
   expected_signals:
     - Rendering runtime tests prove queue, stale work, animation, events, error callbacks and cleanup on every exit path.

@@ -1525,7 +1525,7 @@ index 0000000..2ee40a8
 +    - "pnpm test:package"
 +    - "pnpm exec playwright test e2e/export.spec.ts e2e/accessibility.spec.ts --project=chromium"
 +    - "git diff --check"
-+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T107"
++    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T107"
 +  expected_signals:
 +    - "RED fails for missing persistence/export/handle/summary behavior rather than syntax or harness errors."
 +    - "Round-trip preserves every ViewSpec field byte-for-byte after normalization; conflict fixtures return stable code/path and leave the editor unchanged."

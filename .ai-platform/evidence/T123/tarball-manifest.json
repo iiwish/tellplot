@@ -2,6 +2,8 @@
   "name": "@tellplot/editor",
   "version": "1.0.0",
   "filename": "tellplot-editor-1.0.0.tgz",
+  "sizeBytes": 485037,
+  "sha256": "359ea2910a881c8f1f09c211b0173617be6a85337ccb699a11d76483100dd7c9",
   "files": [
     {
       "path": "dist/index.cjs"

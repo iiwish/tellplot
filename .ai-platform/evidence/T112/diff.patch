@@ -35,7 +35,7 @@ index f84e49d..6deceb5 100644
 +- Deliverables: Confirmed feature artifacts、Completed checklist/analysis、T112 execution packet
 +- Acceptance criteria: 用户明确批准全部 004 artifacts；analysis 无 Critical/High finding；T112 packet 自包含。
 +- Definition of Done: 用户于 2026-07-19 明确批准；T111 Accepted；T112 Ready。
-+- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
++- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
 +- TDD plan: 不适用；本任务只审批技术 artifact。
 +- Packet path: 不适用；审批任务不生成实现 packet。
 +- Evidence required: 用户审批记录、validator、analysis、文档 diff。
@@ -2055,7 +2055,7 @@ index 0000000..be735da
 +    - pnpm test:package
 +    - pnpm lint
 +    - pnpm format:check
-+    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T112
++    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T112
 +    - git diff --check
 +  expected_signals:
 +    - All legacy waterfall tests pass without updated behavioral expectations.
@@ -2346,7 +2346,7 @@ index 0000000..a6a0b61
 +- `pnpm test:a11y`
 +- `pnpm test:performance`
 +- `pnpm test:browser-previous`
-+- `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`
++- `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`
 +- `git diff --check`
 +
 +Coverage 必须为 `domain/**`、`waterfall/**`、新增 `categorical/**` 和抽取后的 `rendering/**` 建立不低于
@@ -2720,7 +2720,7 @@ index 0000000..6a496a9
 +  不含 Critical/High finding。
 +- Definition of Done: T111 状态为 `Accepted`；feature artifacts 为 `Confirmed`；T112 packet 自包含且 T112
 +  状态为 `Ready`。
-+- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
++- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
 +- TDD plan: 不适用；本任务只验证自然语言需求、技术决策和工作图，不实现行为。
 +- Packet path: 不适用；审批任务不生成实现 execution packet。
 +- Evidence required: 用户明确审批记录、artifact validator、placeholder audit、cross-artifact analysis 和文档 diff。
@@ -2895,7 +2895,7 @@ index 0000000..6a496a9
 +- Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；
 +  `pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:e2e`；`pnpm test:a11y`；
 +  `pnpm test:performance`；`pnpm test:browser-previous`；
-+  `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
++  `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
 +- TDD plan: RED 增加 runtime cleanup、screen/export parity 和 chart dispatch characterization；GREEN 逐块移动
 +  最小重复并保持所有 tests green；REFACTOR 删除只为对称存在的抽象，更新 canonical architecture 文档。
 +- Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml`

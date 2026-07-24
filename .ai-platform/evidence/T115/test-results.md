@@ -34,7 +34,7 @@ Coverage summary：statements 85.29%（3433/4025）、branches 79.88%（2672/334
 | `pnpm test:e2e` | 0 | Chromium/Firefox/WebKit 共 132 tests passed，1.8m。 |
 | `pnpm test:a11y` | 0 | 三引擎共 27 tests passed；axe 无 serious/critical violation。 |
 | `pnpm test:performance` | 0 | 2 tests passed；waterfall p95 66.10ms，categorical p95 65.50ms，预算 150ms，均 30 samples，same-target root commit delta 0。 |
-| `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T115 --strict` | 0 | strict task artifact validation 通过。 |
+| `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T115 --strict` | 0 | strict task artifact validation 通过。 |
 | 同一 validator 的 feature-level `--strict` | 0 | 004 全 feature artifacts 通过。 |
 | `git apply --reverse --check .ai-platform/evidence/T115/diff.patch` | 0 | task-only patch 可从当前 T115 worktree 反向应用。 |
 | `git diff --check` | 0 | 无 whitespace error。 |

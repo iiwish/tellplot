@@ -2,7 +2,7 @@
 
 ## Source
 
-- Working tree: `/Users/iiwish/self/g2touch`
+- Working tree: `<workspace>/g2touch`
 - Source HEAD: `af3aec4f5d2b74453a56cb413777a1dd93b5daf6`
 - Remote main: `af3aec4f5d2b74453a56cb413777a1dd93b5daf6`
 - Remote dev: `59739ed6ba5695b8edf54c2989d19105295a1c6c`
@@ -10,13 +10,13 @@
 
 ## Safety Copy
 
-- Bare mirror: `/Users/iiwish/self/g2touch-legacy.git`
+- Bare mirror: `<workspace>/g2touch-legacy.git`
 - `git fsck --full`: exit 0
 - Mirror heads match remote `main` and `dev`.
 
 ## Target
 
-- Working tree: `/Users/iiwish/self/tellplot`
+- Working tree: `<workspace>/tellplot`
 - Git history: independent repository initialized with `main` and no inherited commits
 - Root commit: `fd31094c09f0989b3fb6f05a673ff77c25bdb534`
 - Validated implementation commit: `6bbce676e68736e78b645eb6a246e7fc64393cd1`

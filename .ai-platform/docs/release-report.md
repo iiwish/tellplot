@@ -4,7 +4,7 @@
 
 - Version: 1.0.0
 - Status: Not_Released
-- Last updated: 2026-07-23
+- Last updated: 2026-07-24
 - Working branch: `codex/t112-categorical-data-contract`
 
 ## Current State
@@ -55,23 +55,23 @@ plugin registry。
 
 ## Validation Evidence
 
-- 标签配置扩展 fresh unit：52 files / 447 tests；format、lint、typecheck、build、package 和 React
-  18/19 matrix 通过。
-- 标签/演示相关 Chromium live-code、rendering、export、showcase 20/20；a11y 三浏览器 45/45。
-- 标签扩展后 200-item performance：waterfall p95 84ms；categorical p95 111.6ms；预算 150ms。
-
-- fresh unit/coverage：436/436；statements 85.57%、branches 80.08%、functions 88.08%、lines 85.72%，
-  受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+- Node 22.20.0 下的 `pnpm release:check` 完整通过；聚合门禁覆盖 architecture、release audit、
+  format、lint、typecheck、coverage、build、package、React matrix、current E2E、a11y、performance、
+  previous-browser matrix 和 isolated-source rehearsal。
+- unit/coverage：52 files / 448 tests；statements 85.68%、branches 80.41%、functions 88.16%、
+  lines 85.83%，受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
 - current Chromium/Firefox/WebKit：177/177；accessibility：45/45。
-- previous browser release：177/177；WebKit 18.4：59/59。
+- previous Playwright release：177/177；WebKit 18.4：59/59。
 - React 18.3.1 / 19.2.7、ESM/CJS/types、compile-checked quickstart 与 package checks 通过。
-- 200-item fresh performance：waterfall p95 67.3ms；categorical p95 66.6ms；预算 150ms。
-- architecture audit：47 个源码文件、240 条 import edge、0 个 runtime cycle；release audit：
-  11 个 runtime export、19 个公开文件。
-- 隔离源码复演：280 个源码文件，frozen install、architecture、audit、typecheck、436 个 unit、
+- 200-item performance：waterfall p95 69.4ms；categorical p95 69.6ms；预算 150ms。
+- architecture audit：48 个源码文件、243 条 import edge、0 个 runtime cycle；release audit：
+  11 个 runtime export、19 个公开文件、306 个源码与交付记录文件。
+- 隔离源码复演：285 个源码文件，frozen install、architecture、audit、typecheck、448 个 unit、
   build 与 package 全部通过。
+- 官方 npm registry 生产依赖审计无已知漏洞；package `publishConfig` 固定 public access 与
+  `https://registry.npmjs.org/`。
 - tarball 为 `@tellplot/editor@1.0.0`，仅包含 13 个 dist/metadata/README/LICENSE 文件；
-  SHA-256 为 `ccc4b112015fe5184727d1346b8608d545e6205a87f271dae115c3e76985e437`。
+  485037 bytes，SHA-256 为 `359ea2910a881c8f1f09c211b0173617be6a85337ccb699a11d76483100dd7c9`。
 - strict artifact validator、format、lint、typecheck、build、release audit 和 diff checks 通过。
 
 详细结果和残余风险见 `.ai-platform/evidence/T117/`、`.ai-platform/evidence/T118/`、
@@ -79,13 +79,15 @@ plugin registry。
 
 ## Known Limitations
 
-- 当前 T112-T122 工作仍位于未提交的 working branch；stage、commit、push、PR 和 merge 未获授权。
+- 1.0 候选与发布复核修复位于本地工作分支；没有 push、PR 或 merge。
 - `@tellplot/editor@1.0.0` 只完成本地稳定候选验证，npm publish、GitHub Release 和正式部署未执行。
 - playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
 - 200-item performance 继续保留 150ms 阻断预算和真实浏览器监测，不弱化预算。
 - GitHub 私有仓库计划无法强制 branch protection/rulesets；服务端 required checks 仍受外部计划限制。
 - 当前未包含生产网站部署；未来 history URL 托管需要配置 SPA fallback。
 - 网站文档是可扫描入口；生产托管、SPA fallback 和公开链接验证归入 G005。
+- npm 官方 registry 发布身份尚未授权，仓库公开、域名、GitHub Release 与 npm publish 仍属于
+  G005 的独立远程闸门。
 
 ## Next Gate
 

@@ -67,7 +67,8 @@
     "react-dom": "19.2.7"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@antv/g-svg": "2.1.1",

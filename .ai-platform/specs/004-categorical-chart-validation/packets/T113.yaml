@@ -193,7 +193,7 @@ validation_loop:
     - pnpm build
     - pnpm lint
     - pnpm format:check
-    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T113
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T113
     - git diff --check
   expected_signals:
     - Empty, single, positive, negative, zero, duplicate-label and nested collapsed/expanded projections are deterministic.

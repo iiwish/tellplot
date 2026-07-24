@@ -229,7 +229,7 @@ selection、outline、inspector、toolbar、feedback、history 和 export orches
 - `pnpm test:a11y`
 - `pnpm test:performance`
 - `pnpm test:browser-previous`
-- `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`
+- `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`
 - `git diff --check`
 
 Coverage 必须为 `domain/**`、`waterfall/**`、新增 `categorical/**` 和抽取后的 `rendering/**` 建立不低于

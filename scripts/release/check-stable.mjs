@@ -6,9 +6,15 @@ const gates = [
   ['pnpm', ['format:check']],
   ['pnpm', ['lint']],
   ['pnpm', ['typecheck']],
-  ['pnpm', ['test:unit']],
+  ['pnpm', ['test:coverage']],
   ['pnpm', ['build']],
   ['pnpm', ['test:package']],
+  ['pnpm', ['test:react-matrix']],
+  ['pnpm', ['test:e2e']],
+  ['pnpm', ['test:a11y']],
+  ['pnpm', ['test:performance']],
+  ['pnpm', ['test:browser-previous']],
+  ['pnpm', ['release:rehearse']],
 ];
 
 for (const [command, args] of gates) {

@@ -485,7 +485,7 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +  - pnpm test:a11y
 +  - pnpm test:performance
 +  - pnpm test:browser-previous
-+  - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 010-stable-v1-release --task-id T123 --strict
++  - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 010-stable-v1-release --task-id T123 --strict
 +  - git diff --check
 +
 +validation_loop:

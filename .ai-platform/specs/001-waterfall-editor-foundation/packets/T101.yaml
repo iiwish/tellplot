@@ -100,7 +100,7 @@ validation_loop:
     - "pnpm build"
     - "pnpm test:package"
     - "git diff --check"
-    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T101"
+    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T101"
   expected_signals:
     - "All commands exit 0 after GREEN."
     - "dist contains ESM and CJS runtime output with format-matched .d.ts and .d.cts declarations."

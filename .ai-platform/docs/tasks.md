@@ -4,7 +4,7 @@
 
 - Version: 0.32.0
 - Status: Active
-- Last updated: 2026-07-23
+- Last updated: 2026-07-24
 - Scope: T101-T116 已验收；G002 系列与 G004 1.0.0 本地稳定版候选实现完成并等待验收
 
 ## Goal-Level Delivery
@@ -43,7 +43,7 @@
 - Deliverables: 经用户批准的产品设计 SSOT 与项目章程；明确的 `OQ-001` 至 `OQ-004` 结论
 - Acceptance criteria: 用户明确批准产品定位、Phase 1A/1B 边界及项目原则；所有阻断问题有确定答案。
 - Definition of Done: 产品设计与项目章程状态为 `Confirmed`，技术决策进入审批。
-- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root .`；`git diff --check`
+- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root .`；`git diff --check`
 - TDD plan: 不适用；当前任务不实现运行时代码。
 - Packet path: 不适用；产品审批任务不生成实现执行包。
 - Evidence required: 用户明确审批记录、artifact validator 通过、`git diff --check` 通过。
@@ -63,7 +63,7 @@
 - Deliverables: `001-waterfall-editor-foundation` 下的 spec、plan、tasks、design contract、data model、contracts、research 与 analysis
 - Acceptance criteria: 用户明确批准技术决策和 feature task graph；analysis 不含 Critical 或 High finding。
 - Definition of Done: feature artifacts 状态为 `Confirmed`，首个实现任务转为 `Ready` 并生成执行包。
-- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation`；`git diff --check`
+- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation`；`git diff --check`
 - TDD plan: 不适用；当前任务生成和审核技术 artifact，不实现运行时代码。
 - Packet path: 不适用；审批任务不生成实现执行包。
 - Evidence required: 用户审批记录、validator 通过、analysis 结论、文档 diff summary。
@@ -142,7 +142,7 @@
 - Deliverables: Confirmed feature artifacts、Completed checklist/analysis、T112 execution packet
 - Acceptance criteria: 用户明确批准全部 004 artifacts；analysis 无 Critical/High finding；T112 packet 自包含。
 - Definition of Done: 用户于 2026-07-19 明确批准；T111 Accepted；T112 Ready。
-- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
+- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
 - TDD plan: 不适用；本任务只审批技术 artifact。
 - Packet path: 不适用；审批任务不生成实现 packet。
 - Evidence required: 用户审批记录、validator、analysis、文档 diff。
@@ -189,8 +189,10 @@ G002-R3 已由用户于 2026-07-23 批准 breaking public API 和连续执行，
 ## G004 Execution
 
 G004 已由用户于 2026-07-23 批准，内部以 T123 连续完成 `@tellplot/editor@1.0.0` 本地稳定候选、
-兼容政策、开源资料、架构/发布门禁、隔离源码复演和完整浏览器矩阵，状态为 `Needs_Review`。权威目标图与
-交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和 `.ai-platform/evidence/T123/`。
+兼容政策、开源资料、完整发布门禁、隔离源码复演和当前/旧版浏览器矩阵。2026-07-24 发布复核关闭了
+WebKit 长队列资源耗尽、不完整聚合门禁、npm registry 漂移和内部交付记录个人路径泄漏，状态保持
+`Needs_Review`。权威目标图与交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和
+`.ai-platform/evidence/T123/`。
 
 原 G004 Beta 草案与 T120/T121 不再是当前执行入口。公开 Git、仓库可见性、生产网站、DNS、tag、
 GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到 G002/G004 目标验收并取得独立远程授权。

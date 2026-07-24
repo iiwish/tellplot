@@ -56,7 +56,7 @@ axis-neutral interaction primitives，二者不得修改同一文件。
   不含 Critical/High finding。
 - Definition of Done: T111 状态为 `Accepted`；feature artifacts 为 `Confirmed`；T112 packet 自包含且 T112
   状态为 `Ready`。
-- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
+- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
 - TDD plan: 不适用；本任务只验证自然语言需求、技术决策和工作图，不实现行为。
 - Packet path: 不适用；审批任务不生成实现 execution packet。
 - Evidence required: 用户明确审批记录、artifact validator、placeholder audit、cross-artifact analysis 和文档 diff。
@@ -131,7 +131,7 @@ axis-neutral interaction primitives，二者不得修改同一文件。
   sourceIds 正确；G2 spec 只改变方向相关编码；无 raw G2 public export；waterfall spec tests 无回归。
 - Definition of Done: RED/GREEN、categorical coverage 四项不低于 95%、type/lint/build 通过、projection/spec
   review 无 blocking finding、evidence 完整，状态进入 `Needs_Review`。
-- Validation commands: `pnpm exec vitest run packages/editor/tests/categorical packages/editor/tests/export/categorical-chart-spec.test.ts packages/editor/tests/export/chart-spec.test.ts`；`pnpm test:coverage`；`pnpm typecheck`；`pnpm lint`；`pnpm build`；`pnpm format:check`；`python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T113`；`git diff --check`
+- Validation commands: `pnpm exec vitest run packages/editor/tests/categorical packages/editor/tests/export/categorical-chart-spec.test.ts packages/editor/tests/export/chart-spec.test.ts`；`pnpm test:coverage`；`pnpm typecheck`；`pnpm lint`；`pnpm build`；`pnpm format:check`；`python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T113`；`git diff --check`
 - TDD plan: RED 先覆盖投影不变量和两种 encode；GREEN 实现独立 categorical projection/spec；REFACTOR 只复用
   已存在的纯金额格式/appearance 函数，不移动 waterfall runtime。
 - Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T113.yaml`
@@ -166,7 +166,7 @@ axis-neutral interaction primitives，二者不得修改同一文件。
   logical target；value-axis movement 不改变 target；不读取固定 bar width/row height；结构化失败不抛异常。
 - Definition of Done: RED/GREEN、interaction tests/coverage 通过、type/lint 通过、G2 event boundary review 无
   blocking finding、evidence 完整，状态进入 `Needs_Review`。
-- Validation commands: `pnpm exec vitest run packages/editor/tests/components/chartPointer.test.ts packages/editor/tests/components/categoryAxis.test.ts packages/editor/tests/components/group-actions.test.ts`；`pnpm test:unit`；`pnpm test:coverage`；`pnpm typecheck`；`pnpm lint`；`pnpm format:check`；`python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T114`；`git diff --check`
+- Validation commands: `pnpm exec vitest run packages/editor/tests/components/chartPointer.test.ts packages/editor/tests/components/categoryAxis.test.ts packages/editor/tests/components/group-actions.test.ts`；`pnpm test:unit`；`pnpm test:coverage`；`pnpm typecheck`；`pnpm lint`；`pnpm format:check`；`python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T114`；`git diff --check`
 - TDD plan: RED 先固定 Y-axis 和 X regression；GREEN 实现最小 coordinate adapter；REFACTOR 在 parity green 后
   用 category-axis 内核替代 horizontal-only 私有重复，保留兼容函数直到 T115 集成。
 - Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T114.yaml`
@@ -250,7 +250,7 @@ axis-neutral interaction primitives，二者不得修改同一文件。
 - Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:coverage`；
   `pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:e2e`；`pnpm test:a11y`；
   `pnpm test:performance`；`pnpm test:browser-previous`；
-  `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
+  `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
 - TDD plan: RED 增加 runtime cleanup、screen/export parity 和 chart dispatch characterization；GREEN 逐块移动
   最小重复并保持所有 tests green；REFACTOR 删除只为对称存在的抽象，更新 canonical architecture 文档。
 - Packet path: `.ai-platform/specs/004-categorical-chart-validation/packets/T116.yaml`

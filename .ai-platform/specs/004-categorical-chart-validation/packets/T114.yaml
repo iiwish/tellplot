@@ -167,7 +167,7 @@ validation_loop:
     - pnpm typecheck
     - pnpm lint
     - pnpm format:check
-    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T114
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T114
     - git diff --check
   expected_signals:
     - Scene min/center/max is derived only from G2 getBounds for both axes; invalid and hostile inputs never throw.

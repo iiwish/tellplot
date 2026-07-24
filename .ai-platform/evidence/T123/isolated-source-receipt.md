@@ -4,9 +4,9 @@
 
 - Result: `passed`
 - Version: `1.0.0`
-- Isolated root:
-  `/var/folders/my/cfl1vvhj0jgdz48pmvgc27lw0000gn/T/tellplot-1.0.0-rehearsal-Rj8Gaa`
-- Source files copied: 280
+- Runtime: Node 22.20.0 / pnpm 11.1.3
+- Isolated root: `<temporary-directory>/tellplot-1.0.0-rehearsal-*`
+- Source files copied: 285
 - Excluded: `.git`、node_modules、dist、coverage、Playwright output、test-results 和 evidence
 
 ## Gates
@@ -19,7 +19,8 @@
 6. `pnpm build`
 7. `pnpm test:package`
 
-最终结果为 architecture 47 files / 240 edges / 0 cycles，unit 50 files / 436 tests，package
+最终结果为 architecture 48 files / 243 edges / 0 cycles，isolated release audit 191 files，
+unit 52 files / 448 tests，package
 `@tellplot/editor@1.0.0` 的 publint、ATTW、ESM、CJS、types 和 tarball contract 全部通过。
 
 ## Finding Closed During Rehearsal
@@ -34,5 +35,5 @@ package resolution。
 
 ## Boundary
 
-隔离副本来自当前未提交工作树，不是公开发布来源。G005 仍要求从用户批准的干净 commit 重新执行同一
-复演，并在独立授权后才允许 tag、GitHub Release、网站部署或 npm publish。
+隔离副本来自本地 1.0 候选源码，不是公开发布来源。G005 仍要求从用户批准的干净 commit 重新执行同一
+复演，并在独立授权后才允许 push、tag、GitHub Release、网站部署或 npm publish。

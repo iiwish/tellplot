@@ -855,7 +855,7 @@ index 0000000..4cab0d4
 +    - "pnpm build"
 +    - "pnpm test:package"
 +    - "git diff --check"
-+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T103"
++    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T103"
 +  expected_signals:
 +    - "All commands exit 0 after GREEN."
 +    - "Domain statement, branch, function and line coverage are each at least 95%."

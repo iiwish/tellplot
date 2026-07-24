@@ -120,7 +120,7 @@ validation_loop:
     - "pnpm build"
     - "pnpm test:package"
     - "git diff --check"
-    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T106-CR001"
+    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T106-CR001"
   expected_signals:
     - "RED failures identify missing recursive or direct-interaction behavior, not harness errors."
     - "Three-level nested fixtures conserve every source exactly once and preserve totals through collapse/expand/ungroup/undo/redo."

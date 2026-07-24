@@ -198,7 +198,7 @@ validation_loop:
     - pnpm test:package
     - pnpm lint
     - pnpm format:check
-    - python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T112
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T112
     - git diff --check
   expected_signals:
     - All legacy waterfall tests pass without updated behavioral expectations.
