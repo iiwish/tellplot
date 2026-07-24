@@ -1224,6 +1224,91 @@ describe('G2 direct pointer adapter', () => {
     expect(onMove).toHaveBeenCalledWith('b', { containerId: 'root', index: 1 }, 'direct');
   });
 
+  it('reprojects the expanded group background before a boundary drag is released', async () => {
+    const groupedView: ViewSpec = {
+      ...initialView(commandSourceData),
+      rootOrder: ['drivers', 'd', 'e'],
+      groups: {
+        drivers: { id: 'drivers', label: 'Growth drivers', childIds: ['a', 'b', 'c'] },
+      },
+    };
+    g2Mock.Chart.sceneElements = [
+      {
+        __data__: { data: { nodeId: 'a' } },
+        getBounds: vi.fn(() => ({ min: [20, 20], max: [60, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'b' } },
+        getBounds: vi.fn(() => ({ min: [70, 20], max: [110, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'c' } },
+        getBounds: vi.fn(() => ({ min: [120, 20], max: [160, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'd' } },
+        getBounds: vi.fn(() => ({ min: [190, 20], max: [230, 90] })),
+      },
+    ];
+    const views: ViewSpec[] = [];
+    render(
+      <FinancialChartEditor
+        chartAppearance={{ animation: { enabled: false } }}
+        defaultViewSpec={groupedView}
+        sourceData={commandSourceData}
+        onViewSpecChange={view => views.push(view)}
+      />,
+    );
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    if (chart === undefined) {
+      throw new Error('Expected a mocked chart instance');
+    }
+    await waitFor(() => expect(chart.render).toHaveBeenCalledOnce());
+    appendPointerCaptureCanvas();
+
+    const groupRegionEnd = (): string | undefined => {
+      const spec = chart.options.mock.calls.at(-1)?.[0] as
+        | {
+            readonly children?: readonly {
+              readonly type?: string;
+              readonly data?: readonly {
+                readonly groupId?: string;
+                readonly endNodeId?: string;
+              }[];
+            }[];
+          }
+        | undefined;
+      return spec?.children
+        ?.find(child => child.type === 'range')
+        ?.data?.find(region => region.groupId === 'drivers')?.endNodeId;
+    };
+    expect(groupRegionEnd()).toBe('c');
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'c', pointerId: 65, x: 140, minX: 120, maxX: 160 }),
+      );
+      emitChartEvent(chart, 'plot:pointermove', plotChartEvent(65, 161));
+    });
+
+    expect(views).toHaveLength(0);
+    await waitFor(() => expect(chart.render).toHaveBeenCalledTimes(2));
+    expect(groupRegionEnd()).toBe('b');
+    expect(screen.getByTestId('tellplot-chart-stage').getAttribute('data-interaction-state')).toBe(
+      'dragging',
+    );
+
+    act(() => {
+      emitChartEvent(chart, 'plot:pointerup', plotChartEvent(65, 161));
+    });
+    await waitFor(() => expect(views).toHaveLength(1));
+    expect(views[0]?.groups['drivers']?.childIds).toEqual(['a', 'b']);
+    await waitFor(() => expect(groupRegionEnd()).toBe('b'));
+  });
+
   it('routes chart ungroup through one direct command and preserves the parent group', async () => {
     const nestedView: ViewSpec = {
       ...initialView(commandSourceData),

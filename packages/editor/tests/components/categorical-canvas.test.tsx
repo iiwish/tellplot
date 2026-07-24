@@ -244,6 +244,47 @@ describe('CategoricalCanvas', () => {
     expect(onMove).toHaveBeenCalledWith('b', { containerId: 'root', index: 2 }, 'direct');
   });
 
+  it('renders group regions from the preview tree while preserving the interaction tree', async () => {
+    const canonicalView: ViewSpec = {
+      ...viewSpec,
+      rootOrder: ['trio'],
+      groups: { trio: { id: 'trio', label: 'Trio', childIds: ['a', 'b', 'c'] } },
+    };
+    const previewView: ViewSpec = {
+      ...canonicalView,
+      rootOrder: ['trio', 'c'],
+      groups: { trio: { id: 'trio', label: 'Trio', childIds: ['a', 'b'] } },
+    };
+    render(
+      <CategoricalCanvas
+        chartType="bar"
+        groupRegionViewSpec={previewView}
+        projection={projection}
+        viewSpec={canonicalView}
+      />,
+    );
+
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0] as MockChart;
+    await waitFor(() => expect(chart.render).toHaveBeenCalledOnce());
+    const spec = (chart.options.mock.calls.at(-1) as readonly [unknown] | undefined)?.[0] as
+      | {
+          readonly children?: readonly {
+            readonly type?: string;
+            readonly data?: readonly {
+              readonly groupId?: string;
+              readonly endNodeId?: string;
+            }[];
+          }[];
+        }
+      | undefined;
+    expect(
+      spec?.children
+        ?.find(child => child.type === 'range')
+        ?.data?.find(region => region.groupId === 'trio')?.endNodeId,
+    ).toBe('b');
+  });
+
   it('cancels a stale render revision instead of committing old scene bounds', async () => {
     const onMove = vi.fn(() => true);
     const onCancel = vi.fn();

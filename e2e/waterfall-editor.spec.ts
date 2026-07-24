@@ -67,6 +67,31 @@ async function paintedPixelCount(canvas: Locator): Promise<number> {
   });
 }
 
+async function canvasPixelHash(canvas: Locator): Promise<number> {
+  return canvas.evaluate(element => {
+    if (!(element instanceof HTMLCanvasElement)) {
+      return 0;
+    }
+    const context = element.getContext('2d');
+    if (context === null) {
+      return 0;
+    }
+    const pixels = context.getImageData(0, 0, element.width, element.height).data;
+    let hash = 2_166_136_261;
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      hash ^= pixels[offset] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+      hash ^= pixels[offset + 1] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+      hash ^= pixels[offset + 2] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+      hash ^= pixels[offset + 3] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+    }
+    return hash >>> 0;
+  });
+}
+
 async function markCanvas(page: Page, token: string): Promise<Locator> {
   const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
   await expect(canvas).toBeVisible();
@@ -378,6 +403,7 @@ test('creates, collapses, expands, and ungroups a conserved group from the real 
 test('chart click retains group actions while a boundary drag moves one child out', async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await openEditor(page);
   await page.getByRole('treeitem', { name: /销量增长/ }).click();
   await page
@@ -400,6 +426,7 @@ test('chart click retains group actions while a boundary drag moves one child ou
   const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
   await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
   const points = await waterfallBarPoints(canvas);
+  const groupedCanvasHash = await canvasPixelHash(canvas);
   const firstChild = points[1];
   const lastChild = points[3];
   expect(firstChild).toBeDefined();
@@ -422,12 +449,15 @@ test('chart click retains group actions while a boundary drag moves one child ou
   await expect(page.locator('.tp-chart-group-actions')).toHaveCount(0);
   await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
   await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-node-id', groupId);
+  await expect.poll(() => canvasPixelHash(canvas)).not.toBe(groupedCanvasHash);
+  const previewCanvasHash = await canvasPixelHash(canvas);
   await page.mouse.up();
 
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
   await expect(groupRow).toHaveAttribute('data-source-count', '2');
   await expect(page.getByRole('treeitem', { name: /产品结构/ })).toHaveAttribute('aria-level', '1');
   await expect(page.getByRole('treeitem', { name: /销量增长/ })).toHaveAttribute('aria-level', '2');
+  await expect.poll(() => canvasPixelHash(canvas)).toBe(previewCanvasHash);
 });
 
 test('creates a nested group from contiguous sibling nodes and preserves recursive levels', async ({

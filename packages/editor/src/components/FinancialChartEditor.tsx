@@ -929,6 +929,7 @@ export const FinancialChartEditor = forwardRef<
         chartType={displayChart.chartType}
         projection={displayChart.projection}
         viewSpec={currentView}
+        groupRegionViewSpec={previewViewSpec ?? currentView}
         readOnly={props.readOnly === true}
         locale={locale}
         currency={props.sourceData.currency}
@@ -950,6 +951,7 @@ export const FinancialChartEditor = forwardRef<
           displayChart?.family === 'waterfall' ? displayChart.projection : EMPTY_PROJECTION
         }
         viewSpec={currentView}
+        groupRegionViewSpec={previewViewSpec ?? currentView}
         readOnly={props.readOnly === true}
         locale={locale}
         currency={props.sourceData.currency}

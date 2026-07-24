@@ -177,6 +177,7 @@ export interface ChartRenderIssue {
 export interface WaterfallCanvasProps {
   readonly projection: WaterfallProjection;
   readonly viewSpec?: ViewSpec;
+  readonly groupRegionViewSpec?: ViewSpec;
   readonly readOnly?: boolean;
   readonly title?: string;
   readonly locale?: EditorLocale;
@@ -360,6 +361,7 @@ function draggableDatum(datum: WaterfallDatum | undefined): WaterfallDatum | und
 export function WaterfallCanvas({
   projection,
   viewSpec,
+  groupRegionViewSpec,
   readOnly = false,
   title,
   locale = 'zh-CN',
@@ -428,13 +430,15 @@ export function WaterfallCanvas({
   const interactionTarget = interaction.state === 'dragging' ? interaction.target : null;
   const visibleInteractionTarget =
     interactionTarget ?? (externalPreview.state === 'dragging' ? externalPreview.target : null);
+  const regionViewSpec = groupRegionViewSpec ?? viewSpec;
   const activeGroupRegionId =
     viewSpec !== undefined && visibleInteractionTarget?.placement === 'inside'
       ? ownGroup(viewSpec, visibleInteractionTarget.nodeId)?.id
       : undefined;
   const groupRegions = useMemo(
-    () => (viewSpec === undefined ? [] : projectExpandedGroupRegions(viewSpec, projection)),
-    [projection, viewSpec],
+    () =>
+      regionViewSpec === undefined ? [] : projectExpandedGroupRegions(regionViewSpec, projection),
+    [projection, regionViewSpec],
   );
 
   useLayoutEffect(() => {

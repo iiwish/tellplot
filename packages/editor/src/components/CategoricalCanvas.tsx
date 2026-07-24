@@ -187,6 +187,7 @@ export interface CategoricalCanvasProps {
   readonly chartType: Extract<ChartType, 'bar' | 'column'>;
   readonly projection: CategoricalProjection;
   readonly viewSpec?: ViewSpec;
+  readonly groupRegionViewSpec?: ViewSpec;
   readonly readOnly?: boolean;
   readonly title?: string;
   readonly locale?: EditorLocale;
@@ -407,6 +408,7 @@ export function CategoricalCanvas({
   chartType,
   projection,
   viewSpec,
+  groupRegionViewSpec,
   readOnly = false,
   title,
   locale = 'zh-CN',
@@ -480,13 +482,15 @@ export function CategoricalCanvas({
   const interactionTarget = interaction.state === 'dragging' ? interaction.target : null;
   const visibleInteractionTarget =
     interactionTarget ?? (externalPreview.state === 'dragging' ? externalPreview.target : null);
+  const regionViewSpec = groupRegionViewSpec ?? viewSpec;
   const activeGroupRegionId =
     viewSpec !== undefined && visibleInteractionTarget?.placement === 'inside'
       ? ownGroup(viewSpec, visibleInteractionTarget.nodeId)?.id
       : undefined;
   const groupRegions = useMemo(
-    () => (viewSpec === undefined ? [] : projectExpandedGroupRegions(viewSpec, projection)),
-    [projection, viewSpec],
+    () =>
+      regionViewSpec === undefined ? [] : projectExpandedGroupRegions(regionViewSpec, projection),
+    [projection, regionViewSpec],
   );
 
   useLayoutEffect(() => {
