@@ -375,6 +375,61 @@ test('creates, collapses, expands, and ungroups a conserved group from the real 
   await expect(page.getByRole('treeitem', { name: /期末净利润/ })).toContainText('3,440');
 });
 
+test('chart click retains group actions while a boundary drag moves one child out', async ({
+  page,
+}) => {
+  await openEditor(page);
+  await page.getByRole('treeitem', { name: /销量增长/ }).click();
+  await page
+    .getByRole('treeitem', { name: /价格提升/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await page
+    .getByRole('treeitem', { name: /产品结构/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
+  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+  await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+
+  const groupRow = page.getByRole('treeitem', { name: /增长驱动/ });
+  const groupId = await groupRow.getAttribute('data-node-id');
+  expect(groupId).not.toBeNull();
+  await expect(groupRow).toHaveAttribute('data-source-count', '3');
+
+  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+  await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+  const points = await waterfallBarPoints(canvas);
+  const firstChild = points[1];
+  const lastChild = points[3];
+  expect(firstChild).toBeDefined();
+  expect(lastChild).toBeDefined();
+  if (firstChild === undefined || lastChild === undefined || groupId === null) {
+    return;
+  }
+
+  await page.mouse.move(firstChild.x, firstChild.y);
+  await expect(page.getByRole('button', { name: '折叠分组: 增长驱动' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '取消分组: 增长驱动' })).toBeVisible();
+  await page.mouse.click(firstChild.x, firstChild.y);
+  await expect(page.getByRole('button', { name: '折叠分组: 增长驱动' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '取消分组: 增长驱动' })).toBeVisible();
+
+  await page.mouse.move(lastChild.x, lastChild.y);
+  await page.mouse.down();
+  await page.mouse.move(lastChild.maxX + 2, lastChild.y, { steps: 6 });
+  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
+  await expect(page.locator('.tp-chart-group-actions')).toHaveCount(0);
+  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
+  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-node-id', groupId);
+  await page.mouse.up();
+
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+  await expect(groupRow).toHaveAttribute('data-source-count', '2');
+  await expect(page.getByRole('treeitem', { name: /产品结构/ })).toHaveAttribute('aria-level', '1');
+  await expect(page.getByRole('treeitem', { name: /销量增长/ })).toHaveAttribute('aria-level', '2');
+});
+
 test('creates a nested group from contiguous sibling nodes and preserves recursive levels', async ({
   page,
 }) => {

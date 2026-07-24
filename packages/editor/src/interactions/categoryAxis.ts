@@ -1,4 +1,6 @@
-import type { ViewNodeId } from '../domain/ids';
+import type { GroupId, ViewNodeId } from '../domain/ids';
+import type { ViewSpec } from '../domain/model';
+import { collectLeafSourceIds, locateViewNode } from '../domain/viewTree';
 import type { MoveTargetEdge } from './moveTargets';
 
 export type CategoryAxis = 'x' | 'y';
@@ -20,6 +22,12 @@ export interface ChartCategoryBounds {
   readonly nodeId: ViewNodeId;
   readonly min: number;
   readonly center: number;
+  readonly max: number;
+}
+
+export interface ChartCategoryGroupBounds {
+  readonly nodeId: GroupId;
+  readonly min: number;
   readonly max: number;
 }
 
@@ -115,6 +123,88 @@ export function projectChartCategoryBounds(
   const min = axis === 'x' ? bounds.minX : bounds.minY;
   const max = axis === 'x' ? bounds.maxX : bounds.maxY;
   return { nodeId: bounds.nodeId, min, center: (min + max) / 2, max };
+}
+
+/**
+ * Projects the direct-to-outer source group boundaries from renderer-owned visible mark bounds.
+ * The snapshot lets a pointer leave a group in the gap before it collides with the next item.
+ */
+export function projectChartCategorySourceGroupBounds(
+  viewSpec: ViewSpec,
+  itemId: ViewNodeId,
+  visibleBounds: readonly ChartCategoryBounds[],
+): readonly ChartCategoryGroupBounds[] {
+  const ancestorIds: GroupId[] = [];
+  const visited = new Set<ViewNodeId>();
+  let current = itemId;
+  while (!visited.has(current)) {
+    visited.add(current);
+    const location = locateViewNode(viewSpec, current);
+    if (location === undefined || location.containerId === 'root') {
+      break;
+    }
+    ancestorIds.push(location.containerId);
+    current = location.containerId;
+  }
+
+  return ancestorIds.flatMap(groupId => {
+    const groupSourceIds = new Set(collectLeafSourceIds(viewSpec, groupId));
+    const memberBounds = visibleBounds.filter(bounds =>
+      collectLeafSourceIds(viewSpec, bounds.nodeId).some(sourceId => groupSourceIds.has(sourceId)),
+    );
+    if (memberBounds.length === 0 || memberBounds.some(bounds => !validCategoryBounds(bounds))) {
+      return [];
+    }
+    return [
+      {
+        nodeId: groupId,
+        min: Math.min(...memberBounds.map(bounds => bounds.min)),
+        max: Math.max(...memberBounds.map(bounds => bounds.max)),
+      },
+    ];
+  });
+}
+
+/** Returns whether a collision candidate is still represented inside one source group. */
+export function isChartCategoryTargetWithinGroup(
+  viewSpec: ViewSpec,
+  groupId: ViewNodeId,
+  targetId: ViewNodeId,
+): boolean {
+  const groupSourceIds = new Set(collectLeafSourceIds(viewSpec, groupId));
+  return collectLeafSourceIds(viewSpec, targetId).some(sourceId => groupSourceIds.has(sourceId));
+}
+
+/**
+ * Resolves the outermost source-group boundary crossed by the pointer.
+ * Crossing a child mark edge still reorders inside the group; crossing the region edge moves out.
+ */
+export function resolveChartCategorySourceGroupExitTarget(
+  axis: CategoryAxis,
+  startPointer: ChartAxisPoint,
+  pointer: ChartAxisPoint,
+  sourceGroupBounds: readonly ChartCategoryGroupBounds[],
+): ChartCategoryDropTarget | undefined {
+  const start = categoryCoordinate(startPointer, axis);
+  const current = categoryCoordinate(pointer, axis);
+  if (start === undefined || current === undefined || current === start) {
+    return undefined;
+  }
+  let target: ChartCategoryDropTarget | undefined;
+  if (current > start) {
+    for (const bounds of sourceGroupBounds) {
+      if (Number.isFinite(bounds.max) && current > bounds.max) {
+        target = { nodeId: bounds.nodeId, edge: 'after', target: bounds.max };
+      }
+    }
+    return target;
+  }
+  for (const bounds of sourceGroupBounds) {
+    if (Number.isFinite(bounds.min) && current < bounds.min) {
+      target = { nodeId: bounds.nodeId, edge: 'before', target: bounds.min };
+    }
+  }
+  return target;
 }
 
 /** Resolves deterministic reorder collision using only the selected category-axis coordinate. */

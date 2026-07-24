@@ -24,10 +24,14 @@ import {
 import {
   categoryCoordinate,
   projectChartCategoryBounds,
+  isChartCategoryTargetWithinGroup,
   resolveChartCategoryDropTarget,
   resolveChartCategoryMinimumTargetHit,
+  projectChartCategorySourceGroupBounds,
+  resolveChartCategorySourceGroupExitTarget,
   type CategoryAxis,
   type ChartCategoryBounds,
+  type ChartCategoryGroupBounds,
 } from '../interactions/categoryAxis';
 import {
   resolvePointerDropPlacement,
@@ -106,8 +110,10 @@ interface ChartDragSession {
   readonly nodeId: ViewNodeId;
   readonly label: string;
   canvas: HTMLCanvasElement;
+  readonly viewSpec: ViewSpec;
   readonly start: ChartPointerPoint;
   readonly orderedBounds: readonly ChartCategoryBounds[];
+  readonly sourceGroupBounds: readonly ChartCategoryGroupBounds[];
   current: ChartPointerPoint;
   moved: boolean;
   target: ChartDropTarget | null;
@@ -785,13 +791,14 @@ export function CategoricalCanvas({
         max: pointer.max,
       });
       const orderedBounds: ChartCategoryBounds[] = [];
+      const visibleBounds: ChartCategoryBounds[] = [];
       for (const candidate of config.projection) {
-        if (draggableDatum(candidate) === undefined) {
-          continue;
-        }
         const bounds = boundsByNode.get(candidate.nodeId);
         if (bounds !== undefined) {
-          orderedBounds.push(bounds);
+          visibleBounds.push(bounds);
+          if (draggableDatum(candidate) !== undefined) {
+            orderedBounds.push(bounds);
+          }
         }
       }
 
@@ -805,8 +812,14 @@ export function CategoricalCanvas({
         nodeId: datum.nodeId,
         label: datum.label,
         canvas,
+        viewSpec: config.viewSpec,
         start: pointer,
         orderedBounds,
+        sourceGroupBounds: projectChartCategorySourceGroupBounds(
+          config.viewSpec,
+          itemId,
+          visibleBounds,
+        ),
         current: pointer,
         moved: false,
         target: null,
@@ -816,10 +829,12 @@ export function CategoricalCanvas({
     };
 
     const handleElementPointerDown = (event: unknown): void => {
-      setGroupActions(null);
       const result = readChartCategoryElementPointer(event, interactionConfigRef.current.axis);
       if (result.ok) {
+        setGroupActions(current => (current?.nodeId === result.value.nodeId ? current : null));
         startElementPointerSession(result.value);
+      } else {
+        setGroupActions(null);
       }
     };
 
@@ -837,6 +852,7 @@ export function CategoricalCanvas({
         Math.abs(current - start) >= 4
       ) {
         session.attemptedDrag = true;
+        setGroupActions(null);
         notifyCancel(interactionConfigRef.current.onCancel, session.dragCancelReason);
         resetSelectionPress();
       }
@@ -862,6 +878,7 @@ export function CategoricalCanvas({
       if (!dropResult.ok && dropResult.reason === 'BELOW_THRESHOLD') {
         return true;
       }
+      setGroupActions(null);
       if (!dropResult.ok && dropResult.reason === 'STALE_BOUNDS') {
         resetDrag();
         notifyCancel(interactionConfigRef.current.onCancel, 'cancelled');
@@ -871,8 +888,24 @@ export function CategoricalCanvas({
       const targetBounds = dropResult.ok
         ? session.orderedBounds.find(bounds => bounds.nodeId === dropResult.target.nodeId)
         : undefined;
-      const target =
-        !dropResult.ok || targetBounds === undefined || pointerCoordinate === undefined
+      const exitTarget = resolveChartCategorySourceGroupExitTarget(
+        session.axis,
+        session.start,
+        point,
+        session.sourceGroupBounds,
+      );
+      const useExitTarget =
+        exitTarget !== undefined &&
+        ((!dropResult.ok && dropResult.reason === 'NO_TARGET') ||
+          (dropResult.ok &&
+            isChartCategoryTargetWithinGroup(
+              session.viewSpec,
+              exitTarget.nodeId,
+              dropResult.target.nodeId,
+            )));
+      const target = useExitTarget
+        ? { nodeId: exitTarget.nodeId, placement: exitTarget.edge }
+        : !dropResult.ok || targetBounds === undefined || pointerCoordinate === undefined
           ? null
           : {
               nodeId: dropResult.target.nodeId,
@@ -886,7 +919,8 @@ export function CategoricalCanvas({
               ),
             };
       const indicator =
-        dropResult.ok && target?.placement !== 'inside' ? dropResult.target.target : undefined;
+        (useExitTarget ? exitTarget.target : undefined) ??
+        (dropResult.ok && target?.placement !== 'inside' ? dropResult.target.target : undefined);
       const wasPending = !session.moved;
       session.moved = true;
       schedulePointer(point);
@@ -964,7 +998,6 @@ export function CategoricalCanvas({
     };
 
     const handlePlotPointerDown = (event: unknown): void => {
-      setGroupActions(null);
       const config = interactionConfigRef.current;
       if (dragSessionRef.current !== null || selectionPressSessionRef.current !== null) {
         return;
@@ -985,6 +1018,7 @@ export function CategoricalCanvas({
       if (pointHitsMark) {
         return;
       }
+      setGroupActions(null);
       const ownerWindow = canvas.ownerDocument.defaultView;
       const usesMinimumTargets =
         ownerWindow !== null &&

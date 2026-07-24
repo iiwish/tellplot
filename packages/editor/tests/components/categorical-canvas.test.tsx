@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CategoricalCanvas } from '../../src/components/CategoricalCanvas';
@@ -170,8 +170,9 @@ describe('CategoricalCanvas', () => {
     });
   });
 
-  it('uses all visible G2 category bounds to resolve a cross-group drag target', async () => {
+  it('exits the source group as soon as the pointer crosses its renderer-owned boundary', async () => {
     const onMove = vi.fn(() => true);
+    const onInteractionChange = vi.fn();
     const groupedView: ViewSpec = {
       ...viewSpec,
       rootOrder: ['pair', 'c'],
@@ -182,6 +183,7 @@ describe('CategoricalCanvas', () => {
         chartType="bar"
         projection={projection}
         viewSpec={groupedView}
+        onInteractionChange={onInteractionChange}
         onMove={onMove}
       />,
     );
@@ -194,9 +196,51 @@ describe('CategoricalCanvas', () => {
       'element:pointerdown',
       elementEvent('b', 17, 40, 120, { min: [10, 100], max: [90, 140] }),
     );
-    emit(chart, 'plot:pointermove', { pointerId: 17, canvas: { x: 40, y: 160 } });
-    emit(chart, 'plot:pointerup', { pointerId: 17, canvas: { x: 40, y: 160 } });
+    emit(chart, 'plot:pointermove', { pointerId: 17, canvas: { x: 40, y: 141 } });
+    emit(chart, 'plot:pointerup', { pointerId: 17, canvas: { x: 40, y: 141 } });
 
+    expect(onInteractionChange).toHaveBeenCalledWith({
+      state: 'dragging',
+      itemId: 'b',
+      target: { nodeId: 'pair', placement: 'after' },
+    });
+    expect(onMove).toHaveBeenCalledWith('b', { containerId: 'root', index: 1 }, 'direct');
+  });
+
+  it('hands control back to an external mark after leaving the source group gap', async () => {
+    const onMove = vi.fn(() => true);
+    const onInteractionChange = vi.fn();
+    const groupedView: ViewSpec = {
+      ...viewSpec,
+      rootOrder: ['pair', 'c'],
+      groups: { pair: { id: 'pair', label: 'Pair', childIds: ['a', 'b'] } },
+    };
+    render(
+      <CategoricalCanvas
+        chartType="bar"
+        projection={projection}
+        viewSpec={groupedView}
+        onInteractionChange={onInteractionChange}
+        onMove={onMove}
+      />,
+    );
+
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    appendCanvas();
+    const chart = g2Mock.Chart.instances[0] as MockChart;
+    emit(
+      chart,
+      'element:pointerdown',
+      elementEvent('b', 18, 40, 120, { min: [10, 100], max: [90, 140] }),
+    );
+    emit(chart, 'plot:pointermove', { pointerId: 18, canvas: { x: 40, y: 200 } });
+    emit(chart, 'plot:pointerup', { pointerId: 18, canvas: { x: 40, y: 200 } });
+
+    expect(onInteractionChange).toHaveBeenCalledWith({
+      state: 'dragging',
+      itemId: 'b',
+      target: { nodeId: 'c', placement: 'after' },
+    });
     expect(onMove).toHaveBeenCalledWith('b', { containerId: 'root', index: 2 }, 'direct');
   });
 
@@ -235,6 +279,61 @@ describe('CategoricalCanvas', () => {
 
     expect(onMove).not.toHaveBeenCalled();
     expect(onCancel).toHaveBeenCalledWith('cancelled');
+  });
+
+  it('keeps expanded-group actions through click selection and hides them on drag', async () => {
+    const groupedView: ViewSpec = {
+      ...viewSpec,
+      rootOrder: ['pair', 'c'],
+      groups: { pair: { id: 'pair', label: 'Pair', childIds: ['a', 'b'] } },
+    };
+    const onMove = vi.fn(() => true);
+    const onSelectNode = vi.fn();
+    render(
+      <CategoricalCanvas
+        chartType="bar"
+        projection={projection}
+        viewSpec={groupedView}
+        onMove={onMove}
+        onSelectNode={onSelectNode}
+      />,
+    );
+
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    appendCanvas();
+    const chart = g2Mock.Chart.instances[0] as MockChart;
+    act(() => {
+      emit(
+        chart,
+        'element:pointerover',
+        elementEvent('a', 31, 40, 40, { min: [10, 20], max: [90, 60] }),
+      );
+    });
+    expect(screen.getByRole('button', { name: '折叠分组: Pair' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '取消分组: Pair' })).toBeTruthy();
+
+    act(() => {
+      emit(
+        chart,
+        'element:pointerdown',
+        elementEvent('a', 32, 40, 40, { min: [10, 20], max: [90, 60] }),
+      );
+      emit(chart, 'plot:pointerdown', { pointerId: 32, canvas: { x: 40, y: 40 } });
+      emit(chart, 'plot:pointerup', { pointerId: 32, canvas: { x: 40, y: 40 } });
+    });
+    expect(onSelectNode).toHaveBeenCalledWith('a');
+    expect(screen.getByRole('button', { name: '折叠分组: Pair' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '取消分组: Pair' })).toBeTruthy();
+
+    act(() => {
+      emit(
+        chart,
+        'element:pointerdown',
+        elementEvent('a', 33, 40, 40, { min: [10, 20], max: [90, 60] }),
+      );
+      emit(chart, 'plot:pointermove', { pointerId: 33, canvas: { x: 40, y: 100 } });
+    });
+    expect(document.querySelector('.tp-chart-group-actions')).toBeNull();
   });
 
   it('keeps the accessible summary and reports only a structured render failure', async () => {

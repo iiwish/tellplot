@@ -13,9 +13,13 @@ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../cha
 import type { WaterfallDatum, WaterfallProjection } from '../charts/waterfall/types';
 import {
   projectChartCategoryBounds,
+  isChartCategoryTargetWithinGroup,
   resolveChartCategoryDropTarget,
   resolveChartCategoryMinimumTargetHit,
+  projectChartCategorySourceGroupBounds,
+  resolveChartCategorySourceGroupExitTarget,
   type ChartCategoryBounds,
+  type ChartCategoryGroupBounds,
 } from '../interactions/categoryAxis';
 import {
   readChartCategoryElementPointer,
@@ -98,8 +102,10 @@ interface ChartDragSession {
   readonly nodeId: ViewNodeId;
   readonly label: string;
   readonly canvas: HTMLCanvasElement;
+  readonly viewSpec: ViewSpec;
   readonly start: ChartPointerPoint;
   readonly orderedBounds: readonly ChartCategoryBounds[];
+  readonly sourceGroupBounds: readonly ChartCategoryGroupBounds[];
   current: ChartPointerPoint;
   moved: boolean;
   target: ChartDropTarget | null;
@@ -715,13 +721,14 @@ export function WaterfallCanvas({
         max: pointer.max,
       });
       const orderedBounds: ChartCategoryBounds[] = [];
+      const visibleBounds: ChartCategoryBounds[] = [];
       for (const candidate of config.projection) {
-        if (draggableDatum(candidate) === undefined) {
-          continue;
-        }
         const bounds = boundsByNode.get(candidate.nodeId);
         if (bounds !== undefined) {
-          orderedBounds.push(bounds);
+          visibleBounds.push(bounds);
+          if (draggableDatum(candidate) !== undefined) {
+            orderedBounds.push(bounds);
+          }
         }
       }
 
@@ -733,8 +740,14 @@ export function WaterfallCanvas({
         nodeId: datum.nodeId,
         label: datum.label,
         canvas,
+        viewSpec: config.viewSpec,
         start: pointer,
         orderedBounds,
+        sourceGroupBounds: projectChartCategorySourceGroupBounds(
+          config.viewSpec,
+          itemId,
+          visibleBounds,
+        ),
         current: pointer,
         moved: false,
         target: null,
@@ -744,10 +757,12 @@ export function WaterfallCanvas({
     };
 
     const handleElementPointerDown = (event: unknown): void => {
-      setGroupActions(null);
       const pointer = readChartCategoryElementPointer(event, 'x');
       if (pointer.ok) {
+        setGroupActions(current => (current?.nodeId === pointer.value.nodeId ? current : null));
         startElementPointerSession(pointer.value);
+      } else {
+        setGroupActions(null);
       }
     };
 
@@ -758,6 +773,7 @@ export function WaterfallCanvas({
       }
       if (!session.attemptedDrag && Math.abs(point.x - session.start.x) >= 4) {
         session.attemptedDrag = true;
+        setGroupActions(null);
         notifyCancel(interactionConfigRef.current.onCancel, session.dragCancelReason);
         resetSelectionPress();
       }
@@ -773,6 +789,7 @@ export function WaterfallCanvas({
       if (!session.moved && Math.abs(point.x - session.start.x) < 4) {
         return true;
       }
+      setGroupActions(null);
       const dropResult = resolveChartCategoryDropTarget({
         axis: 'x',
         itemId: session.itemId,
@@ -786,8 +803,24 @@ export function WaterfallCanvas({
       const targetBounds = dropResult.ok
         ? session.orderedBounds.find(bounds => bounds.nodeId === dropResult.target.nodeId)
         : undefined;
-      const target =
-        !dropResult.ok || targetBounds === undefined
+      const exitTarget = resolveChartCategorySourceGroupExitTarget(
+        'x',
+        session.start,
+        point,
+        session.sourceGroupBounds,
+      );
+      const useExitTarget =
+        exitTarget !== undefined &&
+        ((!dropResult.ok && dropResult.reason === 'NO_TARGET') ||
+          (dropResult.ok &&
+            isChartCategoryTargetWithinGroup(
+              session.viewSpec,
+              exitTarget.nodeId,
+              dropResult.target.nodeId,
+            )));
+      const target = useExitTarget
+        ? { nodeId: exitTarget.nodeId, placement: exitTarget.edge }
+        : !dropResult.ok || targetBounds === undefined
           ? null
           : {
               nodeId: dropResult.target.nodeId,
@@ -800,21 +833,21 @@ export function WaterfallCanvas({
                 dropResult.target.edge,
               ),
             };
+      const indicator =
+        (useExitTarget ? exitTarget.target : undefined) ??
+        (dropResult.ok && target?.placement !== 'inside' ? dropResult.target.target : undefined);
       const wasPending = !session.moved;
       session.moved = true;
       schedulePointer(point);
       if (wasPending) {
         session.target = target;
-        if (!dropResult.ok) {
+        if (indicator === undefined) {
           hostRef.current?.style.removeProperty('--tp-chart-drop-x');
         } else {
           if (target?.placement === 'inside') {
             hostRef.current?.style.removeProperty('--tp-chart-drop-x');
           } else {
-            hostRef.current?.style.setProperty(
-              '--tp-chart-drop-x',
-              `${dropResult.target.target}px`,
-            );
+            hostRef.current?.style.setProperty('--tp-chart-drop-x', `${indicator}px`);
           }
         }
         publishInteraction({
@@ -824,10 +857,7 @@ export function WaterfallCanvas({
         });
         return true;
       }
-      publishTarget(
-        target,
-        dropResult.ok && target?.placement !== 'inside' ? dropResult.target.target : undefined,
-      );
+      publishTarget(target, target?.placement === 'inside' ? undefined : indicator);
       return true;
     };
 
@@ -891,7 +921,6 @@ export function WaterfallCanvas({
     };
 
     const handlePlotPointerDown = (event: unknown): void => {
-      setGroupActions(null);
       const config = interactionConfigRef.current;
       if (dragSessionRef.current !== null || selectionPressSessionRef.current !== null) {
         return;
@@ -912,6 +941,7 @@ export function WaterfallCanvas({
       if (pointHitsMark) {
         return;
       }
+      setGroupActions(null);
       const ownerWindow = canvas.ownerDocument.defaultView;
       const usesMinimumTargets =
         ownerWindow !== null &&

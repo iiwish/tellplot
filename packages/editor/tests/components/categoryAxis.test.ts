@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import type { ViewSpec } from '../../src/domain/model';
 import {
   categoryCoordinate,
   projectChartCategoryBounds,
+  projectChartCategorySourceGroupBounds,
   resolveChartCategoryDropTarget,
   resolveChartCategoryMinimumTargetHit,
+  resolveChartCategorySourceGroupExitTarget,
   type CategoryAxis,
   type ChartCategoryBounds,
   type ChartCategoryDropInput,
@@ -97,6 +100,68 @@ describe('category-axis projection', () => {
 });
 
 describe('category-axis drop collision', () => {
+  it('separates in-group reorder from direct and nested group exit boundaries', () => {
+    const viewSpec: ViewSpec = {
+      schemaVersion: '1.0.0',
+      datasetId: 'group-boundary-fixture',
+      chartType: 'waterfall',
+      revision: 0,
+      rootOrder: ['outer', 'd'],
+      groups: {
+        inner: { id: 'inner', label: 'Inner', childIds: ['a', 'b'] },
+        outer: { id: 'outer', label: 'Outer', childIds: ['inner', 'c'] },
+      },
+      collapsedGroupIds: [],
+      pinnedItemIds: [],
+      annotations: {},
+      emphasis: {},
+    };
+    const visibleBounds = [
+      { nodeId: 'a', min: 20, center: 40, max: 60 },
+      { nodeId: 'b', min: 100, center: 120, max: 140 },
+      { nodeId: 'c', min: 180, center: 200, max: 220 },
+      { nodeId: 'd', min: 260, center: 280, max: 300 },
+    ] as const satisfies readonly ChartCategoryBounds[];
+    const sourceGroups = projectChartCategorySourceGroupBounds(viewSpec, 'a', visibleBounds);
+
+    expect(sourceGroups).toEqual([
+      { nodeId: 'inner', min: 20, max: 140 },
+      { nodeId: 'outer', min: 20, max: 220 },
+    ]);
+    expect(
+      resolveChartCategorySourceGroupExitTarget(
+        'x',
+        { x: 40, y: 0 },
+        { x: 140, y: 1_000 },
+        sourceGroups,
+      ),
+    ).toBeUndefined();
+    expect(
+      resolveChartCategorySourceGroupExitTarget(
+        'x',
+        { x: 40, y: 0 },
+        { x: 141, y: -1_000 },
+        sourceGroups,
+      ),
+    ).toEqual({ nodeId: 'inner', edge: 'after', target: 140 });
+    expect(
+      resolveChartCategorySourceGroupExitTarget(
+        'x',
+        { x: 40, y: 0 },
+        { x: 221, y: 0 },
+        sourceGroups,
+      ),
+    ).toEqual({ nodeId: 'outer', edge: 'after', target: 220 });
+    expect(
+      resolveChartCategorySourceGroupExitTarget(
+        'x',
+        { x: 40, y: 0 },
+        { x: 19, y: 0 },
+        sourceGroups,
+      ),
+    ).toEqual({ nodeId: 'outer', edge: 'before', target: 20 });
+  });
+
   it('crosses at the exact renderer edge and uses the source mark width', () => {
     const bounds = [
       { nodeId: 'narrow', min: 100, center: 110, max: 120 },

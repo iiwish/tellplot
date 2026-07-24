@@ -1090,6 +1090,140 @@ describe('G2 direct pointer adapter', () => {
     expect(onUngroup).toHaveBeenCalledWith('inner');
   });
 
+  it('keeps expanded-group actions after a click and hides them only after drag intent', async () => {
+    const groupedView: ViewSpec = {
+      ...initialView(commandSourceData),
+      rootOrder: ['pair', 'c', 'd', 'e'],
+      groups: {
+        pair: { id: 'pair', label: 'Pair drivers', childIds: ['a', 'b'] },
+      },
+    };
+    const projection = projectWaterfall(commandSourceData, groupedView);
+    if (!projection.ok) {
+      throw new Error('Expected valid group-action projection');
+    }
+    g2Mock.Chart.sceneElements = [
+      {
+        __data__: { data: { nodeId: 'a' } },
+        getBounds: vi.fn(() => ({ min: [30, 40], max: [90, 120] })),
+      },
+      {
+        __data__: { data: { nodeId: 'b' } },
+        getBounds: vi.fn(() => ({ min: [110, 40], max: [170, 120] })),
+      },
+    ];
+    const onMove = vi.fn(() => true);
+    const onSelectNode = vi.fn();
+    render(
+      <WaterfallCanvas
+        projection={projection.value}
+        viewSpec={groupedView}
+        onMove={onMove}
+        onSelectNode={onSelectNode}
+      />,
+    );
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    if (chart === undefined) {
+      throw new Error('Expected a mocked chart instance');
+    }
+    appendPointerCaptureCanvas();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerover',
+        semanticChartEvent({ nodeId: 'a', pointerId: 61, x: 60, minX: 30, maxX: 90 }),
+      );
+    });
+    expect(screen.getByRole('button', { name: '折叠分组: Pair drivers' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '取消分组: Pair drivers' })).toBeTruthy();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'a', pointerId: 62, x: 60, minX: 30, maxX: 90 }),
+      );
+      emitChartEvent(chart, 'plot:pointerdown', plotChartEvent(62, 60));
+      emitChartEvent(chart, 'plot:pointerup', plotChartEvent(62, 60));
+    });
+    expect(onSelectNode).toHaveBeenCalledWith('a');
+    expect(screen.getByRole('button', { name: '折叠分组: Pair drivers' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '取消分组: Pair drivers' })).toBeTruthy();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'a', pointerId: 63, x: 60, minX: 30, maxX: 90 }),
+      );
+      emitChartEvent(chart, 'plot:pointermove', plotChartEvent(63, 125));
+    });
+    expect(document.querySelector('.tp-chart-group-actions')).toBeNull();
+  });
+
+  it('moves a grouped waterfall item outside at the source group boundary', async () => {
+    const groupedView: ViewSpec = {
+      ...initialView(commandSourceData),
+      rootOrder: ['pair', 'c', 'd', 'e'],
+      groups: {
+        pair: { id: 'pair', label: 'Pair drivers', childIds: ['a', 'b'] },
+      },
+    };
+    const projection = projectWaterfall(commandSourceData, groupedView);
+    if (!projection.ok) {
+      throw new Error('Expected valid grouped drag projection');
+    }
+    g2Mock.Chart.sceneElements = [
+      {
+        __data__: { data: { nodeId: 'a' } },
+        getBounds: vi.fn(() => ({ min: [20, 20], max: [60, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'b' } },
+        getBounds: vi.fn(() => ({ min: [70, 20], max: [110, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'c' } },
+        getBounds: vi.fn(() => ({ min: [140, 20], max: [180, 90] })),
+      },
+    ];
+    const onInteractionChange = vi.fn();
+    const onMove = vi.fn(() => true);
+    render(
+      <WaterfallCanvas
+        projection={projection.value}
+        viewSpec={groupedView}
+        onInteractionChange={onInteractionChange}
+        onMove={onMove}
+      />,
+    );
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    if (chart === undefined) {
+      throw new Error('Expected a mocked chart instance');
+    }
+    appendPointerCaptureCanvas();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'b', pointerId: 64, x: 90, minX: 70, maxX: 110 }),
+      );
+      emitChartEvent(chart, 'plot:pointermove', plotChartEvent(64, 111));
+      emitChartEvent(chart, 'plot:pointerup', plotChartEvent(64, 111));
+    });
+
+    expect(onInteractionChange).toHaveBeenCalledWith({
+      state: 'dragging',
+      itemId: 'b',
+      target: { nodeId: 'pair', placement: 'after' },
+    });
+    expect(onMove).toHaveBeenCalledWith('b', { containerId: 'root', index: 1 }, 'direct');
+  });
+
   it('routes chart ungroup through one direct command and preserves the parent group', async () => {
     const nestedView: ViewSpec = {
       ...initialView(commandSourceData),
