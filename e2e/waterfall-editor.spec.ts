@@ -494,6 +494,60 @@ test('creates a nested group from contiguous sibling nodes and preserves recursi
   await expect(sales).toBeVisible();
 });
 
+test('marquee across an expanded group promotes its complete boundary into an outer group', async ({
+  page,
+}) => {
+  await openEditor(page);
+  await page.getByRole('treeitem', { name: /销量增长/ }).click();
+  await page
+    .getByRole('treeitem', { name: /价格提升/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await page
+    .getByRole('treeitem', { name: /产品结构/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
+  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+  await page.getByRole('button', { name: '创建分组' }).click();
+
+  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+  await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+  const points = await waterfallBarPoints(canvas);
+  const box = await canvas.boundingBox();
+  const selectedChild = points[3];
+  const outsideItem = points[4];
+  expect(box).not.toBeNull();
+  expect(selectedChild).toBeDefined();
+  expect(outsideItem).toBeDefined();
+  if (box === null || selectedChild === undefined || outsideItem === undefined) {
+    return;
+  }
+
+  await page.mouse.move(selectedChild.minX - 4, box.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(outsideItem.maxX + 4, box.y + box.height - 36, { steps: 8 });
+  await page.mouse.up();
+
+  const dialog = page.getByRole('dialog', { name: '创建折叠分组' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-selection-mode="lifted"]')).toContainText('按分组边界');
+  await dialog.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
+  await dialog.getByRole('button', { name: '创建分组' }).click();
+
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+  await activateOutlinePanel(page);
+  const outer = page.getByRole('treeitem', { name: /经营桥/ });
+  await expect(outer).toHaveAttribute('data-source-count', '4');
+  await expect(page.getByRole('button', { name: '展开 经营桥' })).toBeVisible();
+  await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toBeHidden();
+
+  await page.getByRole('button', { name: '展开 经营桥' }).click();
+  await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveAttribute('aria-level', '2');
+  await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toHaveAttribute(
+    'aria-level',
+    '2',
+  );
+});
+
 test('blank-chart marquee creates one initially collapsed direct group', async ({ page }) => {
   await openEditor(page);
   const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();

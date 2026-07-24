@@ -4,10 +4,10 @@
 
 - Feature ID: `006-group-cross-level-experience`
 - Goal ID: `G002-R1`
-- Version: 0.1.0
+- Version: 0.2.0
 - Status: Confirmed
-- Last updated: 2026-07-20
-- Approval: 用户于 2026-07-20 明确同意并要求继续完成 G002-R1
+- Last updated: 2026-07-24
+- Approval: 用户明确批准 G002-R1，并于 2026-07-24 批准递归层级框选与嵌套分组语义
 
 ## Goal
 
@@ -19,6 +19,8 @@
 - 点击已经选中的分组只表达当前分组上下文，不显示“所选节点必须连续且位于同一父级”。
 - 创建分组动作只在多选上下文出现，非法多选的原因只约束创建动作，不污染普通选择反馈。
 - 用户可以在图表和结构大纲中把 item 或 group 拖到其他合法分组之前、之后或内部。
+- 用户可以在展开分组内框选连续成员创建子分组；框选跨越分组边界时，界面明确选择整个分组并与相邻
+  节点创建上层分组。
 - 两成员分组移出一个节点后自动解散，剩余节点保持原位置，一次撤销恢复完整分组和移动。
 - 展开分组在 waterfall、column 和 bar 中显示可配置背景，屏幕与 SVG/PNG 语义一致。
 
@@ -70,6 +72,18 @@ Pointer adapter 使用 `before | after | inside` 三种内部落点。普通 ite
 拖拽预览在图表与大纲同步表达 before/after/inside；inside 使用区域强调而不是边线。取消、非法目标和锁定
 反馈保持稳定，readOnly 和 reduced motion 始终优先。
 
+### R1-FR-008 递归层级框选
+
+图表框选与结构大纲多选把原始可见节点归一化为最低共同容器下的直接子节点：
+
+- 选择只位于同一展开分组内时，连续的直接子节点创建该分组的子分组。
+- 选择跨越分组边界时，命中的后代提升为共同父级下的完整 group 节点，再与其他选中节点创建上层分组。
+- 归一化后的节点按树顺序去重，不自动补齐未选择的普通间隔节点；非连续结果继续拒绝。
+- 归一化覆盖非根分组的全部直接子节点时视为已有完整分组，不创建会使父分组只剩一个直接子节点的
+  冗余层级。
+- 图表、大纲、Inspector 与创建分组对话框在提交前显示归一化后的节点和来源范围。公共
+  `createGroup` command wire、同父级与连续性校验保持不变。
+
 ## Non-Functional Requirements
 
 - R1-NFR-001：无新增、删除或升级 dependency。
@@ -81,7 +95,7 @@ Pointer adapter 使用 `before | after | inside` 三种内部落点。普通 ite
 
 ## Non-Goals
 
-- 新图表家族、多序列、数据编辑、任意层级自动重组或多节点批量拖拽。
+- 新图表家族、多序列、数据编辑、确定性层级框选提升之外的任意自动重组或多节点批量拖拽。
 - 允许持久化单成员 group。
 - 原始 `G2Spec`、chart instance、内部 scene adapter 或 drop callback 公共出口。
 - 新拖拽、动画、状态或渲染依赖。
@@ -95,6 +109,8 @@ Pointer adapter 使用 `before | after | inside` 三种内部落点。普通 ite
 - R1-SC-004：默认、关闭、透明度边界、label 模式、嵌套和折叠区域通过 spec/export/视觉测试。
 - R1-SC-005：完整 unit/coverage、package、React、current/previous browsers、a11y、performance 和 export gates
   通过，无 unresolved Critical/High/Medium finding。
+- R1-SC-006：展开分组组内子分组、跨边界整组提升、嵌套共同父级、冗余全选、非连续、锁定、segment
+  与单步 undo/redo 均有 component/domain/真实浏览器证据。
 
 ## Approval Gate
 

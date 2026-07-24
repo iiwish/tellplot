@@ -16,7 +16,7 @@ import type { EditorCommand } from '../domain/commands';
 import { validationIssue, type ValidationIssue } from '../domain/errors';
 import { executeCommand } from '../domain/executeCommand';
 import type { GroupId, ViewNodeId } from '../domain/ids';
-import { collectLeafSourceIds } from '../domain/viewTree';
+import { collectLeafSourceIds, ownGroup } from '../domain/viewTree';
 import { exportError, type ExportOptions, type ExportResult } from '../export/exportTypes';
 import { normalizeExportOptions } from '../export/exportOptions';
 import { exportPngChart } from '../export/pngExport';
@@ -27,7 +27,11 @@ import {
   resolvePointerMoveTarget,
   type InteractionCommandSource,
 } from '../interactions/moveTargets';
-import type { FinancialChartEditorHandle, FinancialChartEditorProps } from '../react/editorTypes';
+import type {
+  FinancialChartEditorHandle,
+  FinancialChartEditorProps,
+  SelectionState,
+} from '../react/editorTypes';
 import { useEditorController } from '../react/useEditorController';
 import { projectWaterfall } from '../charts/waterfall/projection';
 import type { WaterfallProjection } from '../charts/waterfall/types';
@@ -65,7 +69,8 @@ type FeedbackMessageKey =
   | 'groupLabelRequired'
   | 'groupTooSmall'
   | 'groupNonContiguous'
-  | 'groupLocked';
+  | 'groupLocked'
+  | 'groupRedundant';
 
 interface CommandFeedbackState {
   readonly code: string;
@@ -197,7 +202,22 @@ function feedbackForError(code: string): FeedbackMessageKey {
         ? 'groupNonContiguous'
         : code === 'GROUP_TOO_SMALL'
           ? 'groupTooSmall'
-          : 'targetUnavailable';
+          : code === 'REDUNDANT_GROUP_SELECTION'
+            ? 'groupRedundant'
+            : 'targetUnavailable';
+}
+
+function feedbackForGroupSelection(selection: GroupSelectionResult): FeedbackMessageKey {
+  if (selection.ok) {
+    return 'targetUnavailable';
+  }
+  return selection.reason === 'GROUP_TOO_SMALL'
+    ? 'groupTooSmall'
+    : selection.reason === 'ITEM_LOCKED'
+      ? 'groupLocked'
+      : selection.reason === 'REDUNDANT_GROUP_SELECTION'
+        ? 'groupRedundant'
+        : 'groupNonContiguous';
 }
 
 function groupSelectionFallback(): GroupSelectionResult {
@@ -614,15 +634,7 @@ export const FinancialChartEditor = forwardRef<
     ): boolean => {
       if (controller.viewSpec === null || !selection.ok || label.trim().length === 0) {
         const reasonKey: FeedbackMessageKey =
-          label.trim().length === 0
-            ? 'groupLabelRequired'
-            : selection.ok
-              ? 'targetUnavailable'
-              : selection.reason === 'GROUP_TOO_SMALL'
-                ? 'groupTooSmall'
-                : selection.reason === 'ITEM_LOCKED'
-                  ? 'groupLocked'
-                  : 'groupNonContiguous';
+          label.trim().length === 0 ? 'groupLabelRequired' : feedbackForGroupSelection(selection);
         setFeedback({ code: 'GROUP_UNAVAILABLE', messageKey: reasonKey, tone: 'error' });
         return false;
       }
@@ -678,12 +690,7 @@ export const FinancialChartEditor = forwardRef<
       if (!result.ok) {
         setFeedback({
           code: 'GROUP_UNAVAILABLE',
-          messageKey:
-            result.reason === 'GROUP_TOO_SMALL'
-              ? 'groupTooSmall'
-              : result.reason === 'ITEM_LOCKED'
-                ? 'groupLocked'
-                : 'groupNonContiguous',
+          messageKey: feedbackForGroupSelection(result),
           tone: 'error',
         });
         return;
@@ -697,6 +704,32 @@ export const FinancialChartEditor = forwardRef<
       setPendingChartGroup(result);
     },
     [controller, props.sourceData, setChartGroupLabel, setFeedback, setPendingChartGroup],
+  );
+
+  const handleOutlineSelect = useCallback(
+    (selection: SelectionState): void => {
+      if (controller.viewSpec === null || selection.nodeIds.length < 2) {
+        controller.select(selection);
+        return;
+      }
+      const result = evaluateGroupSelection(
+        props.sourceData,
+        controller.viewSpec,
+        selection.nodeIds,
+      );
+      if (!result.ok) {
+        controller.select(selection);
+        return;
+      }
+      controller.select({
+        nodeId: result.nodeIds.includes(selection.nodeId)
+          ? selection.nodeId
+          : (result.nodeIds.at(-1) ?? result.nodeIds[0] ?? selection.nodeId),
+        nodeIds: [...result.nodeIds],
+        sourceIds: [...result.sourceIds],
+      });
+    },
+    [controller, props.sourceData],
   );
 
   const handleChartSelect = useCallback(
@@ -899,7 +932,7 @@ export const FinancialChartEditor = forwardRef<
         selection={controller.selection}
         readOnly={props.readOnly === true}
         externalPreview={currentChartInteraction}
-        onSelect={controller.select}
+        onSelect={handleOutlineSelect}
         onMove={handleMove}
         onToggleGroup={handleToggleGroup}
         onCancel={handleCancel}
@@ -1183,6 +1216,16 @@ export const FinancialChartEditor = forwardRef<
             }}
           >
             <h2>{messages.groupDialogTitle}</h2>
+            <p className="tp-group-dialog-scope" data-selection-mode={pendingChartGroup.mode}>
+              {messages.groupSelectionSummary(
+                pendingChartGroup.mode,
+                pendingChartGroup.containerId === 'root' || currentView === null
+                  ? null
+                  : (ownGroup(currentView, pendingChartGroup.containerId)?.label ?? null),
+                pendingChartGroup.nodeIds.length,
+                pendingChartGroup.sourceIds.length,
+              )}
+            </p>
             <label htmlFor={chartGroupLabelId}>{messages.groupLabel}</label>
             <input
               autoFocus

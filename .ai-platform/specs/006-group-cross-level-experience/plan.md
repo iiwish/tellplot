@@ -4,18 +4,17 @@
 
 - Feature ID: `006-group-cross-level-experience`
 - Goal ID: `G002-R1`
-- Version: 0.1.0
+- Version: 0.2.0
 - Status: Confirmed
-- Last updated: 2026-07-20
-- Approval: 用户已批准 G002-R1 目标级连续执行
+- Last updated: 2026-07-24
+- Approval: 用户已批准 G002-R1 目标级连续执行与递归层级框选语义
 
 ## Baseline
 
-- G001 / T101-T116 已验收；G002 / T117 release candidate 保留在当前 dirty worktree。
-- G002-R1 外部快照：`/tmp/tellplot-G002-R1-baseline.y3LKch/worktree/`。
-- Manifest：`/tmp/tellplot-G002-R1-baseline.y3LKch/manifest.sha256`，314 files，SHA-256
-  `367c1074a1c0021c78e9859405d4f49d76e55ba0815da9bc380e922c5cd3564c`。
-- 不使用 HEAD 代替 accepted baseline，不 reset、stash、stage 或 commit。
+- G001 / T101-T116 已验收；G002 / T117 release candidate 保留。
+- 本轮递归层级框选基线为分支 `codex/t112-categorical-data-contract` 的本地 commit `ead4be9`，
+  开始执行时 worktree clean。
+- 保留现有历史，不 reset、stash 或覆盖无关变更。
 
 ## Delivery Strategy
 
@@ -24,7 +23,8 @@
 3. 修改唯一 command executor，在跨容器移动中原子解散两成员来源 group，并验证 undo/redo 和不变量。
 4. 建立共享 `ExpandedGroupRegion` 投影，waterfall、column 和 bar 的 G2 spec 共同消费。
 5. 扩展 `FinancialChartAppearance.groupRegion`，屏幕和 export 共享相同 resolved appearance 与 spec。
-6. 完成真实浏览器、视觉、a11y、performance、package 和兼容性回归，生成目标级 evidence。
+6. 在交互层归一化递归框选结果，保持 `createGroup` 领域命令的同父级与连续性合同不变。
+7. 完成真实浏览器、视觉、a11y、performance、package 和兼容性回归，生成目标级 evidence。
 
 ## Interaction Decisions
 
@@ -34,6 +34,12 @@
 - collapsed group 中心 inside 默认追加到 group 末尾，group 保持 collapsed。
 - chart pointer-down 快照包含所有可移动 projection element bounds，不包含背景 range mark。
 - 直接移动失败继续由 command executor 提供唯一合法性结论，不复制 segment/cycle/pin 规则到 Canvas。
+- 框选命中先移除被已选祖先覆盖的后代，再通过 root-to-node 路径找到最低共同容器，并把每条路径投影为
+  该容器下的直接子节点。
+- 组内连续子集保持在当前 group 创建子分组；跨边界选择把命中的后代提升为完整 group。归一化后的
+  selection 是 Inspector、对话框、selection callback 和 `createGroup` payload 的唯一范围。
+- 归一化覆盖非根容器全部直接子节点时返回明确的 redundant 结果，不持久化单成员父分组；普通节点间
+  的未选择间隔不会被自动补齐。
 
 ## Domain Decisions
 
@@ -67,7 +73,8 @@
 
 ## Validation Strategy
 
-- RED：Inspector contextual actions、inside resolver、auto-dissolve、group region/config/spec tests 先失败。
+- RED：Inspector contextual actions、hierarchical selection lifting、inside resolver、auto-dissolve、
+  group region/config/spec tests 先失败。
 - GREEN：按 selection -> resolver/domain -> chart/outline -> region/spec/export 顺序最小实现。
 - REFACTOR：仅抽取两个图表真实共享的 region projection/spec helper，不创建通用 chart plugin。
 - Final：format、lint、typecheck、unit/coverage、build、package、React、current/previous browsers、a11y、

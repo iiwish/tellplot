@@ -29,6 +29,9 @@
 | GREEN | group/value label visual contract slice | 68/68 passed |
 | RED | 拖拽边界预览中的 group region 仍读取 canonical ViewSpec | 2 expected component failures |
 | GREEN | waterfall/categorical region 与柱形共享 preview ViewSpec | focused 58/58；三浏览器关键回归 36/36 passed |
+| RED | 展开分组内框选与跨边界框选仍要求同一直接父级 | focused component 6 个预期失败 |
+| GREEN | lowest-common-container 归一化、整组提升、冗余拒绝与 outline 有效范围同步 | focused component 19/19 passed |
+| BROWSER | 展开分组子柱 + 外部柱的真实 G2 marquee | current/previous Chromium、Firefox、WebKit 与 WebKit 18.4 passed |
 
 ## Full Gates
 
@@ -37,24 +40,23 @@
 | `pnpm format:check` | passed |
 | `pnpm lint` | passed；0 warning |
 | `pnpm typecheck` | editor/playground strict TypeScript passed |
-| `pnpm test:unit` | 52 files；455/455 passed |
-| `pnpm test:coverage` | 455/455 passed；statements 86.99%、branches 81.88%、functions 90.05%、lines 87.10% |
+| `pnpm test:unit` | 52 files；458/458 passed |
+| `pnpm test:coverage` | 458/458 passed；statements 87.08%、branches 81.68%、functions 89.97%、lines 87.19% |
 | `pnpm build` | editor ESM/CJS/DTS/CSS 与 playground production build passed；既有 G2 chunk warning retained |
 | `pnpm test:package` | publint、ATTW、ESM、CJS、types、pack contract passed |
 | `pnpm test:react-matrix` | React 18.3.1 / 19.2.7；各 87,405 painted pixels；clean unmount |
-| `pnpm test:e2e` | current Chromium/Firefox/WebKit 180/180 passed |
+| `pnpm test:e2e` | current Chromium/Firefox/WebKit 183/183 passed |
 | `pnpm test:a11y` | Chromium/Firefox/WebKit 45/45 passed；无 serious/critical axe violation |
-| `mise exec node@22.20.0 -- pnpm test:browser-previous` | previous Chromium/Firefox/WebKit 180/180；WebKit 18.4 60/60 passed |
+| `mise exec node@22.20.0 -- pnpm test:browser-previous` | previous Chromium/Firefox/WebKit 183/183；WebKit 18.4 61/61 passed |
 | strict artifact validator | feature/task strict validation passed；0 error / 0 warning |
 | `git diff --check` | passed |
 
 ## Diff Evidence
 
-- task-only patch：`.ai-platform/evidence/T118/diff.patch`，4,141 lines，47 files。
-- SHA-256：`9eba21699fe47b4a2ddf13b22eeacf2f1aadef8dc48481788b6c188c2e22e5a6`。
-- `git apply --check --reverse` passed；外部 baseline 314-file manifest 复核通过。
-- 分组边界退出与 click/drag correction 由本地 commit `42c0342` 记录；实时背景预览由 `5f0dcb9`
-  记录，并通过当前 1.0 完整门禁。
+- 本轮递归层级框选 implementation + SSOT patch：`.ai-platform/evidence/T118/diff.patch`，1,205 lines，
+  20 files；evidence bundle 自身不包含在 patch。
+- SHA-256：`2de50ab449fe184402fcb8bcf3a5710e0807c75efb10464735bf1030baa07679`。
+- `git apply --check --reverse` passed；基线为本地 commit `ead4be9`。
 - package manifests 与 lockfile 对 baseline 逐字节一致；T118 source 未引入 `any`、`@ts-ignore` 或
   `@ts-expect-error`。
 
@@ -70,7 +72,7 @@
 ## Performance
 
 150ms product budget、30 samples 和 assertion 未修改。2026-07-24 的聚合 exact command clean pass 为
-waterfall 101.4ms、categorical 75.4ms，root commit delta 均为 0。此前高系统负载诊断样本保留如下：
+waterfall 69.9ms、categorical 77.5ms，root commit delta 均为 0。此前高系统负载诊断样本保留如下：
 
 | Run | Waterfall p95 | Categorical p95 | Root commit delta | Result |
 | --- | ---: | ---: | ---: | --- |
@@ -88,6 +90,9 @@ assertion，也没有修改性能测试或公共行为来规避门禁。
 ## Behavior Evidence
 
 - single item/group Inspector context、非法多选、ungroup：component + E2E passed。
+- 层级选择 normalizer 覆盖组内子分组、root/嵌套共同父级提升、祖先覆盖去重、冗余全选、缺口与锁定；
+  outline 把原始跨层选择立即同步为完整 group + 外部节点，真实 G2 marquee 创建的上层折叠分组保留内部
+  分组并覆盖正确来源。current/previous browsers 和 WebKit 18.4 全部通过。
 - outline real DnD into group、chart cross-container scene bounds、before/after/inside synchronized preview：passed。
 - 来源 group 的 G2 scene bounds 在 drag start 固化；边界内成员重排与边界外 group before/after 退出
   分离；指针进入外部 mark 后标准碰撞重新接管，边界不会持续吸附。首成员柱 click 保留折叠/取消分组

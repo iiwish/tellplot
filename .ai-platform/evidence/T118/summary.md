@@ -10,6 +10,11 @@ SVG/PNG 和宿主调用继续进入同一套确定性 ViewSpec 命令与历史�
 ## Delivered
 
 - Inspector 仅在至少两个节点的选择上下文显示创建分组；单 group 只显示分组信息和取消分组。
+- 图表框选和结构大纲多选按最低共同容器归一化：组内连续成员创建子分组；跨越边界时命中后代提升为
+  完整 group，再与相邻节点创建上层分组。大纲勾选状态、selection callback、Inspector 与确认对话框
+  使用同一实际生效范围。
+- 非根分组的全量子节点选择作为冗余层级拒绝；归一化不补齐未选择的普通间隔节点，锁定项与瀑布
+  segment 校验仍由原有安全边界阻断。
 - pointer 内部语义统一为 `before | after | inside`；group 中部命中 inside，边缘保持 before/after。
 - 图表拖拽候选覆盖 G2 当前投影中的全部可移动可见节点，图表与大纲共享同一 target resolver。
 - 图表在 pointer down 时从 G2 scene bounds 投影来源分组边界；成员边缘内继续排序，指针越过展开分组
@@ -37,16 +42,16 @@ SVG/PNG 和宿主调用继续进入同一套确定性 ViewSpec 命令与历史�
 - `SourceData` / `ViewSpec` wire schema：未修改。
 - 公共 command wire：未修改。
 - `any`、`@ts-ignore`、`@ts-expect-error`：未引入。
-- correction commits：`42c0342`、`5f0dcb9`；remote Git、push、PR、publish、release 未执行。
+- 本轮递归层级框选基线：`ead4be9`；remote Git、push、PR、publish、release 未执行。
 
 ## Quality
 
-- full unit/coverage：52 files，455/455 passed；总 lines 87.10%、branches 81.88%。
-- current Chromium/Firefox/WebKit：180/180；a11y：45/45。
-- previous Playwright release：180/180；WebKit 18.4：60/60。
+- full unit/coverage：52 files，458/458 passed；总 lines 87.19%、branches 81.68%。
+- current Chromium/Firefox/WebKit：183/183；a11y：45/45。
+- previous Playwright release：183/183；WebKit 18.4：61/61。
 - React 18.3.1 / 19.2.7、publint、ATTW、ESM/CJS/types、tarball contract、build 全部通过。
 - 三层 review 无 unresolved Critical/High/Medium finding。
-- 聚合 `pnpm test:performance` clean exact-command pass：waterfall p95 101.4ms，categorical p95 75.4ms，
+- 聚合 `pnpm test:performance` clean exact-command pass：waterfall p95 69.9ms，categorical p95 77.5ms，
   30 samples、root commit delta 0，均低于 150ms 预算。
 
 ## Residual Risks

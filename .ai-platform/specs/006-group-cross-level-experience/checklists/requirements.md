@@ -2,10 +2,10 @@
 
 ## Metadata
 
-- Version: 0.1.0
+- Version: 0.2.0
 - Status: Completed
-- Source spec: `../spec.md` 0.1.0 Confirmed
-- Last updated: 2026-07-20
+- Source spec: `../spec.md` 0.2.0 Confirmed
+- Last updated: 2026-07-24
 
 ## Interaction
 
@@ -14,6 +14,10 @@
 - [x] 是否覆盖 chart、outline 和 keyboard 的等价路径？[Accessibility]
 - [x] 是否定义 expanded 与 collapsed group 的落点行为？[Edge Case]
 - [x] 是否保留 locked、cycle、segment 和 readOnly 失败边界？[Safety]
+- [x] 是否定义展开分组内连续子集创建子分组？[Hierarchy]
+- [x] 是否定义跨边界选择提升为完整 group，而不是静默移出后代？[Intent]
+- [x] 是否让图表、大纲、Inspector 与确认对话框展示相同的实际生效范围？[Feedback]
+- [x] 是否拒绝冗余全选、普通节点缺口和单成员父分组？[Invariant]
 
 ## Domain
 

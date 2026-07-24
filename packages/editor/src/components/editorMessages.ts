@@ -1,3 +1,4 @@
+import type { GroupSelectionMode } from '../interactions/groupSelection';
 import type { EditorLocale } from './formatAmount';
 
 export interface EditorMessages {
@@ -45,6 +46,7 @@ export interface EditorMessages {
   readonly groupTooSmall: string;
   readonly groupNonContiguous: string;
   readonly groupLocked: string;
+  readonly groupRedundant: string;
   readonly dragInstructions: string;
   readonly moveInProgress: string;
   readonly moveValidationPending: string;
@@ -62,6 +64,12 @@ export interface EditorMessages {
   readonly dragLabel: (label: string) => string;
   readonly collapseGroup: (label: string) => string;
   readonly expandGroup: (label: string) => string;
+  readonly groupSelectionSummary: (
+    mode: GroupSelectionMode,
+    parentLabel: string | null,
+    nodeCount: number,
+    sourceCount: number,
+  ) => string;
   readonly backdrop: (label: string) => string;
 }
 
@@ -110,6 +118,7 @@ const ZH_CN: EditorMessages = {
   groupTooSmall: '至少选择 2 项连续贡献项',
   groupNonContiguous: '所选节点必须连续且位于同一父级',
   groupLocked: '所选项目包含锁定项',
+  groupRedundant: '所选内容已属于同一完整分组，请调整选择范围',
   dragInstructions: '使用指针拖动此项目。键盘移动请聚焦结构大纲行，并按 Alt 加方向键。',
   moveInProgress: '正在移动…',
   moveValidationPending: '移动目标已提交，正在校验',
@@ -127,6 +136,12 @@ const ZH_CN: EditorMessages = {
   dragLabel: label => `拖动 ${label}`,
   collapseGroup: label => `折叠 ${label}`,
   expandGroup: label => `展开 ${label}`,
+  groupSelectionSummary: (mode, parentLabel, nodeCount, sourceCount) =>
+    mode === 'nested'
+      ? `将在“${parentLabel ?? '当前分组'}”内创建子分组，共 ${sourceCount} 项来源`
+      : mode === 'lifted'
+        ? `已按分组边界选择 ${nodeCount} 个完整节点，共 ${sourceCount} 项来源`
+        : `将 ${nodeCount} 个节点（${sourceCount} 项来源）创建为分组`,
   backdrop: label => `${label}背景层`,
 };
 
@@ -175,6 +190,7 @@ const EN_US: EditorMessages = {
   groupTooSmall: 'Select at least 2 contiguous contributions',
   groupNonContiguous: 'Selected nodes must be contiguous siblings',
   groupLocked: 'The selection contains a locked item',
+  groupRedundant: 'The selection already covers one complete group; adjust the selection',
   dragInstructions:
     'Use a pointer to drag this item. For keyboard moves, focus an outline row and press Alt plus an arrow key.',
   moveInProgress: 'Moving…',
@@ -193,6 +209,12 @@ const EN_US: EditorMessages = {
   dragLabel: label => `Drag ${label}`,
   collapseGroup: label => `Collapse ${label}`,
   expandGroup: label => `Expand ${label}`,
+  groupSelectionSummary: (mode, parentLabel, nodeCount, sourceCount) =>
+    mode === 'nested'
+      ? `Create a subgroup inside “${parentLabel ?? 'the current group'}” from ${sourceCount} sources`
+      : mode === 'lifted'
+        ? `Selected ${nodeCount} complete nodes at group boundaries from ${sourceCount} sources`
+        : `Create a group from ${nodeCount} nodes and ${sourceCount} sources`,
   backdrop: label => `${label} backdrop`,
 };
 

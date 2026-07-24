@@ -140,7 +140,9 @@ function groupReason(
     ? messages.groupTooSmall
     : result.reason === 'ITEM_LOCKED'
       ? messages.groupLocked
-      : messages.groupNonContiguous;
+      : result.reason === 'REDUNDANT_GROUP_SELECTION'
+        ? messages.groupRedundant
+        : messages.groupNonContiguous;
 }
 
 export function InspectorPanel({

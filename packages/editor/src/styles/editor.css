@@ -930,6 +930,13 @@
   line-height: 22px;
 }
 
+.tp-group-dialog-scope {
+  margin: 0 0 2px;
+  color: var(--tp-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .tp-group-dialog label {
   color: var(--tp-text-muted);
   font-size: 11px;

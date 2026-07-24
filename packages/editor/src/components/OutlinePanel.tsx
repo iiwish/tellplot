@@ -25,7 +25,7 @@ import {
 import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
 import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
 import type { CategoricalDatum, CategoricalProjection } from '../charts/categorical/types';
-import { collectLeafSourceIds, locateViewNode } from '../domain/viewTree';
+import { collectLeafSourceIds } from '../domain/viewTree';
 import {
   resolveKeyboardMoveTarget,
   resolvePointerDropPlacement,
@@ -599,8 +599,9 @@ export function OutlinePanel({
       } else {
         next.add(entryId);
       }
-      const location = locateViewNode(viewSpec, entryId);
-      const orderedIds = (location?.values ?? [entryId]).filter(nodeId => next.has(nodeId));
+      const orderedIds = entries
+        .map(candidate => candidate.nodeId)
+        .filter(nodeId => next.has(nodeId));
       const entryRemainsSelected = next.has(entryId);
       const selectedNodeIds = orderedIds.length === 0 ? [entryId] : orderedIds;
       onSelect({
@@ -612,7 +613,7 @@ export function OutlinePanel({
         sourceIds: selectedNodeIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId)),
       });
     },
-    [onSelect, selection, viewSpec],
+    [entries, onSelect, selection, viewSpec],
   );
 
   useEffect(

@@ -11,7 +11,10 @@
   cycle 和单步 undo/redo 均有不变量测试。
 - R1-SC-004：默认、关闭、透明度边界、label、嵌套和折叠祖先通过 config/spec/export/rendering tests。
 - R1-SC-005：unit/coverage、package、React、current/previous browser、a11y、export gates 通过；聚合
-  `pnpm test:performance` clean pass 为 waterfall 101.4ms、categorical 75.4ms，均低于 150ms 预算。
+  `pnpm test:performance` clean pass 为 waterfall 69.9ms、categorical 77.5ms，均低于 150ms 预算。
+- R1-SC-006：组内选择创建子分组；跨边界选择提升完整 group；root 与嵌套共同父级、祖先覆盖、
+  冗余全选、非连续和锁定均有 component/domain 断言，真实 G2 marquee 在 current/previous browsers
+  与 WebKit 18.4 通过。
 
 Result: implementation PASS；delivery gate PASS；Critical/High/Medium code findings 0。
 
@@ -47,12 +50,16 @@ Result: implementation PASS；delivery gate PASS；Critical/High/Medium code fin
   quickstart SVG regression 均验证坐标轴保留。
 - PanelOverlay 在 focused action 被条件替换时恢复 dialog 内焦点，修复了移动端创建分组后的焦点丢失。
 - public appearance parser 对 opacity 限制为 0..0.2，未知 label 回退默认，未开放 callback 或 G2 options。
+- 层级选择 normalizer 只生成最低共同容器下的直接子节点；领域 `createGroup` 的同父级、连续性和
+  segment 合同未放宽。非根容器全量选择明确拒绝，避免持久化单成员父分组。
+- 结构大纲允许跨层累积原始选择，再由编辑器把合法结果同步为实际 group 边界；图表框选、Inspector、
+  selection callback 与提交 payload 不会出现不同范围。
 
 Result: PASS；actionable findings 0。
 
 ## QA Acceptance
 
-- 455 unit tests、180 current-browser tests、180 previous-browser tests、WebKit 18.4 60 tests 和
+- 458 unit tests、183 current-browser tests、183 previous-browser tests、WebKit 18.4 61 tests 和
   45 a11y tests 全绿。
 - manual desktop browser QA 观察到真实 G2 有界分组矩形、前景 label、单 group 的唯一取消分组动作，以及
   把“产品结构”拖入“增长驱动”后的 revision、层级和成功反馈；嵌套分组 `233` / `123` 标签均未被柱形

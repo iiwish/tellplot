@@ -104,6 +104,12 @@ export function ControlledChart() {
 同一实例不要同时传入 `view` 和 `defaultView`。受控 view 的 dataset、schema 和 chart type 必须与 config
 兼容。
 
+## 分组交互
+
+框选同一展开分组内的连续柱会创建子分组。框选同时覆盖分组内外的柱时，TellPlot 会把命中的内部柱提升
+为完整分组边界，再与外部连续节点创建上层分组；确认对话框会显示实际生效的节点与来源范围。原始
+`config.data` 始终不变，结构结果只写入 `ViewSpec`。
+
 ## 保存与恢复
 
 ```ts

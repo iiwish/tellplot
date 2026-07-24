@@ -93,6 +93,9 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 - Status: Confirmed
 - Decision: 图表手势采用 `idle -> pending-bar -> dragging` 与 `idle -> marquee` 两条互斥路径。项目在物理 category axis 移动达到 4px 才开始拖动，空白区域拖动显示选区；锁定项目和只读模式保留 pending 点击选择，拖动尝试不进入 dragging。拖动和框选预览属于临时交互状态，提交时只产生一个领域命令。
 - Rationale: 该状态机避免点击选择、柱子拖动和空白框选争夺 pointer，并保持一次用户意图对应一次撤销。
+- Marquee grouping: 图表框选和大纲多选先把可见命中归一化为最低共同容器下的直接子节点。选择只覆盖
+  展开分组内的连续子集时在该分组内创建子分组；选择跨越边界时，后代提升为共同父级下的完整 group
+  节点。归一化不自动补齐普通间隔节点，不允许产生单成员父分组，并在确认前显示实际生效范围。
 - Chart boundary: 图表和结构大纲都把落点解析为 `before`、`after` 或 `inside`，并提交相同的 container/index
   命令。图表使用 pointer down 时的 G2 scene category-axis 边界快照，waterfall/column 使用 X，bar 使用
   Y，value-axis 位移不影响目标；结构大纲保留完整层级与键盘入口。

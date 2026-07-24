@@ -43,6 +43,7 @@ const categoricalSource = {
     { id: 'category-a', label: 'Category A', amount: 10 },
     { id: 'category-b', label: 'Category B', amount: 20 },
     { id: 'category-c', label: 'Category C', amount: 30 },
+    { id: 'category-d', label: 'Category D', amount: 40 },
   ],
 } as const satisfies CategoricalSourceData;
 
@@ -186,6 +187,8 @@ describe('group selection and actions', () => {
       ok: true,
       nodeIds: ['a', 'b'],
       sourceIds: ['a', 'b'],
+      containerId: 'root',
+      mode: 'same-level',
     });
     expect(evaluateGroupSelection(commandSourceData, initialView(), ['a', 'c'])).toEqual({
       ok: false,
@@ -210,6 +213,8 @@ describe('group selection and actions', () => {
       ok: true,
       nodeIds: ['category-a', 'category-b'],
       sourceIds: ['category-a', 'category-b'],
+      containerId: 'root',
+      mode: 'same-level',
     });
     expect(
       evaluateGroupSelection(
@@ -220,25 +225,181 @@ describe('group selection and actions', () => {
     ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
   });
 
-  it('classifies contiguous recursive nodes only within the same parent', () => {
+  it('creates a subgroup from a contiguous selection inside an expanded group', () => {
     const viewSpec: ViewSpec = {
       ...initialView(),
       rootOrder: ['outer', 'd', 'e'],
       groups: {
-        inner: { id: 'inner', label: 'Inner', childIds: ['a', 'b'] },
-        outer: { id: 'outer', label: 'Outer', childIds: ['inner', 'c'] },
+        outer: { id: 'outer', label: 'Outer', childIds: ['a', 'b', 'c'] },
       },
     };
 
-    expect(evaluateGroupSelection(commandSourceData, viewSpec, ['c', 'inner'])).toEqual({
+    expect(evaluateGroupSelection(commandSourceData, viewSpec, ['b', 'a'])).toEqual({
       ok: true,
-      nodeIds: ['inner', 'c'],
-      sourceIds: ['a', 'b', 'c'],
+      nodeIds: ['a', 'b'],
+      sourceIds: ['a', 'b'],
+      containerId: 'outer',
+      mode: 'nested',
     });
-    expect(evaluateGroupSelection(commandSourceData, viewSpec, ['b', 'c'])).toEqual({
+  });
+
+  it('lifts a cross-boundary selection to complete sibling nodes', () => {
+    const rootView: ViewSpec = {
+      ...categoricalView(),
+      rootOrder: ['inner', 'category-c', 'category-d'],
+      groups: {
+        inner: {
+          id: 'inner',
+          label: 'Inner',
+          childIds: ['category-a', 'category-b'],
+        },
+      },
+    };
+    expect(
+      evaluateGroupSelection(categoricalSource, rootView, ['category-b', 'category-c']),
+    ).toEqual({
+      ok: true,
+      nodeIds: ['inner', 'category-c'],
+      sourceIds: ['category-a', 'category-b', 'category-c'],
+      containerId: 'root',
+      mode: 'lifted',
+    });
+    expect(
+      evaluateGroupSelection(categoricalSource, rootView, ['inner', 'category-b', 'category-c']),
+    ).toEqual({
+      ok: true,
+      nodeIds: ['inner', 'category-c'],
+      sourceIds: ['category-a', 'category-b', 'category-c'],
+      containerId: 'root',
+      mode: 'lifted',
+    });
+
+    const nestedView: ViewSpec = {
+      ...categoricalView(),
+      rootOrder: ['outer'],
+      groups: {
+        inner: {
+          id: 'inner',
+          label: 'Inner',
+          childIds: ['category-a', 'category-b'],
+        },
+        outer: {
+          id: 'outer',
+          label: 'Outer',
+          childIds: ['inner', 'category-c', 'category-d'],
+        },
+      },
+    };
+    expect(
+      evaluateGroupSelection(categoricalSource, nestedView, ['category-b', 'category-c']),
+    ).toEqual({
+      ok: true,
+      nodeIds: ['inner', 'category-c'],
+      sourceIds: ['category-a', 'category-b', 'category-c'],
+      containerId: 'outer',
+      mode: 'lifted',
+    });
+  });
+
+  it('rejects redundant, non-contiguous, or locked promoted selections', () => {
+    const rootView: ViewSpec = {
+      ...categoricalView(),
+      rootOrder: ['inner', 'category-c', 'category-d'],
+      groups: {
+        inner: {
+          id: 'inner',
+          label: 'Inner',
+          childIds: ['category-a', 'category-b'],
+        },
+      },
+    };
+    expect(
+      evaluateGroupSelection(categoricalSource, rootView, ['category-b', 'category-d']),
+    ).toEqual({
       ok: false,
       reason: 'NON_CONTIGUOUS_GROUP_SELECTION',
     });
+    expect(
+      evaluateGroupSelection(categoricalSource, { ...rootView, pinnedItemIds: ['category-a'] }, [
+        'category-b',
+        'category-c',
+      ]),
+    ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
+
+    const nestedView: ViewSpec = {
+      ...categoricalView(),
+      rootOrder: ['outer', 'category-d'],
+      groups: {
+        outer: {
+          id: 'outer',
+          label: 'Outer',
+          childIds: ['category-a', 'category-b', 'category-c'],
+        },
+      },
+    };
+    expect(
+      evaluateGroupSelection(categoricalSource, nestedView, [
+        'category-a',
+        'category-b',
+        'category-c',
+      ]),
+    ).toEqual({
+      ok: false,
+      reason: 'REDUNDANT_GROUP_SELECTION',
+    });
+  });
+
+  it('normalizes an expanded cross-boundary outline selection before grouping', async () => {
+    const groupedView: ViewSpec = {
+      ...categoricalView(),
+      rootOrder: ['inner', 'category-c', 'category-d'],
+      groups: {
+        inner: {
+          id: 'inner',
+          label: 'Inner',
+          childIds: ['category-a', 'category-b'],
+        },
+      },
+    };
+    const views: ViewSpec[] = [];
+    const onSelectionChange = vi.fn();
+    render(
+      <FinancialChartEditor
+        sourceData={categoricalSource}
+        defaultViewSpec={groupedView}
+        onSelectionChange={onSelectionChange}
+        onViewSpecChange={view => views.push(view)}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Category B/ }));
+    fireEvent.click(screen.getByRole('treeitem', { name: /Category C/ }), { ctrlKey: true });
+
+    await waitFor(() =>
+      expect(onSelectionChange).toHaveBeenLastCalledWith({
+        nodeId: 'category-c',
+        nodeIds: ['inner', 'category-c'],
+        sourceIds: ['category-a', 'category-b', 'category-c'],
+      }),
+    );
+    expect((screen.getByRole('checkbox', { name: '选择 Inner' }) as HTMLInputElement).checked).toBe(
+      true,
+    );
+    expect(
+      (screen.getByRole('checkbox', { name: '选择 Category C' }) as HTMLInputElement).checked,
+    ).toBe(true);
+
+    fireEvent.change(screen.getByRole('textbox', { name: '分组名称' }), {
+      target: { value: 'Outer selection' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '创建分组' }));
+
+    await waitFor(() => expect(views).toHaveLength(1));
+    const created = Object.values(views[0]?.groups ?? {}).find(
+      group => group.label === 'Outer selection',
+    );
+    expect(created?.childIds).toEqual(['inner', 'category-c']);
+    expect(views[0]?.groups['inner']?.childIds).toEqual(['category-a', 'category-b']);
   });
 
   it('supports modifier-free additive selection through touch-sized checkboxes', async () => {
