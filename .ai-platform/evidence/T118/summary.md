@@ -1,5 +1,10 @@
 # T118 / G002-R1 交付摘要
 
+## Metadata
+
+- Status: `Accepted`
+- Accepted on: 2026-07-29
+
 ## Outcome
 
 G002-R1 完成上下文分组动作、跨层 before/after/inside 编辑、按展开区域边界退出分组、两成员来源分组
@@ -63,5 +68,5 @@ SVG/PNG 和宿主调用继续进入同一套确定性 ViewSpec 命令与历史�
 
 ## Acceptance Gate
 
-G002-R1 / T118 的实现、review 和聚合性能门禁均已完成，状态为 `Needs_Review`，与 G002、G002-R2、
-G002-R3 统一等待用户目标级验收。npm publish、远程 Git 和正式 release 未获授权。
+G002-R1 / T118 的实现、review 和聚合性能门禁均已完成，用户于 2026-07-29 完成目标级统一验收，
+状态为 `Accepted`。npm publish、远程 Git 和正式 release 未获授权。

@@ -25,7 +25,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 
 ## G002 轻量图表库 Beta
 
-- Status: Needs_Review
+- Status: Accepted
 - Goal: 把当前三个图表家族整理成开发者可以直接安装、理解和稳定集成的 beta 版本。
 - Included outcomes:
   - 收敛并记录公共组件、数据、配置、事件、持久化和导出 API。
@@ -33,11 +33,11 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
   - 验证发布 tarball、React 18/19、类型、浏览器、可访问性、性能和导出。
   - 确定 beta 版本、变更记录和迁移规则。
 - Excluded: 新图表类型、通用插件系统、Dashboard 和服务端能力。
-- Acceptance: 与 G002-R1、G002-R2、G002-R3 一起进行目标级验收。
+- Acceptance: 用户于 2026-07-29 与 G002-R1、G002-R2、G002-R3、G004 统一验收。
 
 ## G002-R1 分组与跨层编辑体验
 
-- Status: Needs_Review
+- Status: Accepted
 - Goal: 让分组选择、跨层拖拽和展开区域在结构大纲与图表中具有一致、可理解的编辑反馈。
 - Outcome: 已完成上下文选择、组内子分组、跨边界整组提升、跨层移动、最小分组自动解散和可配置展开
   分组背景区域。
@@ -45,7 +45,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 
 ## G002-R2 开源官网与示例中心
 
-- Status: Needs_Review
+- Status: Accepted
 - Goal: 用真实图表首页、示例中心、开发者文档入口和连续工作台承载 TellPlot 的开源使用体验。
 - Outcome: `/`、`/examples`、`/docs` 和 `/playground` 已覆盖当前三个图表家族及 beta 接入路径。
 - Extension model: 新图表示例进入 playground 内容目录，不形成核心或公共 plugin registry。
@@ -53,7 +53,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 
 ## G002-R3 公共配置 API v1
 
-- Status: Needs_Review
+- Status: Accepted
 - Goal: 使用 `ChartEditor` 和一份判别式 `ChartConfig` 完成普通接入，并把可编辑 `ViewSpec` 作为独立高级状态。
 - Outcome: 类型和运行时配置校验、公开 facade、config/view 双文件工作台、迁移说明和发布候选回归。
 - Boundary: 不增加图表家族、schema、依赖、raw G2Spec 或第二套领域状态。
@@ -70,23 +70,23 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 
 ## G004 首个稳定版 1.0 候选
 
-- Status: Needs_Review
+- Status: Accepted
 - Goal: 形成可复现、可审计的 `@tellplot/editor@1.0.0` 本地稳定候选。
 - Included outcomes: 1.x 兼容合同、架构/cycle 门禁、稳定版文档、开源维护资料、tarball 审计、
   隔离源码 frozen-install 复演和完整兼容矩阵。
-- Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，等待目标级验收。
+- Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，并于 2026-07-29 通过目标级验收。
 - Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；不执行远程发布。
 
 ## G005 公开稳定版发布
 
 - Status: Blocked
 - Goal: 从干净 commit 将 1.0.0 公开为 GitHub、生产网站、tag/release 和 npm `latest`。
-- Entry condition: G002 系列与 G004 验收；remote Git、visibility、deploy、DNS、tag、GitHub Release 和
-  npm publish 获得独立明确授权；scope、2FA/Trusted Publishing 和托管权限可用。
+- Entry condition: remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 获得独立明确
+  授权；scope、2FA/Trusted Publishing 和托管权限可用。
 
 ## Decision Gates
 
-- G004 验收前不增加通用插件或拆分 `@tellplot/core`。
+- 不增加缺少明确用户价值证据的通用插件或拆分 `@tellplot/core`。
 - 新图表只在 G003 的具体目标获得批准后实现。
 - 原始 G2 options、G2 Chart instance 和内部 runtime handle 不进入公共 API。
 - 项目不规划 Dashboard、通用插件平台或第二渲染引擎。

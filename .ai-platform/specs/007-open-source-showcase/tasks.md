@@ -3,14 +3,15 @@
 ## Metadata
 
 - Version: 0.4.5
-- Status: Needs_Review
-- Last updated: 2026-07-23
+- Status: Accepted
+- Last updated: 2026-07-29
+- Acceptance: 用户于 2026-07-29 与 G002、G002-R1、G002-R3、G004 统一验收
 
 ## Goal Task
 
 ### T119 - 开源官网与示例中心
 
-- Status: Needs_Review
+- Status: Accepted
 - Priority: P0
 - Dependencies: G002 / T117 implementation complete；G002-R1 / T118 implementation complete
 - Blocks: G002-R2 目标级验收
@@ -31,7 +32,7 @@
 - Evidence required: RED receipt、changed files、完整命令结果、desktop/mobile screenshots、visual rubric、
   task-only diff 和 residual risk。
 - Packet path: `.ai-platform/specs/007-open-source-showcase/packets/T119.yaml`
-- User review: 等待 G002 系列目标级统一验收。
+- User review: 用户于 2026-07-29 统一验收 G002-R2 / T119。
 
 ## Internal Attempts
 

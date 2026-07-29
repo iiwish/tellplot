@@ -4,8 +4,8 @@
 
 - Version: 0.32.0
 - Status: Active
-- Last updated: 2026-07-24
-- Scope: T101-T116 已验收；G002 系列与 G004 1.0.0 本地稳定版候选实现完成并等待验收
+- Last updated: 2026-07-29
+- Scope: T101-T116、G002 系列与 G004 均已验收；1.0.0 本地稳定候选等待独立远程发布授权
 
 ## Goal-Level Delivery
 
@@ -20,13 +20,13 @@
 | Goal | Status | Outcome |
 | --- | --- | --- |
 | G001 - 多图表基础能力 | Accepted | T101-T116；waterfall、bar、column 与共享 G2 runtime 完整验收 |
-| G002 - 轻量图表库 Beta | Needs_Review | T117；发布包、文档、兼容性和 beta 质量闭环 |
-| G002-R1 - 分组与跨层编辑体验 | Needs_Review | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
-| G002-R2 - 开源官网与示例中心 | Needs_Review | T119；真实图表首页、示例中心、文档入口和连续工作台 |
-| G002-R3 - 公共配置 API v1 | Needs_Review | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
+| G002 - 轻量图表库 Beta | Accepted | T117；发布包、文档、兼容性和 beta 质量闭环 |
+| G002-R1 - 分组与跨层编辑体验 | Accepted | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
+| G002-R2 - 开源官网与示例中心 | Accepted | T119；真实图表首页、示例中心、文档入口和连续工作台 |
+| G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
 | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
-| G004 - 首个稳定版 1.0 候选 | Needs_Review | T123；稳定合同、发布门禁与隔离源码复演 |
-| G005 - 公开稳定版发布 | Blocked | 等待 G002/G004 验收与独立远程授权 |
+| G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
+| G005 - 公开稳定版发布 | Blocked | 等待独立远程授权与发布身份/托管条件 |
 
 ## T001 - 确认产品设计与项目章程
 
@@ -163,36 +163,36 @@
 ## G002 Execution
 
 G002 已由用户批准并以 T117 连续完成。发布包、文档、兼容性、可配置 panel、布局和双向工作台 evidence
-完整；目标与 G002-R1、G002-R2、G002-R3 一起等待统一验收。权威目标图位于
+完整；用户于 2026-07-29 完成统一验收。权威目标图位于
 `.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md`。旧仓库处置、npm publish 和正式发布保持
 独立闸门。
 
 ## G002-R1 Execution
 
 G002-R1 已由用户批准并以 T118 连续完成。上下文选择、区域边界退出、click/drag 动作区分、跨层移动、
-原子解散和展开分组区域 evidence 完整；目标等待 G002 系列统一验收。权威目标图位于
+原子解散和展开分组区域 evidence 完整；用户于 2026-07-29 完成统一验收。权威目标图位于
 `.ai-platform/specs/006-group-cross-level-experience/tasks.md`。
 
 ## G002-R2 Execution
 
 G002-R2 已由用户批准并以 T119 连续完成。真实图表首页、示例中心、开发者文档入口、连续工作台以及
-桌面/移动验证均已交付；目标等待 G002 系列统一验收。权威目标图、设计合同与任务证据位于
+桌面/移动验证均已交付；用户于 2026-07-29 完成统一验收。权威目标图、设计合同与任务证据位于
 `.ai-platform/specs/007-open-source-showcase/` 和 `.ai-platform/evidence/T119/`。
 
 ## G002-R3 Execution
 
 G002-R3 已由用户于 2026-07-23 批准 breaking public API 和连续执行，内部以 T122 完成交付
 `ChartEditor`、判别式 `ChartConfig`、`validateChartConfig`、config/view 双文件工作台、迁移说明和完整
-发布候选门禁，状态为 `Needs_Review`。权威目标图位于
+发布候选门禁；用户于 2026-07-29 完成统一验收，状态为 `Accepted`。权威目标图位于
 `.ai-platform/specs/009-public-configuration-api/tasks.md`。
 
 ## G004 Execution
 
 G004 已由用户于 2026-07-23 批准，内部以 T123 连续完成 `@tellplot/editor@1.0.0` 本地稳定候选、
 兼容政策、开源资料、完整发布门禁、隔离源码复演和当前/旧版浏览器矩阵。2026-07-24 发布复核关闭了
-WebKit 长队列资源耗尽、不完整聚合门禁、npm registry 漂移和内部交付记录个人路径泄漏，状态保持
-`Needs_Review`。权威目标图与交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和
+WebKit 长队列资源耗尽、不完整聚合门禁、npm registry 漂移和内部交付记录个人路径泄漏。用户于
+2026-07-29 完成统一验收，状态为 `Accepted`。权威目标图与交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和
 `.ai-platform/evidence/T123/`。
 
 原 G004 Beta 草案与 T120/T121 不再是当前执行入口。公开 Git、仓库可见性、生产网站、DNS、tag、
-GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到 G002/G004 目标验收并取得独立远程授权。
+GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到取得独立远程授权并具备发布身份与托管条件。

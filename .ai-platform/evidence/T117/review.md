@@ -46,7 +46,7 @@ Result: PASS；actionable findings 0。
   previous-browser matrix 通过，锁定反馈、revision 和树顺序断言保持。
 - npm publish、远程 Git 和正式 release 未执行。
 
-Result: PASS；G002 / T117 可进入 `Needs_Review`。
+Result: PASS；用户于 2026-07-29 验收，G002 / T117 为 `Accepted`。
 
 ## Residual Risk Classification
 

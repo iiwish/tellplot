@@ -16,6 +16,8 @@ governance_inputs:
   analysis: .ai-platform/specs/010-stable-v1-release/analysis.md
   execution_authorization: >-
     Granted. The user explicitly approved creating and completing the 1.0.0 stable-version goal on 2026-07-23.
+    On 2026-07-24 the user explicitly authorized correcting final tarball provenance and the playground G2 chunk
+    warning without npm publish or GitHub Release.
     Stage, commit, push, pull request, merge, repository visibility, production deploy, DNS, git tag, GitHub Release
     and npm publish remain unauthorized.
 
@@ -69,16 +71,21 @@ baseline:
 execution_constraints:
   allowed_files:
     - package.json
+    - .gitignore
+    - .prettierignore
     - vitest.config.ts
     - packages/editor/package.json
     - packages/editor/README.md
     - packages/editor/tests/package/**
+    - packages/editor/tests/react-matrix/**
     - scripts/release/**
     - README.md
     - CHANGELOG.md
     - docs/**
     - apps/playground/src/DocsPage.tsx
     - apps/playground/src/SiteHeader.tsx
+    - apps/playground/vite.config.ts
+    - apps/playground/tests/**
     - e2e/**
     - .github/**
     - .ai-platform/**
@@ -94,15 +101,18 @@ tdd_plan:
     - Lock stable version, required public files and release scripts before implementation.
     - Lock architecture import graph and cycle rules.
     - Lock tarball manifest and no-prerelease metadata.
+    - Prove the production playground currently emits a JavaScript chunk above Vite's warning threshold.
   green:
     - Implement stable policy/docs/community files and release checks.
     - Implement isolated-source rehearsal.
+    - Split the lazy G2 runtime into bounded Vite 8 Rolldown chunks while preserving on-demand loading.
   refactor:
     - Compose root release commands without duplicating project validation logic.
 
 validation_commands:
   - pnpm release:architecture
   - pnpm release:audit
+  - pnpm release:artifact
   - pnpm release:check
   - pnpm release:rehearse
   - pnpm format:check

@@ -8,6 +8,7 @@ const gates = [
   ['pnpm', ['typecheck']],
   ['pnpm', ['test:coverage']],
   ['pnpm', ['build']],
+  ['pnpm', ['release:artifact']],
   ['pnpm', ['test:package']],
   ['pnpm', ['test:react-matrix']],
   ['pnpm', ['test:e2e']],

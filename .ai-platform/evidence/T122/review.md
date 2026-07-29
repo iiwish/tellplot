@@ -3,7 +3,7 @@
 ## Verdict
 
 `PASS`。G002-R3 / T122 满足 CONFIG-SC-001 至 CONFIG-SC-007，无未解决 Critical、High 或 Medium
-finding，可以进入 `Needs_Review`。
+finding；用户于 2026-07-29 验收，状态为 `Accepted`。
 
 ## Spec Compliance
 

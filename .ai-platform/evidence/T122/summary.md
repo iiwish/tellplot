@@ -5,7 +5,8 @@
 - Goal: `G002-R3`
 - Task: `T122`
 - Packet: `EP-G002-R3-T122-A001`
-- Status: `Needs_Review`
+- Status: `Accepted`
+- Accepted on: 2026-07-29
 - Date: 2026-07-23
 - Branch: `codex/t112-categorical-data-contract`
 
@@ -67,4 +68,4 @@ playground 左栏编辑真实公共 `tellplot.config.json`，高级标签页独�
 
 没有修改 dependency manifest、lockfile、`SourceData` / `ViewSpec` schema、命令协议、chart projection、
 G2 runtime 或 export implementation。没有执行 stage、commit、push、PR、merge、npm publish、release
-或部署。G002-R3 / T122 进入 `Needs_Review`；只有用户可以将其标记为 `Accepted`。
+或部署。用户于 2026-07-29 完成目标级统一验收，G002-R3 / T122 状态为 `Accepted`。

@@ -6,8 +6,9 @@
 - Version: `1.0.0`
 - Runtime: Node 22.20.0 / pnpm 11.1.3
 - Isolated root: `<temporary-directory>/tellplot-1.0.0-rehearsal-*`
-- Source files copied: 285
+- Source files copied: 287
 - Excluded: `.git`、node_modules、dist、coverage、Playwright output、test-results 和 evidence
+- Local protection: `.copyright-application` 与 `tmp` 不进入隔离副本
 
 ## Gates
 
@@ -19,8 +20,8 @@
 6. `pnpm build`
 7. `pnpm test:package`
 
-最终结果为 architecture 48 files / 245 edges / 0 cycles，isolated release audit 191 files，
-unit 52 files / 455 tests，package
+最终结果为 architecture 48 files / 246 edges / 0 cycles，isolated release audit 193 files，
+unit 53 files / 459 tests，package
 `@tellplot/editor@1.0.0` 的 publint、ATTW、ESM、CJS、types 和 tarball contract 全部通过。
 
 ## Finding Closed During Rehearsal

@@ -7,7 +7,7 @@
 | Metric | Result |
 | --- | --- |
 | TypeScript / TSX source files | 48 |
-| Runtime import edges | 245 |
+| Runtime import edges | 246 |
 | Runtime cycles | 0 |
 | Public entry | `packages/editor/src/index.ts` |
 | Runtime exports | 11 |
@@ -34,6 +34,8 @@
 - 审计只报告规则和路径，不输出疑似凭据内容。
 - package `publishConfig` 固定 `access: public` 和 npm 官方 registry，不受开发机全局 registry 漂移影响。
 - package tarball 只包含 allowlist 中的 13 个 dist/metadata/README/LICENSE 文件。
+- provenance 门禁从当前源码独立构建与 pack，并校验 evidence tarball、manifest、size、SHA-256
+  和文件清单，避免候选产物落后于源码。
 
 ## Change Boundary
 
@@ -44,6 +46,8 @@
   保持在既有 interactions/components 层内；临时 ViewSpec 只进入内部 canvas 的 group region
   投影，没有新增公共出口或越层依赖。
 - source alias 只消除测试对预生成 `dist` 的隐式依赖。
+- Playground 的 Vite 8 Rolldown 分组只调整构建产物边界，G2 仍由既有 dynamic import 按需加载；
+  package runtime、公共 API 和宿主 bundler 策略不受影响。
 
 ## Conclusion
 

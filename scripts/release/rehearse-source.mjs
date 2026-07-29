@@ -7,12 +7,14 @@ import { repositoryRoot, run, walkFiles } from './release-utils.mjs';
 const targetRoot = mkdtempSync(join(tmpdir(), 'tellplot-1.0.0-rehearsal-'));
 const excluded = new Set([
   '.git',
+  '.copyright-application',
   'node_modules',
   'dist',
   'coverage',
   'playwright-report',
   'test-results',
   'blob-report',
+  'tmp',
 ]);
 
 function includeSource(source) {

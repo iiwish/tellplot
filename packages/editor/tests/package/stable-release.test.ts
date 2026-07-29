@@ -29,6 +29,7 @@ describe('1.0 stable release contract', () => {
   it('uses stable package metadata and release commands', () => {
     const packageManifest = json('packages/editor/package.json');
     const workspaceManifest = json('package.json');
+    const artifactScript = text('scripts/release/package-artifact.mjs');
     const scripts = workspaceManifest['scripts'] as Record<string, unknown>;
     const publishConfig = packageManifest['publishConfig'] as Record<string, unknown>;
 
@@ -39,8 +40,14 @@ describe('1.0 stable release contract', () => {
     });
     expect(scripts['release:architecture']).toBe('node scripts/release/check-architecture.mjs');
     expect(scripts['release:audit']).toBe('node scripts/release/audit-release.mjs');
+    expect(scripts['release:artifact']).toBe('node scripts/release/package-artifact.mjs');
+    expect(scripts['release:artifact:refresh']).toBe(
+      'node scripts/release/package-artifact.mjs --write',
+    );
     expect(scripts['release:check']).toBe('node scripts/release/check-stable.mjs');
     expect(scripts['release:rehearse']).toBe('node scripts/release/rehearse-source.mjs');
+    expect(artifactScript).toContain("resolve(repositoryRoot, '.nvmrc')");
+    expect(artifactScript).toContain('process.versions.node');
   });
 
   it('keeps the public release command and browser matrix release-complete', () => {
@@ -49,9 +56,12 @@ describe('1.0 stable release contract', () => {
     const previousBrowserRunner = text(
       'packages/editor/tests/browser-matrix/run-previous-browsers.mjs',
     );
+    const reactMatrixRunner = text('packages/editor/tests/react-matrix/run-react-matrix.mjs');
     const releaseAudit = text('scripts/release/audit-release.mjs');
+    const sourceRehearsal = text('scripts/release/rehearse-source.mjs');
     const requiredGates = [
       'test:coverage',
+      'release:artifact',
       'test:package',
       'test:react-matrix',
       'test:e2e',
@@ -67,7 +77,12 @@ describe('1.0 stable release contract', () => {
     expect(playwrightConfig).toContain("process.env['TELLPLOT_E2E_WORKERS'] ?? '2'");
     expect(playwrightConfig).toContain('workers: e2eWorkers');
     expect(previousBrowserRunner).toContain('workers: 2');
+    expect(reactMatrixRunner).toContain("join(directory, 'vite.config.mjs')");
+    expect(reactMatrixRunner).toContain("name: 'g2-runtime'");
+    expect(reactMatrixRunner).toContain('codeSplitting');
     expect(releaseAudit).toContain("resolve(repositoryRoot, '.ai-platform')");
+    expect(sourceRehearsal).toContain("'.copyright-application'");
+    expect(sourceRehearsal).toContain("'tmp'");
   });
 
   it('ships the public maintenance and stability documents', () => {

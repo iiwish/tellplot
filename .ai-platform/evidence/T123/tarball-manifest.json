@@ -2,9 +2,15 @@
   "name": "@tellplot/editor",
   "version": "1.0.0",
   "filename": "tellplot-editor-1.0.0.tgz",
-  "sizeBytes": 486637,
-  "sha256": "99124b1ec5dcd21d3233851ee7073d9f780b0af44f8b84f2385c8465418475f0",
+  "sizeBytes": 492728,
+  "sha256": "9f8f6babe9342ec778f507b9d0e12e313c5ba52faa8b27e02bea094f618ebdfa",
   "files": [
+    {
+      "path": "LICENSE"
+    },
+    {
+      "path": "README.md"
+    },
     {
       "path": "dist/index.cjs"
     },
@@ -36,13 +42,7 @@
       "path": "dist/styles.d.ts"
     },
     {
-      "path": "LICENSE"
-    },
-    {
       "path": "package.json"
-    },
-    {
-      "path": "README.md"
     }
   ]
 }

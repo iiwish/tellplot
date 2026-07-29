@@ -5,13 +5,13 @@
 - Feature ID: `006-group-cross-level-experience`
 - Goal ID: `G002-R1`
 - Version: 0.4.0
-- Status: Needs_Review
-- Last updated: 2026-07-24
-- Approval: 用户明确批准 G002-R1，并于 2026-07-24 要求完成递归层级框选优化
+- Status: Accepted
+- Last updated: 2026-07-29
+- Approval: 用户明确批准 G002-R1，并于 2026-07-29 与 G002、G002-R2、G002-R3、G004 统一验收
 
 ## T118 - 交付 G002-R1 分组与跨层编辑体验
 
-- Status: Needs_Review
+- Status: Accepted
 - Priority: P0
 - Dependencies: G001 Accepted；G002 / T117 release candidate complete
 - Blocks: G002 目标级复验与后续基础图表扩展
@@ -46,4 +46,4 @@
   selection-normalizer/adapter/G2 implementation；REFACTOR shared tree-path and region code only.
 - Packet path: `.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml`
 - Evidence required: `.ai-platform/evidence/T118/summary.md`、`test-results.md`、`diff.patch`、`review.md`、visual evidence
-- User review: 等待 G002 系列目标级统一验收。
+- User review: 用户于 2026-07-29 统一验收 G002-R1 / T118。

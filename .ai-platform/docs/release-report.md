@@ -4,13 +4,13 @@
 
 - Version: 1.0.0
 - Status: Not_Released
-- Last updated: 2026-07-24
+- Last updated: 2026-07-29
 - Working branch: `codex/t112-categorical-data-contract`
 
 ## Current State
 
-TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 已验收；G002、G002-R1、G002-R2、G002-R3 与 G004
-已完成实现并统一等待验收。`@tellplot/editor@1.0.0` 是通过本地发布门禁的稳定版候选，不是已经
+TellPlot 是基于 G2 的轻量可编辑基础图表库。G001、G002、G002-R1、G002-R2、G002-R3 与 G004
+均已验收。`@tellplot/editor@1.0.0` 是通过本地发布门禁的稳定版候选，不是已经
 发布到 npm 或 GitHub 的公开版本。当前包提供瀑布图、分类条形图和分类柱状图，以及共享数据/视图模型、
 确定性命令、结构大纲、历史、持久化、安全语义配置、SVG/PNG 导出和无障碍支持。
 
@@ -44,9 +44,6 @@ plugin registry。
 - T110：长期文档与 `FinancialChartAppearance` 安全语义配置。
 - T111-T115：分类数据合同、bar/column projection、X/Y 交互、编辑器、导出与可访问性。
 - T116：chart-family ownership、shared G2 screen/export runtime 和多图表架构收敛。
-
-## Needs Review Scope
-
 - G002 / T117：Beta 公共 API、package README/LICENSE、developer docs、tarball 与双向开发者编辑器。
 - G002-R1 / T118：分组上下文、跨层拖拽、自动解散和展开分组区域。
 - G002-R2 / T119：真实图表首页、示例中心、开发者文档入口、连续工作台与响应式视觉体验。
@@ -55,28 +52,32 @@ plugin registry。
 
 ## Blocked Release Goal
 
-- G005：等待 G002 系列与 G004 目标级验收，以及 remote Git、visibility、deploy、DNS、tag、
-  GitHub Release 和 npm publish 的逐类明确授权。
+- G005：等待 remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 的逐类明确授权，
+  以及 npm 发布身份与生产托管条件。
 
 ## Validation Evidence
 
 - Node 22.20.0 下的 `pnpm release:check` 完整通过；聚合门禁覆盖 architecture、release audit、
   format、lint、typecheck、coverage、build、package、React matrix、current E2E、a11y、performance、
   previous-browser matrix 和 isolated-source rehearsal。
-- unit/coverage：52 files / 455 tests；statements 86.99%、branches 81.88%、functions 90.05%、
-  lines 87.10%，受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
-- current Chromium/Firefox/WebKit：180/180；accessibility：45/45。
-- previous Playwright release：180/180；WebKit 18.4：60/60。
+- unit/coverage：53 files / 459 tests；statements 87.08%、branches 81.68%、functions 89.97%、
+  lines 87.19%，受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+- current Chromium/Firefox/WebKit：183/183；accessibility：45/45。
+- previous Playwright release：183/183；WebKit 18.4：61/61。
 - React 18.3.1 / 19.2.7、ESM/CJS/types、compile-checked quickstart 与 package checks 通过。
-- 200-item performance：waterfall p95 101.4ms；categorical p95 75.4ms；预算 150ms。
-- architecture audit：48 个源码文件、245 条 import edge、0 个 runtime cycle；release audit：
-  11 个 runtime export、19 个公开文件、306 个源码与交付记录文件。
-- 隔离源码复演：285 个源码文件，frozen install、architecture、audit、typecheck、455 个 unit、
+- 200-item performance：waterfall 与 categorical p95 均通过 150ms 阻断预算。
+- architecture audit：48 个源码文件、246 条 import edge、0 个 runtime cycle；clean clone release audit：
+  11 个 runtime export、19 个公开文件、282 个源码与交付记录文件。
+- 隔离源码复演：287 个源码文件，frozen install、architecture、audit、typecheck、459 个 unit、
   build 与 package 全部通过。
 - 官方 npm registry 生产依赖审计无已知漏洞；package `publishConfig` 固定 public access 与
   `https://registry.npmjs.org/`。
 - tarball 为 `@tellplot/editor@1.0.0`，仅包含 13 个 dist/metadata/README/LICENSE 文件；
-  486637 bytes，SHA-256 为 `99124b1ec5dcd21d3233851ee7073d9f780b0af44f8b84f2385c8465418475f0`。
+  492728 bytes，SHA-256 为 `9f8f6babe9342ec778f507b9d0e12e313c5ba52faa8b27e02bea094f618ebdfa`。
+- `release:artifact` 固定使用 `.nvmrc` 的 Node 22.20.0，从当前源码重建并核对 tarball、
+  manifest、size、SHA-256 与文件清单。
+- Playground 与 React 18/19 consumer 的 G2 runtime 保持按需加载，最大 JS chunk 472.56 kB，
+  真实生产构建无 chunk-size warning。
 - strict artifact validator、format、lint、typecheck、build、release audit 和 diff checks 通过。
 
 详细结果和残余风险见 `.ai-platform/evidence/T117/`、`.ai-platform/evidence/T118/`、
@@ -86,7 +87,7 @@ plugin registry。
 
 - 1.0 候选与发布复核修复位于本地工作分支；没有 push、PR 或 merge。
 - `@tellplot/editor@1.0.0` 只完成本地稳定候选验证，npm publish、GitHub Release 和正式部署未执行。
-- playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
+- chunk 分组使用 Vite 8 Rolldown 配置，升级构建工具时由真实生产构建测试验证兼容性和 500 kB 阈值。
 - 200-item performance 继续保留 150ms 阻断预算和真实浏览器监测，不弱化预算。
 - GitHub 私有仓库计划无法强制 branch protection/rulesets；服务端 required checks 仍受外部计划限制。
 - 当前未包含生产网站部署；未来 history URL 托管需要配置 SPA fallback。
@@ -96,5 +97,5 @@ plugin registry。
 
 ## Next Gate
 
-统一验收 G002、G002-R1、G002-R2、G002-R3 与 G004。验收后可单独审批 G005；远程 Git、仓库公开、
-网站部署、DNS、Git tag、GitHub Release 和 npm publish 继续保持独立闸门。
+G005 继续保持独立审批；远程 Git、仓库公开、网站部署、DNS、Git tag、GitHub Release 和 npm publish
+均未获授权。

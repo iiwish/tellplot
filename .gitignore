@@ -38,6 +38,10 @@ yarn-error.log*
 *.tmp
 *.temp
 
+# Local private and scratch materials
+.copyright-application/
+tmp/
+
 # Other package manager lock files
 # package-lock.json
 # yarn.lock

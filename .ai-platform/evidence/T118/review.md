@@ -73,7 +73,8 @@ Result: PASS；actionable findings 0。
 - mobile Inspector action replacement 的焦点边界 finding 已修复并加入 unit/E2E regression。
 - correction commits 为 `42c0342`、`5f0dcb9`；没有执行 remote Git、push、publish 或 release。
 
-Result: product QA PASS；performance delivery gate PASS；G002-R1 / T118 进入 `Needs_Review`。
+Result: product QA PASS；performance delivery gate PASS；用户于 2026-07-29 验收，G002-R1 / T118
+为 `Accepted`。
 
 ## Residual Risk Classification
 

@@ -5,13 +5,13 @@
 - Feature ID: `005-lightweight-chart-library-beta`
 - Goal ID: `G002`
 - Version: 0.6.0
-- Status: Needs_Review
-- Last updated: 2026-07-23
-- Approval: 用户于 2026-07-20 明确批准 G002；目标与 G002-R1、G002-R2、G002-R3 一起等待统一验收
+- Status: Accepted
+- Last updated: 2026-07-29
+- Approval: 用户于 2026-07-20 明确批准 G002，并于 2026-07-29 与 G002-R1、G002-R2、G002-R3、G004 统一验收
 
 ## T117 - 交付 G002 轻量图表库 Beta
 
-- Status: Needs_Review
+- Status: Accepted
 - Priority: P0
 - Dependencies: G001 / T101-T116 Accepted
 - Blocks: npm publish、G003 新图表扩展
@@ -54,7 +54,7 @@
   REFACTOR 只清理陈旧公共文案。
 - Packet path: `.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml`
 - Evidence required: `.ai-platform/evidence/T117/` 中的目标级 summary、tests、diff、pack manifest、API surface 和 review
-- User review: 等待 G002 系列目标级统一验收。
+- User review: 用户于 2026-07-29 统一验收 G002 / T117。
 - Execution variance: compile-checked CSS import 需要为 styles subpath 声明 `types` condition；React tarball
   consumer 的 manifest assertion 同步验证该 metadata，不改变 runtime、CSS 内容或导入路径。
 - Review state: spec compliance、bug/code quality 与 QA review 无 blocking finding；417/417 unit/coverage、

@@ -5,7 +5,8 @@
 - Goal: `G002-R2`
 - Task: `T119`
 - Packet: `EP-G002-R2-A001`
-- Status: `Needs_Review`
+- Status: `Accepted`
+- Accepted on: 2026-07-29
 - Date: 2026-07-23
 - Branch: `codex/t112-categorical-data-contract`
 
@@ -60,6 +61,6 @@ runtime registry。核心包、公共 API、schema 和命令协议不在 T119 di
 
 ## Delivery Boundary
 
-未执行 stage、commit、push、PR、merge、npm publish、release 或网站部署。G002-R2 / T119 的实现、
-review 和门禁均已完成，状态为 `Needs_Review`，与 G002、G002-R1、G002-R3 统一等待用户目标级验收。
+未执行 push、PR、merge、npm publish、release 或网站部署。G002-R2 / T119 的实现、review 和门禁均已完成，
+用户于 2026-07-29 完成目标级统一验收，状态为 `Accepted`。
 T119 当时的完整矩阵保留一个已隔离通过的低风险 WebKit 导航超时；后续 T122 完整矩阵已 177/177 通过。

@@ -5,13 +5,13 @@
 - Feature ID: `009-public-configuration-api`
 - Goal ID: `G002-R3`
 - Version: 0.2.0
-- Status: Needs_Review
-- Last updated: 2026-07-23
-- Approval: 用户于 2026-07-23 明确批准目标与执行
+- Status: Accepted
+- Last updated: 2026-07-29
+- Approval: 用户于 2026-07-23 明确批准目标与执行，并于 2026-07-29 与 G002 系列、G004 统一验收
 
 ## T122 - 交付公共配置 API v1
 
-- Status: Needs_Review
+- Status: Accepted
 - Priority: P0
 - Dependencies: G002 / T117、G002-R1 / T118、G002-R2 / T119 implementation complete
 - Blocks: G002 系列目标级验收、G004 / T120

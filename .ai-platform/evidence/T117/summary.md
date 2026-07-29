@@ -2,7 +2,8 @@
 
 ## Outcome
 
-- Status: `Needs_Review`
+- Status: `Accepted`
+- Accepted on: 2026-07-29
 - Execution attempt: `T117-A001`、review corrections `T117-A002` / `T117-A003` / `T117-A004`
 - Package candidate: `@tellplot/editor@0.1.0-beta.1`
 - Goal: G002 轻量图表库 Beta
@@ -56,5 +57,5 @@ Critical/High/Medium findings: 0。
 
 ## Acceptance Gate
 
-G002 / T117 的实现、review 和门禁均已完成，状态为 `Needs_Review`，与 G002-R1、G002-R2、G002-R3
-统一等待用户目标级验收。远程 Git、npm publish、Git tag、GitHub Release 和生产部署未获授权。
+G002 / T117 的实现、review 和门禁均已完成，用户于 2026-07-29 完成目标级统一验收，状态为
+`Accepted`。远程 Git、npm publish、Git tag、GitHub Release 和生产部署未获授权。

@@ -1,2063 +1,1290 @@
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/product-design.md ./.ai-platform/docs/product-design.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/product-design.md	2026-07-23 15:13:04
-+++ ./.ai-platform/docs/product-design.md	2026-07-23 15:49:07
-@@ -2,10 +2,10 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 1bed3b8..e3013d9 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -4,13 +4,13 @@
  
- ## Metadata
- 
--- Version: 0.9.0
-+- Version: 1.0.0
- - Status: Confirmed
- - Last updated: 2026-07-23
--- Approval: 用户已确认轻量可编辑基础图表库定位，并于 2026-07-23 批准声明式公共配置 API
-+- Approval: 用户已确认轻量可编辑基础图表库定位、声明式公共配置 API 与 1.0.0 稳定版目标
- 
- ## Product Positioning
- 
-@@ -175,6 +175,12 @@
- `ViewSpec` 独立承载排序、分组、折叠、固定、注释和强调；普通接入不要求手工初始化视图。TypeScript
- 和 `validateChartConfig` 必须拒绝图表家族、数据和配置字段冲突。
- 
-+### FR-017 稳定版合同
-+
-+`@tellplot/editor@1.0.0` 对文档化的 runtime/type/schema/error/peer/browser 表面遵循 Semantic
-+Versioning。1.x 不进行 breaking public API 或 schema 变更；弃用至少跨一个 minor，并提供替代路径、
-+迁移说明和兼容测试。
-+
- ## Non-Functional Requirements
- 
- ### NFR-001 正确性
-@@ -247,6 +253,7 @@
- - SC-005：新增图表不要求宿主接触 G2 instance 或复制 TellPlot 内部生命周期。
- - SC-006：核心包不存在模型调用、外部业务请求或未经授权的数据发送。
- - SC-007：最小瀑布图、条形图和柱状图接入只需要一份 `ChartConfig`；公共配置与可编辑视图状态边界明确。
-+- SC-008：1.0.0 package、公开资料、架构/发布审计和隔离源码复演全部通过，且不会被描述为已公开发布。
- 
- ## Confirmed Decisions
- 
-@@ -290,3 +297,8 @@
- 公共组件使用 `ChartEditor`；`ChartConfig` 收纳 `type`、`data`、`appearance`、`editor`、`locale` 和
- `height`，受控状态使用 `view`、`defaultView` 与 `onViewChange`。内部适配层保留领域模型和 G2
- ownership，不提供 raw `G2Spec`。
-+
-+### CD-010 稳定版本
-+
-+首个稳定包版本为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
-+作为稳定条件。公开发布只允许来自后续授权的干净 commit；本地稳定候选不等于 npm/GitHub/网站已发布。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/release-report.md ./.ai-platform/docs/release-report.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/release-report.md	2026-07-23 15:38:56
-+++ ./.ai-platform/docs/release-report.md	2026-07-23 16:20:12
-@@ -2,17 +2,17 @@
- 
- ## Metadata
- 
--- Version: 0.14.0
-+- Version: 1.0.0
+ - Version: 1.0.0
  - Status: Not_Released
- - Last updated: 2026-07-23
+-- Last updated: 2026-07-24
++- Last updated: 2026-07-29
  - Working branch: `codex/t112-categorical-data-contract`
  
  ## Current State
  
--TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 已验收；G002、G002-R1、G002-R2、G002-R3 已完成实现，
--四个目标统一等待验收。`@tellplot/editor@0.1.0-beta.1` 是本地候选，不是已批准的
--公开发布候选。当前包提供瀑布图、分类条形图和分类柱状图，以及共享数据/视图模型、确定性命令、结构大纲、
--历史、持久化、安全语义配置、SVG/PNG 导出和无障碍支持。
-+TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 已验收；G002、G002-R1、G002-R2、G002-R3 与 G004
-+已完成实现并统一等待验收。`@tellplot/editor@1.0.0` 是通过本地发布门禁的稳定版候选，不是已经
-+发布到 npm 或 GitHub 的公开版本。当前包提供瀑布图、分类条形图和分类柱状图，以及共享数据/视图模型、
-+确定性命令、结构大纲、历史、持久化、安全语义配置、SVG/PNG 导出和无障碍支持。
+-TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 已验收；G002、G002-R1、G002-R2、G002-R3 与 G004
+-已完成实现并统一等待验收。`@tellplot/editor@1.0.0` 是通过本地发布门禁的稳定版候选，不是已经
++TellPlot 是基于 G2 的轻量可编辑基础图表库。G001、G002、G002-R1、G002-R2、G002-R3 与 G004
++均已验收。`@tellplot/editor@1.0.0` 是通过本地发布门禁的稳定版候选，不是已经
+ 发布到 npm 或 GitHub 的公开版本。当前包提供瀑布图、分类条形图和分类柱状图，以及共享数据/视图模型、
+ 确定性命令、结构大纲、历史、持久化、安全语义配置、SVG/PNG 导出和无障碍支持。
  
- 公共 React 入口使用 `ChartEditor` 和判别式 `ChartConfig`。普通接入通过 `config.data`、
- `config.appearance` 与 `config.editor` 声明图表；高级受控编辑状态使用独立 `ViewSpec`。playground
-@@ -42,38 +42,43 @@
+@@ -44,9 +44,6 @@ plugin registry。
+ - T110：长期文档与 `FinancialChartAppearance` 安全语义配置。
+ - T111-T115：分类数据合同、bar/column projection、X/Y 交互、编辑器、导出与可访问性。
+ - T116：chart-family ownership、shared G2 screen/export runtime 和多图表架构收敛。
+-
+-## Needs Review Scope
+-
+ - G002 / T117：Beta 公共 API、package README/LICENSE、developer docs、tarball 与双向开发者编辑器。
  - G002-R1 / T118：分组上下文、跨层拖拽、自动解散和展开分组区域。
  - G002-R2 / T119：真实图表首页、示例中心、开发者文档入口、连续工作台与响应式视觉体验。
- - G002-R3 / T122：`ChartEditor`、`ChartConfig`、运行时配置校验、config/view 双文件工作台与迁移文档。
-+- G004 / T123：1.0.0 稳定合同、维护文档、架构/发布审计、隔离源码复演与本地 tarball。
+@@ -55,28 +52,32 @@ plugin registry。
  
  ## Blocked Release Goal
  
--- G004 / T120：等待 G002 系列目标级验收与 G004 重新批准。
--- G004 / T121：继续等待 T120 review、外部权限和每一类远程动作授权。
-+- G005：等待 G002 系列与 G004 目标级验收，以及 remote Git、visibility、deploy、DNS、tag、
-+  GitHub Release 和 npm publish 的逐类明确授权。
+-- G005：等待 G002 系列与 G004 目标级验收，以及 remote Git、visibility、deploy、DNS、tag、
+-  GitHub Release 和 npm publish 的逐类明确授权。
++- G005：等待 remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 的逐类明确授权，
++  以及 npm 发布身份与生产托管条件。
  
  ## Validation Evidence
  
--- fresh unit/coverage：433/433；statements 85.57%、branches 80.08%、functions 88.08%、lines 85.72%，
-+- fresh unit/coverage：436/436；statements 85.57%、branches 80.08%、functions 88.08%、lines 85.72%，
-   受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
--- current Chromium/Firefox/WebKit：177/177；G002-R3 live config/view focused matrix 12/12。
-+- current Chromium/Firefox/WebKit：177/177；accessibility：45/45。
- - previous browser release：177/177；WebKit 18.4：59/59。
--- accessibility：45/45；React 18/19、ESM/CJS/types/compile-checked quickstart/package checks 通过。
--- 200-item fresh performance：waterfall p95 78.7ms；categorical p95 79.3ms；预算 150ms。
--- tarball 为 `@tellplot/editor@0.1.0-beta.1`，仅包含 13 个 dist/metadata/README/LICENSE 文件。
--- strict artifact validator、format、lint、typecheck、build 和 diff checks 通过。
-+- React 18.3.1 / 19.2.7、ESM/CJS/types、compile-checked quickstart 与 package checks 通过。
-+- 200-item fresh performance：waterfall p95 67.3ms；categorical p95 66.6ms；预算 150ms。
-+- architecture audit：47 个源码文件、240 条 import edge、0 个 runtime cycle；release audit：
-+  11 个 runtime export、19 个公开文件。
-+- 隔离源码复演：280 个源码文件，frozen install、architecture、audit、typecheck、436 个 unit、
-+  build 与 package 全部通过。
-+- tarball 为 `@tellplot/editor@1.0.0`，仅包含 13 个 dist/metadata/README/LICENSE 文件；
-+  SHA-256 为 `ccc4b112015fe5184727d1346b8608d545e6205a87f271dae115c3e76985e437`。
-+- strict artifact validator、format、lint、typecheck、build、release audit 和 diff checks 通过。
+ - Node 22.20.0 下的 `pnpm release:check` 完整通过；聚合门禁覆盖 architecture、release audit、
+   format、lint、typecheck、coverage、build、package、React matrix、current E2E、a11y、performance、
+   previous-browser matrix 和 isolated-source rehearsal。
+-- unit/coverage：52 files / 455 tests；statements 86.99%、branches 81.88%、functions 90.05%、
+-  lines 87.10%，受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+-- current Chromium/Firefox/WebKit：180/180；accessibility：45/45。
+-- previous Playwright release：180/180；WebKit 18.4：60/60。
++- unit/coverage：53 files / 459 tests；statements 87.08%、branches 81.68%、functions 89.97%、
++  lines 87.19%，受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
++- current Chromium/Firefox/WebKit：183/183；accessibility：45/45。
++- previous Playwright release：183/183；WebKit 18.4：61/61。
+ - React 18.3.1 / 19.2.7、ESM/CJS/types、compile-checked quickstart 与 package checks 通过。
+-- 200-item performance：waterfall p95 101.4ms；categorical p95 75.4ms；预算 150ms。
+-- architecture audit：48 个源码文件、245 条 import edge、0 个 runtime cycle；release audit：
+-  11 个 runtime export、19 个公开文件、306 个源码与交付记录文件。
+-- 隔离源码复演：285 个源码文件，frozen install、architecture、audit、typecheck、455 个 unit、
++- 200-item performance：waterfall 与 categorical p95 均通过 150ms 阻断预算。
++- architecture audit：48 个源码文件、246 条 import edge、0 个 runtime cycle；clean clone release audit：
++  11 个 runtime export、19 个公开文件、282 个源码与交付记录文件。
++- 隔离源码复演：287 个源码文件，frozen install、architecture、audit、typecheck、459 个 unit、
+   build 与 package 全部通过。
+ - 官方 npm registry 生产依赖审计无已知漏洞；package `publishConfig` 固定 public access 与
+   `https://registry.npmjs.org/`。
+ - tarball 为 `@tellplot/editor@1.0.0`，仅包含 13 个 dist/metadata/README/LICENSE 文件；
+-  486637 bytes，SHA-256 为 `99124b1ec5dcd21d3233851ee7073d9f780b0af44f8b84f2385c8465418475f0`。
++  492728 bytes，SHA-256 为 `9f8f6babe9342ec778f507b9d0e12e313c5ba52faa8b27e02bea094f618ebdfa`。
++- `release:artifact` 固定使用 `.nvmrc` 的 Node 22.20.0，从当前源码重建并核对 tarball、
++  manifest、size、SHA-256 与文件清单。
++- Playground 与 React 18/19 consumer 的 G2 runtime 保持按需加载，最大 JS chunk 472.56 kB，
++  真实生产构建无 chunk-size warning。
+ - strict artifact validator、format、lint、typecheck、build、release audit 和 diff checks 通过。
  
  详细结果和残余风险见 `.ai-platform/evidence/T117/`、`.ai-platform/evidence/T118/`、
--`.ai-platform/evidence/T119/` 与 `.ai-platform/evidence/T122/`。G004 草案见
--`.ai-platform/specs/008-public-beta-release/`。
-+`.ai-platform/evidence/T119/`、`.ai-platform/evidence/T122/` 与 `.ai-platform/evidence/T123/`。
+@@ -86,7 +87,7 @@ plugin registry。
  
- ## Known Limitations
- 
- - 当前 T112-T122 工作仍位于未提交的 working branch；stage、commit、push、PR 和 merge 未获授权。
--- `@tellplot/editor@0.1.0-beta.1` 只完成本地 release-candidate 验证，npm publish 和正式 release 未执行。
-+- `@tellplot/editor@1.0.0` 只完成本地稳定候选验证，npm publish、GitHub Release 和正式部署未执行。
- - playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
+ - 1.0 候选与发布复核修复位于本地工作分支；没有 push、PR 或 merge。
+ - `@tellplot/editor@1.0.0` 只完成本地稳定候选验证，npm publish、GitHub Release 和正式部署未执行。
+-- playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
++- chunk 分组使用 Vite 8 Rolldown 配置，升级构建工具时由真实生产构建测试验证兼容性和 500 kB 阈值。
  - 200-item performance 继续保留 150ms 阻断预算和真实浏览器监测，不弱化预算。
  - GitHub 私有仓库计划无法强制 branch protection/rulesets；服务端 required checks 仍受外部计划限制。
  - 当前未包含生产网站部署；未来 history URL 托管需要配置 SPA fallback。
--- 网站文档是可扫描入口；生产托管、SPA fallback 和公开链接验证已纳入 G004。
-+- 网站文档是可扫描入口；生产托管、SPA fallback 和公开链接验证归入 G005。
+@@ -96,5 +97,5 @@ plugin registry。
  
  ## Next Gate
  
--统一验收 G002、G002-R1、G002-R2、G002-R3。G004 需要之后重新批准；远程 Git、仓库公开、网站部署、
--DNS、Git tag、GitHub Release 和 npm publish 继续保持独立闸门。
-+统一验收 G002、G002-R1、G002-R2、G002-R3 与 G004。验收后可单独审批 G005；远程 Git、仓库公开、
-+网站部署、DNS、Git tag、GitHub Release 和 npm publish 继续保持独立闸门。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/tasks.md ./.ai-platform/docs/tasks.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/tasks.md	2026-07-23 15:38:56
-+++ ./.ai-platform/docs/tasks.md	2026-07-23 16:20:12
-@@ -2,10 +2,10 @@
+-统一验收 G002、G002-R1、G002-R2、G002-R3 与 G004。验收后可单独审批 G005；远程 Git、仓库公开、
+-网站部署、DNS、Git tag、GitHub Release 和 npm publish 继续保持独立闸门。
++G005 继续保持独立审批；远程 Git、仓库公开、网站部署、DNS、Git tag、GitHub Release 和 npm publish
++均未获授权。
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 4bef02a..7a8c2ed 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -4,8 +4,8 @@
  
- ## Metadata
- 
--- Version: 0.30.0
-+- Version: 0.32.0
+ - Version: 0.32.0
  - Status: Active
- - Last updated: 2026-07-23
--- Scope: T101-T116 已验收；G002、G002-R1、G002-R2、G002-R3 实现完成并统一等待验收；G004 阻塞
-+- Scope: T101-T116 已验收；G002 系列与 G004 1.0.0 本地稳定版候选实现完成并等待验收
+-- Last updated: 2026-07-24
+-- Scope: T101-T116 已验收；G002 系列与 G004 1.0.0 本地稳定版候选实现完成并等待验收
++- Last updated: 2026-07-29
++- Scope: T101-T116、G002 系列与 G004 均已验收；1.0.0 本地稳定候选等待独立远程发布授权
  
  ## Goal-Level Delivery
  
-@@ -25,7 +25,8 @@
- | G002-R2 - 开源官网与示例中心 | Needs_Review | T119；真实图表首页、示例中心、文档入口和连续工作台 |
- | G002-R3 - 公共配置 API v1 | Needs_Review | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
+@@ -20,13 +20,13 @@
+ | Goal | Status | Outcome |
+ | --- | --- | --- |
+ | G001 - 多图表基础能力 | Accepted | T101-T116；waterfall、bar、column 与共享 G2 runtime 完整验收 |
+-| G002 - 轻量图表库 Beta | Needs_Review | T117；发布包、文档、兼容性和 beta 质量闭环 |
+-| G002-R1 - 分组与跨层编辑体验 | Needs_Review | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
+-| G002-R2 - 开源官网与示例中心 | Needs_Review | T119；真实图表首页、示例中心、文档入口和连续工作台 |
+-| G002-R3 - 公共配置 API v1 | Needs_Review | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
++| G002 - 轻量图表库 Beta | Accepted | T117；发布包、文档、兼容性和 beta 质量闭环 |
++| G002-R1 - 分组与跨层编辑体验 | Accepted | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
++| G002-R2 - 开源官网与示例中心 | Accepted | T119；真实图表首页、示例中心、文档入口和连续工作台 |
++| G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
  | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
--| G004 - 首个公开 Beta 发布 | Blocked | 等待 G002 系列目标级验收后重新批准 |
-+| G004 - 首个稳定版 1.0 候选 | Needs_Review | T123；稳定合同、发布门禁与隔离源码复演 |
-+| G005 - 公开稳定版发布 | Blocked | 等待 G002/G004 验收与独立远程授权 |
+-| G004 - 首个稳定版 1.0 候选 | Needs_Review | T123；稳定合同、发布门禁与隔离源码复演 |
+-| G005 - 公开稳定版发布 | Blocked | 等待 G002/G004 验收与独立远程授权 |
++| G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
++| G005 - 公开稳定版发布 | Blocked | 等待独立远程授权与发布身份/托管条件 |
  
  ## T001 - 确认产品设计与项目章程
  
-@@ -187,6 +188,9 @@
+@@ -163,36 +163,36 @@
+ ## G002 Execution
+ 
+ G002 已由用户批准并以 T117 连续完成。发布包、文档、兼容性、可配置 panel、布局和双向工作台 evidence
+-完整；目标与 G002-R1、G002-R2、G002-R3 一起等待统一验收。权威目标图位于
++完整；用户于 2026-07-29 完成统一验收。权威目标图位于
+ `.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md`。旧仓库处置、npm publish 和正式发布保持
+ 独立闸门。
+ 
+ ## G002-R1 Execution
+ 
+ G002-R1 已由用户批准并以 T118 连续完成。上下文选择、区域边界退出、click/drag 动作区分、跨层移动、
+-原子解散和展开分组区域 evidence 完整；目标等待 G002 系列统一验收。权威目标图位于
++原子解散和展开分组区域 evidence 完整；用户于 2026-07-29 完成统一验收。权威目标图位于
+ `.ai-platform/specs/006-group-cross-level-experience/tasks.md`。
+ 
+ ## G002-R2 Execution
+ 
+ G002-R2 已由用户批准并以 T119 连续完成。真实图表首页、示例中心、开发者文档入口、连续工作台以及
+-桌面/移动验证均已交付；目标等待 G002 系列统一验收。权威目标图、设计合同与任务证据位于
++桌面/移动验证均已交付；用户于 2026-07-29 完成统一验收。权威目标图、设计合同与任务证据位于
+ `.ai-platform/specs/007-open-source-showcase/` 和 `.ai-platform/evidence/T119/`。
+ 
+ ## G002-R3 Execution
+ 
+ G002-R3 已由用户于 2026-07-23 批准 breaking public API 和连续执行，内部以 T122 完成交付
+ `ChartEditor`、判别式 `ChartConfig`、`validateChartConfig`、config/view 双文件工作台、迁移说明和完整
+-发布候选门禁，状态为 `Needs_Review`。权威目标图位于
++发布候选门禁；用户于 2026-07-29 完成统一验收，状态为 `Accepted`。权威目标图位于
+ `.ai-platform/specs/009-public-configuration-api/tasks.md`。
  
  ## G004 Execution
  
--G004 以 G002、G002-R1、G002-R2 和 G002-R3 全部验收为进入条件。T120 与 T121 保持 `Blocked`，不得执行
--本地发布硬化、远程 Git、仓库公开、网站部署、tag/release 或 npm publish。权威草案位于
--`.ai-platform/specs/008-public-beta-release/`。
-+G004 已由用户于 2026-07-23 批准，内部以 T123 连续完成 `@tellplot/editor@1.0.0` 本地稳定候选、
-+兼容政策、开源资料、架构/发布门禁、隔离源码复演和完整浏览器矩阵，状态为 `Needs_Review`。权威目标图与
-+交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和 `.ai-platform/evidence/T123/`。
+ G004 已由用户于 2026-07-23 批准，内部以 T123 连续完成 `@tellplot/editor@1.0.0` 本地稳定候选、
+ 兼容政策、开源资料、完整发布门禁、隔离源码复演和当前/旧版浏览器矩阵。2026-07-24 发布复核关闭了
+-WebKit 长队列资源耗尽、不完整聚合门禁、npm registry 漂移和内部交付记录个人路径泄漏，状态保持
+-`Needs_Review`。权威目标图与交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和
++WebKit 长队列资源耗尽、不完整聚合门禁、npm registry 漂移和内部交付记录个人路径泄漏。用户于
++2026-07-29 完成统一验收，状态为 `Accepted`。权威目标图与交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和
+ `.ai-platform/evidence/T123/`。
+ 
+ 原 G004 Beta 草案与 T120/T121 不再是当前执行入口。公开 Git、仓库可见性、生产网站、DNS、tag、
+-GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到 G002/G004 目标验收并取得独立远程授权。
++GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到取得独立远程授权并具备发布身份与托管条件。
+diff --git a/.ai-platform/evidence/T117/review.md b/.ai-platform/evidence/T117/review.md
+index 9d9c7aa..2c3386c 100644
+--- a/.ai-platform/evidence/T117/review.md
++++ b/.ai-platform/evidence/T117/review.md
+@@ -46,7 +46,7 @@ Result: PASS；actionable findings 0。
+   previous-browser matrix 通过，锁定反馈、revision 和树顺序断言保持。
+ - npm publish、远程 Git 和正式 release 未执行。
+ 
+-Result: PASS；G002 / T117 可进入 `Needs_Review`。
++Result: PASS；用户于 2026-07-29 验收，G002 / T117 为 `Accepted`。
+ 
+ ## Residual Risk Classification
+ 
+diff --git a/.ai-platform/evidence/T117/summary.md b/.ai-platform/evidence/T117/summary.md
+index d572a68..ef48355 100644
+--- a/.ai-platform/evidence/T117/summary.md
++++ b/.ai-platform/evidence/T117/summary.md
+@@ -2,7 +2,8 @@
+ 
+ ## Outcome
+ 
+-- Status: `Needs_Review`
++- Status: `Accepted`
++- Accepted on: 2026-07-29
+ - Execution attempt: `T117-A001`、review corrections `T117-A002` / `T117-A003` / `T117-A004`
+ - Package candidate: `@tellplot/editor@0.1.0-beta.1`
+ - Goal: G002 轻量图表库 Beta
+@@ -56,5 +57,5 @@ Critical/High/Medium findings: 0。
+ 
+ ## Acceptance Gate
+ 
+-G002 / T117 的实现、review 和门禁均已完成，状态为 `Needs_Review`，与 G002-R1、G002-R2、G002-R3
+-统一等待用户目标级验收。远程 Git、npm publish、Git tag、GitHub Release 和生产部署未获授权。
++G002 / T117 的实现、review 和门禁均已完成，用户于 2026-07-29 完成目标级统一验收，状态为
++`Accepted`。远程 Git、npm publish、Git tag、GitHub Release 和生产部署未获授权。
+diff --git a/.ai-platform/evidence/T118/review.md b/.ai-platform/evidence/T118/review.md
+index f0e0fdf..d053a57 100644
+--- a/.ai-platform/evidence/T118/review.md
++++ b/.ai-platform/evidence/T118/review.md
+@@ -73,7 +73,8 @@ Result: PASS；actionable findings 0。
+ - mobile Inspector action replacement 的焦点边界 finding 已修复并加入 unit/E2E regression。
+ - correction commits 为 `42c0342`、`5f0dcb9`；没有执行 remote Git、push、publish 或 release。
+ 
+-Result: product QA PASS；performance delivery gate PASS；G002-R1 / T118 进入 `Needs_Review`。
++Result: product QA PASS；performance delivery gate PASS；用户于 2026-07-29 验收，G002-R1 / T118
++为 `Accepted`。
+ 
+ ## Residual Risk Classification
+ 
+diff --git a/.ai-platform/evidence/T118/summary.md b/.ai-platform/evidence/T118/summary.md
+index 880c22a..9db8285 100644
+--- a/.ai-platform/evidence/T118/summary.md
++++ b/.ai-platform/evidence/T118/summary.md
+@@ -1,5 +1,10 @@
+ # T118 / G002-R1 交付摘要
+ 
++## Metadata
 +
-+原 G004 Beta 草案与 T120/T121 不再是当前执行入口。公开 Git、仓库可见性、生产网站、DNS、tag、
-+GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到 G002/G004 目标验收并取得独立远程授权。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/technology-decision-record.md ./.ai-platform/docs/technology-decision-record.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/docs/technology-decision-record.md	2026-07-23 15:16:03
-+++ ./.ai-platform/docs/technology-decision-record.md	2026-07-23 15:49:07
-@@ -207,7 +207,7 @@
- 
- ## TDR-019 首个公开 Beta 发布
- 
--- Status: Proposed
-+- Status: Superseded
- - Release source: 只从干净 `main` 的确定 commit 生成网站、tag、GitHub Release 和 npm tarball；fresh clone
-   必须能够使用锁定工具链复现发布门禁。
- - Distribution: `@tellplot/editor@0.1.0-beta.1` 使用公开 `beta` dist-tag，不占用 `latest`。
-@@ -238,8 +238,24 @@
- - Rationale: 单一声明式配置降低首次接入认知负担，同时保留确定性领域状态、G2 ownership 和高级命令 API。
- - Rejected alternatives: 分散顶层 props、把私有 document wrapper 当作配置、raw G2Spec、双公共组件入口。
- 
-+## TDR-021 首个稳定版 1.0
++- Status: `Accepted`
++- Accepted on: 2026-07-29
 +
-+- Status: Confirmed
-+- Version: `@tellplot/editor@1.0.0`，本地候选和未来公开版本使用相同稳定 metadata。
-+- Compatibility: 1.x 遵循 Semantic Versioning；runtime exports、公共类型、schema、错误码和 peer/browser
-+  合同只允许向后兼容扩展。弃用至少跨一个 minor，并提供迁移说明。
-+- Release source: 本地目标使用隔离源码复演；公开 npm/GitHub/网站发布只允许来自独立授权后的干净
-+  commit、tag 和可追溯 tarball。
-+- Quality: architecture import graph/cycle、public files、local links、secret/path、tarball、React、
-+  current/previous browser、a11y 和 performance 均为阻断门禁。
-+- Scope: 稳定表示当前 waterfall、bar、column 的文档化能力可被兼容承诺，不表示 TellPlot 已覆盖 G2
-+  的通用图表范围。
-+- Rationale: 当前窄公共入口和兼容矩阵已经可以形成稳定合同；不公开 Beta 时，通过本地 tarball consumer
-+  和隔离源码复演提高首次公开稳定版的前置信心。
-+- Rejected alternatives: 发布 Beta、用 `0.x` 模糊兼容承诺、为 1.0 增加新图表、从 dirty worktree publish。
-+
- ## Approval Gate
+ ## Outcome
  
--TDR-001 至 TDR-018 与 TDR-020 已获得用户明确批准；TDR-019 保持 `Proposed`。后续实现以 approved goal
-+TDR-001 至 TDR-018、TDR-020 与 TDR-021 已获得用户明确批准；TDR-019 由 TDR-021 取代。后续实现以 approved goal
- 为执行单位；内部 task graph 和 execution packet 由执行方维护。任何依赖、schema、breaking public API、
- 远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/analysis.md ./.ai-platform/specs/008-public-beta-release/analysis.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/analysis.md	2026-07-23 15:14:16
-+++ ./.ai-platform/specs/008-public-beta-release/analysis.md	2026-07-23 15:49:22
-@@ -4,7 +4,7 @@
+ G002-R1 完成上下文分组动作、跨层 before/after/inside 编辑、按展开区域边界退出分组、两成员来源分组
+@@ -63,5 +68,5 @@ SVG/PNG 和宿主调用继续进入同一套确定性 ViewSpec 命令与历史
  
- - Feature ID: `008-public-beta-release`
- - Version: 0.1.0
--- Status: Blocked
-+- Status: Superseded
- - Last updated: 2026-07-23
+ ## Acceptance Gate
  
- ## Requirement Coverage
-@@ -40,4 +40,5 @@
+-G002-R1 / T118 的实现、review 和聚合性能门禁均已完成，状态为 `Needs_Review`，与 G002、G002-R2、
+-G002-R3 统一等待用户目标级验收。npm publish、远程 Git 和正式 release 未获授权。
++G002-R1 / T118 的实现、review 和聚合性能门禁均已完成，用户于 2026-07-29 完成目标级统一验收，
++状态为 `Accepted`。npm publish、远程 Git 和正式 release 未获授权。
+diff --git a/.ai-platform/evidence/T119/review.md b/.ai-platform/evidence/T119/review.md
+index 264785f..2476271 100644
+--- a/.ai-platform/evidence/T119/review.md
++++ b/.ai-platform/evidence/T119/review.md
+@@ -2,8 +2,8 @@
  
  ## Verdict
  
--`BLOCKED`。G004 需求与计划保留为草案；G002 系列统一验收并重新批准后才能执行 T120。
-+`SUPERSEDED`。T120/T121 不执行；当前稳定版目标位于
-+`.ai-platform/specs/010-stable-v1-release/`。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/checklists/requirements.md ./.ai-platform/specs/008-public-beta-release/checklists/requirements.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/checklists/requirements.md	2026-07-23 15:14:16
-+++ ./.ai-platform/specs/008-public-beta-release/checklists/requirements.md	2026-07-23 15:49:22
-@@ -4,7 +4,7 @@
+-`PASS`。G002-R2 / T119 满足全部成功标准，无未解决 Critical、High 或 Medium finding，可以进入
+-`Needs_Review`。
++`PASS`。G002-R2 / T119 满足全部成功标准，无未解决 Critical、High 或 Medium finding；用户于
++2026-07-29 验收，状态为 `Accepted`。
  
- - Feature ID: `008-public-beta-release`
- - Version: 0.1.0
--- Status: Draft
-+- Status: Superseded
- - Source: `../spec.md`
- - Last updated: 2026-07-23
+ ## Spec Compliance
  
-@@ -40,4 +40,5 @@
+diff --git a/.ai-platform/evidence/T119/summary.md b/.ai-platform/evidence/T119/summary.md
+index 94b6804..6f0d06c 100644
+--- a/.ai-platform/evidence/T119/summary.md
++++ b/.ai-platform/evidence/T119/summary.md
+@@ -5,7 +5,8 @@
+ - Goal: `G002-R2`
+ - Task: `T119`
+ - Packet: `EP-G002-R2-A001`
+-- Status: `Needs_Review`
++- Status: `Accepted`
++- Accepted on: 2026-07-29
+ - Date: 2026-07-23
+ - Branch: `codex/t112-categorical-data-contract`
  
- ## User Review Gate
+@@ -60,6 +61,6 @@ runtime registry。核心包、公共 API、schema 和命令协议不在 T119 di
  
--G004 requirements 等待 G002 系列目标级验收后重新确认。
-+Beta requirements 不再进入执行；当前稳定版 requirements 位于
-+`.ai-platform/specs/010-stable-v1-release/checklists/requirements.md`。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/plan.md ./.ai-platform/specs/008-public-beta-release/plan.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/plan.md	2026-07-23 15:14:16
-+++ ./.ai-platform/specs/008-public-beta-release/plan.md	2026-07-23 15:49:22
-@@ -5,9 +5,9 @@
- - Feature ID: `008-public-beta-release`
- - Goal ID: `G004`
- - Version: 0.1.0
--- Status: Proposed
-+- Status: Superseded
- - Last updated: 2026-07-23
--- Approval: 等待 G002 系列目标级验收后重新批准；远程动作保留独立闸门
-+- Approval: 未批准；稳定版目标以 `.ai-platform/specs/010-stable-v1-release/` 为准
+ ## Delivery Boundary
  
- ## Decision Summary
+-未执行 stage、commit、push、PR、merge、npm publish、release 或网站部署。G002-R2 / T119 的实现、
+-review 和门禁均已完成，状态为 `Needs_Review`，与 G002、G002-R1、G002-R3 统一等待用户目标级验收。
++未执行 push、PR、merge、npm publish、release 或网站部署。G002-R2 / T119 的实现、review 和门禁均已完成，
++用户于 2026-07-29 完成目标级统一验收，状态为 `Accepted`。
+ T119 当时的完整矩阵保留一个已隔离通过的低风险 WebKit 导航超时；后续 T122 完整矩阵已 177/177 通过。
+diff --git a/.ai-platform/evidence/T122/review.md b/.ai-platform/evidence/T122/review.md
+index d1b1f5e..b877050 100644
+--- a/.ai-platform/evidence/T122/review.md
++++ b/.ai-platform/evidence/T122/review.md
+@@ -3,7 +3,7 @@
+ ## Verdict
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/spec.md ./.ai-platform/specs/008-public-beta-release/spec.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/spec.md	2026-07-23 15:14:16
-+++ ./.ai-platform/specs/008-public-beta-release/spec.md	2026-07-23 15:49:22
-@@ -5,9 +5,9 @@
- - Feature ID: `008-public-beta-release`
- - Goal ID: `G004`
- - Version: 0.1.0
--- Status: Proposed
-+- Status: Superseded
- - Last updated: 2026-07-23
--- Approval: 等待 G002、G002-R1、G002-R2 与 G002-R3 统一验收后重新批准
-+- Approval: 未批准；稳定版目标以 `.ai-platform/specs/010-stable-v1-release/` 为准
+ `PASS`。G002-R3 / T122 满足 CONFIG-SC-001 至 CONFIG-SC-007，无未解决 Critical、High 或 Medium
+-finding，可以进入 `Needs_Review`。
++finding；用户于 2026-07-29 验收，状态为 `Accepted`。
  
- ## Goal
+ ## Spec Compliance
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/tasks.md ./.ai-platform/specs/008-public-beta-release/tasks.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/008-public-beta-release/tasks.md	2026-07-23 15:14:16
-+++ ./.ai-platform/specs/008-public-beta-release/tasks.md	2026-07-23 15:49:22
+diff --git a/.ai-platform/evidence/T122/summary.md b/.ai-platform/evidence/T122/summary.md
+index e311659..e5883cc 100644
+--- a/.ai-platform/evidence/T122/summary.md
++++ b/.ai-platform/evidence/T122/summary.md
+@@ -5,7 +5,8 @@
+ - Goal: `G002-R3`
+ - Task: `T122`
+ - Packet: `EP-G002-R3-T122-A001`
+-- Status: `Needs_Review`
++- Status: `Accepted`
++- Accepted on: 2026-07-29
+ - Date: 2026-07-23
+ - Branch: `codex/t112-categorical-data-contract`
+ 
+@@ -67,4 +68,4 @@ playground 左栏编辑真实公共 `tellplot.config.json`，高级标签页独
+ 
+ 没有修改 dependency manifest、lockfile、`SourceData` / `ViewSpec` schema、命令协议、chart projection、
+ G2 runtime 或 export implementation。没有执行 stage、commit、push、PR、merge、npm publish、release
+-或部署。G002-R3 / T122 进入 `Needs_Review`；只有用户可以将其标记为 `Accepted`。
++或部署。用户于 2026-07-29 完成目标级统一验收，G002-R3 / T122 状态为 `Accepted`。
+diff --git a/.ai-platform/evidence/T123/architecture-report.md b/.ai-platform/evidence/T123/architecture-report.md
+index 5dfe8a8..acaca88 100644
+--- a/.ai-platform/evidence/T123/architecture-report.md
++++ b/.ai-platform/evidence/T123/architecture-report.md
+@@ -7,7 +7,7 @@
+ | Metric | Result |
+ | --- | --- |
+ | TypeScript / TSX source files | 48 |
+-| Runtime import edges | 245 |
++| Runtime import edges | 246 |
+ | Runtime cycles | 0 |
+ | Public entry | `packages/editor/src/index.ts` |
+ | Runtime exports | 11 |
+@@ -34,6 +34,8 @@
+ - 审计只报告规则和路径，不输出疑似凭据内容。
+ - package `publishConfig` 固定 `access: public` 和 npm 官方 registry，不受开发机全局 registry 漂移影响。
+ - package tarball 只包含 allowlist 中的 13 个 dist/metadata/README/LICENSE 文件。
++- provenance 门禁从当前源码独立构建与 pack，并校验 evidence tarball、manifest、size、SHA-256
++  和文件清单，避免候选产物落后于源码。
+ 
+ ## Change Boundary
+ 
+@@ -44,6 +46,8 @@
+   保持在既有 interactions/components 层内；临时 ViewSpec 只进入内部 canvas 的 group region
+   投影，没有新增公共出口或越层依赖。
+ - source alias 只消除测试对预生成 `dist` 的隐式依赖。
++- Playground 的 Vite 8 Rolldown 分组只调整构建产物边界，G2 仍由既有 dynamic import 按需加载；
++  package runtime、公共 API 和宿主 bundler 策略不受影响。
+ 
+ ## Conclusion
+ 
+diff --git a/.ai-platform/evidence/T123/isolated-source-receipt.md b/.ai-platform/evidence/T123/isolated-source-receipt.md
+index 1b4c1ec..5200279 100644
+--- a/.ai-platform/evidence/T123/isolated-source-receipt.md
++++ b/.ai-platform/evidence/T123/isolated-source-receipt.md
+@@ -6,8 +6,9 @@
+ - Version: `1.0.0`
+ - Runtime: Node 22.20.0 / pnpm 11.1.3
+ - Isolated root: `<temporary-directory>/tellplot-1.0.0-rehearsal-*`
+-- Source files copied: 285
++- Source files copied: 287
+ - Excluded: `.git`、node_modules、dist、coverage、Playwright output、test-results 和 evidence
++- Local protection: `.copyright-application` 与 `tmp` 不进入隔离副本
+ 
+ ## Gates
+ 
+@@ -19,8 +20,8 @@
+ 6. `pnpm build`
+ 7. `pnpm test:package`
+ 
+-最终结果为 architecture 48 files / 245 edges / 0 cycles，isolated release audit 191 files，
+-unit 52 files / 455 tests，package
++最终结果为 architecture 48 files / 246 edges / 0 cycles，isolated release audit 193 files，
++unit 53 files / 459 tests，package
+ `@tellplot/editor@1.0.0` 的 publint、ATTW、ESM、CJS、types 和 tarball contract 全部通过。
+ 
+ ## Finding Closed During Rehearsal
+diff --git a/.ai-platform/evidence/T123/review.md b/.ai-platform/evidence/T123/review.md
+index a9d0270..8a4b6df 100644
+--- a/.ai-platform/evidence/T123/review.md
++++ b/.ai-platform/evidence/T123/review.md
+@@ -3,7 +3,7 @@
+ ## Verdict
+ 
+ `PASS`。G004 / T123 满足 STABLE-SC-001 至 STABLE-SC-006。发布复核发现的四项 Medium finding
+-均已关闭，无未解决 Critical、High 或 Medium finding，状态保持 `Needs_Review`。
++均已关闭，无未解决 Critical、High 或 Medium finding；用户于 2026-07-29 验收，状态为 `Accepted`。
+ 
+ ## Spec Compliance
+ 
+@@ -20,7 +20,7 @@
+ 
+ - 1.0 runtime export 固定为 11 个，声明文件不泄漏 G2 或内部 adapter 类型。
+ - `ChartEditor + ChartConfig` 与独立 `ViewSpec` 继续是唯一公共普通/高级状态模型。
+-- AST import graph 证明 48 个源码文件、245 条 runtime edge 中没有 cycle 或新增越层依赖。
++- AST import graph 证明 48 个源码文件、246 条 runtime edge 中没有 cycle 或新增越层依赖。
+ - 当前候选没有修改 dependency、lockfile、schema、command、projection、runtime 或 export behavior；
+   分组交互 correction 保持在既有 interaction/component ownership 内。临时 ViewSpec 仅供柱形与
+   group region 预览投影，canonical 状态、历史和公共回调仍在 pointer up 时一次提交。
+@@ -33,16 +33,26 @@
+ - M-001：`release:check` 只覆盖部分稳定门禁，可能形成假绿。当前聚合门禁覆盖 coverage、React、
+   current/previous browser、a11y、performance 和 rehearsal 等全部阻断项。
+ - M-002：单 worker WebKit 长队列会在完整矩阵中耗尽进程资源。当前与旧版 Playwright 矩阵使用两个
+-  worker 隔离负载；current 180/180、previous 180/180、WebKit 18.4 60/60 通过。
++  worker 隔离负载；current 183/183、previous 183/183、WebKit 18.4 61/61 通过。
+ - M-003：package 未固定 npm registry，开发机的镜像配置可能把 publish 指向错误端点。当前
+   `publishConfig` 固定 public access 和 npm 官方 registry，并由 package contract 锁定。
+ - M-004：发布审计没有覆盖 `.ai-platform`，历史 evidence 含个人和临时绝对路径。当前审计覆盖该目录，
+-  306 个文件通过，仓库内不再保留这些绝对路径。
+-- tarball 13 个文件、486637 bytes，SHA-256 与 manifest 已记录。
++  clean clone 中 282 个文件通过，仓库内不再保留这些绝对路径。
++- P1-001：evidence tarball 与当前 package 输出缺少可执行的同源校验。`release:artifact` 会独立
++  build/pack 当前源码并逐项比对存档与 manifest，旧候选上的 size、SHA-256 和内容差异均能阻断发布门禁；
++  校验固定使用 `.nvmrc` 的 Node 22.20.0，非发布运行时会在构建前明确拒绝。
++- W-003：Playground 与 React consumer 的默认构建会输出 G2 大 chunk warning。当前保持 dynamic
++  import，并只在宿主构建层配置有界 `g2-runtime` 分组。
++- 最终 tarball provenance 门禁会从当前源码重建 package，并校验 evidence tarball、manifest、
++  13 个文件、492728 bytes 与 SHA-256 `9f8f6babe9342ec778f507b9d0e12e313c5ba52faa8b27e02bea094f618ebdfa`。
++- Playground 和 React 18/19 consumer 使用 Vite 8 Rolldown 对按需加载的 G2 runtime 做有界分组；
++  最大 JS chunk 472.56 kB，并由真实生产构建测试锁定。
++- `.copyright-application` 与 `tmp` 同时由 Git、Prettier 和隔离源码复演排除，不进入提交、tarball
++  或 rehearsal 副本。
+ 
+ ## Residual Low Risks
+ 
+-- L-001：Vite 保留既有 G2 chunk-size warning；当前没有用户价值或性能证据支持拆分/替换 G2。
++- L-001：chunk 分组使用 Vite 8 Rolldown 配置；真实生产构建测试会在升级 Vite 后阻断不兼容或超阈值结果。
+ - L-002：稳定候选只存在于本地分支；G005 必须从用户批准的干净 commit 重跑全部发布门禁。
+ - L-003：生产网站尚未验证真实域名、SPA fallback 和外部链接；这些属于 G005。
+ - L-004：npm 官方发布身份、仓库公开、GitHub Release 与生产部署尚未授权或验证。
+diff --git a/.ai-platform/evidence/T123/summary.md b/.ai-platform/evidence/T123/summary.md
+index e1c0bae..981f89c 100644
+--- a/.ai-platform/evidence/T123/summary.md
++++ b/.ai-platform/evidence/T123/summary.md
+@@ -5,7 +5,8 @@
+ - Goal: `G004`
+ - Task: `T123`
+ - Packet: `EP-G004-T123-A001`
+-- Status: `Needs_Review`
++- Status: `Accepted`
++- Accepted on: 2026-07-29
+ - Date: 2026-07-24
+ - Branch: `codex/t112-categorical-data-contract`
+ 
+@@ -32,6 +33,12 @@
+ - 把复杂命令一致性 E2E 改为读取实时同步的公开 ViewSpec 文件；下载能力继续由独立 export E2E 覆盖。
+ - 当前与旧版浏览器矩阵使用双 worker，避免 WebKit 长队列进程资源耗尽。
+ - package 固定 public access 和 npm 官方 registry，避免开发机全局 registry 污染发布目标。
++- 最终 tarball 门禁在 `.nvmrc` 的 Node 22.20.0 下从当前源码重建 package，并比对 evidence
++  存档、manifest、size、SHA-256 与文件清单。
++- Playground 与 React 兼容 consumer 对按需加载的 G2 runtime 使用有界构建分组；最大 JS chunk
++  472.56 kB，真实生产构建不再产生 chunk-size warning。
++- Git、Prettier 与隔离源码复演统一排除 `.copyright-application` 和 `tmp`，本地软著与临时材料不进入
++  提交、tarball 或 rehearsal 副本。
+ - 来源分组拖拽使用 G2 scene bounds 区分区域内排序与跨边界退出；首成员柱 click 保留分组动作，
+   达到拖拽阈值后才隐藏。公共 API、schema 和命令合同保持不变。
+ - 拖拽中的柱形与展开分组背景使用同一临时 ViewSpec 实时投影；pointer up 前只更新 G2 预览，
+@@ -41,27 +48,27 @@
+ 
+ - RELEASE REVIEW RED：package contract 2/4 失败，锁定官方 registry 和完整聚合门禁；发布审计扩展后
+   暴露 43 个含个人/临时路径的文件。
+-- GREEN：package contract 4/4，release audit 306 files，Node 22.20.0 下完整
++- GREEN：package contract 4/4，clean clone release audit 282 files，Node 22.20.0 下完整
+   `pnpm release:check` 通过。
+-- REGRESSION：unit 455/455、current 180/180、previous 180/180、WebKit 18.4 60/60、a11y 45/45；
+-  200-item waterfall/categorical p95 为 101.4ms / 75.4ms，预算 150ms。
+-- REHEARSAL：隔离 285 个源码文件完成 frozen install、architecture、audit、typecheck、455 unit、
++- REGRESSION：unit 459/459、current 183/183、previous 183/183、WebKit 18.4 61/61、a11y 45/45；
++  200-item waterfall/categorical p95 均通过 150ms 预算。
++- REHEARSAL：隔离 287 个源码文件完成 frozen install、architecture、audit、typecheck、459 unit、
+   build 与 package。
+ 
+ ## Package Evidence
+ 
+ - Tarball: [tellplot-editor-1.0.0.tgz](artifacts/tellplot-editor-1.0.0.tgz)
+ - Manifest: [tarball-manifest.json](tarball-manifest.json)
+-- Size: 486637 bytes
+-- SHA-256: `99124b1ec5dcd21d3233851ee7073d9f780b0af44f8b84f2385c8465418475f0`
++- Size: 492728 bytes
++- SHA-256: `9f8f6babe9342ec778f507b9d0e12e313c5ba52faa8b27e02bea094f618ebdfa`
+ - Contents: 10 个 dist 文件、LICENSE、package.json 和 README，共 13 个文件。
+ 
+ ## Source Evidence
+ 
+-- 1.0 candidate commits: `bf8f007`、`90af6f2`、`42c0342`、`5f0dcb9`
++- Release source: 包含本 evidence 的干净 1.0 commit；精确 commit 由 Git 历史记录
+ - Task patch: [diff.patch](diff.patch)
+-- `diff.patch` 保留 G004 初始稳定化范围；后续发布门禁与分组交互 correction 由上述本地 commits
+-  和当前 evidence 记录。
++- `diff.patch` 记录当前 G004 稳定候选相对仓库 HEAD 的文本改动；二进制 tarball 由 manifest
++  和 provenance 门禁独立验证。
+ - patch 与审计排除 `.git`、node_modules、dist、coverage、Playwright output 和测试运行产物。
+ 
+ ## Delivery Boundary
+@@ -71,4 +78,5 @@ lockfile 与依赖集合保持不变；editor package 固定 1.0.0、public acce
+ 只在既有 chart pointer/session 与 move target 合同内完成。
+ 没有执行 push、PR、merge、visibility、deploy、DNS、tag、GitHub Release 或 npm publish。
+ 
+-G004 / T123 进入 `Needs_Review`。公开发布仍属于 G005，必须在目标验收后逐类取得远程授权。
++用户于 2026-07-29 完成目标级统一验收，G004 / T123 状态为 `Accepted`。公开发布仍属于 G005，
++必须逐类取得远程授权。
+diff --git a/.ai-platform/evidence/T123/tarball-manifest.json b/.ai-platform/evidence/T123/tarball-manifest.json
+index 073990d..448a1b7 100644
+--- a/.ai-platform/evidence/T123/tarball-manifest.json
++++ b/.ai-platform/evidence/T123/tarball-manifest.json
+@@ -2,9 +2,15 @@
+   "name": "@tellplot/editor",
+   "version": "1.0.0",
+   "filename": "tellplot-editor-1.0.0.tgz",
+-  "sizeBytes": 486637,
+-  "sha256": "99124b1ec5dcd21d3233851ee7073d9f780b0af44f8b84f2385c8465418475f0",
++  "sizeBytes": 492728,
++  "sha256": "9f8f6babe9342ec778f507b9d0e12e313c5ba52faa8b27e02bea094f618ebdfa",
+   "files": [
++    {
++      "path": "LICENSE"
++    },
++    {
++      "path": "README.md"
++    },
+     {
+       "path": "dist/index.cjs"
+     },
+@@ -35,14 +41,8 @@
+     {
+       "path": "dist/styles.d.ts"
+     },
+-    {
+-      "path": "LICENSE"
+-    },
+     {
+       "path": "package.json"
+-    },
+-    {
+-      "path": "README.md"
+     }
+   ]
+ }
+diff --git a/.ai-platform/evidence/T123/test-results.md b/.ai-platform/evidence/T123/test-results.md
+index 755f07a..bc547f5 100644
+--- a/.ai-platform/evidence/T123/test-results.md
++++ b/.ai-platform/evidence/T123/test-results.md
+@@ -10,24 +10,24 @@
+ 
+ | Command / Gate | Result |
+ | --- | --- |
+-| `pnpm release:architecture` | 48 source files；245 import edges；0 runtime cycles |
+-| `pnpm release:audit` | version 1.0.0；11 runtime exports；19 public files；306 audited files |
++| `pnpm release:architecture` | 48 source files；246 import edges；0 runtime cycles |
++| `pnpm release:audit` | clean clone：version 1.0.0；11 runtime exports；19 public files；282 audited files |
+ | `pnpm release:check` | 全部稳定版阻断门禁 passed |
+-| `pnpm release:rehearse` | isolated 285 source files；frozen install 到 package 全部 passed |
++| `pnpm release:rehearse` | isolated 287 source files；frozen install 到 package 全部 passed |
+ | `pnpm format:check` | passed |
+ | `pnpm lint` | passed，0 warning |
+ | `pnpm typecheck` | editor 与 playground passed |
+-| `pnpm test:unit` | 52 files；455/455 passed |
+-| `pnpm test:coverage` | 455/455；statements 86.99%；branches 81.88%；functions 90.05%；lines 87.10% |
++| `pnpm test:unit` | 53 files；459/459 passed |
++| `pnpm test:coverage` | 459/459；statements 87.08%；branches 81.68%；functions 89.97%；lines 87.19% |
+ | constrained domain/chart/G2 coverage | all >=95% |
+-| `pnpm build` | passed；仅保留既有 G2 chunk-size warning |
++| `pnpm build` | passed；G2 保持按需加载，最大 JS chunk 472.56 kB，无 chunk-size warning |
+ | `pnpm test:package` | publint、ATTW、ESM、CJS、types、quickstart、tarball contract passed |
+-| `pnpm test:react-matrix` | React 18.3.1 / 19.2.7；89114 / 87405 painted pixels；clean unmount |
+-| `pnpm test:e2e` | current Chromium/Firefox/WebKit 180/180 passed |
++| `pnpm test:react-matrix` | React 18.3.1 / 19.2.7；87405 / 87405 painted pixels；clean unmount；fixture build 无 chunk warning |
++| `pnpm test:e2e` | current Chromium/Firefox/WebKit 183/183 passed |
+ | `pnpm test:a11y` | 45/45 passed |
+-| `pnpm test:performance` | waterfall p95 101.4ms；categorical p95 75.4ms；budget 150ms |
+-| previous Playwright release | Chromium 148、Firefox 150.0.2、WebKit 26.4；180/180 passed |
+-| WebKit previous major | WebKit 18.4；60/60 passed |
++| `pnpm test:performance` | waterfall 与 categorical p95 均通过 150ms budget |
++| previous Playwright release | Chromium 148、Firefox 150.0.2、WebKit 26.4；183/183 passed |
++| WebKit previous major | WebKit 18.4；61/61 passed |
+ | `pnpm audit --prod --registry=https://registry.npmjs.org/` | no known vulnerabilities |
+ | strict artifact validator | feature/task strict 与 root validator passed |
+ | `git diff --check` | passed |
+@@ -35,24 +35,34 @@
+ ## TDD And Regression Detail
+ 
+ - 本轮 `stable-release.test.ts` RED 2/4，锁定 npm registry 和完整聚合门禁；实现后 4/4 通过。
++- tarball provenance 门禁在旧 evidence 上准确报告 manifest size、SHA-256 和存档内容三项不一致；
++  刷新候选后，门禁可重建当前 package 并逐项验证 manifest 与存档。
++- Playground 生产构建测试 RED 记录最大 JS chunk 为 1032082 bytes；Vite 8 Rolldown
++  `g2-runtime` 分组后最大 chunk 为 472.56 kB，主构建与 React 18/19 consumer 构建均无 warning。
+ - 单 worker WebKit 在完整矩阵第 44 个用例出现进程资源耗尽；focused WebKit 12/12 和双 worker
+-  完整矩阵 180/180 证明问题属于浏览器长队列隔离。当前与旧版矩阵固定双 worker，且保留
++  完整矩阵 183/183 证明问题属于浏览器长队列隔离。当前与旧版矩阵固定双 worker，且保留
+   `TELLPLOT_E2E_WORKERS` 环境覆盖。
+ - 发布审计扩展到 `.ai-platform` 后首次发现 43 个含个人或临时绝对路径的交付文件；全部规范化为
+-  可移植占位符后，306 个文件通过审计。
++  可移植占位符后，clean clone 中 282 个文件通过审计。
+ - Node 24 启动的完整门禁在 previous-browser 阶段按设计拒绝；Node 22.20.0 下整套
+   `pnpm release:check` 通过。
+-- 最终 isolated source 运行 52 个 unit 文件和 455 个测试，不读取工作树预生成 `dist`。
++- 最终 isolated source 运行 53 个 unit 文件和 459 个测试，不读取工作树预生成 `dist`。
+ 
+ ## Artifact And Package Checks
+ 
+ - `tarball-manifest.json` 只包含 13 个 allowlist 文件。
++- `pnpm release:artifact` 每次从当前源码构建并 pack 到临时目录，逐项比对 evidence tarball、
++  package identity、文件清单、size 与 SHA-256。
++- artifact 校验固定使用 `.nvmrc` 的 Node 22.20.0；其他 Node 版本会在构建前明确拒绝，避免
++  source map 工具链差异被误报为候选源码漂移。
+ - tarball 的 publint、ATTW、ESM、CJS 和 TypeScript consumer 均通过。
+-- 当前源码 release audit 扫描 306 个源码、公开文件与交付记录；隔离副本扫描 191 个，均未发现阻断项。
++- clean clone release audit 扫描 282 个源码、公开文件与交付记录；隔离副本扫描 193 个，均未发现阻断项。
++- `.copyright-application` 与 `tmp` 由 Git、Prettier 和 rehearsal exclude 同时保护，未进入 commit、
++  tarball 或隔离副本。
+ - TypeScript AST architecture audit 未发现越层依赖、非法 G2 import、公共入口泄漏或 runtime cycle。
+ 
+ ## Post-Candidate Additive Label Verification
+ 
+ 用户批准的对象式标签配置、分组边界退出/click-drag correction 与实时分组背景预览均保持公共合同
+-向后兼容，并已纳入上述 455 个 unit、当前/旧版浏览器、a11y、performance、package 与隔离源码门禁。
++向后兼容，并已纳入上述 459 个 unit、当前/旧版浏览器、a11y、performance、package 与隔离源码门禁。
+ 未执行 publish、tag、GitHub Release 或部署。
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md b/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
+index 00eef79..60d3ef0 100644
+--- a/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
 @@ -5,13 +5,13 @@
- - Feature ID: `008-public-beta-release`
+ - Feature ID: `005-lightweight-chart-library-beta`
+ - Goal ID: `G002`
+ - Version: 0.6.0
+-- Status: Needs_Review
+-- Last updated: 2026-07-23
+-- Approval: 用户于 2026-07-20 明确批准 G002；目标与 G002-R1、G002-R2、G002-R3 一起等待统一验收
++- Status: Accepted
++- Last updated: 2026-07-29
++- Approval: 用户于 2026-07-20 明确批准 G002，并于 2026-07-29 与 G002-R1、G002-R2、G002-R3、G004 统一验收
+ 
+ ## T117 - 交付 G002 轻量图表库 Beta
+ 
+-- Status: Needs_Review
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: G001 / T101-T116 Accepted
+ - Blocks: npm publish、G003 新图表扩展
+@@ -54,7 +54,7 @@
+   REFACTOR 只清理陈旧公共文案。
+ - Packet path: `.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml`
+ - Evidence required: `.ai-platform/evidence/T117/` 中的目标级 summary、tests、diff、pack manifest、API surface 和 review
+-- User review: 等待 G002 系列目标级统一验收。
++- User review: 用户于 2026-07-29 统一验收 G002 / T117。
+ - Execution variance: compile-checked CSS import 需要为 styles subpath 声明 `types` condition；React tarball
+   consumer 的 manifest assertion 同步验证该 metadata，不改变 runtime、CSS 内容或导入路径。
+ - Review state: spec compliance、bug/code quality 与 QA review 无 blocking finding；417/417 unit/coverage、
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/tasks.md b/.ai-platform/specs/006-group-cross-level-experience/tasks.md
+index 6adf3b1..2e7fd4f 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/tasks.md
++++ b/.ai-platform/specs/006-group-cross-level-experience/tasks.md
+@@ -5,13 +5,13 @@
+ - Feature ID: `006-group-cross-level-experience`
+ - Goal ID: `G002-R1`
+ - Version: 0.4.0
+-- Status: Needs_Review
+-- Last updated: 2026-07-24
+-- Approval: 用户明确批准 G002-R1，并于 2026-07-24 要求完成递归层级框选优化
++- Status: Accepted
++- Last updated: 2026-07-29
++- Approval: 用户明确批准 G002-R1，并于 2026-07-29 与 G002、G002-R2、G002-R3、G004 统一验收
+ 
+ ## T118 - 交付 G002-R1 分组与跨层编辑体验
+ 
+-- Status: Needs_Review
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: G001 Accepted；G002 / T117 release candidate complete
+ - Blocks: G002 目标级复验与后续基础图表扩展
+@@ -46,4 +46,4 @@
+   selection-normalizer/adapter/G2 implementation；REFACTOR shared tree-path and region code only.
+ - Packet path: `.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml`
+ - Evidence required: `.ai-platform/evidence/T118/summary.md`、`test-results.md`、`diff.patch`、`review.md`、visual evidence
+-- User review: 等待 G002 系列目标级统一验收。
++- User review: 用户于 2026-07-29 统一验收 G002-R1 / T118。
+diff --git a/.ai-platform/specs/007-open-source-showcase/tasks.md b/.ai-platform/specs/007-open-source-showcase/tasks.md
+index 7aa46f7..57f782d 100644
+--- a/.ai-platform/specs/007-open-source-showcase/tasks.md
++++ b/.ai-platform/specs/007-open-source-showcase/tasks.md
+@@ -3,14 +3,15 @@
+ ## Metadata
+ 
+ - Version: 0.4.5
+-- Status: Needs_Review
+-- Last updated: 2026-07-23
++- Status: Accepted
++- Last updated: 2026-07-29
++- Acceptance: 用户于 2026-07-29 与 G002、G002-R1、G002-R3、G004 统一验收
+ 
+ ## Goal Task
+ 
+ ### T119 - 开源官网与示例中心
+ 
+-- Status: Needs_Review
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: G002 / T117 implementation complete；G002-R1 / T118 implementation complete
+ - Blocks: G002-R2 目标级验收
+@@ -31,7 +32,7 @@
+ - Evidence required: RED receipt、changed files、完整命令结果、desktop/mobile screenshots、visual rubric、
+   task-only diff 和 residual risk。
+ - Packet path: `.ai-platform/specs/007-open-source-showcase/packets/T119.yaml`
+-- User review: 等待 G002 系列目标级统一验收。
++- User review: 用户于 2026-07-29 统一验收 G002-R2 / T119。
+ 
+ ## Internal Attempts
+ 
+diff --git a/.ai-platform/specs/009-public-configuration-api/tasks.md b/.ai-platform/specs/009-public-configuration-api/tasks.md
+index cc79962..f5dc88a 100644
+--- a/.ai-platform/specs/009-public-configuration-api/tasks.md
++++ b/.ai-platform/specs/009-public-configuration-api/tasks.md
+@@ -5,13 +5,13 @@
+ - Feature ID: `009-public-configuration-api`
+ - Goal ID: `G002-R3`
+ - Version: 0.2.0
+-- Status: Needs_Review
+-- Last updated: 2026-07-23
+-- Approval: 用户于 2026-07-23 明确批准目标与执行
++- Status: Accepted
++- Last updated: 2026-07-29
++- Approval: 用户于 2026-07-23 明确批准目标与执行，并于 2026-07-29 与 G002 系列、G004 统一验收
+ 
+ ## T122 - 交付公共配置 API v1
+ 
+-- Status: Needs_Review
++- Status: Accepted
+ - Priority: P0
+ - Dependencies: G002 / T117、G002-R1 / T118、G002-R2 / T119 implementation complete
+ - Blocks: G002 系列目标级验收、G004 / T120
+diff --git a/.ai-platform/specs/010-stable-v1-release/packets/T123.yaml b/.ai-platform/specs/010-stable-v1-release/packets/T123.yaml
+index eb6db21..ab49030 100644
+--- a/.ai-platform/specs/010-stable-v1-release/packets/T123.yaml
++++ b/.ai-platform/specs/010-stable-v1-release/packets/T123.yaml
+@@ -16,6 +16,8 @@ governance_inputs:
+   analysis: .ai-platform/specs/010-stable-v1-release/analysis.md
+   execution_authorization: >-
+     Granted. The user explicitly approved creating and completing the 1.0.0 stable-version goal on 2026-07-23.
++    On 2026-07-24 the user explicitly authorized correcting final tarball provenance and the playground G2 chunk
++    warning without npm publish or GitHub Release.
+     Stage, commit, push, pull request, merge, repository visibility, production deploy, DNS, git tag, GitHub Release
+     and npm publish remain unauthorized.
+ 
+@@ -69,16 +71,21 @@ baseline:
+ execution_constraints:
+   allowed_files:
+     - package.json
++    - .gitignore
++    - .prettierignore
+     - vitest.config.ts
+     - packages/editor/package.json
+     - packages/editor/README.md
+     - packages/editor/tests/package/**
++    - packages/editor/tests/react-matrix/**
+     - scripts/release/**
+     - README.md
+     - CHANGELOG.md
+     - docs/**
+     - apps/playground/src/DocsPage.tsx
+     - apps/playground/src/SiteHeader.tsx
++    - apps/playground/vite.config.ts
++    - apps/playground/tests/**
+     - e2e/**
+     - .github/**
+     - .ai-platform/**
+@@ -94,15 +101,18 @@ tdd_plan:
+     - Lock stable version, required public files and release scripts before implementation.
+     - Lock architecture import graph and cycle rules.
+     - Lock tarball manifest and no-prerelease metadata.
++    - Prove the production playground currently emits a JavaScript chunk above Vite's warning threshold.
+   green:
+     - Implement stable policy/docs/community files and release checks.
+     - Implement isolated-source rehearsal.
++    - Split the lazy G2 runtime into bounded Vite 8 Rolldown chunks while preserving on-demand loading.
+   refactor:
+     - Compose root release commands without duplicating project validation logic.
+ 
+ validation_commands:
+   - pnpm release:architecture
+   - pnpm release:audit
++  - pnpm release:artifact
+   - pnpm release:check
+   - pnpm release:rehearse
+   - pnpm format:check
+diff --git a/.ai-platform/specs/010-stable-v1-release/tasks.md b/.ai-platform/specs/010-stable-v1-release/tasks.md
+index 779287b..c2fc703 100644
+--- a/.ai-platform/specs/010-stable-v1-release/tasks.md
++++ b/.ai-platform/specs/010-stable-v1-release/tasks.md
+@@ -5,13 +5,13 @@
+ - Feature ID: `010-stable-v1-release`
  - Goal ID: `G004`
- - Version: 0.1.0
--- Status: Blocked
-+- Status: Superseded
- - Last updated: 2026-07-23
--- Approval: 等待 G002 系列目标级统一验收后重新批准
-+- Approval: 未批准；T120/T121 由稳定版 T123 和未来 G005 取代
+ - Version: 1.0.0
+-- Status: Needs_Review
+-- Last updated: 2026-07-23
+-- Approval: 用户已批准目标与连续执行
++- Status: Accepted
++- Last updated: 2026-07-29
++- Approval: 用户已批准目标与连续执行，并于 2026-07-29 与 G002 系列统一验收
  
- ## T120 - 本地发布硬化与可复现候选
+ ## T123 - 交付 1.0.0 本地稳定版候选
  
--- Status: Blocked
-+- Status: Cancelled
+-- Status: Needs_Review
++- Status: Accepted
  - Priority: P0
- - Dependencies: G002 / T117、G002-R1 / T118、G002-R2 / T119、G002-R3 / T122 全部 Accepted；
-   用户重新批准 G004
-@@ -43,7 +43,7 @@
+ - Dependencies: G002、G002-R1、G002-R2、G002-R3 implementation/review complete；用户批准 G004
+ - Blocks: G005 公开稳定版发布
+@@ -20,8 +20,10 @@
+ - Conflicts with: 新图表、schema、breaking API、依赖、核心重构、远程 Git、publish、deploy
+ - Goal: 交付可复现、可审计但尚未执行远程发布的 `@tellplot/editor@1.0.0` 本地稳定候选。
+ - Allowed files: package/release metadata、`.github/**`、`scripts/release/**`、公开文档、package tests、
+-  `apps/playground/src/DocsPage.tsx`、`apps/playground/src/SiteHeader.tsx`、`e2e/**`、root scripts、
+-  `vitest.config.ts`、`.ai-platform/**`、`AGENTS.md`
++  `packages/editor/tests/react-matrix/**`、
++  `apps/playground/src/DocsPage.tsx`、`apps/playground/src/SiteHeader.tsx`、`apps/playground/vite.config.ts`、
++  `apps/playground/tests/**`、`e2e/**`、root scripts、`.gitignore`、`.prettierignore`、`vitest.config.ts`、`.ai-platform/**`、
++  `AGENTS.md`
+ - Read-only behavior: domain、commands、charts、projection、interactions、G2 runtime、export implementation
+ - Test targets: stable metadata/public files RED；runtime export；architecture graph/cycles；release audit；
+   isolated source；package/React/browser/a11y/performance regressions
+@@ -31,8 +33,9 @@
+   finding；不执行任何远程动作。
+ - Definition of Done: 1.0.0 tarball、隔离源码 receipt、三层 review 与 evidence 完整，G004/T123
+   进入 `Needs_Review`。
+-- Validation commands: `pnpm release:architecture`、`pnpm release:audit`、`pnpm release:check`、
+-  `pnpm release:rehearse`、完整质量与浏览器矩阵、strict artifact validator、`git diff --check`
++- Validation commands: `pnpm release:architecture`、`pnpm release:audit`、`pnpm release:artifact`、
++  `pnpm release:check`、`pnpm release:rehearse`、完整质量与浏览器矩阵、strict artifact validator、
++  `git diff --check`
+ - TDD plan: RED stable version/files/scripts；GREEN policy/community/release gates；REFACTOR 组合命令与隔离复演；
+   FINAL 完整兼容矩阵和 evidence。
+ - Packet path: `.ai-platform/specs/010-stable-v1-release/packets/T123.yaml`
+@@ -48,3 +51,4 @@
+ | T123-A003 | Architecture/release audit scripts | Completed |
+ | T123-A004 | Isolated-source rehearsal | Completed |
+ | T123-A005 | Full gates、review、evidence | Completed |
++| T123-A006 | Final tarball provenance 与 playground chunk correction | Completed |
+diff --git a/.gitignore b/.gitignore
+index f092cfc..9b0ccc4 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -38,6 +38,10 @@ yarn-error.log*
+ *.tmp
+ *.temp
  
- ## T121 - 公开仓库、网站与 npm Beta
++# Local private and scratch materials
++.copyright-application/
++tmp/
++
+ # Other package manager lock files
+ # package-lock.json
+ # yarn.lock
+diff --git a/.prettierignore b/.prettierignore
+index db006cd..65f9510 100644
+--- a/.prettierignore
++++ b/.prettierignore
+@@ -1,4 +1,6 @@
+ .ai-platform/
++.copyright-application/
++tmp/
+ AGENTS.md
+ README.md
+ LICENSE
+diff --git a/AGENTS.md b/AGENTS.md
+index 91ca39c..553797a 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -2,9 +2,8 @@
  
--- Status: Blocked
-+- Status: Cancelled
- - Priority: P0
- - Dependencies: T120 review 通过；用户明确批准远程 Git、仓库公开、生产部署、tag/release 和 npm publish；
-   `@tellplot` scope、2FA/Trusted Publishing、域名与托管权限可用
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/analysis.md ./.ai-platform/specs/010-stable-v1-release/analysis.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/analysis.md	1970-01-01 08:00:00
-+++ ./.ai-platform/specs/010-stable-v1-release/analysis.md	2026-07-23 15:48:16
-@@ -0,0 +1,27 @@
-+# G004 稳定版 1.0 一致性分析
-+
-+## Metadata
-+
-+- Feature ID: `010-stable-v1-release`
-+- Goal ID: `G004`
-+- Version: 1.0.0
-+- Status: Completed
-+- Last updated: 2026-07-23
-+
-+## Findings
-+
-+- Critical: 0
-+- High: 0
-+- Medium: 0
-+- Low: 3
-+
-+1. 当前工作树包含 T112-T122 未提交成果，不能作为公开发布源；隔离源码复演只能证明候选可复现。
-+2. 两个 family Canvas 较大且存在编排重复；发布前重构风险高于收益。
-+3. 没有公开 Beta 使用反馈；稳定信心由窄 API、类型/runtime 合同、React/浏览器矩阵和本地 tarball
-+   consumer 补强，但真实生态反馈仍属于发布后维护风险。
-+
-+## Verdict
-+
-+`PASS`。Low findings 不要求新增依赖、图表或核心重构。T123 可以执行并停在 `Needs_Review`；公开发布
-+继续由 G005 和独立远程授权控制。
-+
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/checklists/requirements.md ./.ai-platform/specs/010-stable-v1-release/checklists/requirements.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/checklists/requirements.md	1970-01-01 08:00:00
-+++ ./.ai-platform/specs/010-stable-v1-release/checklists/requirements.md	2026-07-23 15:48:16
-@@ -0,0 +1,26 @@
-+# G004 稳定版 1.0 Requirements Checklist
-+
-+## Metadata
-+
-+- Feature ID: `010-stable-v1-release`
-+- Goal ID: `G004`
-+- Version: 1.0.0
-+- Status: Completed
-+- Last updated: 2026-07-23
-+
-+## Checklist
-+
-+- [x] 稳定版与图表数量无关，承诺范围明确。
-+- [x] 1.0 runtime/type/schema/error/peer/browser 合同可测试。
-+- [x] SemVer、弃用、支持与安全政策有明确要求。
-+- [x] 本地候选与公开发布状态严格区分。
-+- [x] dirty worktree 不作为远程发布来源。
-+- [x] architecture、cycle、link、secret/path、tarball 审计可自动执行。
-+- [x] 隔离源码复演不需要破坏或提交当前工作树。
-+- [x] 远程 Git、deploy、tag、release 和 publish 保留独立闸门。
-+- [x] 新图表、schema、依赖和核心重构保持范围外。
-+
-+## Result
-+
-+`PASS`。没有阻断性需求缺口，可以执行 T123。
-+
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/packets/T123.yaml ./.ai-platform/specs/010-stable-v1-release/packets/T123.yaml
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/packets/T123.yaml	1970-01-01 08:00:00
-+++ ./.ai-platform/specs/010-stable-v1-release/packets/T123.yaml	2026-07-23 16:26:11
-@@ -0,0 +1,164 @@
-+schema_version: 1
-+packet_id: EP-G004-T123-A001
-+task_id: T123
-+feature_id: 010-stable-v1-release
-+mode: execute_goal
-+adapter: codex
-+
-+governance_inputs:
-+  constitution: .ai-platform/memory/constitution.md
-+  product_contract: .ai-platform/docs/product-design.md
-+  technical_decisions: .ai-platform/docs/technology-decision-record.md
-+  goal_spec: .ai-platform/specs/010-stable-v1-release/spec.md
-+  goal_plan: .ai-platform/specs/010-stable-v1-release/plan.md
-+  goal_graph: .ai-platform/specs/010-stable-v1-release/tasks.md
-+  requirements_checklist: .ai-platform/specs/010-stable-v1-release/checklists/requirements.md
-+  analysis: .ai-platform/specs/010-stable-v1-release/analysis.md
-+  execution_authorization: >-
-+    Granted. The user explicitly approved creating and completing the 1.0.0 stable-version goal on 2026-07-23.
-+    Stage, commit, push, pull request, merge, repository visibility, production deploy, DNS, git tag, GitHub Release
-+    and npm publish remain unauthorized.
-+
-+work_unit:
-+  title: 首个稳定版 1.0 本地候选
-+  goal: Deliver a local, reproducible @tellplot/editor 1.0.0 stable release candidate.
-+  depends_on:
-+    - G002 T117 implementation and evidence complete
-+    - G002-R1 T118 implementation and evidence complete
-+    - G002-R2 T119 implementation and evidence complete
-+    - G002-R3 T122 implementation and evidence complete
-+  requirements:
-+    - STABLE-FR-001
-+    - STABLE-FR-002
-+    - STABLE-FR-003
-+    - STABLE-FR-004
-+    - STABLE-FR-005
-+    - STABLE-FR-006
-+    - STABLE-FR-007
-+    - STABLE-FR-008
-+    - STABLE-NFR-001
-+    - STABLE-NFR-002
-+    - STABLE-NFR-003
-+    - STABLE-NFR-004
-+    - STABLE-NFR-005
-+
-+codebase_context:
-+  local_instructions:
-+    - AGENTS.md
-+  accepted_baseline:
-+    branch: codex/t112-categorical-data-contract
-+    state: T112-T122 and governance corrections are intentionally uncommitted in the current worktree
-+    constraints:
-+      - Preserve all existing user and accepted changes.
-+      - Do not reset, stash, stage or commit.
-+      - Generate T123 evidence against the recorded snapshot.
-+  relevant_files:
-+    - packages/editor/package.json
-+    - packages/editor/src/index.ts
-+    - packages/editor/tests/package/**
-+    - scripts/release/**
-+    - vitest.config.ts
-+    - README.md
-+    - CHANGELOG.md
-+    - docs/**
-+
-+baseline:
-+  snapshot: /tmp/tellplot-G004-stable.PBkJ9I/worktree
-+  note: Snapshot recorded before G004 stable artifacts or implementation edits.
-+
-+execution_constraints:
-+  allowed_files:
-+    - package.json
-+    - vitest.config.ts
-+    - packages/editor/package.json
-+    - packages/editor/README.md
-+    - packages/editor/tests/package/**
-+    - scripts/release/**
-+    - README.md
-+    - CHANGELOG.md
-+    - docs/**
-+    - apps/playground/src/DocsPage.tsx
-+    - apps/playground/src/SiteHeader.tsx
-+    - e2e/**
-+    - .github/**
-+    - .ai-platform/**
-+    - AGENTS.md
-+  forbidden_changes:
-+    - No runtime or dev dependency.
-+    - No domain, schema, command, projection, interaction, G2 runtime or export behavior change.
-+    - No remote action, publish or deployment.
-+    - No any, @ts-ignore or @ts-expect-error.
-+
-+tdd_plan:
-+  red:
-+    - Lock stable version, required public files and release scripts before implementation.
-+    - Lock architecture import graph and cycle rules.
-+    - Lock tarball manifest and no-prerelease metadata.
-+  green:
-+    - Implement stable policy/docs/community files and release checks.
-+    - Implement isolated-source rehearsal.
-+  refactor:
-+    - Compose root release commands without duplicating project validation logic.
-+
-+validation_commands:
-+  - pnpm release:architecture
-+  - pnpm release:audit
-+  - pnpm release:check
-+  - pnpm release:rehearse
-+  - pnpm format:check
-+  - pnpm lint
-+  - pnpm typecheck
-+  - pnpm test:coverage
-+  - pnpm build
-+  - pnpm test:package
-+  - pnpm test:react-matrix
-+  - pnpm test:e2e
-+  - pnpm test:a11y
-+  - pnpm test:performance
-+  - pnpm test:browser-previous
-+  - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 010-stable-v1-release --task-id T123 --strict
-+  - git diff --check
-+
-+validation_loop:
-+  focused_red:
-+    - Run stable package identity, required public files and release-script tests before implementation.
-+    - Record the expected beta version and missing-file/script failures.
-+  focused_green:
-+    - Run the same focused suite after stable metadata, public docs and release scripts are present.
-+  regression:
-+    - Run release:check, isolated rehearsal and the complete current/previous compatibility matrix.
-+  failure_policy:
-+    - Fix T123 failures only within allowed files.
-+    - Stop if a fix requires dependency, schema, runtime behavior or a remote action.
-+
-+evidence_contract:
-+  directory: .ai-platform/evidence/T123
-+  required:
-+    - summary.md
-+    - test-results.md
-+    - diff.patch
-+    - review.md
-+    - architecture-report.md
-+    - tarball-manifest.json
-+    - isolated-source-receipt.md
-+
-+review_contract:
-+  required_passes:
-+    - spec_compliance
-+    - bug_code_quality
-+    - qa_acceptance
-+  acceptance_rule: >-
-+    G004 may move to Needs_Review only when all stable success criteria and complete gates pass with no unresolved
-+    Critical, High or Medium finding. Only the user can mark the goal Accepted.
-+
-+stop_conditions:
-+  - A dependency, public schema or runtime behavior change is required.
-+  - Existing package, React, browser, accessibility or performance gates regress.
-+  - The dirty baseline cannot be preserved.
-+  - A Critical or High review finding remains unresolved.
-+  - A remote action or publish is requested without separate approval.
-+
-+handoff:
-+  remote_actions_authorized: false
-+  public_release_goal: G005
-+  finish_state: Needs_Review
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/plan.md ./.ai-platform/specs/010-stable-v1-release/plan.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/plan.md	1970-01-01 08:00:00
-+++ ./.ai-platform/specs/010-stable-v1-release/plan.md	2026-07-23 15:48:16
-@@ -0,0 +1,44 @@
-+# G004 首个稳定版 1.0 计划
-+
-+## Metadata
-+
-+- Feature ID: `010-stable-v1-release`
-+- Goal ID: `G004`
-+- Version: 1.0.0
-+- Status: Confirmed
-+- Last updated: 2026-07-23
-+
-+## Strategy
-+
-+1. 用 RED tests 锁定 `1.0.0` metadata、稳定 runtime exports、必需公共资料和 release scripts。
-+2. 冻结 SemVer、兼容、弃用、支持与 schema 政策，不扩展图表范围。
-+3. 使用 TypeScript compiler API 建立 import graph、依赖方向和 cycle 门禁。
-+4. 建立本地链接、secret/path、metadata 与 tarball 审计，并组合为 `pnpm release:check`。
-+5. 从隔离源码执行 frozen install 与稳定候选复演。
-+6. 运行完整矩阵，生成 tarball manifest、architecture report、review 和目标 evidence。
-+
-+## Version Strategy
-+
-+- package version：`1.0.0`。
-+- 本地验证产物：`tellplot-editor-1.0.0.tgz`。
-+- npm dist-tag：未来远程发布使用 `latest`；本目标不执行 publish。
-+- breaking changes：只允许进入新的 major。
-+- deprecation：至少跨一个 minor，包含替代路径、迁移文档和测试。
-+
-+## Release Commands
-+
-+- `pnpm release:architecture`
-+- `pnpm release:audit`
-+- `pnpm release:check`
-+- `pnpm release:rehearse`
-+
-+`release:check` 不执行 Git 或网络写操作。`release:rehearse` 创建临时隔离源码副本并验证，不修改当前工作树。
-+
-+## Risk Controls
-+
-+- dirty worktree：仅作为本地候选输入；公开发布必须等待后续 Git 授权形成干净 commit。
-+- 首发即 1.0：稳定承诺限定当前三个图表家族和文档化能力，不承诺通用 G2 替代品。
-+- 无公开 Beta：用独立 tarball、React 18/19、上一浏览器和隔离源码复演提高发布前置信心。
-+- 发布脚本误泄漏：只报告规则与文件路径，不回显匹配内容。
-+- 发布前重构：禁止修改领域、projection、interaction 和 G2 runtime。
-+
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/spec.md ./.ai-platform/specs/010-stable-v1-release/spec.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/spec.md	1970-01-01 08:00:00
-+++ ./.ai-platform/specs/010-stable-v1-release/spec.md	2026-07-23 15:48:16
-@@ -0,0 +1,109 @@
-+# G004 首个稳定版 1.0 需求
-+
-+## Metadata
-+
-+- Feature ID: `010-stable-v1-release`
-+- Goal ID: `G004`
-+- Version: 1.0.0
-+- Status: Confirmed
-+- Last updated: 2026-07-23
-+- Approval: 用户于 2026-07-23 明确批准创建并完成 1.0.0 稳定版大目标
-+
-+## Goal
-+
-+把当前 waterfall、bar、column 的已实现能力整理为 `@tellplot/editor@1.0.0` 本地稳定版候选。稳定版承诺
-+当前支持范围内的公共 API、schema、错误码、React/G2 peer 范围和浏览器合同，不以增加图表数量作为
-+发布条件。
-+
-+本目标完成本地实现、兼容合同、开源资料、自动发布门禁、隔离源码复演和完整质量矩阵。远程 Git、生产
-+部署、tag、GitHub Release 与 npm publish 不属于本次授权。
-+
-+## User Outcomes
-+
-+- React 开发者通过 `ChartEditor + ChartConfig` 接入明确标记为稳定版的包。
-+- 维护者可以根据版本、兼容、弃用、支持、安全和贡献文档理解 1.x 承诺。
-+- 发布者可以用一个确定命令验证架构、公共文件、链接、敏感信息、包内容和完整工程门禁。
-+- 当前未提交工作树可以生成可审计的本地 tarball；真正公开发布仍只允许来自后续授权的干净 commit。
-+
-+## Requirements
-+
-+### STABLE-FR-001 稳定版本身份
-+
-+package、README、CHANGELOG、网站文档、测试和发布报告使用 `1.0.0`，不得把公开候选描述为 Beta。
-+本地 tarball 名称和 manifest 必须为 `@tellplot/editor@1.0.0`。
-+
-+### STABLE-FR-002 公共合同冻结
-+
-+1.0 runtime exports 精确固定为 `ChartEditor`、`validateChartConfig` 和九个既有 domain/session API。
-+类型合同覆盖 `ChartConfig`、`ViewSpec`、commands、errors、export 和 React props/handle。内部
-+`FinancialChart*`、G2Spec、Chart instance、projection 和 runtime handle 不属于兼容承诺。
-+
-+### STABLE-FR-003 版本与弃用政策
-+
-+文档定义 Semantic Versioning、1.x 兼容范围、最短弃用周期、支持矩阵和 schema 兼容政策。breaking
-+public API、schema 或错误码变化只能进入新的 major；弃用至少跨一个 minor 并提供迁移说明。
-+
-+### STABLE-FR-004 开源维护资料
-+
-+公开源码包含 README、LICENSE、CHANGELOG、CONTRIBUTING、SECURITY、CODE_OF_CONDUCT、SUPPORT、
-+Issue templates 和 PR template。文档链接在本地可解析，安全报告不要求公开披露漏洞细节。
-+
-+### STABLE-FR-005 架构门禁
-+
-+自动检查 domain、interactions、charts、rendering、components/export/react 的依赖方向、G2 import
-+边界、公共入口和 TypeScript/TSX runtime import cycle。检查使用结构化 TypeScript parser，不使用
-+字符串猜测 import graph。
-+
-+### STABLE-FR-006 发布审计
-+
-+自动检查版本、必需公开文件、package metadata、本地 Markdown 链接、明显 secret/private-key 模式、
-+个人绝对路径和 tarball allowlist。审计不得输出业务数据值或凭据内容。
-+
-+### STABLE-FR-007 隔离源码复演
-+
-+从排除 `.git`、node_modules、dist、coverage 和测试输出的隔离源码副本执行 frozen install、稳定版
-+门禁和 package 构建。由于远程 Git 未授权，本次复演不是公开发布来源；公开发布仍要求干净 commit。
-+
-+### STABLE-FR-008 完整质量矩阵
-+
-+format、lint、typecheck、unit/coverage、build、package、React 18/19、current/previous browser、
-+a11y、performance、stable release audit 和 artifact validator 全部通过。
-+
-+## Stable Support Contract
-+
-+- React：18.3 与 19.x。
-+- React DOM：与 React 对应的 18.3 与 19.x。
-+- G2：5.4.x 及满足 peer range 的兼容 5.x。
-+- Node：构建与验证使用 22.20.0；CI 同时验证当前 Node 24。
-+- 浏览器：当前 Chromium、Firefox、WebKit，以及上一 Playwright browser release；WebKit 18.4
-+  保留兼容回归。
-+- Schema：现有 1.x legacy waterfall 与 2.x waterfall/categorical 解析合同保持兼容。
-+
-+## Non-Functional Requirements
-+
-+- STABLE-NFR-001：不增加 runtime 或 dev dependency。
-+- STABLE-NFR-002：不修改 SourceData/ViewSpec schema、命令行为、projection 或 G2 runtime。
-+- STABLE-NFR-003：发布门禁跨平台、失败即非零退出，并只输出路径/规则，不输出 secret 内容。
-+- STABLE-NFR-004：工作树已有用户成果不得被 reset、stash、覆盖或隐式提交。
-+- STABLE-NFR-005：不得把本地候选描述为已公开发布。
-+
-+## Non-Goals
-+
-+- 新图表家族、多序列、AI、Dashboard、通用 plugin registry 或 raw G2Spec。
-+- 远程 Git、仓库公开、production deploy、DNS、tag、GitHub Release 或 npm publish。
-+- 为发布重构大型 Canvas、交互控制器或领域模型。
-+
-+## Success Criteria
-+
-+- STABLE-SC-001：`pnpm pack` 生成 `@tellplot/editor@1.0.0` 且 package contract 全绿。
-+- STABLE-SC-002：runtime/type/compat/deprecation/schema 合同文档和测试完整。
-+- STABLE-SC-003：architecture、public files、links、secret/path 和 tarball 自动门禁通过。
-+- STABLE-SC-004：隔离源码 frozen install、build、package 和稳定版 audit 可复现。
-+- STABLE-SC-005：完整当前/上一浏览器、React、a11y 和性能矩阵通过。
-+- STABLE-SC-006：无 unresolved Critical、High 或 Medium finding。
-+
-+## Approval Gate
-+
-+用户已批准 G004 本地稳定版目标、版本改为 `1.0.0` 和连续执行。stage、commit、push、PR、merge、
-+production deploy、DNS、tag、GitHub Release 和 npm publish 仍需独立明确授权。
-+
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/tasks.md ./.ai-platform/specs/010-stable-v1-release/tasks.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.ai-platform/specs/010-stable-v1-release/tasks.md	1970-01-01 08:00:00
-+++ ./.ai-platform/specs/010-stable-v1-release/tasks.md	2026-07-23 16:26:11
-@@ -0,0 +1,50 @@
-+# G004 首个稳定版 1.0 Goal Graph
-+
-+## Metadata
-+
-+- Feature ID: `010-stable-v1-release`
-+- Goal ID: `G004`
-+- Version: 1.0.0
-+- Status: Needs_Review
-+- Last updated: 2026-07-23
-+- Approval: 用户已批准目标与连续执行
-+
-+## T123 - 交付 1.0.0 本地稳定版候选
-+
-+- Status: Needs_Review
-+- Priority: P0
-+- Dependencies: G002、G002-R1、G002-R2、G002-R3 implementation/review complete；用户批准 G004
-+- Blocks: G005 公开稳定版发布
-+- Story / Requirement: STABLE-FR-001 至 008；STABLE-NFR-001 至 005
-+- Parallel: false
-+- Conflicts with: 新图表、schema、breaking API、依赖、核心重构、远程 Git、publish、deploy
-+- Goal: 交付可复现、可审计但尚未执行远程发布的 `@tellplot/editor@1.0.0` 本地稳定候选。
-+- Allowed files: package/release metadata、`.github/**`、`scripts/release/**`、公开文档、package tests、
-+  `apps/playground/src/DocsPage.tsx`、`apps/playground/src/SiteHeader.tsx`、`e2e/**`、root scripts、
-+  `vitest.config.ts`、`.ai-platform/**`、`AGENTS.md`
-+- Read-only behavior: domain、commands、charts、projection、interactions、G2 runtime、export implementation
-+- Test targets: stable metadata/public files RED；runtime export；architecture graph/cycles；release audit；
-+  isolated source；package/React/browser/a11y/performance regressions
-+- Deliverables: `@tellplot/editor@1.0.0` tarball；1.x 兼容与维护文档；release scripts；隔离源码 receipt；
-+  三层 review 与目标级 evidence
-+- Acceptance criteria: STABLE-SC-001 至 STABLE-SC-006 全部满足；无 unresolved Critical/High/Medium
-+  finding；不执行任何远程动作。
-+- Definition of Done: 1.0.0 tarball、隔离源码 receipt、三层 review 与 evidence 完整，G004/T123
-+  进入 `Needs_Review`。
-+- Validation commands: `pnpm release:architecture`、`pnpm release:audit`、`pnpm release:check`、
-+  `pnpm release:rehearse`、完整质量与浏览器矩阵、strict artifact validator、`git diff --check`
-+- TDD plan: RED stable version/files/scripts；GREEN policy/community/release gates；REFACTOR 组合命令与隔离复演；
-+  FINAL 完整兼容矩阵和 evidence。
-+- Packet path: `.ai-platform/specs/010-stable-v1-release/packets/T123.yaml`
-+- Evidence required: `.ai-platform/evidence/T123/summary.md`、`test-results.md`、`diff.patch`、`review.md`、
-+  `architecture-report.md`、`tarball-manifest.json`、`isolated-source-receipt.md`
-+
-+## Internal Workstreams
-+
-+| Workstream | Scope | State |
-+| --- | --- | --- |
-+| T123-A001 | Stable artifacts、metadata/docs RED | Completed |
-+| T123-A002 | Version/API/support/community GREEN | Completed |
-+| T123-A003 | Architecture/release audit scripts | Completed |
-+| T123-A004 | Isolated-source rehearsal | Completed |
-+| T123-A005 | Full gates、review、evidence | Completed |
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/ISSUE_TEMPLATE/bug_report.yml ./.github/ISSUE_TEMPLATE/bug_report.yml
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/ISSUE_TEMPLATE/bug_report.yml	1970-01-01 08:00:00
-+++ ./.github/ISSUE_TEMPLATE/bug_report.yml	2026-07-23 15:54:10
-@@ -0,0 +1,42 @@
-+name: Bug report
-+description: 报告可复现的 TellPlot 缺陷
-+title: '[Bug] '
-+labels:
-+  - bug
-+body:
-+  - type: markdown
-+    attributes:
-+      value: 请先移除真实金额、业务标签、来源引用和凭据。
-+  - type: input
-+    id: version
-+    attributes:
-+      label: TellPlot version
-+      placeholder: 1.0.0
-+    validations:
-+      required: true
-+  - type: textarea
-+    id: environment
-+    attributes:
-+      label: Environment
-+      description: React、G2、浏览器、操作系统和 Node 版本
-+    validations:
-+      required: true
-+  - type: textarea
-+    id: reproduction
-+    attributes:
-+      label: Minimal reproduction
-+      description: 提供脱敏配置、步骤或公开仓库
-+    validations:
-+      required: true
-+  - type: textarea
-+    id: expected
-+    attributes:
-+      label: Expected behavior
-+    validations:
-+      required: true
-+  - type: textarea
-+    id: actual
-+    attributes:
-+      label: Actual behavior
-+    validations:
-+      required: true
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/ISSUE_TEMPLATE/config.yml ./.github/ISSUE_TEMPLATE/config.yml
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/ISSUE_TEMPLATE/config.yml	1970-01-01 08:00:00
-+++ ./.github/ISSUE_TEMPLATE/config.yml	2026-07-23 15:54:10
-@@ -0,0 +1,8 @@
-+blank_issues_enabled: false
-+contact_links:
-+  - name: Security report
-+    url: https://github.com/iiwish/tellplot/security/advisories/new
-+    about: 请私下报告安全问题
-+  - name: Support
-+    url: https://github.com/iiwish/tellplot/discussions
-+    about: 使用问题与讨论
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/ISSUE_TEMPLATE/feature_request.yml ./.github/ISSUE_TEMPLATE/feature_request.yml
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/ISSUE_TEMPLATE/feature_request.yml	1970-01-01 08:00:00
-+++ ./.github/ISSUE_TEMPLATE/feature_request.yml	2026-07-23 15:54:10
-@@ -0,0 +1,25 @@
-+name: Feature request
-+description: 提议明确图表或编辑需求
-+title: '[Feature] '
-+labels:
-+  - enhancement
-+body:
-+  - type: textarea
-+    id: problem
-+    attributes:
-+      label: User problem
-+      description: 谁在什么场景遇到什么问题
-+    validations:
-+      required: true
-+  - type: textarea
-+    id: chart
-+    attributes:
-+      label: Chart and data contract
-+      description: 图表类型、数据形状、交互与导出预期
-+    validations:
-+      required: true
-+  - type: textarea
-+    id: alternatives
-+    attributes:
-+      label: Alternatives
-+      description: 已尝试的 G2 或 TellPlot 现有能力
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/pull_request_template.md ./.github/pull_request_template.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/.github/pull_request_template.md	1970-01-01 08:00:00
-+++ ./.github/pull_request_template.md	2026-07-23 15:54:10
-@@ -0,0 +1,21 @@
-+## Summary
-+
-+说明用户问题和本次最小改动。
-+
-+## Validation
-+
-+- [ ] format / lint / typecheck
-+- [ ] relevant unit and invariant tests
-+- [ ] browser / a11y / performance when behavior changes
-+- [ ] package and release checks when public surface changes
-+
-+## Boundaries
-+
-+- [ ] SourceData remains immutable
-+- [ ] no raw G2 public escape hatch
-+- [ ] no credentials or business data
-+- [ ] public API/schema/dependency/release changes were approved
-+
-+## Evidence
-+
-+列出命令结果、视觉证据和残余风险。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/AGENTS.md ./AGENTS.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/AGENTS.md	2026-07-23 15:38:56
-+++ ./AGENTS.md	2026-07-23 16:20:12
-@@ -3,7 +3,8 @@
  ## 项目状态
  
- - 当前阶段：T101-T116 已验收；G002 / T117、G002-R1 / T118、G002-R2 / T119 与
--  G002-R3 / T122 实现完成，统一处于 `Needs_Review`；G004 阻塞。
-+  G002-R3 / T122 实现完成，统一处于 `Needs_Review`；G004 / T123 稳定版 1.0 本地候选实现完成，
-+  处于 `Needs_Review`。
+-- 当前阶段：T101-T116 已验收；G002 / T117、G002-R1 / T118、G002-R2 / T119 与
+-  G002-R3 / T122 实现完成，统一处于 `Needs_Review`；G004 / T123 稳定版 1.0 本地候选实现完成，
+-  处于 `Needs_Review`。
++- 当前阶段：T101-T116、G002 / T117、G002-R1 / T118、G002-R2 / T119、G002-R3 / T122 与
++  G004 / T123 均已验收；`@tellplot/editor@1.0.0` 是等待独立远程发布授权的本地稳定候选。
  - 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
  - 产品 SSOT：`.ai-platform/docs/product-design.md`。
  - 项目原则：`.ai-platform/memory/constitution.md`。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/CHANGELOG.md ./CHANGELOG.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/CHANGELOG.md	2026-07-23 15:06:58
-+++ ./CHANGELOG.md	2026-07-23 15:51:52
-@@ -1,10 +1,11 @@
- # Changelog
+diff --git a/apps/playground/tests/buildOutput.test.ts b/apps/playground/tests/buildOutput.test.ts
+new file mode 100644
+index 0000000..a727ea2
+--- /dev/null
++++ b/apps/playground/tests/buildOutput.test.ts
+@@ -0,0 +1,46 @@
++import { fileURLToPath } from 'node:url';
++
++import { build } from 'vite';
++import { describe, expect, it } from 'vitest';
++
++const playgroundRoot = fileURLToPath(new URL('..', import.meta.url));
++const viteWarningThresholdBytes = 500_000;
++
++describe('playground production bundle', () => {
++  it('keeps lazy chart and application chunks below the Vite warning threshold', async () => {
++    const previousNodeEnv = process.env['NODE_ENV'];
++    process.env['NODE_ENV'] = 'production';
++    const result = await build({
++      root: playgroundRoot,
++      logLevel: 'silent',
++      build: {
++        write: false,
++      },
++    }).finally(() => {
++      if (previousNodeEnv === undefined) {
++        delete process.env['NODE_ENV'];
++      } else {
++        process.env['NODE_ENV'] = previousNodeEnv;
++      }
++    });
++    const outputs = Array.isArray(result) ? result : [result];
++    const chunks = outputs.flatMap(output => {
++      if (!('output' in output)) {
++        throw new Error('Expected a completed playground production build');
++      }
++      return output.output.filter(item => item.type === 'chunk');
++    });
++    const chunkSizes = chunks.map(chunk => ({
++      fileName: chunk.fileName,
++      size: Buffer.byteLength(chunk.code),
++    }));
++
++    expect(chunkSizes.length).toBeGreaterThan(1);
++    expect(chunkSizes.length).toBeLessThanOrEqual(8);
++    expect(chunks.some(chunk => chunk.isEntry && chunk.dynamicImports.length > 0)).toBe(true);
++    expect(chunkSizes.every(chunk => chunk.size > 0)).toBe(true);
++    expect(Math.max(...chunkSizes.map(chunk => chunk.size))).toBeLessThanOrEqual(
++      viteWarningThresholdBytes,
++    );
++  });
++});
+diff --git a/apps/playground/vite.config.ts b/apps/playground/vite.config.ts
+index f4a8dca..3e71085 100644
+--- a/apps/playground/vite.config.ts
++++ b/apps/playground/vite.config.ts
+@@ -4,6 +4,24 @@ import { defineConfig } from 'vite';
  
--TellPlot 使用 Semantic Versioning。Beta 版本可能包含经迁移说明记录的公共合同调整。
-+TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或错误码变化只进入新的 major；
-+弃用遵循 [版本与兼容政策](docs/versioning.md)。
+ export default defineConfig({
+   plugins: [react()],
++  build: {
++    rolldownOptions: {
++      output: {
++        codeSplitting: {
++          groups: [
++            {
++              name: 'g2-runtime',
++              test: /node_modules[\\/]@antv[\\/]g2[\\/]/,
++              priority: 10,
++              minSize: 96 * 1024,
++              // Rolldown applies this target before minification.
++              maxSize: 1_300 * 1024,
++            },
++          ],
++        },
++      },
++    },
++  },
+   resolve: {
+     alias: [
+       {
+diff --git a/docs/roadmap.md b/docs/roadmap.md
+index 5c62f8c..5454625 100644
+--- a/docs/roadmap.md
++++ b/docs/roadmap.md
+@@ -25,7 +25,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
  
--## 0.1.0-beta.1
-+## 1.0.0
+ ## G002 轻量图表库 Beta
  
--首个轻量图表库 beta release candidate。
-+首个稳定版本。当前仓库生成本地稳定候选；公开 npm、GitHub Release 与生产网站状态以发布报告为准。
+-- Status: Needs_Review
++- Status: Accepted
+ - Goal: 把当前三个图表家族整理成开发者可以直接安装、理解和稳定集成的 beta 版本。
+ - Included outcomes:
+   - 收敛并记录公共组件、数据、配置、事件、持久化和导出 API。
+@@ -33,11 +33,11 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+   - 验证发布 tarball、React 18/19、类型、浏览器、可访问性、性能和导出。
+   - 确定 beta 版本、变更记录和迁移规则。
+ - Excluded: 新图表类型、通用插件系统、Dashboard 和服务端能力。
+-- Acceptance: 与 G002-R1、G002-R2、G002-R3 一起进行目标级验收。
++- Acceptance: 用户于 2026-07-29 与 G002-R1、G002-R2、G002-R3、G004 统一验收。
  
- ### Added
+ ## G002-R1 分组与跨层编辑体验
  
-@@ -23,7 +24,7 @@
- - React 配置统一收纳到 `config.data`、`config.appearance` 与 `config.editor`；可编辑状态使用
-   `view`、`defaultView` 和 `onViewChange`。
+-- Status: Needs_Review
++- Status: Accepted
+ - Goal: 让分组选择、跨层拖拽和展开区域在结构大纲与图表中具有一致、可理解的编辑反馈。
+ - Outcome: 已完成上下文选择、组内子分组、跨边界整组提升、跨层移动、最小分组自动解散和可配置展开
+   分组背景区域。
+@@ -45,7 +45,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
  
--### Release Status
-+### Stability
+ ## G002-R2 开源官网与示例中心
  
--- G002、G002-R1、G002-R2 与 G002-R3 完成本地实现后统一进入 `Needs_Review`。
--- npm publish、Git tag 和正式 release 不包含在 G002 授权中。
-+- runtime exports、公共类型、schema、错误码、React/G2 peer 范围和浏览器合同进入 1.x 兼容承诺。
-+- npm publish、Git tag、GitHub Release 和生产部署需要独立授权，版本字段不表示已经公开发布。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/CODE_OF_CONDUCT.md ./CODE_OF_CONDUCT.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/CODE_OF_CONDUCT.md	1970-01-01 08:00:00
-+++ ./CODE_OF_CONDUCT.md	2026-07-23 15:54:10
-@@ -0,0 +1,11 @@
-+# Code of Conduct
-+
-+TellPlot 社区致力于提供开放、尊重、专业的协作环境。
-+
-+参与者应友善讨论技术与产品问题，尊重不同经验与背景，针对事实和代码提出反馈，不进行骚扰、歧视、
-+人身攻击、公开羞辱或泄露他人隐私。
-+
-+维护者可以编辑或移除违反本规范的内容，并根据严重程度限制参与。报告行为问题时请使用仓库维护者提供的
-+私密联系渠道，不要在公开线程披露受影响者信息。
-+
-+本规范适用于仓库、Issue、Pull Request、Discussion 和代表 TellPlot 的公开社区空间。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/CONTRIBUTING.md ./CONTRIBUTING.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/CONTRIBUTING.md	1970-01-01 08:00:00
-+++ ./CONTRIBUTING.md	2026-07-23 15:54:10
-@@ -0,0 +1,41 @@
-+# Contributing to TellPlot
-+
-+感谢参与 TellPlot。项目保持小核心：新能力必须来自明确图表需求，优先使用 G2，不引入第二渲染引擎、
-+Dashboard、AI 或通用插件框架。
-+
-+## 开始
-+
-+```bash
-+pnpm install --frozen-lockfile
-+pnpm typecheck
-+pnpm test:unit
-+pnpm build
-+```
-+
-+需要 Node 22.20.0 和 pnpm 11.1.3。行为变更默认先增加失败测试；财务聚合、顺序和层级变更必须有不变量测试。
-+
-+## Pull Request
-+
-+- 每个 PR 只解决一个清晰问题，说明用户影响、验证命令和残余风险。
-+- 使用 Conventional Commits。
-+- 不提交生成的 `dist/`、coverage、Playwright report、token、业务数据或个人环境文件。
-+- 公共 API、schema、依赖、发布和远程基础设施变化必须先获得维护者批准。
-+- UI 变化附桌面和移动证据；交互变化覆盖键盘、reduced motion 与真实浏览器。
-+
-+提交前运行：
-+
-+```bash
-+pnpm release:check
-+pnpm test:e2e
-+pnpm test:a11y
-+pnpm test:performance
-+```
-+
-+## 设计边界
-+
-+- `SourceData` 不可由编辑动作改写。
-+- `ViewSpec` 是排序、分组、折叠、固定、注释和强调的唯一持久状态。
-+- 图表、大纲、键盘和宿主调用进入同一确定性命令。
-+- G2 负责 mark、scale、coordinate、scene boundary、renderer 和图形动画。
-+
-+安全问题请按 [SECURITY.md](SECURITY.md) 私下报告，不要创建公开 Issue。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/README.md ./README.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/README.md	2026-07-23 15:06:58
-+++ ./README.md	2026-07-23 16:20:12
-@@ -4,8 +4,8 @@
+-- Status: Needs_Review
++- Status: Accepted
+ - Goal: 用真实图表首页、示例中心、开发者文档入口和连续工作台承载 TellPlot 的开源使用体验。
+ - Outcome: `/`、`/examples`、`/docs` 和 `/playground` 已覆盖当前三个图表家族及 beta 接入路径。
+ - Extension model: 新图表示例进入 playground 内容目录，不形成核心或公共 plugin registry。
+@@ -53,7 +53,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
  
- ## 当前状态
+ ## G002-R3 公共配置 API v1
  
--G001 已验收。G002、G002-R1、G002-R2 与 G002-R3 已完成实现，统一等待目标级验收。G004 首个公开
--Beta 发布保持阻塞；当前本地 release candidate 为 `@tellplot/editor@0.1.0-beta.1`，npm publish、
-+G001 已验收。G002、G002-R1、G002-R2、G002-R3 与 G004 已完成实现，统一等待目标级验收。
-+`@tellplot/editor@1.0.0` 本地稳定版候选、发布门禁和隔离源码复演已经完成；npm publish、
- GitHub Release 与生产网站部署均未执行。
+-- Status: Needs_Review
++- Status: Accepted
+ - Goal: 使用 `ChartEditor` 和一份判别式 `ChartConfig` 完成普通接入，并把可编辑 `ViewSpec` 作为独立高级状态。
+ - Outcome: 类型和运行时配置校验、公开 facade、config/view 双文件工作台、迁移说明和发布候选回归。
+ - Boundary: 不增加图表家族、schema、依赖、raw G2Spec 或第二套领域状态。
+@@ -70,23 +70,23 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
  
- ## 本地开发
-@@ -43,6 +43,7 @@
- - [错误处理](docs/errors.md)
- - [图表配置边界](docs/configuration.md)
- - [迁移与兼容](docs/migration.md)
-+- [版本与兼容政策](docs/versioning.md)
- - [变更记录](CHANGELOG.md)
- - [产品设计 SSOT](.ai-platform/docs/product-design.md)
- - [项目章程](.ai-platform/memory/constitution.md)
-@@ -70,4 +71,4 @@
- - [分组与跨层编辑体验](.ai-platform/specs/006-group-cross-level-experience/spec.md)
- - [开源官网与示例中心](.ai-platform/specs/007-open-source-showcase/spec.md)
- - [公共配置 API v1](.ai-platform/specs/009-public-configuration-api/spec.md)
--- [首个公开 Beta 发布](.ai-platform/specs/008-public-beta-release/spec.md)
-+- [首个稳定版 1.0](.ai-platform/specs/010-stable-v1-release/spec.md)
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/SECURITY.md ./SECURITY.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/SECURITY.md	1970-01-01 08:00:00
-+++ ./SECURITY.md	2026-07-23 15:54:10
-@@ -0,0 +1,26 @@
-+# Security Policy
-+
-+## Supported Versions
-+
-+| Version        | Support              |
-+| -------------- | -------------------- |
-+| 1.x            | 安全与数据正确性修复 |
-+| 未发布开发版本 | 仅当前 `main`        |
-+
-+## Reporting
-+
-+请通过 GitHub Security Advisory 的私有报告入口联系维护者。不要在公开 Issue、Discussion、日志或截图中
-+披露漏洞细节、token、私钥、业务金额、标签或来源引用。
-+
-+报告应包含：
-+
-+- 受影响版本和环境。
-+- 可脱敏的最小复现。
-+- 预期与实际影响。
-+- 已知缓解方式。
-+
-+维护者会在确认收到后协调复现、修复、公告和披露时间。无法立即修复时，会提供风险说明和临时缓解措施。
-+
-+## Scope
-+
-+核心包默认不发起网络请求。宿主的数据获取、权限、持久化、上传和服务端集成不属于 TellPlot 的安全边界。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/SUPPORT.md ./SUPPORT.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/SUPPORT.md	1970-01-01 08:00:00
-+++ ./SUPPORT.md	2026-07-23 15:54:10
-@@ -0,0 +1,22 @@
-+# TellPlot Support
-+
-+## Stable Scope
-+
-+1.x 支持 waterfall、单序列 bar、单序列 column，以及文档化的配置、编辑、持久化、SVG/PNG 和无障碍能力。
-+支持矩阵见 [docs/versioning.md](docs/versioning.md)。
-+
-+## Before Opening An Issue
-+
-+1. 确认使用受支持的 React、G2、Node 和浏览器版本。
-+2. 阅读 [入门](docs/getting-started.md)、[API](docs/api.md)、[错误处理](docs/errors.md) 和
-+   [迁移说明](docs/migration.md)。
-+3. 使用 `validateChartConfig`、`validateSourceData` 或 `validateViewSpec` 获取脱敏错误路径。
-+4. 准备不包含真实金额、业务标签、来源引用或凭据的最小复现。
-+
-+Bug 使用 Issue 模板；明确的新图表需求使用 feature request。使用问题可以提交 Discussion。安全问题必须
-+遵循 [SECURITY.md](SECURITY.md) 私下报告。
-+
-+## Response Contract
-+
-+开源维护按可用时间进行，不提供 SLA。Critical 安全和数据正确性问题优先；兼容性回归、可访问性与导出
-+问题次之；未确认的通用扩展和新图表进入路线图评估。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/apps/playground/src/DocsPage.tsx ./apps/playground/src/DocsPage.tsx
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/apps/playground/src/DocsPage.tsx	2026-07-23 15:01:20
-+++ ./apps/playground/src/DocsPage.tsx	2026-07-23 15:57:21
-@@ -34,7 +34,7 @@
-     <>
-       <main className="site-main site-docs" aria-label="TellPlot 开发者文档">
-         <header className="site-page-intro site-page-intro--docs">
--          <p className="site-kicker">DEVELOPER GUIDE · BETA.1</p>
-+          <p className="site-kicker">DEVELOPER GUIDE · 1.0</p>
-           <h1>开发者文档</h1>
-           <p>
-             用类型化数据和有限语义配置接入真实业务图表。TellPlot 管理编辑状态与 G2
-@@ -60,11 +60,11 @@
-                 <h2>安装</h2>
-               </header>
-               <p>
--                <code>@tellplot/editor</code> 是 React 组件包，G2
--                已作为明确依赖边界包含在发布包合同中。
-+                <code>@tellplot/editor</code> 是 React 组件包，React、React DOM 与 G2 是显式 peer
-+                dependencies。
-               </p>
-               <pre>
--                <code>pnpm add @tellplot/editor</code>
-+                <code>pnpm add @tellplot/editor @antv/g2 react react-dom</code>
-               </pre>
-             </section>
+ ## G004 首个稳定版 1.0 候选
  
-@@ -135,7 +135,7 @@
+-- Status: Needs_Review
++- Status: Accepted
+ - Goal: 形成可复现、可审计的 `@tellplot/editor@1.0.0` 本地稳定候选。
+ - Included outcomes: 1.x 兼容合同、架构/cycle 门禁、稳定版文档、开源维护资料、tarball 审计、
+   隔离源码 frozen-install 复演和完整兼容矩阵。
+-- Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，等待目标级验收。
++- Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，并于 2026-07-29 通过目标级验收。
+ - Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；不执行远程发布。
  
-           <aside className="site-docs-meta" aria-label="当前版本信息">
-             <span>CURRENT CHANNEL</span>
--            <strong>0.1.0-beta.1</strong>
-+            <strong>1.0.0</strong>
-             <dl>
-               <div>
-                 <dt>React</dt>
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/apps/playground/src/SiteHeader.tsx ./apps/playground/src/SiteHeader.tsx
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/apps/playground/src/SiteHeader.tsx	2026-07-23 11:51:00
-+++ ./apps/playground/src/SiteHeader.tsx	2026-07-23 15:50:42
-@@ -49,7 +49,7 @@
-             <span />
-           </span>
-           <strong>TellPlot</strong>
--          <span className="site-brand__version">BETA</span>
-+          <span className="site-brand__version">1.0</span>
-         </SiteLink>
+ ## G005 公开稳定版发布
  
-         <nav className="site-desktop-nav" aria-label="主导航">
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/README.md ./docs/README.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/README.md	2026-07-23 15:06:58
-+++ ./docs/README.md	2026-07-23 15:51:52
-@@ -19,6 +19,7 @@
- - [错误处理](errors.md)
- - [图表配置边界](configuration.md)
- - [迁移与兼容](migration.md)
-+- [版本、兼容与弃用政策](versioning.md)
- - [变更记录](../CHANGELOG.md)
- 
- ## 本地网站
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/api.md ./docs/api.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/api.md	2026-07-23 15:07:53
-+++ ./docs/api.md	2026-07-23 15:56:58
-@@ -1,6 +1,8 @@
- # TellPlot 公共 API
- 
- `@tellplot/editor` 使用单一 runtime/type 入口；样式使用 `@tellplot/editor/styles.css`。
-+以下 runtime、类型、schema 与错误语义属于 1.x 兼容合同，详细政策见
-+[版本、兼容与弃用政策](versioning.md)。
- 
- ## Runtime Exports
- 
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/configuration.md ./docs/configuration.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/configuration.md	2026-07-23 15:04:11
-+++ ./docs/configuration.md	2026-07-23 15:56:58
-@@ -94,3 +94,6 @@
- - projection、screen/export runtime 和 renderer。
- 
- 需要新增呈现能力时，先定义稳定 TellPlot 语义，再由内部 adapter 映射到 G2。
-+
-+React 宿主应把 `ChartConfig` 视为不可变值。更新数据或配置时传入新的 config/data 对象，不要原地修改
-+现有对象；`ChartEditor` 会保留仍与新 config 兼容的 `ViewSpec`，不兼容时创建新的确定初始视图。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/migration.md ./docs/migration.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/migration.md	2026-07-23 15:07:53
-+++ ./docs/migration.md	2026-07-23 15:51:52
-@@ -1,9 +1,9 @@
--# TellPlot Beta 迁移与兼容
-+# TellPlot 1.0 迁移与兼容
- 
- ## 版本策略
- 
--`@tellplot/editor@0.1.0-beta.1` 是首个 beta release candidate。Beta 阶段遵循 Semantic Versioning，
--但公共合同仍可能在后续 prerelease 中调整；每次升级都应阅读 changelog、重新编译并运行关键交互与导出测试。
-+`@tellplot/editor@1.0.0` 是首个稳定版本。1.x 遵循 Semantic Versioning；breaking public API、schema
-+或错误码变化只进入新的 major。升级仍应阅读 changelog、重新编译并运行关键交互与导出测试。
- 
- npm publish、Git tag 和正式 release 是独立交付闸门，版本字段本身不表示已经公开发布。
- 
-@@ -15,12 +15,12 @@
- 不要导入 `dist/`、`src/` 或内部 chart/rendering 路径。G2 `Chart`、`G2Spec`、projection 和 runtime handle
- 不属于兼容承诺。
- 
--## Beta 前 React API 映射
-+## 1.0 前 React API 映射
- 
--首个公开 Beta 使用声明式 `ChartEditor` 和 `ChartConfig`。开发分支中的旧名称不提供并行 runtime 入口，
-+1.0 使用声明式 `ChartEditor` 和 `ChartConfig`。未发布开发分支中的旧名称不提供并行 runtime 入口，
- 接入代码按下表迁移：
- 
--| Beta 前名称或属性                              | 公开 Beta                        |
-+| 1.0 前名称或属性                               | 1.0                              |
- | ---------------------------------------------- | -------------------------------- |
- | `FinancialChartEditor`                         | `ChartEditor`                    |
- | `sourceData`                                   | `config.data`                    |
-@@ -56,12 +56,12 @@
- 
- ## CommandSource
- 
--Beta 公共 union 为 `direct | outline | keyboard | host`。未发布开发版本中的 `ai` literal 不进入 beta；
-+1.0 公共 union 为 `direct | outline | keyboard | host`。未发布开发版本中的 `ai` literal 不进入稳定合同；
- 宿主系统、自动化流程或其他外部调用统一使用 `source: 'host'`。命令的其余 envelope 与 payload shape 不变。
- 
- ## 升级检查
- 
--1. 安装同一 prerelease 版本的包并保持 peer dependencies 满足范围。
-+1. 安装目标 1.x 版本并保持 peer dependencies 满足范围。
- 2. 只从公共入口导入，并引入 styles subpath。
- 3. 用 TypeScript strict 重新编译应用。
- 4. 通过 `validateChartConfig` 校验宿主配置，并验证持久化 view 与当前 data 的 dataset、schema 和 chart type 兼容。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/roadmap.md ./docs/roadmap.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/roadmap.md	2026-07-23 15:38:56
-+++ ./docs/roadmap.md	2026-07-23 16:20:12
-@@ -67,20 +67,25 @@
-   - 不要求公共 registry、第二渲染引擎或破坏现有 API。
- - Execution rule: 每个图表扩展目标包含设计、实现、测试、示例和兼容性验证，完成后整体验收。
- 
--## G004 首个公开 Beta 发布
-+## G004 首个稳定版 1.0 候选
- 
-+- Status: Needs_Review
-+- Goal: 形成可复现、可审计的 `@tellplot/editor@1.0.0` 本地稳定候选。
-+- Included outcomes: 1.x 兼容合同、架构/cycle 门禁、稳定版文档、开源维护资料、tarball 审计、
-+  隔离源码 frozen-install 复演和完整兼容矩阵。
-+- Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，等待目标级验收。
-+- Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；不执行远程发布。
-+
-+## G005 公开稳定版发布
-+
  - Status: Blocked
--- Goal: 从干净 `main` 形成可复现、可追溯、可公开安装的 `@tellplot/editor@0.1.0-beta.1`。
--- Included outcomes: architecture gate、WebKit 稳定性、clean-clone rehearsal、contribution guide、security
--  policy、issue/PR templates、公开仓库、生产网站、GitHub tag/release 和 npm `beta` distribution。
--- Entry condition: G002、G002-R1、G002-R2 与 G002-R3 统一验收后重新批准。
--- Execution: T120 只做本地发布硬化；T121 还需要独立远程授权、npm scope、2FA/Trusted Publishing、
--  域名与托管权限。
--- Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；开源基础设施不进入图表 runtime。
-+- Goal: 从干净 commit 将 1.0.0 公开为 GitHub、生产网站、tag/release 和 npm `latest`。
-+- Entry condition: G002 系列与 G004 验收；remote Git、visibility、deploy、DNS、tag、GitHub Release 和
-+  npm publish 获得独立明确授权；scope、2FA/Trusted Publishing 和托管权限可用。
+ - Goal: 从干净 commit 将 1.0.0 公开为 GitHub、生产网站、tag/release 和 npm `latest`。
+-- Entry condition: G002 系列与 G004 验收；remote Git、visibility、deploy、DNS、tag、GitHub Release 和
+-  npm publish 获得独立明确授权；scope、2FA/Trusted Publishing 和托管权限可用。
++- Entry condition: remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 获得独立明确
++  授权；scope、2FA/Trusted Publishing 和托管权限可用。
  
  ## Decision Gates
  
--- G004 完成前不增加通用插件或拆分 `@tellplot/core`。
-+- G004 验收前不增加通用插件或拆分 `@tellplot/core`。
+-- G004 验收前不增加通用插件或拆分 `@tellplot/core`。
++- 不增加缺少明确用户价值证据的通用插件或拆分 `@tellplot/core`。
  - 新图表只在 G003 的具体目标获得批准后实现。
  - 原始 G2 options、G2 Chart instance 和内部 runtime handle 不进入公共 API。
  - 项目不规划 Dashboard、通用插件平台或第二渲染引擎。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/versioning.md ./docs/versioning.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/docs/versioning.md	1970-01-01 08:00:00
-+++ ./docs/versioning.md	2026-07-23 15:54:10
-@@ -0,0 +1,59 @@
-+# TellPlot 版本、兼容与弃用政策
-+
-+## Semantic Versioning
-+
-+TellPlot 从 `1.0.0` 起遵循 Semantic Versioning：
-+
-+- patch：修复缺陷，不改变文档化公共合同。
-+- minor：增加向后兼容能力，可以引入带替代路径的弃用。
-+- major：允许 breaking public API、schema 或错误码变化，并提供迁移说明。
-+
-+版本字段只描述候选内容。npm、Git tag、GitHub Release 和生产网站是否已发布，以公开 registry 与发布报告
-+为准。
-+
-+## 1.x 兼容承诺
-+
-+兼容表面包括：
-+
-+- `packages/editor/src/index.ts` 导出的 runtime 和 TypeScript 类型。
-+- `ChartEditor` props/handle、`ChartConfig`、`SourceData`、`ViewSpec`、commands、errors 和 export。
-+- `@tellplot/editor/styles.css` 入口。
-+- 文档化的 schema generation、error code/reason 和 JSON Pointer path 语义。
-+- React、React DOM、G2、Node 和浏览器支持矩阵。
-+
-+内部文件、CSS class、G2Spec、G2 Chart instance、projection、scene context 和 runtime adapter 不属于
-+兼容承诺。应用不得导入 `src/`、`dist/` 或未在 package exports 中声明的路径。
-+
-+## 弃用政策
-+
-+公共能力弃用至少跨一个 minor：
-+
-+1. 在类型和文档中标记弃用，并给出替代入口。
-+2. 在 CHANGELOG 和 migration 文档说明行为差异。
-+3. 保留兼容测试，直到下一 major 才允许移除。
-+4. 安全或数据正确性紧急修复可以立即限制危险行为，但必须发布公告和迁移路径。
-+
-+## 支持矩阵
-+
-+| Surface              | Stable support                                                  |
-+| -------------------- | --------------------------------------------------------------- |
-+| React                | 18.3、19.x                                                      |
-+| React DOM            | 与 React 对应的 18.3、19.x                                      |
-+| AntV G2              | peer range `^5.4.0`                                             |
-+| Node                 | 构建/验证 22.20.0；CI 验证当前 Node 24                          |
-+| Browsers             | 当前 Chromium、Firefox、WebKit；上一 Playwright browser release |
-+| WebKit compatibility | 18.4 previous-major regression matrix                           |
-+
-+超出 peer/engine range 的组合可以运行，但不属于 1.x 阻断支持合同。
-+
-+## Schema
-+
-+- legacy waterfall `1.0.0` 保持解析和序列化兼容。
-+- waterfall/categorical `2.0.0` 保持严格 `dataKind` 和 chart type compatibility。
-+- TellPlot 不执行启发式 schema migration。
-+- 新 schema generation 必须向后读取现有 generation；无法兼容的变化进入新的 major。
-+
-+## 报告兼容问题
-+
-+先阅读 [支持政策](../SUPPORT.md) 和 [错误处理](errors.md)，再提交包含最小复现、版本矩阵和脱敏配置的
-+Issue。不要提交金额、业务标签、来源引用、token 或私钥。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/e2e/waterfall-editor.spec.ts ./e2e/waterfall-editor.spec.ts
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/e2e/waterfall-editor.spec.ts	2026-07-23 11:41:20
-+++ ./e2e/waterfall-editor.spec.ts	2026-07-23 16:07:37
-@@ -1,5 +1,3 @@
--import { readFile } from 'node:fs/promises';
--
- import { expect, test, type Locator, type Page } from '@playwright/test';
- 
- import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
-@@ -37,18 +35,12 @@
-     );
- }
- 
--async function exportedViewSpecBytes(page: Page): Promise<Buffer> {
--  await page.getByRole('button', { name: '导出' }).click();
--  const item = page.getByRole('menuitem', { name: 'ViewSpec JSON' });
--  const downloadPromise = page.waitForEvent('download');
--  await item.click();
--  const download = await downloadPromise;
--  const path = await download.path();
--  expect(path).not.toBeNull();
--  if (path === null) {
--    throw new Error('Expected a local ViewSpec download path');
--  }
--  return readFile(path);
-+async function serializedViewSpecBytes(page: Page): Promise<Buffer> {
-+  const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
-+  await guide.getByRole('tab', { name: '视图状态' }).click();
-+  const input = page.getByRole('textbox', { name: 'TellPlot 视图状态' });
-+  await expect(input).toBeVisible();
-+  return Buffer.from(await input.inputValue());
- }
- 
- async function paintedPixelCount(canvas: Locator): Promise<number> {
-@@ -301,7 +293,7 @@
-   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
-   await expectCanvasRetained(outlineCanvas, 'outline');
-   const outlineOrder = await rootOrder(page);
--  const outlineViewSpec = await exportedViewSpecBytes(page);
-+  const outlineViewSpec = await serializedViewSpecBytes(page);
- 
-   await openEditor(page);
-   const keyboardCanvas = await markCanvas(page, 'keyboard');
-@@ -311,7 +303,7 @@
-   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
-   await expectCanvasRetained(keyboardCanvas, 'keyboard');
-   const keyboardOrder = await rootOrder(page);
--  const keyboardViewSpec = await exportedViewSpecBytes(page);
-+  const keyboardViewSpec = await serializedViewSpecBytes(page);
- 
-   await openEditor(page);
-   const chartCanvas = await markCanvas(page, 'chart');
-@@ -319,7 +311,7 @@
-   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
-   await expectCanvasRetained(chartCanvas, 'chart');
-   const chartOrder = await rootOrder(page);
--  const chartViewSpec = await exportedViewSpecBytes(page);
-+  const chartViewSpec = await serializedViewSpecBytes(page);
- 
-   expect(outlineOrder).toEqual(keyboardOrder);
-   expect(chartOrder).toEqual(keyboardOrder);
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/package.json ./package.json
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/package.json	2026-07-20 11:59:42
-+++ ./package.json	2026-07-23 15:50:42
-@@ -29,7 +29,11 @@
-     "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
-     "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
-     "test:a11y": "playwright test e2e/accessibility.spec.ts",
--    "test:performance": "playwright test e2e/performance.spec.ts --project=chromium-performance"
-+    "test:performance": "playwright test e2e/performance.spec.ts --project=chromium-performance",
-+    "release:architecture": "node scripts/release/check-architecture.mjs",
-+    "release:audit": "node scripts/release/audit-release.mjs",
-+    "release:check": "node scripts/release/check-stable.mjs",
-+    "release:rehearse": "node scripts/release/rehearse-source.mjs"
+diff --git a/package.json b/package.json
+index cfcc446..356cdfb 100644
+--- a/package.json
++++ b/package.json
+@@ -32,6 +32,8 @@
+     "test:performance": "playwright test e2e/performance.spec.ts --project=chromium-performance",
+     "release:architecture": "node scripts/release/check-architecture.mjs",
+     "release:audit": "node scripts/release/audit-release.mjs",
++    "release:artifact": "node scripts/release/package-artifact.mjs",
++    "release:artifact:refresh": "node scripts/release/package-artifact.mjs --write",
+     "release:check": "node scripts/release/check-stable.mjs",
+     "release:rehearse": "node scripts/release/rehearse-source.mjs"
    },
-   "devDependencies": {
-     "@arethetypeswrong/cli": "0.18.5",
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/README.md ./packages/editor/README.md
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/README.md	2026-07-23 15:04:11
-+++ ./packages/editor/README.md	2026-07-23 15:56:58
-@@ -53,7 +53,7 @@
- - 输出：序列化 `ViewSpec`、SVG、PNG
- - 内部实现：G2 spec、Chart instance、projection 与 rendering runtime 不属于公共 API
+diff --git a/packages/editor/tests/package/stable-release.test.ts b/packages/editor/tests/package/stable-release.test.ts
+index 01f0e41..90d0f0e 100644
+--- a/packages/editor/tests/package/stable-release.test.ts
++++ b/packages/editor/tests/package/stable-release.test.ts
+@@ -29,6 +29,7 @@ describe('1.0 stable release contract', () => {
+   it('uses stable package metadata and release commands', () => {
+     const packageManifest = json('packages/editor/package.json');
+     const workspaceManifest = json('package.json');
++    const artifactScript = text('scripts/release/package-artifact.mjs');
+     const scripts = workspaceManifest['scripts'] as Record<string, unknown>;
+     const publishConfig = packageManifest['publishConfig'] as Record<string, unknown>;
  
--`0.1.0-beta.1` 是发布候选版本。npm publish 与正式 release 需要独立授权。
-+`1.0.0` 是首个稳定版本。本地仓库已经生成并验证稳定候选；npm publish 与正式 release 需要独立授权。
+@@ -39,8 +40,14 @@ describe('1.0 stable release contract', () => {
+     });
+     expect(scripts['release:architecture']).toBe('node scripts/release/check-architecture.mjs');
+     expect(scripts['release:audit']).toBe('node scripts/release/audit-release.mjs');
++    expect(scripts['release:artifact']).toBe('node scripts/release/package-artifact.mjs');
++    expect(scripts['release:artifact:refresh']).toBe(
++      'node scripts/release/package-artifact.mjs --write',
++    );
+     expect(scripts['release:check']).toBe('node scripts/release/check-stable.mjs');
+     expect(scripts['release:rehearse']).toBe('node scripts/release/rehearse-source.mjs');
++    expect(artifactScript).toContain("resolve(repositoryRoot, '.nvmrc')");
++    expect(artifactScript).toContain('process.versions.node');
+   });
  
- ## 文档
+   it('keeps the public release command and browser matrix release-complete', () => {
+@@ -49,9 +56,12 @@ describe('1.0 stable release contract', () => {
+     const previousBrowserRunner = text(
+       'packages/editor/tests/browser-matrix/run-previous-browsers.mjs',
+     );
++    const reactMatrixRunner = text('packages/editor/tests/react-matrix/run-react-matrix.mjs');
+     const releaseAudit = text('scripts/release/audit-release.mjs');
++    const sourceRehearsal = text('scripts/release/rehearse-source.mjs');
+     const requiredGates = [
+       'test:coverage',
++      'release:artifact',
+       'test:package',
+       'test:react-matrix',
+       'test:e2e',
+@@ -67,7 +77,12 @@ describe('1.0 stable release contract', () => {
+     expect(playwrightConfig).toContain("process.env['TELLPLOT_E2E_WORKERS'] ?? '2'");
+     expect(playwrightConfig).toContain('workers: e2eWorkers');
+     expect(previousBrowserRunner).toContain('workers: 2');
++    expect(reactMatrixRunner).toContain("join(directory, 'vite.config.mjs')");
++    expect(reactMatrixRunner).toContain("name: 'g2-runtime'");
++    expect(reactMatrixRunner).toContain('codeSplitting');
+     expect(releaseAudit).toContain("resolve(repositoryRoot, '.ai-platform')");
++    expect(sourceRehearsal).toContain("'.copyright-application'");
++    expect(sourceRehearsal).toContain("'tmp'");
+   });
  
-@@ -62,6 +62,7 @@
- - [配置边界](https://github.com/iiwish/tellplot/blob/main/docs/configuration.md)
- - [错误处理](https://github.com/iiwish/tellplot/blob/main/docs/errors.md)
- - [迁移与兼容](https://github.com/iiwish/tellplot/blob/main/docs/migration.md)
-+- [版本与兼容政策](https://github.com/iiwish/tellplot/blob/main/docs/versioning.md)
- 
- ## License
- 
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/package.json ./packages/editor/package.json
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/package.json	2026-07-20 12:45:24
-+++ ./packages/editor/package.json	2026-07-23 15:50:42
-@@ -1,6 +1,6 @@
- {
-   "name": "@tellplot/editor",
--  "version": "0.1.0-beta.1",
-+  "version": "1.0.0",
-   "description": "Lightweight editable React charts built on AntV G2",
-   "license": "MIT",
-   "homepage": "https://tellplot.com",
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/import-cjs.cjs ./packages/editor/tests/package/import-cjs.cjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/import-cjs.cjs	2026-07-23 15:02:12
-+++ ./packages/editor/tests/package/import-cjs.cjs	2026-07-23 15:50:42
-@@ -18,7 +18,7 @@
+   it('ships the public maintenance and stability documents', () => {
+diff --git a/packages/editor/tests/react-matrix/run-react-matrix.mjs b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+index bf60944..8c0bd61 100644
+--- a/packages/editor/tests/react-matrix/run-react-matrix.mjs
++++ b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+@@ -18,6 +18,28 @@ const REACT_MATRIX = [
+   { id: 'react-18', react: '18.3.1', reactDom: '18.3.1' },
+   { id: 'react-19', react: '19.2.7', reactDom: '19.2.7' },
  ];
- 
- if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
--  throw new Error('CJS runtime API does not match the approved beta surface');
-+  throw new Error('CJS runtime API does not match the stable 1.x surface');
- }
- 
- const packageJson = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8'));
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/import-esm.mjs ./packages/editor/tests/package/import-esm.mjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/import-esm.mjs	2026-07-23 15:02:12
-+++ ./packages/editor/tests/package/import-esm.mjs	2026-07-23 15:50:42
-@@ -17,7 +17,7 @@
- ];
- 
- if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
--  throw new Error('ESM runtime API does not match the approved beta surface');
-+  throw new Error('ESM runtime API does not match the stable 1.x surface');
- }
- 
- const packageJson = JSON.parse(
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/pack-contract.mjs ./packages/editor/tests/package/pack-contract.mjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/pack-contract.mjs	2026-07-20 12:44:04
-+++ ./packages/editor/tests/package/pack-contract.mjs	2026-07-23 15:50:42
-@@ -27,16 +27,16 @@
- if (manifest.name !== '@tellplot/editor') {
-   throw new Error(`Unexpected package name: ${manifest.name}`);
- }
--if (manifest.version !== '0.1.0-beta.1') {
--  throw new Error(`Unexpected beta version: ${manifest.version}`);
-+if (manifest.version !== '1.0.0') {
-+  throw new Error(`Unexpected stable version: ${manifest.version}`);
- }
- for (const path of requiredPaths) {
-   if (!paths.includes(path)) {
--    throw new Error(`Beta tarball is missing ${path}`);
-+    throw new Error(`Stable tarball is missing ${path}`);
-   }
- }
- for (const path of paths) {
-   if (!['LICENSE', 'README.md', 'package.json'].includes(path) && !path.startsWith('dist/')) {
--    throw new Error(`Beta tarball contains an internal path: ${path}`);
-+    throw new Error(`Stable tarball contains an internal path: ${path}`);
-   }
- }
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/public-api.test.ts ./packages/editor/tests/package/public-api.test.ts
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/public-api.test.ts	2026-07-23 14:47:08
-+++ ./packages/editor/tests/package/public-api.test.ts	2026-07-23 15:50:42
-@@ -3,7 +3,7 @@
- import * as editor from '../../src/index';
- 
- describe('@tellplot/editor public entry', () => {
--  it('exposes only the approved beta runtime API', () => {
-+  it('exposes only the stable 1.x runtime API', () => {
-     expect(Object.keys(editor).sort()).toEqual([
-       'ChartEditor',
-       'createEditorSession',
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/stable-release.test.ts ./packages/editor/tests/package/stable-release.test.ts
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/stable-release.test.ts	1970-01-01 08:00:00
-+++ ./packages/editor/tests/package/stable-release.test.ts	2026-07-23 15:54:10
-@@ -0,0 +1,62 @@
-+import { existsSync, readFileSync } from 'node:fs';
-+import { resolve } from 'node:path';
-+import { spawnSync } from 'node:child_process';
++const VITE_CONFIG = `import { defineConfig } from 'vite';
 +
-+import { describe, expect, it } from 'vitest';
-+
-+const root = resolve(process.cwd());
-+
-+function json(path: string): Record<string, unknown> {
-+  return JSON.parse(readFileSync(resolve(root, path), 'utf8')) as Record<string, unknown>;
-+}
-+
-+function runScript(path: string): { readonly status: number | null; readonly output: string } {
-+  const result = spawnSync(process.execPath, [resolve(root, path)], {
-+    cwd: root,
-+    encoding: 'utf8',
-+  });
-+  return {
-+    status: result.status,
-+    output: `${result.stdout}${result.stderr}`,
-+  };
-+}
-+
-+describe('1.0 stable release contract', () => {
-+  it('uses stable package metadata and release commands', () => {
-+    const packageManifest = json('packages/editor/package.json');
-+    const workspaceManifest = json('package.json');
-+    const scripts = workspaceManifest['scripts'] as Record<string, unknown>;
-+
-+    expect(packageManifest['version']).toBe('1.0.0');
-+    expect(scripts['release:architecture']).toBe('node scripts/release/check-architecture.mjs');
-+    expect(scripts['release:audit']).toBe('node scripts/release/audit-release.mjs');
-+    expect(scripts['release:check']).toBe('node scripts/release/check-stable.mjs');
-+    expect(scripts['release:rehearse']).toBe('node scripts/release/rehearse-source.mjs');
-+  });
-+
-+  it('ships the public maintenance and stability documents', () => {
-+    const required = [
-+      'CONTRIBUTING.md',
-+      'SECURITY.md',
-+      'CODE_OF_CONDUCT.md',
-+      'SUPPORT.md',
-+      'docs/versioning.md',
-+      '.github/ISSUE_TEMPLATE/bug_report.yml',
-+      '.github/ISSUE_TEMPLATE/feature_request.yml',
-+      '.github/ISSUE_TEMPLATE/config.yml',
-+      '.github/pull_request_template.md',
-+    ];
-+
-+    expect(required.filter(path => !existsSync(resolve(root, path)))).toEqual([]);
-+    expect(readFileSync(resolve(root, 'CHANGELOG.md'), 'utf8')).toContain('## 1.0.0');
-+    expect(readFileSync(resolve(root, 'docs/versioning.md'), 'utf8')).toContain('至少跨一个 minor');
-+  });
-+
-+  it('passes the executable architecture and public release audits', () => {
-+    const architecture = runScript('scripts/release/check-architecture.mjs');
-+    const release = runScript('scripts/release/audit-release.mjs');
-+
-+    expect(architecture, architecture.output).toMatchObject({ status: 0 });
-+    expect(release, release.output).toMatchObject({ status: 0 });
-+  });
-+});
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/types-consumer.ts ./packages/editor/tests/package/types-consumer.ts
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/packages/editor/tests/package/types-consumer.ts	2026-07-23 15:07:52
-+++ ./packages/editor/tests/package/types-consumer.ts	2026-07-23 15:50:42
-@@ -41,7 +41,7 @@
- type CategoricalColors = NonNullable<NonNullable<CategoricalConfig['appearance']>['colors']>;
- type WaterfallColors = NonNullable<NonNullable<WaterfallConfig['appearance']>['colors']>;
- 
--export type BetaCommandSources = Assert<
-+export type StableCommandSources = Assert<
-   Equal<CommandSource, 'direct' | 'outline' | 'keyboard' | 'host'>
- >;
- export type CategoricalColorBoundary = Assert<
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/audit-release.mjs ./scripts/release/audit-release.mjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/audit-release.mjs	1970-01-01 08:00:00
-+++ ./scripts/release/audit-release.mjs	2026-07-23 15:54:10
-@@ -0,0 +1,155 @@
-+import { existsSync, readFileSync } from 'node:fs';
-+import { dirname, extname, relative, resolve } from 'node:path';
-+
-+import ts from 'typescript';
-+
-+import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
-+
-+const findings = [];
-+const packagePath = resolve(repositoryRoot, 'packages/editor/package.json');
-+const packageManifest = JSON.parse(readFileSync(packagePath, 'utf8'));
-+const requiredFiles = [
-+  'README.md',
-+  'CHANGELOG.md',
-+  'CONTRIBUTING.md',
-+  'SECURITY.md',
-+  'CODE_OF_CONDUCT.md',
-+  'SUPPORT.md',
-+  'LICENSE',
-+  'docs/getting-started.md',
-+  'docs/api.md',
-+  'docs/configuration.md',
-+  'docs/errors.md',
-+  'docs/migration.md',
-+  'docs/versioning.md',
-+  'packages/editor/README.md',
-+  'packages/editor/LICENSE',
-+  '.github/ISSUE_TEMPLATE/bug_report.yml',
-+  '.github/ISSUE_TEMPLATE/feature_request.yml',
-+  '.github/ISSUE_TEMPLATE/config.yml',
-+  '.github/pull_request_template.md',
-+];
-+
-+if (packageManifest.version !== '1.0.0') {
-+  findings.push(`package version must be 1.0.0, received ${String(packageManifest.version)}`);
-+}
-+if (!/^\d+\.\d+\.\d+$/u.test(String(packageManifest.version))) {
-+  findings.push('package version must not contain a prerelease suffix');
-+}
-+for (const path of requiredFiles) {
-+  if (!existsSync(resolve(repositoryRoot, path))) {
-+    findings.push(`missing public file: ${path}`);
-+  }
-+}
-+
-+const publicEntryPath = resolve(repositoryRoot, 'packages/editor/src/index.ts');
-+const publicEntryText = readFileSync(publicEntryPath, 'utf8');
-+const publicEntry = ts.createSourceFile(
-+  publicEntryPath,
-+  publicEntryText,
-+  ts.ScriptTarget.Latest,
-+  true,
-+  ts.ScriptKind.TS,
-+);
-+const runtimeExports = [];
-+for (const statement of publicEntry.statements) {
-+  if (
-+    ts.isExportDeclaration(statement) &&
-+    !statement.isTypeOnly &&
-+    statement.exportClause !== undefined &&
-+    ts.isNamedExports(statement.exportClause)
-+  ) {
-+    for (const element of statement.exportClause.elements) {
-+      if (!element.isTypeOnly) {
-+        runtimeExports.push(element.name.text);
-+      }
-+    }
-+  }
-+}
-+const expectedRuntimeExports = [
-+  'ChartEditor',
-+  'createEditorSession',
-+  'createInitialViewSpec',
-+  'executeCommand',
-+  'parseViewSpec',
-+  'redoSession',
-+  'serializeViewSpec',
-+  'undoSession',
-+  'validateChartConfig',
-+  'validateSourceData',
-+  'validateViewSpec',
-+].sort();
-+if (JSON.stringify(runtimeExports.sort()) !== JSON.stringify(expectedRuntimeExports)) {
-+  findings.push('runtime exports do not match the stable 1.x allowlist');
-+}
-+
-+const markdownFiles = [
-+  ...walkFiles(resolve(repositoryRoot, 'docs')).filter(path => extname(path) === '.md'),
-+  ...[
-+    'README.md',
-+    'CHANGELOG.md',
-+    'CONTRIBUTING.md',
-+    'SECURITY.md',
-+    'CODE_OF_CONDUCT.md',
-+    'SUPPORT.md',
-+    'packages/editor/README.md',
-+  ].map(path => resolve(repositoryRoot, path)),
-+];
-+const linkPattern = /\[[^\]]*\]\(([^)]+)\)/gu;
-+for (const markdownPath of markdownFiles) {
-+  const text = readFileSync(markdownPath, 'utf8');
-+  for (const match of text.matchAll(linkPattern)) {
-+    const raw = match[1]?.trim();
-+    if (raw === undefined || raw === '' || raw.startsWith('#') || /^(https?:|mailto:)/u.test(raw)) {
-+      continue;
-+    }
-+    const path = raw.replace(/^<|>$/gu, '').split('#')[0]?.split('?')[0];
-+    if (path !== undefined && path !== '' && !existsSync(resolve(dirname(markdownPath), path))) {
-+      findings.push(`broken local link: ${repositoryPath(markdownPath)} -> ${raw}`);
-+    }
-+  }
-+}
-+
-+const auditRoots = ['apps', 'docs', 'packages/editor/src', 'scripts', '.github'].map(path =>
-+  resolve(repositoryRoot, path),
-+);
-+const auditFiles = [
-+  ...auditRoots.flatMap(path => walkFiles(path, { excludedNames: ['dist'] })),
-+  ...requiredFiles.slice(0, 6).map(path => resolve(repositoryRoot, path)),
-+  resolve(repositoryRoot, 'package.json'),
-+  packagePath,
-+];
-+const sensitivePatterns = [
-+  { name: 'private key marker', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/u },
-+  { name: 'GitHub token', pattern: /\bgh[oprsu]_[A-Za-z0-9]{20,}\b/u },
-+  { name: 'npm token', pattern: /\bnpm_[A-Za-z0-9]{20,}\b/u },
-+  { name: 'AWS access key', pattern: /\bAKIA[0-9A-Z]{16}\b/u },
-+  { name: 'personal absolute path', pattern: /(?:\/Users\/|\/home\/|[A-Z]:\\Users\\)/u },
-+];
-+for (const path of new Set(auditFiles)) {
-+  const text = readFileSync(path, 'utf8');
-+  for (const rule of sensitivePatterns) {
-+    if (rule.pattern.test(text)) {
-+      findings.push(`${rule.name}: ${toPosix(relative(repositoryRoot, path))}`);
-+    }
-+  }
-+}
-+
-+if (findings.length > 0) {
-+  fail('TellPlot stable release audit failed', [...new Set(findings)].sort());
-+} else {
-+  process.stdout.write(
-+    `${JSON.stringify(
-+      {
-+        status: 'passed',
-+        version: packageManifest.version,
-+        runtimeExports: expectedRuntimeExports.length,
-+        publicFiles: requiredFiles.length,
-+        markdownFiles: markdownFiles.length,
-+        auditedFiles: new Set(auditFiles).size,
++export default defineConfig({
++  build: {
++    rolldownOptions: {
++      output: {
++        codeSplitting: {
++          groups: [
++            {
++              name: 'g2-runtime',
++              test: /node_modules[\\\\/]@antv[\\\\/]g2[\\\\/]/,
++              priority: 10,
++              minSize: 96 * 1024,
++              maxSize: 1_300 * 1024,
++            },
++          ],
++        },
 +      },
-+      null,
-+      2,
-+    )}\n`,
-+  );
-+}
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/check-architecture.mjs ./scripts/release/check-architecture.mjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/check-architecture.mjs	1970-01-01 08:00:00
-+++ ./scripts/release/check-architecture.mjs	2026-07-23 15:54:10
-@@ -0,0 +1,177 @@
-+import { existsSync, readFileSync } from 'node:fs';
-+import { dirname, extname, relative, resolve } from 'node:path';
-+
-+import ts from 'typescript';
-+
-+import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
-+
-+const sourceRoot = resolve(repositoryRoot, 'packages/editor/src');
-+const sourceFiles = walkFiles(sourceRoot).filter(path => ['.ts', '.tsx'].includes(extname(path)));
-+const sourceSet = new Set(sourceFiles);
-+const runtimeGraph = new Map(sourceFiles.map(path => [path, []]));
-+const findings = [];
-+let edgeCount = 0;
-+
-+function resolveLocal(source, specifier) {
-+  if (!specifier.startsWith('.')) {
-+    return undefined;
-+  }
-+  const base = resolve(dirname(source), specifier);
-+  const candidates = [
-+    base,
-+    `${base}.ts`,
-+    `${base}.tsx`,
-+    resolve(base, 'index.ts'),
-+    resolve(base, 'index.tsx'),
-+  ];
-+  return candidates.find(path => sourceSet.has(path) || existsSync(path));
-+}
-+
-+function sourceName(path) {
-+  return toPosix(relative(sourceRoot, path));
-+}
-+
-+function recordBoundary(source, target) {
-+  const from = sourceName(source);
-+  const to = sourceName(target);
-+  edgeCount += 1;
-+
-+  if (from.startsWith('domain/') && !to.startsWith('domain/')) {
-+    findings.push(`domain boundary: ${from} -> ${to}`);
-+  }
-+  if (
-+    from.startsWith('interactions/') &&
-+    !(to.startsWith('domain/') || to.startsWith('interactions/'))
-+  ) {
-+    findings.push(`interactions boundary: ${from} -> ${to}`);
-+  }
-+  if (
-+    /^(charts|domain|export|interactions|rendering)\//u.test(from) &&
-+    to.startsWith('components/') &&
-+    to !== 'components/formatAmount.ts'
-+  ) {
-+    findings.push(`low-level component dependency: ${from} -> ${to}`);
-+  }
-+}
-+
-+function collectImports(sourcePath) {
-+  const text = readFileSync(sourcePath, 'utf8');
-+  const sourceFile = ts.createSourceFile(
-+    sourcePath,
-+    text,
-+    ts.ScriptTarget.Latest,
-+    true,
-+    sourcePath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-+  );
-+  const runtimeTargets = runtimeGraph.get(sourcePath);
-+
-+  function add(specifier, runtime) {
-+    const target = resolveLocal(sourcePath, specifier);
-+    if (target !== undefined) {
-+      recordBoundary(sourcePath, target);
-+      if (runtime) {
-+        runtimeTargets?.push(target);
-+      }
-+    }
-+    if (specifier === '@antv/g2' || specifier === '@antv/g-svg') {
-+      const name = sourceName(sourcePath);
-+      const allowed =
-+        name === 'charts/groupRegions.ts' ||
-+        /^charts\/(waterfall|categorical)\/spec\.ts$/u.test(name) ||
-+        name.startsWith('rendering/g2/');
-+      if (!allowed) {
-+        findings.push(`raw G2 import outside adapter boundary: ${name}`);
-+      }
-+    }
-+  }
-+
-+  function visit(node) {
-+    if (
-+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-+      node.moduleSpecifier !== undefined &&
-+      ts.isStringLiteral(node.moduleSpecifier)
-+    ) {
-+      let runtime = !node.isTypeOnly;
-+      if (ts.isImportDeclaration(node) && node.importClause !== undefined) {
-+        const clause = node.importClause;
-+        runtime =
-+          !clause.isTypeOnly &&
-+          (clause.name !== undefined ||
-+            clause.namedBindings === undefined ||
-+            ts.isNamespaceImport(clause.namedBindings) ||
-+            clause.namedBindings.elements.some(element => !element.isTypeOnly));
-+      }
-+      add(node.moduleSpecifier.text, runtime);
-+    }
-+    if (
-+      ts.isCallExpression(node) &&
-+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-+      node.arguments.length === 1
-+    ) {
-+      const argument = node.arguments[0];
-+      if (argument !== undefined && ts.isStringLiteral(argument)) {
-+        add(argument.text, true);
-+      }
-+    }
-+    ts.forEachChild(node, visit);
-+  }
-+
-+  visit(sourceFile);
-+}
-+
-+for (const sourceFile of sourceFiles) {
-+  collectImports(sourceFile);
-+}
-+
-+const visiting = new Set();
-+const visited = new Set();
-+const stack = [];
-+
-+function visitCycle(node) {
-+  if (visiting.has(node)) {
-+    const start = stack.indexOf(node);
-+    const cycle = [...stack.slice(start), node].map(sourceName).join(' -> ');
-+    findings.push(`runtime import cycle: ${cycle}`);
-+    return;
-+  }
-+  if (visited.has(node)) {
-+    return;
-+  }
-+  visiting.add(node);
-+  stack.push(node);
-+  for (const target of runtimeGraph.get(node) ?? []) {
-+    visitCycle(target);
-+  }
-+  stack.pop();
-+  visiting.delete(node);
-+  visited.add(node);
-+}
-+
-+for (const sourceFile of sourceFiles) {
-+  visitCycle(sourceFile);
-+}
-+
-+const publicEntry = readFileSync(resolve(sourceRoot, 'index.ts'), 'utf8');
-+for (const forbidden of ['G2Spec', 'G2Chart', 'FinancialChartEditor', 'rendering/g2']) {
-+  if (publicEntry.includes(forbidden)) {
-+    findings.push(`public entry contains internal identifier: ${forbidden}`);
-+  }
-+}
-+
-+if (findings.length > 0) {
-+  fail('TellPlot architecture check failed', [...new Set(findings)].sort());
-+} else {
-+  process.stdout.write(
-+    `${JSON.stringify(
-+      {
-+        status: 'passed',
-+        sourceFiles: sourceFiles.length,
-+        importEdges: edgeCount,
-+        runtimeCycles: 0,
-+        publicEntry: repositoryPath(resolve(sourceRoot, 'index.ts')),
-+      },
-+      null,
-+      2,
-+    )}\n`,
-+  );
-+}
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/check-stable.mjs ./scripts/release/check-stable.mjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/check-stable.mjs	1970-01-01 08:00:00
-+++ ./scripts/release/check-stable.mjs	2026-07-23 15:54:10
-@@ -0,0 +1,19 @@
-+import { run } from './release-utils.mjs';
-+
-+const gates = [
-+  ['pnpm', ['release:architecture']],
-+  ['pnpm', ['release:audit']],
-+  ['pnpm', ['format:check']],
-+  ['pnpm', ['lint']],
-+  ['pnpm', ['typecheck']],
-+  ['pnpm', ['test:unit']],
-+  ['pnpm', ['build']],
-+  ['pnpm', ['test:package']],
-+];
-+
-+for (const [command, args] of gates) {
-+  process.stdout.write(`\n[stable] ${command} ${args.join(' ')}\n`);
-+  run(command, args, { inherit: true });
-+}
-+
-+process.stdout.write('\nTellPlot 1.0.0 stable release checks passed.\n');
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/rehearse-source.mjs ./scripts/release/rehearse-source.mjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/rehearse-source.mjs	1970-01-01 08:00:00
-+++ ./scripts/release/rehearse-source.mjs	2026-07-23 15:54:10
-@@ -0,0 +1,71 @@
-+import { cpSync, mkdtempSync, readdirSync } from 'node:fs';
-+import { tmpdir } from 'node:os';
-+import { basename, join, relative, resolve, sep } from 'node:path';
-+
-+import { repositoryRoot, run, walkFiles } from './release-utils.mjs';
-+
-+const targetRoot = mkdtempSync(join(tmpdir(), 'tellplot-1.0.0-rehearsal-'));
-+const excluded = new Set([
-+  '.git',
-+  'node_modules',
-+  'dist',
-+  'coverage',
-+  'playwright-report',
-+  'test-results',
-+  'blob-report',
-+]);
-+
-+function includeSource(source) {
-+  const relativePath = relative(repositoryRoot, source);
-+  const segments = relativePath.split(sep);
-+  if (segments.some(segment => excluded.has(segment))) {
-+    return false;
-+  }
-+  if (segments[0] === '.ai-platform' && segments[1] === 'evidence') {
-+    return false;
-+  }
-+  return true;
-+}
-+
-+for (const entry of readdirSync(repositoryRoot)) {
-+  if (excluded.has(entry)) {
-+    continue;
-+  }
-+  const source = resolve(repositoryRoot, entry);
-+  if (!includeSource(source)) {
-+    continue;
-+  }
-+  cpSync(source, resolve(targetRoot, basename(source)), {
-+    recursive: true,
-+    filter: includeSource,
-+  });
-+}
-+
-+const gates = [
-+  ['pnpm', ['install', '--frozen-lockfile']],
-+  ['pnpm', ['release:architecture']],
-+  ['pnpm', ['release:audit']],
-+  ['pnpm', ['typecheck']],
-+  ['pnpm', ['test:unit']],
-+  ['pnpm', ['build']],
-+  ['pnpm', ['test:package']],
-+];
-+
-+for (const [command, args] of gates) {
-+  process.stdout.write(`\n[rehearsal] ${command} ${args.join(' ')}\n`);
-+  run(command, args, { cwd: targetRoot, inherit: true });
-+}
-+
-+process.stdout.write(
-+  `${JSON.stringify(
-+    {
-+      status: 'passed',
-+      version: '1.0.0',
-+      isolatedRoot: targetRoot,
-+      sourceFiles: walkFiles(targetRoot, { excludedNames: ['node_modules', 'dist'] }).length,
-+      gates: gates.map(([command, args]) => `${command} ${args.join(' ')}`),
 +    },
-+    null,
-+    2,
-+  )}\n`,
-+);
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/release-utils.mjs ./scripts/release/release-utils.mjs
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/scripts/release/release-utils.mjs	1970-01-01 08:00:00
-+++ ./scripts/release/release-utils.mjs	2026-07-23 15:54:10
-@@ -0,0 +1,65 @@
-+import { readdirSync, statSync } from 'node:fs';
-+import { dirname, relative, resolve } from 'node:path';
-+import { fileURLToPath } from 'node:url';
-+import { spawnSync } from 'node:child_process';
++  },
++});
++`;
+ 
+ function displayCommand(command, args, cwd) {
+   const location = relative(WORKSPACE, cwd) || '.';
+@@ -322,6 +344,7 @@ async function main() {
+         )}\n`,
+         'utf8',
+       );
++      await writeFile(join(directory, 'vite.config.mjs'), VITE_CONFIG, 'utf8');
+       const installArgs = [
+         'install',
+         '--ignore-workspace',
+diff --git a/scripts/release/check-stable.mjs b/scripts/release/check-stable.mjs
+index 274af31..fb43427 100644
+--- a/scripts/release/check-stable.mjs
++++ b/scripts/release/check-stable.mjs
+@@ -8,6 +8,7 @@ const gates = [
+   ['pnpm', ['typecheck']],
+   ['pnpm', ['test:coverage']],
+   ['pnpm', ['build']],
++  ['pnpm', ['release:artifact']],
+   ['pnpm', ['test:package']],
+   ['pnpm', ['test:react-matrix']],
+   ['pnpm', ['test:e2e']],
+diff --git a/scripts/release/package-artifact.mjs b/scripts/release/package-artifact.mjs
+new file mode 100644
+index 0000000..aa750c2
+--- /dev/null
++++ b/scripts/release/package-artifact.mjs
+@@ -0,0 +1,118 @@
++import { createHash } from 'node:crypto';
++import {
++  copyFileSync,
++  existsSync,
++  mkdtempSync,
++  readFileSync,
++  rmSync,
++  statSync,
++  writeFileSync,
++} from 'node:fs';
++import { tmpdir } from 'node:os';
++import { join, resolve } from 'node:path';
 +
-+export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
++import { fail, repositoryRoot, run } from './release-utils.mjs';
 +
-+export function toPosix(path) {
-+  return path.replaceAll('\\', '/');
++const write = process.argv.slice(2).includes('--write');
++const unsupportedArguments = process.argv.slice(2).filter(argument => argument !== '--write');
++if (unsupportedArguments.length > 0) {
++  throw new Error(`Unsupported arguments: ${unsupportedArguments.join(', ')}`);
 +}
 +
-+export function walkFiles(root, options = {}) {
-+  const excluded = new Set(options.excludedNames ?? []);
-+  const files = [];
++const releaseNodeVersion = readFileSync(resolve(repositoryRoot, '.nvmrc'), 'utf8')
++  .trim()
++  .replace(/^v/u, '');
++if (process.versions.node !== releaseNodeVersion) {
++  throw new Error(
++    `Release artifact requires Node ${releaseNodeVersion}; current runtime is ${process.versions.node}`,
++  );
++}
 +
-+  function visit(directory) {
-+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-+      if (excluded.has(entry.name)) {
-+        continue;
++const packageRoot = resolve(repositoryRoot, 'packages/editor');
++const packageManifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
++const filename = `${packageManifest.name.replace(/^@/u, '').replaceAll('/', '-')}-${packageManifest.version}.tgz`;
++const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T123');
++const artifactPath = resolve(evidenceRoot, 'artifacts', filename);
++const manifestPath = resolve(evidenceRoot, 'tarball-manifest.json');
++const temporaryRoot = mkdtempSync(join(tmpdir(), 'tellplot-release-artifact-'));
++const freshArtifactPath = resolve(temporaryRoot, filename);
++
++function sha256(path) {
++  return createHash('sha256').update(readFileSync(path)).digest('hex');
++}
++
++function comparableFiles(files) {
++  return files.map(file => file.path).sort();
++}
++
++try {
++  run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
++  run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
++  const packManifest = JSON.parse(
++    run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),
++  );
++  const files = comparableFiles(packManifest.files).map(path => ({ path }));
++  const current = {
++    name: packageManifest.name,
++    version: packageManifest.version,
++    filename,
++    sizeBytes: statSync(freshArtifactPath).size,
++    sha256: sha256(freshArtifactPath),
++    files,
++  };
++
++  if (write) {
++    copyFileSync(freshArtifactPath, artifactPath);
++    writeFileSync(manifestPath, `${JSON.stringify(current, null, 2)}\n`);
++  }
++
++  const findings = [];
++  if (!existsSync(artifactPath)) {
++    findings.push(`missing release artifact: ${filename}`);
++  }
++  if (!existsSync(manifestPath)) {
++    findings.push('missing release artifact manifest');
++  }
++
++  if (findings.length === 0) {
++    const stored = JSON.parse(readFileSync(manifestPath, 'utf8'));
++    const storedArtifact = {
++      sizeBytes: statSync(artifactPath).size,
++      sha256: sha256(artifactPath),
++    };
++
++    for (const field of ['name', 'version', 'filename', 'sizeBytes', 'sha256']) {
++      if (stored[field] !== current[field]) {
++        findings.push(`manifest ${field} does not match the current package`);
 +      }
-+      const absolute = resolve(directory, entry.name);
-+      if (entry.isDirectory()) {
-+        visit(absolute);
-+      } else if (entry.isFile()) {
-+        files.push(absolute);
-+      }
++    }
++    if (
++      JSON.stringify(comparableFiles(stored.files ?? [])) !== JSON.stringify(comparableFiles(files))
++    ) {
++      findings.push('manifest files do not match the current package');
++    }
++    if (
++      storedArtifact.sizeBytes !== current.sizeBytes ||
++      storedArtifact.sha256 !== current.sha256
++    ) {
++      findings.push('stored tarball does not match the current package');
 +    }
 +  }
 +
-+  if (statSync(root).isDirectory()) {
-+    visit(root);
-+  }
-+  return files;
-+}
-+
-+export function repositoryPath(path) {
-+  return toPosix(relative(repositoryRoot, path));
-+}
-+
-+export function run(command, args, options = {}) {
-+  const result = spawnSync(command, args, {
-+    cwd: options.cwd ?? repositoryRoot,
-+    encoding: 'utf8',
-+    stdio: options.inherit ? 'inherit' : 'pipe',
-+    env: { ...process.env, ...options.env },
-+  });
-+  if (result.status !== 0) {
-+    if (!options.inherit) {
-+      process.stderr.write(result.stdout ?? '');
-+      process.stderr.write(result.stderr ?? '');
-+    }
-+    throw new Error(
-+      `${command} ${args.join(' ')} failed with exit code ${result.status ?? 'null'}`,
++  if (findings.length > 0) {
++    fail('TellPlot release artifact check failed', findings);
++  } else {
++    process.stdout.write(
++      `${JSON.stringify(
++        {
++          status: write ? 'refreshed' : 'passed',
++          ...current,
++        },
++        null,
++        2,
++      )}\n`,
 +    );
 +  }
-+  return result.stdout ?? '';
++} finally {
++  rmSync(temporaryRoot, { recursive: true, force: true });
 +}
-+
-+export function fail(title, findings) {
-+  process.stderr.write(`${title}\n`);
-+  for (const finding of findings) {
-+    process.stderr.write(`- ${finding}\n`);
-+  }
-+  process.exitCode = 1;
-+}
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=evidence --exclude=.DS_Store /tmp/tellplot-G004-stable.PBkJ9I/worktree/vitest.config.ts ./vitest.config.ts
---- /tmp/tellplot-G004-stable.PBkJ9I/worktree/vitest.config.ts	2026-07-23 10:22:39
-+++ ./vitest.config.ts	2026-07-23 15:56:17
-@@ -1,6 +1,21 @@
- import { defineConfig } from 'vitest/config';
-+import { fileURLToPath } from 'node:url';
+diff --git a/scripts/release/rehearse-source.mjs b/scripts/release/rehearse-source.mjs
+index 66f5c63..4730eb5 100644
+--- a/scripts/release/rehearse-source.mjs
++++ b/scripts/release/rehearse-source.mjs
+@@ -7,12 +7,14 @@ import { repositoryRoot, run, walkFiles } from './release-utils.mjs';
+ const targetRoot = mkdtempSync(join(tmpdir(), 'tellplot-1.0.0-rehearsal-'));
+ const excluded = new Set([
+   '.git',
++  '.copyright-application',
+   'node_modules',
+   'dist',
+   'coverage',
+   'playwright-report',
+   'test-results',
+   'blob-report',
++  'tmp',
+ ]);
  
-+const editorAliases = [
-+  {
-+    find: '@tellplot/editor/styles.css',
-+    replacement: fileURLToPath(new URL('./packages/editor/src/styles/editor.css', import.meta.url)),
-+  },
-+  {
-+    find: '@tellplot/editor',
-+    replacement: fileURLToPath(new URL('./packages/editor/src/index.ts', import.meta.url)),
-+  },
-+] as const;
-+
- export default defineConfig({
-+  resolve: {
-+    alias: editorAliases,
-+  },
-   test: {
-     testTimeout: 15_000,
-     projects: [
-@@ -32,6 +47,9 @@
-         },
-       },
-       {
-+        resolve: {
-+          alias: editorAliases,
-+        },
-         test: {
-           name: 'playground-unit',
-           testTimeout: 15_000,
+ function includeSource(source) {

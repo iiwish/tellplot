@@ -2,8 +2,8 @@
 
 ## Verdict
 
-`PASS`。G002-R2 / T119 满足全部成功标准，无未解决 Critical、High 或 Medium finding，可以进入
-`Needs_Review`。
+`PASS`。G002-R2 / T119 满足全部成功标准，无未解决 Critical、High 或 Medium finding；用户于
+2026-07-29 验收，状态为 `Accepted`。
 
 ## Spec Compliance
 
