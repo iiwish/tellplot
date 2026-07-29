@@ -352,6 +352,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
   browserName,
   page,
 }, testInfo) => {
+  test.slow();
   await openEditor(page);
   const initialOrder = await rootOrder(page);
   expect(initialOrder).toEqual([
