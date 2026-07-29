@@ -1,148 +1,136 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  resolveChartHorizontalDropTarget,
-  resolveChartMinimumTargetHit,
+  readChartCategoryElementPointer,
+  readChartElementBounds,
+  readChartTargetCoordinate,
 } from '../../src/interactions/chartPointer';
 
-const orderedBounds = [
-  { nodeId: 'left', minX: 20, maxX: 60 },
-  { nodeId: 'middle', minX: 100, maxX: 140 },
-  { nodeId: 'right', minX: 180, maxX: 220 },
-] as const;
+describe('chart category-axis G2 boundary', () => {
+  const event = {
+    pointerId: 9,
+    canvas: { x: 110, y: 150 },
+    data: { data: { nodeId: 'node' } },
+    target: {
+      getBounds: () => ({ min: [100, 140], max: [120, 180] }),
+    },
+  };
 
-describe('chart horizontal drag geometry', () => {
-  it('targets the next sibling when the dragged right edge reaches its left edge', () => {
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'middle',
-        startPointerX: 120,
-        pointerX: 159.99,
-        orderedBounds,
-      }),
-    ).toBeNull();
-
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'middle',
-        startPointerX: 120,
-        pointerX: 160,
-        orderedBounds,
-      }),
-    ).toEqual({ nodeId: 'right', edge: 'after', targetX: 220 });
+  it('reads the same renderer event on X or Y', () => {
+    expect(readChartCategoryElementPointer(event, 'x')).toEqual({
+      ok: true,
+      value: {
+        pointerId: 9,
+        x: 110,
+        y: 150,
+        axis: 'x',
+        nodeId: 'node',
+        edge: 'after',
+        min: 100,
+        max: 120,
+        target: 120,
+      },
+    });
+    expect(readChartCategoryElementPointer(event, 'y')).toEqual({
+      ok: true,
+      value: {
+        pointerId: 9,
+        x: 110,
+        y: 150,
+        axis: 'y',
+        nodeId: 'node',
+        edge: 'before',
+        min: 140,
+        max: 180,
+        target: 140,
+      },
+    });
   });
 
-  it('targets the previous sibling when the dragged left edge reaches its right edge', () => {
+  it('supports center/halfExtents bounds and returns structured hostile failures', () => {
+    const centered = {
+      ...event,
+      target: {
+        getBounds: () => ({ center: [110, 160], halfExtents: [10, 20] }),
+      },
+    };
+    expect(readChartCategoryElementPointer(centered, 'y')).toEqual({
+      ok: true,
+      value: expect.objectContaining({ min: 140, max: 180, target: 140 }),
+    });
+    expect(readChartCategoryElementPointer({}, 'x')).toEqual({
+      ok: false,
+      reason: 'INVALID_INPUT',
+    });
+    expect(readChartCategoryElementPointer({ ...event, data: {} }, 'x')).toEqual({
+      ok: false,
+      reason: 'SOURCE_NOT_FOUND',
+    });
     expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'middle',
-        startPointerX: 120,
-        pointerX: 80.01,
-        orderedBounds,
-      }),
-    ).toBeNull();
-
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'middle',
-        startPointerX: 120,
-        pointerX: 80,
-        orderedBounds,
-      }),
-    ).toEqual({ nodeId: 'left', edge: 'before', targetX: 20 });
-  });
-
-  it('selects the furthest crossed sibling and returns null at the origin', () => {
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'left',
-        startPointerX: 40,
-        pointerX: 40,
-        orderedBounds,
-      }),
-    ).toBeNull();
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'left',
-        startPointerX: 40,
-        pointerX: 160,
-        orderedBounds,
-      }),
-    ).toEqual({ nodeId: 'right', edge: 'after', targetX: 220 });
-  });
-
-  it('selects the furthest crossed sibling when moving left', () => {
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'right',
-        startPointerX: 200,
-        pointerX: 80,
-        orderedBounds,
-      }),
-    ).toEqual({ nodeId: 'left', edge: 'before', targetX: 20 });
-  });
-
-  it('uses each rendered bar width instead of a fixed collision threshold', () => {
-    const bounds = [
-      { nodeId: 'narrow', minX: 100, maxX: 120 },
-      { nodeId: 'wide', minX: 180, maxX: 240 },
-    ] as const;
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'narrow',
-        startPointerX: 105,
-        pointerX: 164.99,
-        orderedBounds: bounds,
-      }),
-    ).toBeNull();
-    expect(
-      resolveChartHorizontalDropTarget({
-        itemId: 'narrow',
-        startPointerX: 105,
-        pointerX: 165,
-        orderedBounds: bounds,
-      }),
-    ).toEqual({ nodeId: 'wide', edge: 'after', targetX: 240 });
+      readChartCategoryElementPointer(
+        {
+          ...event,
+          target: {
+            getBounds() {
+              throw new Error('private renderer failure');
+            },
+          },
+        },
+        'x',
+      ),
+    ).toEqual({ ok: false, reason: 'INVALID_BOUNDS' });
   });
 });
 
-describe('chart minimum pointer target', () => {
-  it('expands a narrow rendered mark to a 32px target while preserving its real bounds', () => {
-    expect(
-      resolveChartMinimumTargetHit(
-        { pointerId: 7, x: 92, y: 105 },
-        [{ nodeId: 'narrow', minX: 100, minY: 100, maxX: 110, maxY: 110 }],
-        32,
-      ),
-    ).toEqual({
-      pointerId: 7,
-      x: 92,
-      y: 105,
-      nodeId: 'narrow',
-      edge: 'before',
-      minX: 100,
-      maxX: 110,
-      targetX: 100,
+describe('chart category-axis scene lookup', () => {
+  const element = {
+    __data__: { data: { nodeId: 'node' } },
+    getBounds: () => ({ min: [100, 140], max: [120, 180] }),
+  };
+  const context = {
+    canvas: {
+      document: {
+        getElementsByClassName: () => [element],
+      },
+    },
+  };
+
+  it('reads target edges and complete scene bounds for both axes', () => {
+    expect(readChartTargetCoordinate(context, 'node', 'before', 'x')).toEqual({
+      ok: true,
+      value: 100,
     });
-    expect(
-      resolveChartMinimumTargetHit(
-        { pointerId: 7, x: 83.99, y: 105 },
-        [{ nodeId: 'narrow', minX: 100, minY: 100, maxX: 110, maxY: 110 }],
-        32,
-      ),
-    ).toBeUndefined();
+    expect(readChartTargetCoordinate(context, 'node', 'after', 'y')).toEqual({
+      ok: true,
+      value: 180,
+    });
+    expect(readChartElementBounds(context)).toEqual([
+      { nodeId: 'node', minX: 100, minY: 140, maxX: 120, maxY: 180 },
+    ]);
   });
 
-  it('chooses the nearest real mark when expanded targets overlap', () => {
-    expect(
-      resolveChartMinimumTargetHit(
-        { pointerId: 8, x: 115, y: 105 },
-        [
-          { nodeId: 'left', minX: 100, minY: 100, maxX: 108, maxY: 110 },
-          { nodeId: 'right', minX: 120, minY: 100, maxX: 128, maxY: 110 },
-        ],
-        32,
-      )?.nodeId,
-    ).toBe('right');
+  it('returns structured failures for invalid contexts, missing nodes and bounds', () => {
+    expect(readChartTargetCoordinate({}, 'node', 'before', 'x')).toEqual({
+      ok: false,
+      reason: 'INVALID_INPUT',
+    });
+    expect(readChartTargetCoordinate(context, 'missing', 'before', 'x')).toEqual({
+      ok: false,
+      reason: 'SOURCE_NOT_FOUND',
+    });
+    const invalidBounds = {
+      canvas: {
+        document: {
+          getElementsByClassName: () => [
+            { ...element, getBounds: () => ({ min: [10, 10], max: [5, 20] }) },
+          ],
+        },
+      },
+    };
+    expect(readChartTargetCoordinate(invalidBounds, 'node', 'before', 'x')).toEqual({
+      ok: false,
+      reason: 'INVALID_BOUNDS',
+    });
+    expect(readChartElementBounds(invalidBounds)).toEqual([]);
   });
 });

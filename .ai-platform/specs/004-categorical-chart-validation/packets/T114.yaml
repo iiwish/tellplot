@@ -1,0 +1,250 @@
+schema_version: 1
+packet_id: EP-004-T114-A001
+task_id: T114
+feature_id: 004-categorical-chart-validation
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_spec: .ai-platform/specs/004-categorical-chart-validation/spec.md
+  data_model: .ai-platform/specs/004-categorical-chart-validation/data-model.md
+  public_api_contract: .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+  requirements_checklist: .ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+  feature_plan: .ai-platform/specs/004-categorical-chart-validation/plan.md
+  work_graph: .ai-platform/specs/004-categorical-chart-validation/tasks.md
+  analysis: .ai-platform/specs/004-categorical-chart-validation/analysis.md
+  approval_gates:
+    constitution: Confirmed
+    product_contract: Confirmed
+    feature_contracts: Confirmed by user on 2026-07-19
+    requirements_checklist: Completed with 0 Critical/High/Medium findings
+    technical_plan_and_work_graph: Confirmed by user on 2026-07-19
+    dependency_t112: Accepted by user on 2026-07-19
+    packet_review: User_Approved on 2026-07-19
+    implementation_authorization: >-
+      User explicitly authorized T114 continuation on 2026-07-19 conditional on a clean T113 review; the review
+      found no actionable issue and the condition is satisfied.
+
+work_unit:
+  title: 建立方向感知的分类轴交互
+  goal: >-
+    把当前 G2 scene bounds 与水平 pointer collision 收敛为 X/Y category-axis primitives，保持 waterfall
+    与 column 的 X 行为 deep-equal，为 bar 提供 top-to-bottom Y 排序，并以冻结的 renderer-owned bounds、
+    category-axis pointer coordinate 和结构化失败支撑 T115 集成。
+  epic: E004
+  story: S004-2
+  requirements:
+    - CAT-FR-006
+    - CAT-FR-007
+    - CAT-NFR-001
+    - CAT-NFR-002
+    - CAT-NFR-003
+    - CAT-NFR-004
+    - CAT-AC-002
+    - CAT-AC-004
+    - CAT-AC-007
+  priority: P0
+  depends_on:
+    - T112 Accepted
+  blocks:
+    - T115
+    - T116
+  parallel: >-
+    The work graph permits parallel execution with T113 only from the same accepted T112 baseline in separate
+    worktrees. The current accepted T112 baseline is uncommitted, so this packet defaults to sequential direct
+    execution and must not run concurrently in the current worktree.
+  conflicts_with:
+    - T113 categorical projection/spec ownership
+    - T115 component gesture composition
+    - T116 runtime extraction
+    - Fixed chart dimensions or guessed bar width/row height
+    - A second drag state machine or chart-family command path
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - packages/editor/src/interactions/chartPointer.ts
+    - packages/editor/src/interactions/moveTargets.ts
+    - packages/editor/src/components/WaterfallCanvas.tsx
+    - packages/editor/src/domain/model.ts
+    - packages/editor/src/domain/viewTree.ts
+    - packages/editor/src/domain/chartPolicy.ts
+    - packages/editor/tests/components/chartPointer.test.ts
+    - packages/editor/tests/components/group-actions.test.ts
+  existing_patterns:
+    - chartPointer.ts defensively reads the locked G2 5.4 event boundary, canvas coordinates, scene getBounds and element data without trusting DOM dimensions.
+    - ChartSceneElementBounds already preserves the complete minX/minY/maxX/maxY renderer rectangle for hit testing and overlays.
+    - resolveChartHorizontalDropTarget translates the dragged mark rectangle, compares only X edges, keeps logical orderedBounds input order and returns the furthest crossed sibling.
+    - WaterfallCanvas owns pointer capture, the 4px threshold, RAF coalescing, preview lifecycle and cancellation; T114 does not edit that component.
+    - PointerMoveIntent and resolvePointerMoveTarget are already axis-neutral semantic command adapters; chart geometry should continue to resolve only nodeId plus before/after.
+    - Locked and same-parent eligibility belong to the validated projection/chart policy and caller-provided frozen candidate set, not renderer geometry.
+  interfaces_or_contracts:
+    - CategoryAxis is x or y.
+    - ChartCategoryBounds contains nodeId plus scalar min, center and max on the selected category axis.
+    - Axis-neutral read/collision results use discriminated success/failure results; legacy X wrappers retain their current undefined/null and targetX shapes.
+    - Failure reasons distinguish invalid input or bounds, stale bounds revision, below-threshold movement, missing source and no eligible target without throwing.
+  required_design:
+    - Add categoryAxis.ts as the small scalar geometry kernel. It projects G2 scene rectangles and pointer points onto X or Y; it does not inspect amount or value-axis size.
+    - Ordered bounds are supplied in logical top-level or same-parent order. Do not spatially sort them; for bar, logical first must remain top-to-bottom even when scene coordinates differ by renderer transforms.
+    - Drop collision uses the translated source min/max edge crossing a sibling max/min edge and selects the furthest crossed eligible sibling in logical direction.
+    - The axis-neutral input carries the pointer-down bounds revision, current render revision and configurable minimum drag distance. Revision mismatch and less-than-4px category-axis movement return structured failures.
+    - Invalid or stale scene rectangles are rejected or skipped deterministically. Hostile event access/getBounds failures are caught and never escape.
+    - Axis-neutral hit testing chooses before/after from the selected category coordinate while minimum target expansion still uses the real two-dimensional renderer rectangle.
+    - Existing readChartElementPointer, resolveChartHorizontalDropTarget and readChartTargetX remain compatibility wrappers over the X primitive and preserve current deep-equal outputs.
+    - Locked nodes and cross-container nodes are filtered by the caller's frozen eligible candidate set. Geometry must not duplicate chart policy; semantic command validation remains the final authority and stable error source.
+  forbidden_changes:
+    - Do not modify WaterfallCanvas, CategoricalCanvas, React components, CSS, categorical projection/spec, export runtime, package entrypoint or dependencies.
+    - Do not read clientWidth, offsetWidth, fixed bar width, fixed row height or any guessed renderer dimension.
+    - Do not introduce pointer capture, RAF scheduling, preview state, history writes or command dispatch into categoryAxis.ts.
+    - Do not change existing horizontal wrapper return shapes or waterfall component expectations.
+    - Do not use any, @ts-ignore or @ts-expect-error, and do not log G2 datum content or financial values.
+
+execution_constraints:
+  execution_mode: direct_after_approval
+  approval_required: Satisfied by explicit conditional authorization on 2026-07-19.
+  direct_reason: Delegation was not authorized; repository policy requires one governed task at a time.
+  branch_or_worktree: codex/t112-categorical-data-contract
+  baseline_requirement: >-
+    T112 is user-accepted but uncommitted in this worktree. Execute against the current worktree after approval.
+    Parallel worktrees require a separately authorized commit or equivalent accepted baseline and are out of scope.
+  allowed_files:
+    - packages/editor/src/interactions/chartPointer.ts
+    - packages/editor/src/interactions/moveTargets.ts
+    - packages/editor/src/interactions/categoryAxis.ts
+    - packages/editor/tests/components/chartPointer.test.ts
+    - packages/editor/tests/components/categoryAxis.test.ts
+    - .ai-platform/evidence/T114/**
+  read_only_regression_files:
+    - packages/editor/src/components/WaterfallCanvas.tsx
+    - packages/editor/tests/components/group-actions.test.ts
+    - packages/editor/src/categorical/**
+  test_targets:
+    - packages/editor/tests/components/chartPointer.test.ts
+    - packages/editor/tests/components/categoryAxis.test.ts
+    - packages/editor/tests/components/group-actions.test.ts
+  ownership_notes:
+    - group-actions.test.ts is a regression-only target and is not an allowed modification.
+    - moveTargets.ts may change only if a new axis-neutral type or parity assertion cannot use the existing semantic intent; command behavior must remain deep-equal.
+    - Stop if unrelated user edits appear in an allowed runtime or test file.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    files:
+      - packages/editor/tests/components/categoryAxis.test.ts
+      - packages/editor/tests/components/chartPointer.test.ts
+    command: >-
+      pnpm exec vitest run packages/editor/tests/components/categoryAxis.test.ts
+      packages/editor/tests/components/chartPointer.test.ts
+      packages/editor/tests/components/group-actions.test.ts
+    expected_failure: >-
+      New tests fail because CategoryAxis, axis-neutral bounds/event adapters, Y collision, revision guard and
+      structured drop results do not exist. Existing X and group-action regressions remain green and unchanged.
+  green:
+    command: >-
+      pnpm exec vitest run packages/editor/tests/components/categoryAxis.test.ts
+      packages/editor/tests/components/chartPointer.test.ts
+      packages/editor/tests/components/group-actions.test.ts
+    expected_signal: >-
+      X/Y parity, top-to-bottom Y order, translated edge collision, threshold/revision failures and hostile G2 cases
+      pass while every existing horizontal assertion remains deep-equal.
+  refactor:
+    command: pnpm test:unit
+    expected_signal: >-
+      The full unit suite remains green after legacy X functions delegate to the category-axis kernel; no component
+      or command behavior changes.
+
+validation_loop:
+  commands:
+    - pnpm exec vitest run packages/editor/tests/components/chartPointer.test.ts packages/editor/tests/components/categoryAxis.test.ts packages/editor/tests/components/group-actions.test.ts
+    - pnpm test:unit
+    - pnpm test:coverage
+    - pnpm typecheck
+    - pnpm lint
+    - pnpm format:check
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T114
+    - git diff --check
+  expected_signals:
+    - Scene min/center/max is derived only from G2 getBounds for both axes; invalid and hostile inputs never throw.
+    - Equivalent X and Y gestures resolve the same logical nodeId and before/after edge; value-axis movement is irrelevant.
+    - Y preserves caller logical top-to-bottom order; reverse drags, origin, furthest crossing and translated rectangles are deterministic.
+    - A 4px category threshold, stale revision, invalid bounds, missing source and no eligible target have stable structured failures.
+    - Existing horizontal result objects and waterfall-related component tests remain deep-equal without updated expectations.
+    - Artifact validator reports no errors or warnings for T114.
+  retry_budget: 2
+  failure_policy:
+    first_failure: Read exact output and fix only behavior directly owned by T114.
+    second_failure: Determine whether the failure is a scope, contract or environment blocker; do not widen files or guess renderer geometry.
+    beyond_budget: Stop implementation, preserve RED/GREEN receipts and record blocked evidence.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T114/summary.md
+  diff: .ai-platform/evidence/T114/diff.patch
+  test_results: .ai-platform/evidence/T114/test-results.md
+  required:
+    - task ID, executor, attempt, worktree and direct-execution reason
+    - exact changed files and confirmation that components/categorical/package files are unchanged
+    - RED command, exit code and expected missing-primitive failure
+    - GREEN, refactor and final validation commands with exit codes
+    - X/Y parity table including top-to-bottom Y, threshold and stale-revision cases
+    - hostile G2 event/bounds cases and waterfall horizontal regression result
+    - spec-compliance, engineering and QA review findings
+    - residual risks and final patch
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - All geometry comes from G2 scene bounds and selected-axis pointer coordinates; no fixed dimension is inferred.
+    - Logical order, same-parent eligibility and locked-node policy remain caller/domain responsibilities, not hidden spatial heuristics.
+    - X/Y collision is truly scalar-axis neutral and equivalent gestures yield the same semantic target.
+    - Hostile events, invalid rectangles, stale revisions and below-threshold movement fail deterministically without throwing.
+    - Existing horizontal wrappers and waterfall tests remain deep-equal; no second gesture or command engine appears.
+  acceptance_rule: T114 moves to Needs_Review after validation; only explicit user acceptance can mark it Accepted.
+
+execution_receipt:
+  attempt_id: T114-A001
+  executor: Codex
+  execution_mode: direct
+  status: Accepted
+  changed_files:
+    - packages/editor/src/interactions/categoryAxis.ts
+    - packages/editor/src/interactions/chartPointer.ts
+    - packages/editor/tests/components/categoryAxis.test.ts
+    - packages/editor/tests/components/chartPointer.test.ts
+  validation:
+    red: Expected failure confirmed; the new category-axis module and four adapter functions were absent while 21 legacy tests remained green.
+    focused: 3 files and 34 tests passed.
+    unit_and_coverage: 38 files and 370 tests passed.
+    category_axis_coverage: 98.71% statements, 95.78% branches, 100% functions and 98.66% lines.
+    final_gates: Typecheck, build, lint, format, strict artifact validation, reverse patch check and diff check passed.
+  reviews:
+    spec_compliance: Passed with no blocking finding.
+    bug_code_quality: Passed with no blocking finding.
+    qa_acceptance: Passed with no blocking finding.
+  evidence: .ai-platform/evidence/T114
+  user_acceptance: >-
+    Accepted by the user on 2026-07-19 through the explicit condition to review T114 and proceed with a long
+    follow-up goal if no issue was found; the fresh review found no actionable issue.
+
+handoff:
+  task_status: Accepted
+  packet_review_status: User_Approved
+  recommended_execution_order: Packetize and execute T115 as the next single governed task.
+  next_gate: T115 packet completeness and analyze gate under the user-authorized long-running goal.
+  remote_actions: Commit, push, pull request, merge, publish and release are not authorized by this packet.
+
+stop_conditions:
+  - A required behavior needs React component, categorical, export, package entrypoint, dependency or CSS changes.
+  - Correct collision requires guessed dimensions, value-axis geometry or spatial sorting that changes logical order.
+  - Compatibility wrappers cannot preserve existing waterfall deep-equal results.
+  - Stable locked-node behavior would require duplicating domain chart policy inside geometry.
+  - An unrelated user change appears in an allowed runtime or test file.
+  - Artifact validator reports an unresolved Critical/High finding or missing packet field.

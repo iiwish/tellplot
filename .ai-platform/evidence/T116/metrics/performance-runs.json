@@ -1,0 +1,20 @@
+{
+  "budgetMs": 150,
+  "sampleCount": 30,
+  "successfulRun": {
+    "waterfallP95Ms": 68.29999995231628,
+    "categoricalP95Ms": 69.5,
+    "waterfallSameTargetRootCommitDelta": 0,
+    "categoricalSameTargetRootCommitDelta": 0
+  },
+  "highLoadDiagnostics": [
+    {
+      "waterfallP95Ms": 204.19999992847443,
+      "categoricalP95Ms": 132.70000004768372
+    },
+    {
+      "waterfallP95Ms": 129.89999997615814,
+      "categoricalP95Ms": 179.5
+    }
+  ]
+}

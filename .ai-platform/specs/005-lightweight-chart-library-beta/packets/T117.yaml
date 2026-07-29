@@ -1,0 +1,227 @@
+schema_version: 1
+packet_id: EP-G002-A001
+task_id: T117
+feature_id: 005-lightweight-chart-library-beta
+mode: execute_goal
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  goal_spec: .ai-platform/specs/005-lightweight-chart-library-beta/spec.md
+  goal_plan: .ai-platform/specs/005-lightweight-chart-library-beta/plan.md
+  goal_graph: .ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
+  requirements_checklist: .ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md
+  analysis: .ai-platform/specs/005-lightweight-chart-library-beta/analysis.md
+  execution_authorization: >-
+    Granted. The user explicitly approved G002 on 2026-07-20. Internal workstreams may execute continuously and
+    must stop at goal-level Needs_Review. Remote Git, npm publish and formal release are not authorized.
+
+work_unit:
+  title: 轻量图表库 Beta
+  goal: >-
+    Deliver an installable, documented and release-qualified @tellplot/editor@0.1.0-beta.1 without adding chart
+    families, runtime frameworks, dependencies or publishing remotely.
+  depends_on:
+    - G001 Accepted
+    - T101-T116 Accepted
+  requirements:
+    - BETA-FR-001
+    - BETA-FR-002
+    - BETA-FR-003
+    - BETA-FR-004
+    - BETA-FR-005
+    - BETA-FR-006
+    - BETA-FR-007
+    - BETA-FR-008
+    - BETA-FR-009
+    - BETA-FR-010
+    - BETA-NFR-001
+    - BETA-NFR-002
+    - BETA-NFR-003
+    - BETA-NFR-004
+    - BETA-NFR-005
+    - BETA-NFR-006
+    - BETA-NFR-007
+    - BETA-NFR-008
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  accepted_baseline:
+    branch: codex/t112-categorical-data-contract
+    state: G001 / T101-T116 user-accepted and intentionally uncommitted in the current worktree
+    constraints:
+      - Preserve all accepted runtime, test, documentation and evidence changes already present in the dirty worktree.
+      - Do not use HEAD as the G002 baseline and do not reset, stash, stage or commit.
+      - Generate the T117 task-only patch from the external content snapshot.
+  relevant_files:
+    - packages/editor/src/index.ts
+    - packages/editor/src/domain/commands.ts
+    - packages/editor/package.json
+    - packages/editor/tests/package/public-api.test.ts
+    - packages/editor/tests/package/types-consumer.ts
+    - packages/editor/tests/domain/commands.test.ts
+    - README.md
+    - docs/README.md
+    - docs/configuration.md
+
+baseline:
+  snapshot: /tmp/tellplot-G002-baseline.jBh5ji/worktree
+  manifest: /tmp/tellplot-G002-baseline.jBh5ji/manifest.sha256
+  file_count: 293
+  manifest_sha256: 9664ccb6fb57ac8e41622ee7a6ccb81b0458438d44f143cd0b698f843ce01b3c
+  constraints:
+    - Preserve the accepted dirty G001 baseline without reset, stash, stage or commit.
+    - Generate G002 task-only diff evidence from the external content snapshot.
+
+execution_constraints:
+  allowed_files:
+    - README.md
+    - CHANGELOG.md
+    - docs/**
+    - package.json
+    - packages/editor/package.json
+    - packages/editor/README.md
+    - packages/editor/LICENSE
+    - packages/editor/src/domain/commands.ts
+    - packages/editor/tests/domain/commands.test.ts
+    - packages/editor/tests/package/**
+    - packages/editor/tests/react-matrix/run-react-matrix.mjs
+    - apps/playground/src/**
+    - e2e/**
+    - .ai-platform/**
+  forbidden_changes:
+    - No new chart type, editor visual, chart interaction, projection, rendering, export or persistence behavior.
+    - No new, removed or upgraded dependency.
+    - No G2Spec, Chart instance, internal runtime or registry in the public API.
+    - No remote Git, npm publish, GitHub Release, merge or old-repository action.
+    - No any, @ts-ignore or @ts-expect-error.
+
+tdd_plan:
+  red:
+    - Require package version 0.1.0-beta.1 and README/LICENSE in the dry-run tarball.
+    - Require compile-checked getting-started consumer and exact beta runtime exports.
+    - Require ai command source rejection and host source acceptance.
+  green:
+    - Update package metadata, docs, command source and the minimum contract tests.
+  refactor:
+    - Replace stale T107/AI package wording without changing runtime behavior.
+
+validation_commands:
+  - pnpm format:check
+  - pnpm lint
+  - pnpm typecheck
+  - pnpm test:unit
+  - pnpm test:coverage
+  - pnpm build
+  - pnpm test:package
+  - pnpm test:react-matrix
+  - pnpm test:e2e
+  - pnpm test:a11y
+  - pnpm test:performance
+  - mise exec node@22.20.0 -- pnpm test:browser-previous
+  - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 005-lightweight-chart-library-beta --task-id T117 --strict
+  - git diff --check
+
+validation_loop:
+  focused_red:
+    - Run command-source and package contract tests before implementation and record the expected failures.
+  focused_green:
+    - Run command-source, public API, quickstart type consumer and tarball contract after the minimum implementation.
+  regression:
+    - Run the full validation_commands matrix without weakening tests, thresholds or browser budgets.
+  failure_policy:
+    - Fix only failures caused by T117 inside the allowed files.
+    - Stop when a fix would require runtime behavior, visual, schema, dependency or public-export changes.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T117
+  required:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - pack-manifest.json
+    - api-surface.json
+    - review.md
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: >-
+    G002 may move to Needs_Review only after all blocking gates pass and no unresolved Critical/High/Medium finding
+    remains. Only explicit user acceptance may mark G002 Accepted.
+
+handoff:
+  goal_status: Needs_Review
+  execution_attempt: T117-A004
+  next_gate: Present one goal-level outcome and wait for explicit G002 user acceptance.
+  remote_actions: Not authorized.
+
+review_correction:
+  execution_attempt: T117-A002
+  authorization: User explicitly requested the playground usage button and configuration guide on 2026-07-22.
+  scope:
+    - Add a toolbar usage trigger.
+    - Show install, React import and chartAppearance examples in an accessible responsive dialog.
+    - Provide copy feedback and browser regression coverage.
+  forbidden:
+    - Public API, schema, dependency, core editor, chart behavior, remote Git and publish changes.
+
+layout_review_correction:
+  execution_attempt: T117-A003
+  authorization: >-
+    User explicitly approved the persistent-code, center-chart, right-panel layout and confirmed panel visibility
+    must remain configurable on 2026-07-22.
+  allowed_files:
+    - packages/editor/src/react/editorTypes.ts
+    - packages/editor/src/index.ts
+    - packages/editor/src/components/FinancialChartEditor.tsx
+    - packages/editor/src/components/EditorToolbar.tsx
+    - packages/editor/src/components/PanelRail.tsx
+    - packages/editor/src/styles/editor.css
+    - packages/editor/tests/components/**
+    - packages/editor/tests/package/**
+    - apps/playground/src/**
+    - docs/api.md
+    - e2e/**
+    - .ai-platform/**
+  scope:
+    - Keep the existing default split layout unchanged.
+    - Add typed optional outline placement and inspector presentation configuration.
+    - Keep outline, inspector and toolbar visibility independently configurable through panels.
+    - Show code by default on desktop and use a dialog on compact viewports.
+    - Render the playground with chart center and an accessible right-side outline/inspector tab rail.
+  forbidden:
+    - No schema, chart projection, chart interaction, export, dependency, G2 runtime, remote Git or publish changes.
+
+live_editor_review_correction:
+  execution_attempt: T117-A004
+  authorization: >-
+    User explicitly requested an ECharts-like bidirectional demo editor with a light code theme on 2026-07-23.
+  allowed_files:
+    - apps/playground/src/**
+    - apps/playground/tests/**
+    - e2e/**
+    - vitest.config.ts
+    - .ai-platform/**
+    - AGENTS.md
+  scope:
+    - Serialize the current playground source, view, appearance, panels and layout into one deterministic document.
+    - Apply validated JSON edits to the chart after a short debounce and on Ctrl/Cmd+Enter.
+    - Reflect command-produced ViewSpec changes back into the editor without rewriting source amounts.
+    - Keep invalid drafts visible while preserving the last valid chart state and exposing a stable error path.
+    - Use a dependency-free accessible light editor and keep installation/React/configuration examples available.
+  forbidden:
+    - No eval, new Function, arbitrary JavaScript or TypeScript execution, remote compilation or iframe runtime.
+    - No public API, source/view schema, dependency, core command, chart projection, G2 runtime or export change.
+    - No remote Git, publish or release action.
+
+stop_conditions:
+  - A runtime behavior, visual, schema, dependency or new public API is required.
+  - Any accepted G001 regression remains red after a narrow reproducible fix attempt.
+  - Tarball or declarations expose internal G2/runtime paths.
+  - Remote Git, publish or release would be required to claim success.

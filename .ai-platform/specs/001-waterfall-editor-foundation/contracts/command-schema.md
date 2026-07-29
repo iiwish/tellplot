@@ -13,7 +13,7 @@ interface CommandEnvelope<TType extends string, TPayload> {
   readonly schemaVersion: '1.0.0';
   readonly id: string;
   readonly type: TType;
-  readonly source: 'direct' | 'outline' | 'keyboard' | 'host' | 'ai';
+  readonly source: 'direct' | 'outline' | 'keyboard' | 'host';
   readonly baseRevision: number;
   readonly payload: TPayload;
 }
@@ -150,8 +150,8 @@ start、end、subtotal 与 contribution、group 都可作为 annotation node。�
 - `moveItem` 的 target index 按从来源容器移除 item 后的目标容器计算，范围是 `0..destination.length`。
 - `moveGroup` 使用相同 post-removal index 语义；移动节点不得进入自身后代。
 - root 与任意 group 之间可以移动 contribution/group，但不得跨 subtotal segment。
-- 从 group 移出 node 后若来源 group 少于两个 direct children，命令以 `INVALID_DROP_TARGET` 拒绝，不自动解组。
-- 图表 pointer adapter 只产生同父级 move；outline、keyboard、host 与 AI 可以在合同约束内产生跨层 move。
+- 从恰有两个 direct children 的 group 跨 container 移出 node 时，来源 group 原子解散，remaining child 在原父级位置替换 group；group 的 collapsed、annotation 与 emphasis 状态一并删除。
+- 图表 pointer adapter 与 outline 都可产生跨层 move；`before`、`after`、`inside` 由 adapter 解析为公共 `{ containerId, index }`，keyboard 与 host 使用相同命令合同。
 - 对当前结构没有影响的 move 返回成功 no-op。
 - collapse、expand、pin、unpin 和 setAnnotation 重复设置相同规范化状态时返回成功 no-op。
 

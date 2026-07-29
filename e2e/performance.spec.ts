@@ -26,6 +26,7 @@ interface PerformanceWindow extends Window {
     samples: number[];
     start: number | null;
   };
+  __tellplotPointerLifecycle?: string[];
 }
 
 async function installReactCommitProbe(page: Page): Promise<void> {
@@ -136,11 +137,10 @@ async function barSlots(canvas: Locator): Promise<readonly BarSlot[]> {
       return [];
     }
     const colors = [
-      [95, 107, 101],
-      [22, 131, 99],
-      [213, 82, 74],
-      [49, 92, 140],
-      [164, 104, 18],
+      [47, 124, 246],
+      [18, 183, 106],
+      [240, 68, 100],
+      [20, 184, 166],
     ];
     const pixels = context.getImageData(0, 0, element.width, element.height).data;
     const populated: { readonly colorIndex: number; readonly x: number }[] = [];
@@ -223,11 +223,10 @@ async function yInsideBar(canvas: Locator, cssX: number): Promise<number> {
       const x = Math.max(0, Math.min(element.width - 1, Math.round(ratioX * element.width)));
       const pixels = context.getImageData(x, 0, 1, element.height).data;
       const colors = [
-        [95, 107, 101],
-        [22, 131, 99],
-        [213, 82, 74],
-        [49, 92, 140],
-        [164, 104, 18],
+        [47, 124, 246],
+        [18, 183, 106],
+        [240, 68, 100],
+        [20, 184, 166],
       ];
       const matches: number[] = [];
       for (let y = 0; y < element.height; y += 1) {
@@ -373,8 +372,9 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
   test.setTimeout(90_000);
   await installReactCommitProbe(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?fixture=performance');
+  await page.goto('/playground?fixture=performance');
   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+  await page.getByRole('button', { name: '隐藏使用代码' }).click();
 
   const handles = page.locator('[data-node-kind="contribution"] button[aria-label^="拖动 "]');
   await expect(handles).toHaveCount(200);
@@ -382,6 +382,7 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
   await expect(canvas).toBeVisible();
   await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
   await expect.poll(() => barSlots(canvas)).toHaveLength(202);
+  await page.waitForTimeout(180); // Exclude the default 160ms entrance transition from hit testing.
   const slots = await barSlots(canvas);
   const first = slots[1];
   const second = slots[2];
@@ -509,6 +510,150 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
   });
   console.log(
     `[performance] visible-canvas p95=${String(p95)}ms, budget=${String(PERFORMANCE_P95_BUDGET_MS)}ms, samples=${samples.length}, same-target-root-commit-delta=${commitsAfter - commitsBefore}`,
+  );
+  expect(p95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
+});
+
+test('200-item categorical G2 chart keeps direct feedback outside React and meets commit p95', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await installReactCommitProbe(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/playground?fixture=categorical-performance');
+  await expect(
+    page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="column"]`),
+  ).toBeVisible();
+  await page.getByRole('button', { name: '隐藏使用代码' }).click();
+
+  const handles = page.locator('[data-node-kind="contribution"] button[aria-label^="拖动 "]');
+  await expect(handles).toHaveCount(200);
+  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+  await expect(canvas).toBeVisible();
+  await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
+  await expect.poll(() => barSlots(canvas)).toHaveLength(200);
+  await page.waitForTimeout(180); // Exclude the default 160ms entrance transition from hit testing.
+  await page.evaluate(() => {
+    const performanceWindow = window as PerformanceWindow;
+    performanceWindow.__tellplotPointerLifecycle = [];
+    for (const type of ['lostpointercapture', 'pointercancel', 'pointerup'] as const) {
+      document.addEventListener(
+        type,
+        event => {
+          performanceWindow.__tellplotPointerLifecycle?.push(
+            `${type}:${String(event.pointerId)}:${String(event.buttons)}:${(event.target as Element | null)?.tagName ?? 'none'}`,
+          );
+        },
+        { capture: true },
+      );
+    }
+  });
+  const slots = await barSlots(canvas);
+  const first = slots[0];
+  const second = slots[1];
+  const third = slots[2];
+  expect(first).toBeDefined();
+  expect(second).toBeDefined();
+  expect(third).toBeDefined();
+  if (first === undefined || second === undefined || third === undefined) {
+    return;
+  }
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  if (canvasBox === null || canvasBox.width <= 0) {
+    return;
+  }
+  const signatureRegion: CanvasSignatureRegion = {
+    minXRatio: Math.max(0, (first.minX - canvasBox.x - 2) / canvasBox.width),
+    maxXRatio: Math.min(1, (third.maxX - canvasBox.x + 2) / canvasBox.width),
+  };
+
+  const firstY = await yInsideBar(canvas, first.x);
+  const secondCollisionDelta = Math.max(4.5, second.minX - first.maxX + 0.5);
+  const thirdCollisionX = first.x + (third.minX - first.maxX);
+  const stableAfterStartX = first.x + secondCollisionDelta;
+  const stableAfterEndX = Math.min(stableAfterStartX + 0.5, thirdCollisionX - 0.25);
+  expect(stableAfterEndX).toBeGreaterThan(stableAfterStartX);
+  await page.mouse.move(first.x, firstY);
+  await page.mouse.down();
+  await page.mouse.move(stableAfterStartX, firstY, { steps: 8 });
+  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
+  const overlay = page.getByTestId('chart-drag-overlay');
+  await expect(overlay).toBeVisible();
+  const transformBefore = await overlay.evaluate(element => getComputedStyle(element).transform);
+  await page.waitForTimeout(180);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+  const commitsBefore = await page.evaluate(
+    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
+  );
+  expect(commitsBefore).toBeGreaterThan(0);
+  await page.mouse.move(stableAfterEndX, firstY, { steps: 100 });
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+  const commitsAfter = await page.evaluate(
+    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
+  );
+  const lifecycle = await page.evaluate(
+    () => (window as PerformanceWindow).__tellplotPointerLifecycle ?? [],
+  );
+  expect(await overlay.count(), `active overlay lifecycle: ${JSON.stringify(lifecycle)}`).toBe(1);
+  const transformAfter = await overlay.evaluate(element => getComputedStyle(element).transform);
+  expect(transformAfter).not.toBe(transformBefore);
+  expect(commitsAfter - commitsBefore).toBe(0);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
+
+  await installLatencyProbe(page);
+  const keyboardMover = page.locator('[role="treeitem"][data-node-id="category-001"]');
+  for (let sample = 0; sample < SAMPLE_COUNT; sample += 1) {
+    const expectsSwappedOrder = sample % 2 === 0;
+    const nextRevision = sample + 1;
+    await keyboardMover.focus();
+    const previousSignature = await canvasPixelSignature(canvas, signatureRegion);
+    await page.evaluate(() => {
+      const metric = (window as PerformanceWindow).__tellplotPerf;
+      if (metric !== undefined) {
+        metric.start = performance.now();
+      }
+    });
+    await page.keyboard.press(expectsSwappedOrder ? 'Alt+ArrowDown' : 'Alt+ArrowUp');
+    await recordFirstVisibleCanvasUpdate(canvas, previousSignature, signatureRegion);
+    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', String(nextRevision));
+    const expectedPrefix = expectsSwappedOrder
+      ? ['category-002', 'category-001', 'category-003']
+      : ['category-001', 'category-002', 'category-003'];
+    expect(await rootContributionPrefix(page)).toEqual(expectedPrefix);
+    await page.waitForTimeout(180);
+  }
+
+  const samples = await page.evaluate(
+    () => (window as PerformanceWindow).__tellplotPerf?.samples ?? [],
+  );
+  expect(samples).toHaveLength(SAMPLE_COUNT);
+  const sorted = [...samples].sort((left, right) => left - right);
+  const p95 = sorted[Math.ceil(0.95 * sorted.length) - 1];
+  await test.info().attach('categorical-performance-samples.json', {
+    body: Buffer.from(
+      JSON.stringify(
+        {
+          chartFamily: 'categorical',
+          visibleCategories: 200,
+          sampleCount: samples.length,
+          formula: 'sorted[ceil(.95*n)-1]',
+          samples,
+          p95,
+          p95BudgetMs: PERFORMANCE_P95_BUDGET_MS,
+          sameTargetRootCommitDelta: commitsAfter - commitsBefore,
+          pointerLifecycle: lifecycle,
+        },
+        null,
+        2,
+      ),
+    ),
+    contentType: 'application/json',
+  });
+  console.log(
+    `[performance] categorical-canvas p95=${String(p95)}ms, budget=${String(PERFORMANCE_P95_BUDGET_MS)}ms, samples=${samples.length}, same-target-root-commit-delta=${commitsAfter - commitsBefore}`,
   );
   expect(p95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
 });

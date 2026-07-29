@@ -360,7 +360,7 @@ index 0000000..6f8f343
 +    - "pnpm test:package"
 +    - "pnpm exec playwright test e2e/rendering.spec.ts --project=chromium"
 +    - "git diff --check"
-+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T105"
++    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T105"
 +  expected_signals:
 +    - "All component, full unit, coverage, build, package and Chromium rendering commands exit 0 after GREEN."
 +    - "A real canvas has stable dimensions and more than 500 non-background pixels."

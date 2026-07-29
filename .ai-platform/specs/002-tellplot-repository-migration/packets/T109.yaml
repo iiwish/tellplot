@@ -71,7 +71,7 @@ validation_loop:
     - "pnpm test:a11y"
     - "pnpm test:performance"
     - "git diff --check"
-    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 002-tellplot-repository-migration --task-id T109 --strict"
+    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 002-tellplot-repository-migration --task-id T109 --strict"
   expected_signals:
     - "No current source, package, selector, CSS or canonical documentation exposes the legacy namespace."
     - "All accepted local quality gates pass under the @tellplot package identity."

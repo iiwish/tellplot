@@ -2,7 +2,7 @@
   "name": "tellplot-workspace",
   "version": "0.0.0",
   "private": true,
-  "description": "TellPlot financial narrative chart editor workspace",
+  "description": "TellPlot lightweight editable chart library workspace",
   "license": "MIT",
   "homepage": "https://tellplot.com",
   "repository": {
@@ -29,7 +29,13 @@
     "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
     "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
     "test:a11y": "playwright test e2e/accessibility.spec.ts",
-    "test:performance": "playwright test e2e/performance.spec.ts --project=chromium-performance"
+    "test:performance": "playwright test e2e/performance.spec.ts --project=chromium-performance",
+    "release:architecture": "node scripts/release/check-architecture.mjs",
+    "release:audit": "node scripts/release/audit-release.mjs",
+    "release:artifact": "node scripts/release/package-artifact.mjs",
+    "release:artifact:refresh": "node scripts/release/package-artifact.mjs --write",
+    "release:check": "node scripts/release/check-stable.mjs",
+    "release:rehearse": "node scripts/release/rehearse-source.mjs"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

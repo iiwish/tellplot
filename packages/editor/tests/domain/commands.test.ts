@@ -150,7 +150,7 @@ function annotate(
     schemaVersion: '1.0.0',
     id,
     type: 'setAnnotation',
-    source: 'ai',
+    source: 'host',
     baseRevision,
     payload: { nodeId, text },
   };
@@ -352,7 +352,7 @@ describe('moveItem', () => {
     }
   });
 
-  it('rejects unknown, anchor, pinned, out-of-range, cross-segment and undersized moves', () => {
+  it('rejects unknown, anchor, pinned, out-of-range and cross-segment moves', () => {
     const start = sessionFrom();
     expectFailure(
       executeCommand(start, move('missing', 0, 'missing', 'root', 0)),
@@ -366,10 +366,11 @@ describe('moveItem', () => {
     expectFailure(executeCommand(pinned, move('pinned', 1, 'a', 'root', 1)), 'ITEM_LOCKED');
 
     const grouped = expectSuccess(executeCommand(start, group('group-two', 0)));
-    expectFailure(
-      executeCommand(grouped, move('too-small', 1, 'a', 'root', 1)),
-      'INVALID_DROP_TARGET',
+    const dissolved = expectSuccess(
+      executeCommand(grouped, move('dissolve-source-group', 1, 'a', 'root', 1)),
     );
+    expect(dissolved.viewSpec.groups['group-1']).toBeUndefined();
+    expect(dissolved.viewSpec.rootOrder).toEqual(['b', 'a', 'c', 'd', 'e']);
     expectFailure(
       executeCommand(grouped, move('bad-container', 1, 'd', 'unknown', 0)),
       'GROUP_NOT_FOUND',
@@ -620,6 +621,7 @@ describe('command envelope and atomicity', () => {
       { ...validPin, id: ' ' },
       { ...validPin, type: 'unknown' },
       { ...validPin, source: 'unknown' },
+      { ...validPin, source: 'ai' },
       { ...validPin, baseRevision: -1 },
       { ...validPin, payload: null },
       { ...validPin, payload: { itemId: ' ' } },

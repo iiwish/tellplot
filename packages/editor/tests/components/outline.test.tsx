@@ -2,13 +2,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { useLayoutEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createInitialViewSpec, type CommandEvent, type ViewSpec } from '../../src';
+import { FinancialChartEditor } from '../../src/components/FinancialChartEditor';
 import {
-  FinancialChartEditor,
-  createInitialViewSpec,
-  type CommandEvent,
-  type ViewSpec,
-} from '../../src';
-import { resolvePointerMoveTarget } from '../../src/interactions/moveTargets';
+  resolvePointerDropPlacement,
+  resolvePointerMoveTarget,
+} from '../../src/interactions/moveTargets';
 import { commandSourceData } from '../fixtures/commandSourceData';
 
 const g2Mock = vi.hoisted(() => {
@@ -214,14 +213,14 @@ describe('outline pointer targets', () => {
       resolvePointerMoveTarget(viewSpec, {
         itemId: 'b',
         targetNodeId: 'c',
-        edge: 'after',
+        placement: 'after',
       }),
     ).toEqual({ ok: true, target: { containerId: 'root', index: 2 } });
     expect(
       resolvePointerMoveTarget(viewSpec, {
         itemId: 'c',
         targetNodeId: 'a',
-        edge: 'before',
+        placement: 'before',
       }),
     ).toEqual({ ok: true, target: { containerId: 'root', index: 0 } });
 
@@ -237,16 +236,100 @@ describe('outline pointer targets', () => {
       resolvePointerMoveTarget(nestedView, {
         itemId: 'inner',
         targetNodeId: 'c',
-        edge: 'after',
+        placement: 'after',
       }),
     ).toEqual({ ok: true, target: { containerId: 'outer', index: 1 } });
     expect(
       resolvePointerMoveTarget(nestedView, {
         itemId: 'c',
         targetNodeId: 'inner',
-        edge: 'before',
+        placement: 'before',
       }),
     ).toEqual({ ok: true, target: { containerId: 'outer', index: 0 } });
+    expect(
+      resolvePointerMoveTarget(nestedView, {
+        itemId: 'd',
+        targetNodeId: 'inner',
+        placement: 'inside',
+      }),
+    ).toEqual({ ok: true, target: { containerId: 'inner', index: 2 } });
+    expect(
+      resolvePointerMoveTarget(nestedView, {
+        itemId: 'a',
+        targetNodeId: 'inner',
+        placement: 'inside',
+      }),
+    ).toEqual({ ok: true, target: { containerId: 'inner', index: 1 } });
+    expect(
+      resolvePointerMoveTarget(nestedView, {
+        itemId: 'd',
+        targetNodeId: 'c',
+        placement: 'inside',
+      }),
+    ).toEqual({ ok: false, reason: 'INVALID_TARGET' });
+    expect(resolvePointerDropPlacement(nestedView, 'inner', 0.5, 'after')).toBe('inside');
+    expect(resolvePointerDropPlacement(nestedView, 'inner', 0.1, 'after')).toBe('after');
+    expect(resolvePointerDropPlacement(nestedView, 'c', 0.5, 'before')).toBe('before');
+  });
+
+  it('shows an inside target on the middle of a group row and commits a cross-level move', async () => {
+    const nestedView: ViewSpec = {
+      ...initialView(),
+      rootOrder: ['outer', 'd', 'e'],
+      groups: {
+        inner: { id: 'inner', label: 'Inner group', childIds: ['a', 'b'] },
+        outer: { id: 'outer', label: 'Outer group', childIds: ['inner', 'c'] },
+      },
+    };
+    const views: ViewSpec[] = [];
+    const rejections = vi.fn();
+    render(
+      <FinancialChartEditor
+        sourceData={commandSourceData}
+        viewSpec={nestedView}
+        onCommandRejected={rejections}
+        onViewSpecChange={view => views.push(view)}
+      />,
+    );
+    const tree = await screen.findByRole('tree', { name: '结构大纲' });
+    installOutlineLayout(tree);
+    const handle = screen.getByRole('button', { name: '拖动 Gamma confidential' });
+
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      pointerId: 12,
+      isPrimary: true,
+      clientX: 20,
+      clientY: 218,
+    });
+    fireEvent.pointerMove(document, {
+      pointerId: 12,
+      isPrimary: true,
+      clientX: 20,
+      clientY: 225,
+    });
+    fireEvent.pointerMove(document, {
+      pointerId: 12,
+      isPrimary: true,
+      clientX: 20,
+      clientY: 98,
+    });
+
+    const innerRow = screen.getByRole('treeitem', { name: /Inner group/ });
+    await waitFor(() => expect(innerRow.getAttribute('data-drop-inside')).toBe('true'));
+    expect(innerRow.hasAttribute('data-drop-indicator')).toBe(false);
+    fireEvent.pointerUp(document, {
+      pointerId: 12,
+      isPrimary: true,
+      clientX: 20,
+      clientY: 98,
+    });
+
+    await waitFor(() => expect(views).toHaveLength(1));
+    expect(rejections).not.toHaveBeenCalled();
+    expect(views[0]?.groups['inner']?.childIds).toEqual(['a', 'b', 'c']);
+    expect(views[0]?.groups['outer']).toBeUndefined();
+    expect(views[0]?.rootOrder).toEqual(['inner', 'd', 'e']);
   });
 
   it('marks locked rows as non-sortable while retaining stable tree semantics', async () => {

@@ -1,0 +1,1564 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 2134a5a..23b8a4f 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -2,16 +2,17 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.5.0
++- Version: 0.6.0
+ - Status: Not_Released
+ - Last updated: 2026-07-20
+ - Working branch: `codex/t112-categorical-data-contract`
+ 
+ ## Current State
+ 
+-TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 多图表基础能力已完成，T101-T116 均获得用户验收。
+-当前 `@tellplot/editor` 提供瀑布图、分类条形图和分类柱状图，以及共享数据/视图模型、确定性命令、
+-结构大纲、历史、持久化、安全语义配置、SVG/PNG 导出和无障碍支持。
++TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 多图表基础能力已完成并验收；G002 已形成
++`@tellplot/editor@0.1.0-beta.1` release candidate，状态为 `Needs_Review`。当前包提供瀑布图、分类条形图和
++分类柱状图，以及共享数据/视图模型、确定性命令、结构大纲、历史、持久化、安全语义配置、SVG/PNG
++导出和无障碍支持。
+ 
+ G2 继续独占图形渲染、场景边界、事件和动画。TellPlot 不包含 Dashboard、第二渲染引擎或通用图表
+ plugin registry。
+@@ -24,26 +25,33 @@ plugin registry。
+ - T111-T115：分类数据合同、bar/column projection、X/Y 交互、编辑器、导出与可访问性。
+ - T116：chart-family ownership、shared G2 screen/export runtime 和多图表架构收敛。
+ 
++## Needs Review
++
++- G002 / T117：Beta 公共 API、package README/LICENSE、developer docs、changelog、版本、tarball allowlist 和
++  release-candidate validation 已完成，等待一次目标级用户验收。
++
+ ## Validation Evidence
+ 
+-- T116 full unit/coverage：393/393。
++- G002 fresh unit/coverage：393/393；domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+ - current Chromium/Firefox/WebKit：132/132。
+ - previous browser release：132/132；WebKit 18.4：44/44。
+-- accessibility：27/27；React 18/19、ESM/CJS/types/package checks 通过。
+-- 200-item clean performance：waterfall p95 68.3ms；categorical p95 69.5ms；预算 150ms。
+-- waterfall、bar、column 的 screen/export visual evidence 完整。
++- accessibility：27/27；React 18/19、ESM/CJS/types/compile-checked quickstart/package checks 通过。
++- 200-item fresh performance：waterfall p95 135.1ms；categorical p95 67.5ms；预算 150ms。
++- tarball 为 `@tellplot/editor@0.1.0-beta.1`，仅包含 13 个 dist/metadata/README/LICENSE 文件。
+ - strict artifact validator、format、lint、typecheck、build 和 diff checks 通过。
+ 
+-详细实现与残余风险见 `.ai-platform/evidence/T101` 至 `.ai-platform/evidence/T116`。
++详细 G002 结果与残余风险见 `.ai-platform/evidence/T117/`。
+ 
+ ## Known Limitations
+ 
+ - 当前已验收 T112-T116 工作仍位于未提交的 working branch；stage、commit、push、PR 和 merge 未获授权。
+-- `@tellplot/editor` 版本仍为 `0.0.0`，npm publish 和正式 release 未执行。
++- `@tellplot/editor@0.1.0-beta.1` 只完成本地 release-candidate 验证，npm publish 和正式 release 未执行。
+ - playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
++- fresh waterfall performance p95 为 135.1ms，仍低于 150ms 阻断预算，但余量小于分类图；后续 release
++  candidate 应继续保留真实浏览器监测，不弱化预算。
+ - GitHub 私有仓库计划无法强制 branch protection/rulesets；服务端 required checks 仍受外部计划限制。
+ 
+-## Next Goal
++## Next Gate
+ 
+-下一候选目标是 G002 轻量图表库 Beta：收敛公共 API、集成文档、发布 tarball 和 beta 质量闭环。
+-G002 需要目标级范围批准；npm publish、远程 Git 和正式 release 保持独立人工闸门。
++用户对 G002 进行一次目标级验收。验收不授权 npm publish、远程 Git 或正式 release；这些动作仍需独立
++明确批准。G003 基础图表扩展只在用户另行批准具体目标后进入执行。
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 490511d..fea3fa8 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -5,7 +5,7 @@
+ - Version: 0.22.0
+ - Status: Active
+ - Last updated: 2026-07-20
+-- Scope: T101-T116 已验收；G001 多图表基础能力完成，后续按目标级交付
++- Scope: T101-T116 已验收；G001 多图表基础能力完成；G002 / T117 等待目标级验收
+ 
+ ## Goal-Level Delivery
+ 
+@@ -20,7 +20,7 @@
+ | Goal | Status | Outcome |
+ | --- | --- | --- |
+ | G001 - 多图表基础能力 | Accepted | T101-T116；waterfall、bar、column 与共享 G2 runtime 完整验收 |
+-| G002 - 轻量图表库 Beta | Planned | 公共 API、集成文档、发布包和 beta 质量闭环 |
++| G002 - 轻量图表库 Beta | Needs_Review | T117；公共 API、集成文档、发布包和 beta 质量闭环 |
+ | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
+ | G004 - 开源项目成熟度 | Later | 贡献、版本、发布和长期维护体验 |
+ 
+@@ -156,8 +156,8 @@
+ | T115 - 分类图编辑、导出与可访问性 | Accepted | 用户于 2026-07-20 明确验收实现、evidence 与已披露执行偏差 |
+ | T116 - 多图表内部架构收敛 | Accepted | 用户于 2026-07-20 明确验收；G001 完成 |
+ 
+-## Next Gate
++## G002 Execution
+ 
+-T116-A001 已由用户明确验收，G001 多图表基础能力完成。下一候选目标为 G002 轻量图表库 Beta；
+-只有 G002 的目标范围和最终验收标准获得明确批准后才进入实现。旧仓库处置、npm publish 和正式发布
+-保持独立闸门。
++G002 已由用户于 2026-07-20 明确批准，内部以 T117 作为单一目标级 governed task 连续完成。权威目标图
++位于 `.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md`，当前只等待 G002 整体验收。旧仓库处置、
++npm publish 和正式发布保持独立闸门。
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
+index ba81449..5b2d705 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
+@@ -13,7 +13,7 @@ interface CommandEnvelope<TType extends string, TPayload> {
+   readonly schemaVersion: '1.0.0';
+   readonly id: string;
+   readonly type: TType;
+-  readonly source: 'direct' | 'outline' | 'keyboard' | 'host' | 'ai';
++  readonly source: 'direct' | 'outline' | 'keyboard' | 'host';
+   readonly baseRevision: number;
+   readonly payload: TPayload;
+ }
+@@ -151,7 +151,7 @@ start、end、subtotal 与 contribution、group 都可作为 annotation node。
+ - `moveGroup` 使用相同 post-removal index 语义；移动节点不得进入自身后代。
+ - root 与任意 group 之间可以移动 contribution/group，但不得跨 subtotal segment。
+ - 从 group 移出 node 后若来源 group 少于两个 direct children，命令以 `INVALID_DROP_TARGET` 拒绝，不自动解组。
+-- 图表 pointer adapter 只产生同父级 move；outline、keyboard、host 与 AI 可以在合同约束内产生跨层 move。
++- 图表 pointer adapter 只产生同父级 move；outline、keyboard 与 host 可以在合同约束内产生跨层 move。
+ - 对当前结构没有影响的 move 返回成功 no-op。
+ - collapse、expand、pin、unpin 和 setAnnotation 重复设置相同规范化状态时返回成功 no-op。
+ 
+diff --git a/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md b/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
+index 5adf33f..66c2d6f 100644
+--- a/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
++++ b/.ai-platform/specs/001-waterfall-editor-foundation/data-model.md
+@@ -86,7 +86,7 @@ Rules:
+ ```typescript
+ interface CommandMeta {
+   readonly id: string;
+-  readonly source: 'direct' | 'outline' | 'keyboard' | 'host' | 'ai';
++  readonly source: 'direct' | 'outline' | 'keyboard' | 'host';
+   readonly baseRevision: number;
+ }
+ 
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md b/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+index 5c24b60..367119a 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+@@ -150,7 +150,7 @@ function parseViewSpec(
+ - chart type 与 schema version 在成功命令、undo 和 redo 中保持不变。
+ - waterfall policy 保留 anchor 与 segment 约束。
+ - categorical policy 允许普通 item 在合法同父级位置移动，但 pinned item 与 pinned descendant 继续锁定。
+-- 直接操作、结构大纲、键盘和 host/AI candidate 继续使用同一命令语义。
++- 直接操作、结构大纲、键盘和 host 继续使用同一命令语义。
+ 
+ 内部 chart policy 不是公共 callback，宿主不能替换命令规则。
+ 
+diff --git a/.ai-platform/specs/004-categorical-chart-validation/plan.md b/.ai-platform/specs/004-categorical-chart-validation/plan.md
+index 09640bc..cbd7bdd 100644
+--- a/.ai-platform/specs/004-categorical-chart-validation/plan.md
++++ b/.ai-platform/specs/004-categorical-chart-validation/plan.md
+@@ -243,7 +243,7 @@ group/collapse、export、a11y 和 200 项 performance 场景。
+ | P-001 真实工作流优先 | 只实现已确认的单序列分类条形/柱状图，不扩展通用 BI 范围。 |
+ | P-002 数据与视图分离 | 分类 amount 保留在 SourceData，排序/分组只修改 ViewSpec。 |
+ | P-003 一个确定性命令入口 | chart、outline、keyboard 共用现有 command union。 |
+-| P-004 AI 必须受控 | 本切片不连接 AI；保留 command source 与未来 candidate 边界。 |
++| P-004 轻量核心 | 本切片不连接 AI 或平台能力；外部确定性操作使用 host command source。 |
+ | P-005 财务不变量优先 | 分类来源覆盖、聚合和锁定规则是阻断门禁。 |
+ | P-006 原生能力优先 | interval、scene bounds、Tooltip 和图形动画使用 G2。 |
+ | P-007 直接与精确操作并存 | bar/column canvas 和 outline/keyboard 同时验收。 |
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/analysis.md b/.ai-platform/specs/005-lightweight-chart-library-beta/analysis.md
+new file mode 100644
+index 0000000..8cff165
+--- /dev/null
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/analysis.md
+@@ -0,0 +1,37 @@
++# G002 Cross-Artifact Analysis
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Completed
++- Feature ID: `005-lightweight-chart-library-beta`
++- Goal ID: `G002`
++- Last updated: 2026-07-20
++
++## Result
++
++- Critical: 0
++- High: 0
++- Medium: 0
++
++## Consistency
++
++- 产品 SSOT、章程、TDR-015 和路线图均将 TellPlot 定义为基于 G2 的轻量基础图表库。
++- G002 只产品化已验收的 waterfall、bar 和 column，不扩展图表范围。
++- runtime export 列表与 `src/index.ts`、ESM/CJS consumers 和现有 public API test 一致。
++- `0.1.0-beta.1` 只更新发布包版本；私有 workspace/app 版本不进入 package contract。
++- command source 的 `ai` literal 没有 production consumer，删除后由 parser rejection 与 host command tests 锁定；
++  该变化符合用户明确确认的产品边界，并在首次 beta 前完成。
++- package tarball、React matrix 和 browser gates 已存在，G002 只补全 README/LICENSE/allowlist 与目标级证据。
++
++## Constitution Check
++
++- P-004：只完善轻量图表包，不增加平台能力。
++- P-006：G2 ownership 不变。
++- P-009：不创建新的 runtime abstraction。
++- P-010：完整 release-candidate evidence 保留。
++
++## Execution Readiness
++
++用户已明确批准 G002。目标、范围、allowed files、TDD、validation、evidence 和 stop conditions 完整，
++可以连续执行内部任务并在目标完成后停在 `Needs_Review`。
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md b/.ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md
+new file mode 100644
+index 0000000..328a57d
+--- /dev/null
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md
+@@ -0,0 +1,37 @@
++# G002 Requirements Checklist
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Completed
++- Source spec: `../spec.md` 0.1.0 Confirmed
++- Last updated: 2026-07-20
++
++## Product And Scope
++
++- [x] 是否把 G002 限定为现有图表的 beta 产品化，而不是新增图表？[Scope]
++- [x] 是否明确 G2 继续拥有渲染、场景边界和动画？[Architecture]
++- [x] 是否排除 registry、第二渲染引擎、新依赖和视觉改版？[Boundary]
++- [x] 是否明确 npm publish 和远程 Git 不在授权范围？[Governance]
++- [x] 是否定义用户只验收目标整体，不逐项验收内部任务？[Delivery]
++
++## API And Package
++
++- [x] 是否列出精确 runtime exports 与 internal boundary？[API]
++- [x] 是否定义 beta version、tarball allowlist 和 peer compatibility？[Package]
++- [x] 是否定义 schema、受控/非受控、error 和 migration 文档？[Documentation]
++- [x] 是否用 compile-checked consumer 防止示例漂移？[Quality]
++- [x] 是否披露 `ai` command source 的 beta 前收窄？[Compatibility]
++
++## Validation
++
++- [x] 是否保留 unit/coverage、package、React、browser、a11y、performance 和 export gates？[Regression]
++- [x] 是否要求 strict types、无 escape type 和无内部 G2 export？[Safety]
++- [x] 是否要求 goal-level diff、test results、review 和 residual risk？[Evidence]
++
++## Findings
++
++- Critical: 0
++- High: 0
++- Medium: 0
++- Low: 0
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml b/.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml
+new file mode 100644
+index 0000000..e29011f
+--- /dev/null
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml
+@@ -0,0 +1,161 @@
++schema_version: 1
++packet_id: EP-G002-A001
++task_id: T117
++feature_id: 005-lightweight-chart-library-beta
++mode: execute_goal
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  goal_spec: .ai-platform/specs/005-lightweight-chart-library-beta/spec.md
++  goal_plan: .ai-platform/specs/005-lightweight-chart-library-beta/plan.md
++  goal_graph: .ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
++  requirements_checklist: .ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md
++  analysis: .ai-platform/specs/005-lightweight-chart-library-beta/analysis.md
++  execution_authorization: >-
++    Granted. The user explicitly approved G002 on 2026-07-20. Internal workstreams may execute continuously and
++    must stop at goal-level Needs_Review. Remote Git, npm publish and formal release are not authorized.
++
++work_unit:
++  title: 轻量图表库 Beta
++  goal: >-
++    Deliver an installable, documented and release-qualified @tellplot/editor@0.1.0-beta.1 without adding chart
++    families, runtime frameworks, dependencies or publishing remotely.
++  depends_on:
++    - G001 Accepted
++    - T101-T116 Accepted
++  requirements:
++    - BETA-FR-001
++    - BETA-FR-002
++    - BETA-FR-003
++    - BETA-FR-004
++    - BETA-FR-005
++    - BETA-FR-006
++    - BETA-FR-007
++    - BETA-NFR-001
++    - BETA-NFR-002
++    - BETA-NFR-003
++    - BETA-NFR-004
++    - BETA-NFR-005
++    - BETA-NFR-006
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  accepted_baseline:
++    branch: codex/t112-categorical-data-contract
++    state: G001 / T101-T116 user-accepted and intentionally uncommitted in the current worktree
++    constraints:
++      - Preserve all accepted runtime, test, documentation and evidence changes already present in the dirty worktree.
++      - Do not use HEAD as the G002 baseline and do not reset, stash, stage or commit.
++      - Generate the T117 task-only patch from the external content snapshot.
++  relevant_files:
++    - packages/editor/src/index.ts
++    - packages/editor/src/domain/commands.ts
++    - packages/editor/package.json
++    - packages/editor/tests/package/public-api.test.ts
++    - packages/editor/tests/package/types-consumer.ts
++    - packages/editor/tests/domain/commands.test.ts
++    - README.md
++    - docs/README.md
++    - docs/configuration.md
++
++baseline:
++  snapshot: /tmp/tellplot-G002-baseline.jBh5ji/worktree
++  manifest: /tmp/tellplot-G002-baseline.jBh5ji/manifest.sha256
++  file_count: 293
++  manifest_sha256: 9664ccb6fb57ac8e41622ee7a6ccb81b0458438d44f143cd0b698f843ce01b3c
++  constraints:
++    - Preserve the accepted dirty G001 baseline without reset, stash, stage or commit.
++    - Generate G002 task-only diff evidence from the external content snapshot.
++
++execution_constraints:
++  allowed_files:
++    - README.md
++    - CHANGELOG.md
++    - docs/**
++    - package.json
++    - packages/editor/package.json
++    - packages/editor/README.md
++    - packages/editor/LICENSE
++    - packages/editor/src/domain/commands.ts
++    - packages/editor/tests/domain/commands.test.ts
++    - packages/editor/tests/package/**
++    - packages/editor/tests/react-matrix/run-react-matrix.mjs
++    - .ai-platform/**
++  forbidden_changes:
++    - No new chart type, UI, visual, interaction, projection, rendering, export or persistence behavior.
++    - No new, removed or upgraded dependency.
++    - No G2Spec, Chart instance, internal runtime or registry in the public API.
++    - No remote Git, npm publish, GitHub Release, merge or old-repository action.
++    - No any, @ts-ignore or @ts-expect-error.
++
++tdd_plan:
++  red:
++    - Require package version 0.1.0-beta.1 and README/LICENSE in the dry-run tarball.
++    - Require compile-checked getting-started consumer and exact beta runtime exports.
++    - Require ai command source rejection and host source acceptance.
++  green:
++    - Update package metadata, docs, command source and the minimum contract tests.
++  refactor:
++    - Replace stale T107/AI package wording without changing runtime behavior.
++
++validation_commands:
++  - pnpm format:check
++  - pnpm lint
++  - pnpm typecheck
++  - pnpm test:unit
++  - pnpm test:coverage
++  - pnpm build
++  - pnpm test:package
++  - pnpm test:react-matrix
++  - pnpm test:e2e
++  - pnpm test:a11y
++  - pnpm test:performance
++  - mise exec node@22.20.0 -- pnpm test:browser-previous
++  - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 005-lightweight-chart-library-beta --task-id T117 --strict
++  - git diff --check
++
++validation_loop:
++  focused_red:
++    - Run command-source and package contract tests before implementation and record the expected failures.
++  focused_green:
++    - Run command-source, public API, quickstart type consumer and tarball contract after the minimum implementation.
++  regression:
++    - Run the full validation_commands matrix without weakening tests, thresholds or browser budgets.
++  failure_policy:
++    - Fix only failures caused by T117 inside the allowed files.
++    - Stop when a fix would require runtime behavior, visual, schema, dependency or public-export changes.
++
++evidence_contract:
++  directory: .ai-platform/evidence/T117
++  required:
++    - summary.md
++    - test-results.md
++    - diff.patch
++    - pack-manifest.json
++    - api-surface.json
++    - review.md
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: >-
++    G002 may move to Needs_Review only after all blocking gates pass and no unresolved Critical/High/Medium finding
++    remains. Only explicit user acceptance may mark G002 Accepted.
++
++handoff:
++  goal_status: Needs_Review
++  execution_attempt: T117-A001
++  next_gate: Present one goal-level outcome and wait for explicit G002 user acceptance.
++  remote_actions: Not authorized.
++
++stop_conditions:
++  - A runtime behavior, visual, schema, dependency or new public API is required.
++  - Any accepted G001 regression remains red after a narrow reproducible fix attempt.
++  - Tarball or declarations expose internal G2/runtime paths.
++  - Remote Git, publish or release would be required to claim success.
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/plan.md b/.ai-platform/specs/005-lightweight-chart-library-beta/plan.md
+new file mode 100644
+index 0000000..d568223
+--- /dev/null
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/plan.md
+@@ -0,0 +1,71 @@
++# G002 轻量图表库 Beta Plan
++
++## Metadata
++
++- Feature ID: `005-lightweight-chart-library-beta`
++- Goal ID: `G002`
++- Version: 0.1.0
++- Status: Confirmed
++- Last updated: 2026-07-20
++- Approval: 用户已批准 G002 目标级连续执行
++
++## Baseline
++
++- G001 / T101-T116 均为 `Accepted`。
++- 当前 accepted baseline 有意保留在 dirty worktree，不以 HEAD 代替。
++- G002 执行前外部快照位于 `/tmp/tellplot-G002-baseline.jBh5ji/worktree/`。
++- Manifest: `/tmp/tellplot-G002-baseline.jBh5ji/manifest.sha256`，293 files，SHA-256
++  `9664ccb6fb57ac8e41622ee7a6ccb81b0458438d44f143cd0b698f843ce01b3c`。
++
++## Delivery Strategy
++
++1. 用 contract tests 锁定 beta runtime exports、package version、tarball allowlist 和无 AI source 的命令边界。
++2. 保持 runtime 函数、组件 props、数据/view schema、G2 ownership 和视觉行为不变。
++3. 建立 package README 与长期 developer docs，并用独立 TypeScript consumer 编译核心示例。
++4. 将 `@tellplot/editor` 版本设为 `0.1.0-beta.1`，补齐 README、LICENSE、CHANGELOG 和迁移规则。
++5. 运行 package、React、当前/上一浏览器、a11y、performance、export 和完整静态门禁。
++6. 生成 task-only diff、test results、review 和目标级 summary，状态停在 `Needs_Review`。
++
++## Public API Decision
++
++Beta runtime exports 保持十个：
++
++- `FinancialChartEditor`
++- `createEditorSession`
++- `createInitialViewSpec`
++- `executeCommand`
++- `parseViewSpec`
++- `redoSession`
++- `serializeViewSpec`
++- `undoSession`
++- `validateSourceData`
++- `validateViewSpec`
++
++公共类型继续从单一 entry 导出。G002 唯一 intentional narrowing 是删除未被 runtime 使用、且与确认产品
++边界冲突的 `CommandSource = 'ai'` literal；外部确定性命令使用 `source: 'host'`。包尚未发布，迁移文档明确
++此项 beta 前清理。G002 不增加新 public export。
++
++## Documentation Surface
++
++- `packages/editor/README.md`：npm package first view、安装、最小代码、支持能力与链接。
++- `docs/getting-started.md`：source-only、bar/column 初始化、受控/非受控、样式和宿主要求。
++- `docs/api.md`：runtime exports、公共类型、component/handle、schema 和 internal boundary。
++- `docs/errors.md`：validation、command、export 和接入故障处理。
++- `docs/migration.md`：beta SemVer、schema 1/2、0.1.0-beta.1 升级检查。
++- `CHANGELOG.md`：beta release scope。
++
++## Test Strategy
++
++- RED：beta contract tests 先要求版本、README/tarball、compiled quickstart 和 command source 收窄。
++- GREEN：最小修改 package/docs/command source 与测试。
++- REFACTOR：统一陈旧 T107/AI 文案，不扩展 runtime。
++- Final：format、lint、typecheck、unit/coverage、build、package、React matrix、current/previous browsers、a11y、
++  performance、strict artifact validator、diff check。
++
++## Risk Controls
++
++- 不把文档愿望变成新 runtime API。
++- 不因 G2 chunk warning增加分包或 dependency。
++- 不把 beta version 等同于 publish 授权。
++- 不修改 chart projection、rendering、interaction、appearance、export behavior 或截图基线。
++- 任何 full gate 行为回归只做最小缺陷修复；需要产品/视觉/schema 变化时停止。
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/spec.md b/.ai-platform/specs/005-lightweight-chart-library-beta/spec.md
+new file mode 100644
+index 0000000..9cd9390
+--- /dev/null
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/spec.md
+@@ -0,0 +1,91 @@
++# G002 轻量图表库 Beta Spec
++
++## Metadata
++
++- Feature ID: `005-lightweight-chart-library-beta`
++- Goal ID: `G002`
++- Version: 0.1.0
++- Status: Confirmed
++- Last updated: 2026-07-20
++- Approval: 用户于 2026-07-20 明确批准 G002 轻量图表库 Beta
++
++## Goal
++
++把已经验收的 waterfall、bar 和 column 能力整理成开发者可以直接安装、理解、集成和验证的
++`@tellplot/editor` beta 包。G002 不增加图表类型或运行时框架，只收敛公共合同、开发者文档、发布包内容、
++版本规则和 release-candidate evidence。
++
++## User Outcomes
++
++- React 开发者可以从 package README 在一个最小应用中完成安装、样式引入和首图渲染。
++- 开发者可以区分 source-only、受控和非受控模式，并正确保存、恢复和导出图表。
++- 开发者可以查到公共 runtime exports、主要类型、错误模型、schema 兼容和配置边界。
++- 发布包只包含运行所需 dist、声明、样式、README、LICENSE 和 package metadata。
++- beta 包在 React 18/19、ESM/CJS、当前/上一发布浏览器中通过真实消费验证。
++
++## Requirements
++
++### BETA-FR-001 公共 API 合同
++
++记录并测试唯一 runtime entry、稳定类型、styles subpath、peer dependency 和内部边界。G002 不导出 G2
++instance、`G2Spec`、projection、scene adapter 或 runtime handle。
++
++### BETA-FR-002 开发者入门
++
++提供安装、最小渲染、waterfall、bar/column、受控/非受控、保存/恢复、导出和配置示例。示例必须通过
++TypeScript package consumer 编译。
++
++### BETA-FR-003 错误与兼容
++
++文档覆盖 `ValidationResult`、`CommandError`、`TellPlotExportError`、legacy/current schema、source/view
++compatibility 和常见接入错误，不暴露数据值或 G2 内部异常。
++
++### BETA-FR-004 Beta 版本
++
++`@tellplot/editor` 使用 `0.1.0-beta.1`。根 workspace 与私有 playground 不参与发布版本。npm publish 和
++正式 Git release 不在本目标授权范围。
++
++### BETA-FR-005 包内容
++
++发布 tarball 包含 ESM、CJS、`.d.ts`、`.d.cts`、styles、source maps、package README、LICENSE 和
++package.json；不包含源码、测试、playground、evidence 或内部文档。
++
++### BETA-FR-006 迁移规则
++
++定义 beta SemVer、schema 兼容、公共入口和升级检查。产品定位中不存在的 `ai` command source 在 beta
++前从公共 wire union 删除；`host` 是外部调用来源。其余 runtime exports 和 command wire shape 保持。
++
++### BETA-FR-007 目标级交付
++
++G002 内部工作流连续执行，不逐项请求用户验收；最终统一提供 API、文档、tarball、测试和 residual risk
++evidence，并停在 `Needs_Review`。
++
++## Non-Functional Requirements
++
++- BETA-NFR-001：无新增 runtime/dev dependency。
++- BETA-NFR-002：TypeScript strict；禁止 `any`、`@ts-ignore`、`@ts-expect-error`。
++- BETA-NFR-003：现有 unit/coverage、package、React、browser、a11y、performance 和 export gates 不得弱化。
++- BETA-NFR-004：文档示例与真实公共类型保持同步。
++- BETA-NFR-005：包内容与 public exports 由确定性 contract tests 锁定。
++- BETA-NFR-006：核心包不发起网络请求，普通日志不包含金额、标签或来源明细。
++
++## Non-Goals
++
++- 新图表类型、运行中图表切换或多序列图表。
++- 新 UI、视觉改版或交互行为变更。
++- G2 分包、替换 G2、第二渲染引擎或通用插件系统。
++- 新状态库、动画库、文档站框架或 release automation dependency。
++- npm publish、GitHub Release、push、PR、merge 或旧仓库处置。
++
++## Success Criteria
++
++- BETA-SC-001：package README 的最小示例通过独立类型消费和真实 React matrix。
++- BETA-SC-002：public runtime exports 精确匹配批准列表，declarations 不泄漏内部 G2/runtime 类型。
++- BETA-SC-003：`pnpm pack --dry-run --json` 内容满足 BETA-FR-005，版本为 `0.1.0-beta.1`。
++- BETA-SC-004：publint、attw、ESM/CJS/types consumers 全部通过。
++- BETA-SC-005：完整 release-candidate gates 通过，无 unresolved Critical/High/Medium finding。
++
++## Approval Gate
++
++用户已批准 G002 的目标范围与目标级执行方式。内部任务不设置用户验收点；breaking scope、依赖、远程
++Git 和 publish 仍需独立明确授权。
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md b/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
+new file mode 100644
+index 0000000..d68ba0f
+--- /dev/null
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
+@@ -0,0 +1,54 @@
++# G002 轻量图表库 Beta Goal Graph
++
++## Metadata
++
++- Feature ID: `005-lightweight-chart-library-beta`
++- Goal ID: `G002`
++- Version: 0.1.0
++- Status: Confirmed
++- Last updated: 2026-07-20
++- Approval: 用户于 2026-07-20 明确批准 G002；内部任务无需逐项用户验收
++
++## T117 - 交付 G002 轻量图表库 Beta
++
++- Status: Needs_Review
++- Priority: P0
++- Dependencies: G001 / T101-T116 Accepted
++- Blocks: npm publish、G003 新图表扩展
++- Story / Requirement: G002；BETA-FR-001 至 BETA-FR-007；BETA-NFR-001 至 BETA-NFR-006
++- Parallel: false；G002 作为一个目标级 governed task 连续执行
++- Conflicts with: 新图表、runtime 行为、依赖升级、远程 Git、npm publish、正式 release
++- Goal: 交付可安装、可理解、可集成、可验证的 `@tellplot/editor@0.1.0-beta.1` release candidate。
++- Allowed files: `README.md`、`CHANGELOG.md`、`docs/**`、`package.json`、`packages/editor/package.json`、
++  `packages/editor/README.md`、`packages/editor/LICENSE`、`packages/editor/src/domain/commands.ts`、
++  `packages/editor/tests/domain/commands.test.ts`、`packages/editor/tests/package/**`、
++  `packages/editor/tests/react-matrix/run-react-matrix.mjs`、`.ai-platform/**`
++- Read-only behavior: charts、rendering、components、interactions、export implementation、styles、playground、E2E
++  behavior and screenshots
++- Test targets: public exports、command source、compile-checked quickstart、tarball allowlist、ESM/CJS/types、
++  React 18/19、当前/上一浏览器、a11y、performance、export regression
++- Deliverables: beta package metadata；package README/LICENSE；developer docs；CHANGELOG；tarball；目标级 evidence
++- Internal workstreams:
++  - beta API and command-source contract audit
++  - developer documentation and compile-checked examples
++  - package metadata, README, LICENSE, changelog and tarball allowlist
++  - package/React/browser/a11y/performance release-candidate validation
++  - goal-level spec/engineering/QA review and evidence
++- Acceptance criteria: BETA-SC-001 至 BETA-SC-005 全部满足；无 unresolved Critical/High/Medium finding；
++  npm publish、远程 Git 和正式 release 未执行。
++- Definition of Done: TDD receipt、完整 release-candidate gates、三层 review 与目标级 evidence 完整；G002 和
++  T117 同步进入 `Needs_Review`，只向用户请求一次目标验收。
++- Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:unit`；
++  `pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:e2e`；
++  `pnpm test:a11y`；`pnpm test:performance`；`pnpm test:browser-previous`；strict artifact validator；
++  `git diff --check`
++- TDD plan: RED 锁定 beta version、tarball、quickstart 和 command source；GREEN 做最小 package/docs 修改；
++  REFACTOR 只清理陈旧公共文案。
++- Packet path: `.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml`
++- Evidence required: `.ai-platform/evidence/T117/` 中的目标级 summary、tests、diff、pack manifest、API surface 和 review
++- User review: 只在整个 G002 完成后进入 `Needs_Review`。
++- Execution variance: compile-checked CSS import 需要为 styles subpath 声明 `types` condition；React tarball
++  consumer 的 manifest assertion 同步验证该 metadata，不改变 runtime、CSS 内容或导入路径。
++- Review state: spec compliance、bug/code quality 与 QA review 无 blocking finding；393/393 unit/coverage、
++  current browser 132/132、previous browser 132/132 + WebKit 18.4 44/44、a11y 27/27、React 18/19、package、
++  type/lint/format/build/performance 均通过。
+diff --git a/AGENTS.md b/AGENTS.md
+index e96e604..6f5016c 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -2,7 +2,7 @@
+ 
+ ## 项目状态
+ 
+-- 当前阶段：T101-T116 已验收；多图表基础能力目标 G001 已完成。
++- 当前阶段：T101-T116 已验收；G001 已完成；G002 / T117 轻量图表库 Beta 为 `Needs_Review`。
+ - 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
+ - 产品 SSOT：`.ai-platform/docs/product-design.md`。
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+new file mode 100644
+index 0000000..d437af1
+--- /dev/null
++++ b/CHANGELOG.md
+@@ -0,0 +1,25 @@
++# Changelog
++
++TellPlot 使用 Semantic Versioning。Beta 版本可能包含经迁移说明记录的公共合同调整。
++
++## 0.1.0-beta.1
++
++首个轻量图表库 beta release candidate。
++
++### Added
++
++- 基于 AntV G2 的瀑布图、分类条形图和分类柱状图。
++- React 18/19 组件，以及 source-only、非受控和受控集成模式。
++- 排序、递归分组、折叠、固定、注释、强调与撤销重做。
++- `ViewSpec` 验证、序列化和恢复。
++- SVG/PNG 导出、安全图表配置与无障碍摘要。
++- ESM、CJS、TypeScript declarations 和独立样式入口。
++
++### Changed
++
++- `CommandSource` 固定为 `direct | outline | keyboard | host`；外部确定性命令使用 `host`。
++
++### Release Status
++
++- Release candidate 已完成本地构建与验证，状态为 `Needs_Review`。
++- npm publish、Git tag 和正式 release 不包含在 G002 授权中。
+diff --git a/README.md b/README.md
+index bd7e88f..cf42b8d 100644
+--- a/README.md
++++ b/README.md
+@@ -4,7 +4,8 @@ TellPlot 是基于 AntV G2 的轻量可编辑基础图表库。它为 React 应
+ 
+ ## 当前状态
+ 
+-T101-T116 均已完成验收。仓库包含基于 G2 的可嵌入 `@tellplot/editor` React 组件包、瀑布图、分类条形图、分类柱状图、薄参考编辑器、安全图表配置层和完整质量证据；npm publish 与正式版本发布尚未执行。
++G001 多图表基础能力已验收；G002 已形成 `@tellplot/editor@0.1.0-beta.1` release candidate，完整质量门禁
++通过并等待目标级验收。npm publish 与正式版本发布尚未执行。
+ 
+ ## 本地开发
+ 
+@@ -29,7 +30,12 @@ pnpm test:package
+ - [文档入口](docs/README.md)
+ - [产品路线图](docs/roadmap.md)
+ - [架构概览](docs/architecture.md)
++- [入门与集成](docs/getting-started.md)
++- [公共 API](docs/api.md)
++- [错误处理](docs/errors.md)
+ - [图表配置边界](docs/configuration.md)
++- [迁移与兼容](docs/migration.md)
++- [变更记录](CHANGELOG.md)
+ - [产品设计 SSOT](.ai-platform/docs/product-design.md)
+ - [项目章程](.ai-platform/memory/constitution.md)
+ - [技术决策记录](.ai-platform/docs/technology-decision-record.md)
+@@ -52,3 +58,4 @@ pnpm test:package
+ - [任务图](.ai-platform/specs/001-waterfall-editor-foundation/tasks.md)
+ - [安全图表配置](.ai-platform/specs/003-chart-configuration-foundation/spec.md)
+ - [分类图与多图表架构](.ai-platform/specs/004-categorical-chart-validation/spec.md)
++- [轻量图表库 Beta](.ai-platform/specs/005-lightweight-chart-library-beta/spec.md)
+diff --git a/docs/README.md b/docs/README.md
+index 133a9ff..f39b511 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -14,7 +14,12 @@
+ 
+ - [产品路线图](roadmap.md)
+ - [架构概览](architecture.md)
++- [入门与集成](getting-started.md)
++- [公共 API](api.md)
++- [错误处理](errors.md)
+ - [图表配置边界](configuration.md)
++- [迁移与兼容](migration.md)
++- [变更记录](../CHANGELOG.md)
+ 
+ ## 文档规则
+ 
+@@ -22,4 +27,5 @@
+ - 路线图只记录产品阶段、结果和进入条件，不复制工程任务清单。
+ - 架构文档解释稳定边界；具体实现决策进入技术决策记录。
+ - 配置文档描述 TellPlot 公共语义，不把 G2 的内部配置面直接变成公共 API。
++- 入门和 API 示例必须与 package consumer 一起通过 TypeScript strict 编译。
+ - `.ai-platform/evidence/` 是不可变的交付证明，不承担当前产品说明职责。
+diff --git a/docs/api.md b/docs/api.md
+new file mode 100644
+index 0000000..e8886be
+--- /dev/null
++++ b/docs/api.md
+@@ -0,0 +1,98 @@
++# TellPlot 公共 API
++
++`@tellplot/editor` 只有一个 runtime 入口；类型也从同一入口导入。样式使用独立入口
++`@tellplot/editor/styles.css`。
++
++## Runtime Exports
++
++| Export                  | 用途                              |
++| ----------------------- | --------------------------------- |
++| `FinancialChartEditor`  | React 编辑器组件                  |
++| `createInitialViewSpec` | 为合法 source 创建兼容初始视图    |
++| `validateSourceData`    | 验证不可信 source 输入            |
++| `validateViewSpec`      | 验证 source/view 兼容与视图不变量 |
++| `parseViewSpec`         | 解析并验证持久化 JSON             |
++| `serializeViewSpec`     | 确定性序列化视图                  |
++| `createEditorSession`   | 创建不可变命令会话                |
++| `executeCommand`        | 执行确定性编辑命令                |
++| `undoSession`           | 撤销一个会话动作                  |
++| `redoSession`           | 重做一个会话动作                  |
++
++以上十个名称由 package contract test 精确锁定。
++
++## FinancialChartEditor
++
++主要 props：
++
++| Prop                | 类型                         | 说明                                   |
++| ------------------- | ---------------------------- | -------------------------------------- |
++| `sourceData`        | `SourceData`                 | 必填、只读的事实数据                   |
++| `viewSpec`          | `ViewSpec`                   | 受控视图                               |
++| `defaultViewSpec`   | `ViewSpec`                   | 非受控初始视图                         |
++| `historyLimit`      | `number`                     | 非负安全整数，默认 100                 |
++| `locale`            | `'zh-CN' \| 'en-US'`         | 界面与数字区域设置                     |
++| `readOnly`          | `boolean`                    | 禁用编辑命令                           |
++| `height`            | `number \| string`           | 编辑器高度                             |
++| `panels`            | `FinancialChartEditorPanels` | 显示或隐藏 outline、inspector、toolbar |
++| `chartAppearance`   | `FinancialChartAppearance`   | 有限、安全的呈现配置                   |
++| `onViewSpecChange`  | callback                     | 接收成功命令产生的新视图和事件         |
++| `onCommand`         | callback                     | 接收成功命令事件                       |
++| `onCommandRejected` | callback                     | 接收结构化 `CommandError`              |
++| `onSelectionChange` | callback                     | 接收稳定 node/source IDs               |
++
++组件 ref 为 `FinancialChartEditorHandle`：
++
++- `focus()`：把焦点移入编辑器。
++- `getViewSpec()`：读取当前有效视图。
++- `exportImage(options)`：导出 SVG 或 PNG。
++
++## 数据与视图
++
++`SourceData` 是严格 discriminated union：
++
++- legacy waterfall：`schemaVersion: '1.0.0'`，item 包含 `kind`。
++- current waterfall：`schemaVersion: '2.0.0'`、`dataKind: 'waterfall'`。
++- current categorical：`schemaVersion: '2.0.0'`、`dataKind: 'categorical'`。
++
++`ChartType` 为 `'waterfall' | 'bar' | 'column'`。waterfall source 只兼容 waterfall view；categorical source
++只兼容 bar/column view。
++
++`ViewSpec` 保存 dataset ID、schema、chart type、revision、顺序、分组、折叠、固定、注释与强调。编辑器命令
++创建新的 `ViewSpec`，不修改 `SourceData`。
++
++## 命令与会话
++
++`EditorCommand` 是带 `schemaVersion`、唯一 `id`、`source`、`baseRevision`、`type` 和封闭 `payload` 的
++discriminated union。`CommandSource` 为：
++
++- `direct`：图表直接操作。
++- `outline`：结构大纲操作。
++- `keyboard`：键盘操作。
++- `host`：宿主应用发起的确定性命令。
++
++支持 `moveItem`、`moveGroup`、`createGroup`、`ungroup`、`collapseGroup`、`expandGroup`、`pinItem`、
++`unpinItem` 和 `setAnnotation`。命令和 undo/redo 均校验 revision、重复 ID 与领域不变量。
++
++## ValidationResult
++
++验证与初始化函数返回：
++
++```ts
++type ValidationResult<T> =
++  | { readonly ok: true; readonly value: T; readonly errors: readonly [] }
++  | { readonly ok: false; readonly errors: readonly ValidationIssue[] };
++```
++
++调用方必须先检查 `ok`。错误包含稳定的 `code`、`reason`、`path` 和无敏感数据的 `details`。
++
++## 导出
++
++`ExportOptions` 支持 `svg`/`png`、`pixelRatio`、`background` 和 `filename`。返回的 `ExportResult` 包含
++`blob`、`mimeType`、`suggestedFilename`、`width` 和 `height`。失败抛出 `TellPlotExportError`，公共类型名为
++`ExportError`。
++
++## Internal Boundary
++
++以下内容不是公共 API：G2 `Chart`、`G2Spec`、projection、scene bounds、chart-family modules、screen/export
++runtime、pointer geometry 和内部 error adapters。TellPlot 通过受约束的语义类型维护屏幕、导出、交互、
++持久化和无障碍结果的一致性。
+diff --git a/docs/configuration.md b/docs/configuration.md
+index 8a8248f..304ae15 100644
+--- a/docs/configuration.md
++++ b/docs/configuration.md
+@@ -2,14 +2,15 @@
+ 
+ ## 目标
+ 
+-TellPlot 提供稳定、可测试、与财务语义一致的配置层。宿主可以调整常见呈现方式，但不能覆盖会破坏财务投影、拖拽命中、导出一致性或可访问性的 G2 内部配置。
++TellPlot 提供稳定、可测试、与基础图表语义一致的配置层。宿主可以调整常见呈现方式，但不能覆盖会破坏
++图表投影、拖拽命中、导出一致性或可访问性的 G2 内部配置。
+ 
+ ## 公共配置
+ 
+ `FinancialChartEditor` 通过 `chartAppearance` 接收 `FinancialChartAppearance`：
+ 
+ - `title`：图表可见标题、导出标题和无障碍摘要标题。
+-- `palette`：起点、正向、负向、小计、分组和终点的财务语义色。
++- `palette`：起点、正向、负向、小计、分组和终点的语义色；分类图复用适用的正负/分组颜色。
+ - `axis`：X/Y 坐标轴是否显示。
+ - `valueLabels`：`auto`、`always` 或 `never`。
+ - `tooltip`：是否启用 G2 图形 Tooltip；导出图像不包含交互 Tooltip。
+@@ -51,7 +52,7 @@ import '@tellplot/editor/styles.css';
+ 
+ - G2 `data` 与 transform。
+ - `encode.x`、`encode.y`、`encode.key` 和内部 color domain。
+-- X band 几何、稳定 node ID 和场景命中边界。
++- 分类轴几何、稳定 node ID 和场景命中边界。
+ - G2 chart instance、renderer 和事件注册。
+ - 拖拽状态机、Pointer capture 和落点计算。
+ - 任意 `G2Spec` merge、spec transform 或未约束回调。
+diff --git a/docs/errors.md b/docs/errors.md
+new file mode 100644
+index 0000000..c7fa1b4
+--- /dev/null
++++ b/docs/errors.md
+@@ -0,0 +1,76 @@
++# TellPlot 错误处理
++
++TellPlot 在公共边界使用稳定错误码和路径，不把原始数据值、标签、金额、G2 instance 或底层异常文本放入
++普通错误详情。
++
++## 数据与视图验证
++
++`validateSourceData`、`validateViewSpec`、`createInitialViewSpec` 和 `parseViewSpec` 返回
++`ValidationResult<T>`，不会用异常表示普通输入错误。
++
++```ts
++const result = validateSourceData(untrustedInput);
++
++if (!result.ok) {
++  for (const issue of result.errors) {
++    console.error(issue.code, issue.reason, issue.path);
++  }
++}
++```
++
++常见 `ValidationErrorCode`：
++
++- `INVALID_SOURCE_DATA`：source schema、字段或数值不合法。
++- `INVALID_VIEW_SPEC`：view schema、顺序、分组或引用不合法。
++- `INVALID_SESSION_OPTIONS`：history 等会话选项不合法。
++- `UNSUPPORTED_SCHEMA_VERSION`：schema generation 不受支持。
++- `SOURCE_CONFLICT`：dataset、schema 或 chart type 与 source 不兼容。
++
++`path` 使用 JSON Pointer 形式。`details` 只包含安全的结构信息，不应被当作用户原始内容。
++
++## 命令拒绝
++
++命令 API 返回 `CommandResult`。React 组件通过 `onCommandRejected` 报告相同的 `CommandError`。
++
++```tsx
++<FinancialChartEditor
++  sourceData={sourceData}
++  onCommandRejected={error => {
++    console.error(error.code, error.reason, error.path, error.commandId);
++  }}
++/>
++```
++
++常见 `CommandErrorCode` 包括 `INVALID_COMMAND`、`REVISION_CONFLICT`、`ITEM_LOCKED`、
++`INVALID_DROP_TARGET`、`GROUP_TOO_SMALL` 和 `INVARIANT_VIOLATION`。拒绝是原子操作：session 和 view 保持
++原有 identity，失败的命令不会写入历史。
++
++宿主构造命令时使用 `source: 'host'`。未知 source literal 会以 `INVALID_COMMAND` 拒绝。
++
++## 导出错误
++
++`exportImage` 失败时抛出 `TellPlotExportError`；对应公共接口名为 `ExportError`。
++
++```ts
++try {
++  await editorRef.current?.exportImage({ format: 'png', pixelRatio: 2 });
++} catch (error) {
++  if (error instanceof Error && error.name === 'TellPlotExportError' && 'code' in error) {
++    console.error(error.code);
++  }
++}
++```
++
++导出错误码：
++
++- `INVALID_EXPORT_OPTIONS`：格式、像素比、背景色或文件名无效。
++- `EXPORT_UNAVAILABLE`：当前 DOM/Canvas 环境不能完成导出。
++- `EXPORT_FAILED`：G2 渲染或格式编码失败。
++
++## 接入排查
++
++- 图表无样式：确认应用入口导入 `@tellplot/editor/styles.css`。
++- 图表显示 source/view 冲突：重新用当前 source 调用 `createInitialViewSpec`，或校验恢复的 view。
++- 条形图初始化失败：只有 current categorical source 可以使用 `bar` 或 `column`。
++- SSR 阶段缺少 DOM：在客户端挂载编辑器；服务端只处理纯验证与持久化函数。
++- 导出不可用：确认调用发生在已挂载、支持 Canvas/SVG 的浏览器环境。
+diff --git a/docs/getting-started.md b/docs/getting-started.md
+new file mode 100644
+index 0000000..95a85ff
+--- /dev/null
++++ b/docs/getting-started.md
+@@ -0,0 +1,158 @@
++# TellPlot 入门与集成
++
++## 环境要求
++
++- Node.js 22.13 或更高版本用于构建与测试。
++- React 18.3 或 React 19。
++- 现代浏览器环境；图表渲染依赖 DOM、Canvas 和 G2。
++
++## 安装
++
++```bash
++pnpm add @tellplot/editor @antv/g2 react react-dom
++```
++
++应用入口需要引入一次 TellPlot 样式：
++
++```ts
++import '@tellplot/editor/styles.css';
++```
++
++## 渲染第一个图表
++
++分类数据默认创建 `column` 视图。每个 `id` 在同一数据集中必须唯一，`amount` 必须是有限安全数值。
++
++```tsx
++import { FinancialChartEditor, type CategoricalSourceData } from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
++
++const sourceData: CategoricalSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'revenue-by-region',
++  items: [
++    { id: 'east', label: 'East', amount: 128 },
++    { id: 'west', label: 'West', amount: 96 },
++    { id: 'north', label: 'North', amount: 74 },
++  ],
++};
++
++export function RevenueChart() {
++  return <FinancialChartEditor sourceData={sourceData} locale="en-US" />;
++}
++```
++
++source-only 模式由组件创建并维护初始 `ViewSpec`。编辑顺序、分组和注释不会改写 `sourceData`。
++
++## 选择图表类型
++
++分类数据支持 `bar` 和 `column`。瀑布数据只支持 `waterfall`。
++
++```tsx
++import { createInitialViewSpec, FinancialChartEditor } from '@tellplot/editor';
++
++const initialView = createInitialViewSpec(sourceData, { chartType: 'bar' });
++
++if (!initialView.ok) {
++  throw new Error(initialView.errors[0]?.code ?? 'INVALID_VIEW_SPEC');
++}
++
++export function RevenueBars() {
++  return <FinancialChartEditor sourceData={sourceData} defaultViewSpec={initialView.value} />;
++}
++```
++
++瀑布图的 current schema 示例：
++
++```ts
++import type { WaterfallSourceData } from '@tellplot/editor';
++
++const waterfall: WaterfallSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'waterfall',
++  datasetId: 'profit-bridge',
++  currency: 'CNY',
++  items: [
++    { id: 'opening', label: '期初利润', amount: 1_000, kind: 'start' },
++    { id: 'growth', label: '收入增长', amount: 240, kind: 'contribution' },
++    { id: 'cost', label: '成本增加', amount: -90, kind: 'contribution' },
++    { id: 'ending', label: '期末利润', amount: 1_150, kind: 'end' },
++  ],
++};
++```
++
++## 非受控与受控模式
++
++非受控模式使用 `defaultViewSpec`，宿主可以通过 `ref.getViewSpec()` 读取当前视图。受控模式使用
++`viewSpec` 和 `onViewSpecChange`，宿主负责接受并保存每次变更。
++
++```tsx
++import { useState } from 'react';
++import { createInitialViewSpec, FinancialChartEditor, type ViewSpec } from '@tellplot/editor';
++
++const created = createInitialViewSpec(sourceData, { chartType: 'column' });
++if (!created.ok) throw new Error('Unable to create view');
++const initialView: ViewSpec = created.value;
++
++export function ControlledChart() {
++  const [viewSpec, setViewSpec] = useState(initialView);
++
++  return (
++    <FinancialChartEditor
++      sourceData={sourceData}
++      viewSpec={viewSpec}
++      onViewSpecChange={next => setViewSpec(next)}
++    />
++  );
++}
++```
++
++同一实例不要同时传入 `viewSpec` 和 `defaultViewSpec`。替换 `sourceData` 时，必须提供 dataset、schema 和
++chart type 兼容的视图。
++
++## 保存与恢复
++
++```ts
++import { parseViewSpec, serializeViewSpec } from '@tellplot/editor';
++
++const json = serializeViewSpec(editorRef.current!.getViewSpec());
++localStorage.setItem('tellplot:view', json);
++
++const restored = parseViewSpec(localStorage.getItem('tellplot:view') ?? '', sourceData);
++if (restored.ok) {
++  setViewSpec(restored.value);
++}
++```
++
++`sourceData` 是宿主拥有的事实数据，`ViewSpec` 是 TellPlot 的叙事视图。持久化时应分别保存，并在恢复时
++重新校验二者兼容性。
++
++## 导出
++
++```tsx
++import { useRef } from 'react';
++import { FinancialChartEditor, type FinancialChartEditorHandle } from '@tellplot/editor';
++
++const editorRef = useRef<FinancialChartEditorHandle>(null);
++
++async function exportPng() {
++  const result = await editorRef.current?.exportImage({ format: 'png', pixelRatio: 2 });
++  if (!result) return;
++
++  const url = URL.createObjectURL(result.blob);
++  const anchor = document.createElement('a');
++  anchor.href = url;
++  anchor.download = result.suggestedFilename;
++  anchor.click();
++  URL.revokeObjectURL(url);
++}
++```
++
++导出与屏幕渲染共享内部 G2 spec。宿主负责下载、上传或保存返回的 `Blob`。
++
++## 下一步
++
++- [公共 API](api.md)
++- [错误处理](errors.md)
++- [配置边界](configuration.md)
++- [迁移与兼容](migration.md)
+diff --git a/docs/migration.md b/docs/migration.md
+new file mode 100644
+index 0000000..0fd7362
+--- /dev/null
++++ b/docs/migration.md
+@@ -0,0 +1,44 @@
++# TellPlot Beta 迁移与兼容
++
++## 版本策略
++
++`@tellplot/editor@0.1.0-beta.1` 是首个 beta release candidate。Beta 阶段遵循 Semantic Versioning，
++但公共合同仍可能在后续 prerelease 中调整；每次升级都应阅读 changelog、重新编译并运行关键交互与导出测试。
++
++npm publish、Git tag 和正式 release 是独立交付闸门，版本字段本身不表示已经公开发布。
++
++## 公共入口
++
++- runtime 和类型：`@tellplot/editor`
++- 样式：`@tellplot/editor/styles.css`
++
++不要导入 `dist/`、`src/` 或内部 chart/rendering 路径。G2 `Chart`、`G2Spec`、projection 和 runtime handle
++不属于兼容承诺。
++
++## Schema 兼容
++
++| Source                            | View               | 支持                         |
++| --------------------------------- | ------------------ | ---------------------------- |
++| legacy waterfall `1.0.0`          | waterfall `1.0.0`  | 是，保持原 generation 序列化 |
++| current waterfall `2.0.0`         | waterfall `2.0.0`  | 是                           |
++| current categorical `2.0.0`       | bar/column `2.0.0` | 是                           |
++| waterfall source                  | bar/column view    | 否                           |
++| categorical source                | waterfall view     | 否                           |
++| 不同 dataset 或 schema generation | 任意               | 否                           |
++
++TellPlot 不执行隐式 schema migration。升级持久化内容时应保留原始 source，调用 `parseViewSpec` 或
++`validateViewSpec`，并对失败结果采用显式迁移或重新创建视图。
++
++## CommandSource
++
++Beta 公共 union 为 `direct | outline | keyboard | host`。未发布开发版本中的 `ai` literal 不进入 beta；
++宿主系统、自动化流程或其他外部调用统一使用 `source: 'host'`。命令的其余 envelope 与 payload shape 不变。
++
++## 升级检查
++
++1. 安装同一 prerelease 版本的包并保持 peer dependencies 满足范围。
++2. 只从公共入口导入，并引入 styles subpath。
++3. 用 TypeScript strict 重新编译应用。
++4. 验证持久化 view 与当前 source 的 dataset、schema 和 chart type 兼容。
++5. 验证受控状态更新、undo/redo、关键拖拽、SVG/PNG 和无障碍流程。
++6. 确认宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
+diff --git a/docs/roadmap.md b/docs/roadmap.md
+index 5f234a7..0a76a7e 100644
+--- a/docs/roadmap.md
++++ b/docs/roadmap.md
+@@ -25,7 +25,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ 
+ ## G002 轻量图表库 Beta
+ 
+-- Status: Planned
++- Status: Needs_Review
+ - Goal: 把当前三个图表家族整理成开发者可以直接安装、理解和稳定集成的 beta 版本。
+ - Included outcomes:
+   - 收敛并记录公共组件、数据、配置、事件、持久化和导出 API。
+diff --git a/packages/editor/LICENSE b/packages/editor/LICENSE
+new file mode 100644
+index 0000000..f709f26
+--- /dev/null
++++ b/packages/editor/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2026 TellPlot contributors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/packages/editor/README.md b/packages/editor/README.md
+new file mode 100644
+index 0000000..9c3767e
+--- /dev/null
++++ b/packages/editor/README.md
+@@ -0,0 +1,60 @@
++# @tellplot/editor
++
++基于 AntV G2 的轻量可编辑 React 图表组件。当前支持瀑布图、分类条形图和分类柱状图，并提供排序、
++分组、撤销重做、视图持久化、SVG/PNG 导出与无障碍摘要。
++
++## 安装
++
++```bash
++pnpm add @tellplot/editor @antv/g2 react react-dom
++```
++
++React 18.3 与 React 19 均受支持。`@antv/g2`、`react` 和 `react-dom` 是 peer dependencies。
++
++## 最小示例
++
++```tsx
++import { FinancialChartEditor, type CategoricalSourceData } from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
++
++const sourceData: CategoricalSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'revenue-by-region',
++  items: [
++    { id: 'east', label: 'East', amount: 128 },
++    { id: 'west', label: 'West', amount: 96 },
++    { id: 'north', label: 'North', amount: 74 },
++  ],
++};
++
++export function RevenueChart() {
++  return <FinancialChartEditor sourceData={sourceData} locale="en-US" />;
++}
++```
++
++分类数据默认渲染为柱状图。使用 `createInitialViewSpec(sourceData, { chartType: 'bar' })` 可以创建条形图
++视图；瀑布数据只与 `waterfall` 视图兼容。编辑动作只更新 `ViewSpec`，不会改写 `sourceData`。
++
++## 公共边界
++
++- 单一 runtime 入口：`@tellplot/editor`
++- 样式入口：`@tellplot/editor/styles.css`
++- 图表：`waterfall`、`bar`、`column`
++- React 模式：source-only、非受控、受控
++- 输出：序列化 `ViewSpec`、SVG、PNG
++- 内部实现：G2 spec、Chart instance、projection 与 rendering runtime 不属于公共 API
++
++`0.1.0-beta.1` 是发布候选版本。npm publish 与正式 release 需要独立授权。
++
++## 文档
++
++- [入门与集成](https://github.com/iiwish/tellplot/blob/main/docs/getting-started.md)
++- [公共 API](https://github.com/iiwish/tellplot/blob/main/docs/api.md)
++- [错误处理](https://github.com/iiwish/tellplot/blob/main/docs/errors.md)
++- [配置边界](https://github.com/iiwish/tellplot/blob/main/docs/configuration.md)
++- [迁移与兼容](https://github.com/iiwish/tellplot/blob/main/docs/migration.md)
++
++## License
++
++MIT
+diff --git a/packages/editor/package.json b/packages/editor/package.json
+index d23824a..6272cb9 100644
+--- a/packages/editor/package.json
++++ b/packages/editor/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "@tellplot/editor",
+-  "version": "0.0.0",
++  "version": "0.1.0-beta.1",
+   "description": "Lightweight editable React charts built on AntV G2",
+   "license": "MIT",
+   "homepage": "https://tellplot.com",
+@@ -12,6 +12,15 @@
+   "bugs": {
+     "url": "https://github.com/iiwish/tellplot/issues"
+   },
++  "keywords": [
++    "charts",
++    "react",
++    "g2",
++    "waterfall",
++    "bar-chart",
++    "column-chart",
++    "data-visualization"
++  ],
+   "type": "module",
+   "sideEffects": [
+     "**/*.css"
+@@ -33,13 +42,16 @@
+         "default": "./dist/index.cjs"
+       }
+     },
+-    "./styles.css": "./dist/styles.css",
++    "./styles.css": {
++      "types": "./dist/styles.d.ts",
++      "default": "./dist/styles.css"
++    },
+     "./package.json": "./package.json"
+   },
+   "scripts": {
+     "build": "tsup",
+     "typecheck": "tsc --noEmit -p tsconfig.json",
+-    "test:package": "publint && attw --pack . --exclude-entrypoints ./styles.css && node tests/package/import-esm.mjs && node tests/package/import-cjs.cjs && tsc -p tests/package/tsconfig.json"
++    "test:package": "publint && attw --pack . --exclude-entrypoints ./styles.css && node tests/package/import-esm.mjs && node tests/package/import-cjs.cjs && tsc -p tests/package/tsconfig.json && node tests/package/pack-contract.mjs"
+   },
+   "engines": {
+     "node": ">=22.13.0"
+diff --git a/packages/editor/src/domain/commands.ts b/packages/editor/src/domain/commands.ts
+index a9af4a0..df6dbab 100644
+--- a/packages/editor/src/domain/commands.ts
++++ b/packages/editor/src/domain/commands.ts
+@@ -1,7 +1,7 @@
+ import { commandError, type CommandError, type CommandErrorReason } from './errors';
+ import type { GroupId, SourceItemId, ViewNodeId } from './ids';
+ 
+-export type CommandSource = 'direct' | 'outline' | 'keyboard' | 'host' | 'ai';
++export type CommandSource = 'direct' | 'outline' | 'keyboard' | 'host';
+ 
+ export interface CommandEnvelope<TType extends string, TPayload> {
+   readonly schemaVersion: '1.0.0';
+@@ -117,7 +117,6 @@ const COMMAND_SOURCES: ReadonlySet<CommandSource> = new Set([
+   'outline',
+   'keyboard',
+   'host',
+-  'ai',
+ ]);
+ 
+ const COMMAND_TYPES: ReadonlySet<EditorCommandType> = new Set([
+diff --git a/packages/editor/tests/domain/commands.test.ts b/packages/editor/tests/domain/commands.test.ts
+index 1d1a2ab..8b1ee4d 100644
+--- a/packages/editor/tests/domain/commands.test.ts
++++ b/packages/editor/tests/domain/commands.test.ts
+@@ -150,7 +150,7 @@ function annotate(
+     schemaVersion: '1.0.0',
+     id,
+     type: 'setAnnotation',
+-    source: 'ai',
++    source: 'host',
+     baseRevision,
+     payload: { nodeId, text },
+   };
+@@ -620,6 +620,7 @@ describe('command envelope and atomicity', () => {
+       { ...validPin, id: ' ' },
+       { ...validPin, type: 'unknown' },
+       { ...validPin, source: 'unknown' },
++      { ...validPin, source: 'ai' },
+       { ...validPin, baseRevision: -1 },
+       { ...validPin, payload: null },
+       { ...validPin, payload: { itemId: ' ' } },
+diff --git a/packages/editor/tests/package/getting-started-consumer.tsx b/packages/editor/tests/package/getting-started-consumer.tsx
+new file mode 100644
+index 0000000..a04652d
+--- /dev/null
++++ b/packages/editor/tests/package/getting-started-consumer.tsx
+@@ -0,0 +1,17 @@
++import { FinancialChartEditor, type CategoricalSourceData } from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
++
++const sourceData: CategoricalSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'revenue-by-region',
++  items: [
++    { id: 'east', label: 'East', amount: 128 },
++    { id: 'west', label: 'West', amount: 96 },
++    { id: 'north', label: 'North', amount: 74 },
++  ],
++};
++
++export function RevenueChart() {
++  return <FinancialChartEditor sourceData={sourceData} locale="en-US" />;
++}
+diff --git a/packages/editor/tests/package/import-cjs.cjs b/packages/editor/tests/package/import-cjs.cjs
+index 02e58dd..2728e75 100644
+--- a/packages/editor/tests/package/import-cjs.cjs
++++ b/packages/editor/tests/package/import-cjs.cjs
+@@ -17,11 +17,14 @@ const expected = [
+ ];
+ 
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('CJS runtime API does not match the approved T107 surface');
++  throw new Error('CJS runtime API does not match the approved beta surface');
+ }
+ 
+ const packageJson = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8'));
+-if (packageJson.exports?.['./styles.css'] !== './dist/styles.css') {
++if (
++  packageJson.exports?.['./styles.css']?.types !== './dist/styles.d.ts' ||
++  packageJson.exports?.['./styles.css']?.default !== './dist/styles.css'
++) {
+   throw new Error('CJS package does not expose the approved styles.css subpath');
+ }
+ if (!Array.isArray(packageJson.sideEffects) || !packageJson.sideEffects.includes('**/*.css')) {
+diff --git a/packages/editor/tests/package/import-esm.mjs b/packages/editor/tests/package/import-esm.mjs
+index d3eaf9c..bdd8af9 100644
+--- a/packages/editor/tests/package/import-esm.mjs
++++ b/packages/editor/tests/package/import-esm.mjs
+@@ -16,13 +16,16 @@ const expected = [
+ ];
+ 
+ if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
+-  throw new Error('ESM runtime API does not match the approved T107 surface');
++  throw new Error('ESM runtime API does not match the approved beta surface');
+ }
+ 
+ const packageJson = JSON.parse(
+   await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
+ );
+-if (packageJson.exports?.['./styles.css'] !== './dist/styles.css') {
++if (
++  packageJson.exports?.['./styles.css']?.types !== './dist/styles.d.ts' ||
++  packageJson.exports?.['./styles.css']?.default !== './dist/styles.css'
++) {
+   throw new Error('ESM package does not expose the approved styles.css subpath');
+ }
+ if (!Array.isArray(packageJson.sideEffects) || !packageJson.sideEffects.includes('**/*.css')) {
+diff --git a/packages/editor/tests/package/pack-contract.mjs b/packages/editor/tests/package/pack-contract.mjs
+new file mode 100644
+index 0000000..4d9a4e4
+--- /dev/null
++++ b/packages/editor/tests/package/pack-contract.mjs
+@@ -0,0 +1,42 @@
++import { spawnSync } from 'node:child_process';
++import { fileURLToPath } from 'node:url';
++
++const packageRoot = fileURLToPath(new URL('../..', import.meta.url));
++const result = spawnSync('pnpm', ['pack', '--dry-run', '--json'], {
++  cwd: packageRoot,
++  encoding: 'utf8',
++});
++
++if (result.status !== 0) {
++  throw new Error(`pnpm pack --dry-run failed: ${result.stderr || result.stdout}`);
++}
++
++const manifest = JSON.parse(result.stdout);
++const paths = manifest.files.map(file => file.path).sort();
++const requiredPaths = [
++  'LICENSE',
++  'README.md',
++  'dist/index.cjs',
++  'dist/index.d.cts',
++  'dist/index.d.ts',
++  'dist/index.js',
++  'dist/styles.css',
++  'package.json',
++];
++
++if (manifest.name !== '@tellplot/editor') {
++  throw new Error(`Unexpected package name: ${manifest.name}`);
++}
++if (manifest.version !== '0.1.0-beta.1') {
++  throw new Error(`Unexpected beta version: ${manifest.version}`);
++}
++for (const path of requiredPaths) {
++  if (!paths.includes(path)) {
++    throw new Error(`Beta tarball is missing ${path}`);
++  }
++}
++for (const path of paths) {
++  if (!['LICENSE', 'README.md', 'package.json'].includes(path) && !path.startsWith('dist/')) {
++    throw new Error(`Beta tarball contains an internal path: ${path}`);
++  }
++}
+diff --git a/packages/editor/tests/package/public-api.test.ts b/packages/editor/tests/package/public-api.test.ts
+index 2812218..b80eda5 100644
+--- a/packages/editor/tests/package/public-api.test.ts
++++ b/packages/editor/tests/package/public-api.test.ts
+@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
+ import * as editor from '../../src/index';
+ 
+ describe('@tellplot/editor public entry', () => {
+-  it('exposes only the approved T107 runtime API', () => {
++  it('exposes only the approved beta runtime API', () => {
+     expect(Object.keys(editor).sort()).toEqual([
+       'FinancialChartEditor',
+       'createEditorSession',
+diff --git a/packages/editor/tests/package/tsconfig.json b/packages/editor/tests/package/tsconfig.json
+index 42aadc4..df32680 100644
+--- a/packages/editor/tests/package/tsconfig.json
++++ b/packages/editor/tests/package/tsconfig.json
+@@ -1,9 +1,10 @@
+ {
+   "extends": "../../../../tsconfig.base.json",
+   "compilerOptions": {
++    "jsx": "react-jsx",
+     "module": "NodeNext",
+     "moduleResolution": "NodeNext",
+     "types": []
+   },
+-  "files": ["types-consumer.ts"]
++  "files": ["getting-started-consumer.tsx", "types-consumer.ts"]
+ }
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index bd8983e..b393892 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -8,6 +8,7 @@ import {
+   serializeViewSpec,
+   undoSession,
+   type CommandResult,
++  type CommandSource,
+   type CategoricalSourceData,
+   type CategoricalSourceItem,
+   type ChartType,
+@@ -32,6 +33,14 @@ import {
+   type WaterfallSourceItem,
+ } from '@tellplot/editor';
+ 
++type Equal<TLeft, TRight> =
++  (<T>() => T extends TLeft ? 1 : 2) extends <T>() => T extends TRight ? 1 : 2 ? true : false;
++type Assert<TValue extends true> = TValue;
++
++export type BetaCommandSources = Assert<
++  Equal<CommandSource, 'direct' | 'outline' | 'keyboard' | 'host'>
++>;
++
+ declare const source: SourceData;
+ declare const view: ViewSpec;
+ declare const session: EditorSession;
+diff --git a/packages/editor/tests/react-matrix/run-react-matrix.mjs b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+index d0975ab..5194b38 100644
+--- a/packages/editor/tests/react-matrix/run-react-matrix.mjs
++++ b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+@@ -341,7 +341,10 @@ async function main() {
+       );
+       assert.equal(installedManifest.name, '@tellplot/editor');
+       assert.equal(installedManifest.version, sourceManifest.version);
+-      assert.equal(installedManifest.exports?.['./styles.css'], './dist/styles.css');
++      assert.deepEqual(installedManifest.exports?.['./styles.css'], {
++        types: './dist/styles.d.ts',
++        default: './dist/styles.css',
++      });
+       await run('pnpm', ['run', 'build'], { cwd: directory });
+       await verifyConsumer(browser, consumer, directory);
+     }

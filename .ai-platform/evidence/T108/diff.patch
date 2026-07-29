@@ -9035,7 +9035,7 @@ index 0000000..2621496
 +    - "pnpm test:a11y"
 +    - "pnpm test:performance"
 +    - "git diff --check"
-+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T108"
++    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T108"
 +  expected_signals:
 +    - "React 18.3 and React 19.2 isolated hosts install the packed package, import its CSS/public API, render a painted ready chart and unmount without page errors."
 +    - "Current Playwright 1.61.1 Chromium 149, Firefox 151 and WebKit 26.5; Playwright 1.60.0 Chromium 148, Firefox 150 and WebKit 26.4; and Playwright 1.52.0 WebKit 18.4 pass their configured E2E gates with actual runtime-version probes. The isolated current Chromium performance project passes p95 <=150ms with zero same-target React commits."

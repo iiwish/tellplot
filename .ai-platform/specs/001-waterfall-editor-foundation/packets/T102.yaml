@@ -86,7 +86,7 @@ validation_loop:
     - "pnpm lint"
     - "pnpm format:check"
     - "git diff --check"
-    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T102"
+    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T102"
   expected_signals:
     - "All commands exit 0 after GREEN."
     - "Domain statement, branch, function and line coverage are each at least 95%."

@@ -1,0 +1,251 @@
+schema_version: 1
+packet_id: EP-004-T113-A001
+task_id: T113
+feature_id: 004-categorical-chart-validation
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_spec: .ai-platform/specs/004-categorical-chart-validation/spec.md
+  data_model: .ai-platform/specs/004-categorical-chart-validation/data-model.md
+  public_api_contract: .ai-platform/specs/004-categorical-chart-validation/contracts/editor-api.md
+  requirements_checklist: .ai-platform/specs/004-categorical-chart-validation/checklists/requirements.md
+  feature_plan: .ai-platform/specs/004-categorical-chart-validation/plan.md
+  work_graph: .ai-platform/specs/004-categorical-chart-validation/tasks.md
+  analysis: .ai-platform/specs/004-categorical-chart-validation/analysis.md
+  approval_gates:
+    constitution: Confirmed
+    product_contract: Confirmed
+    feature_contracts: Confirmed by user on 2026-07-19
+    requirements_checklist: Completed with 0 Critical/High/Medium findings
+    technical_plan_and_work_graph: Confirmed by user on 2026-07-19
+    dependency_t112: Accepted by user on 2026-07-19
+    packet_review: User_Approved on 2026-07-19
+    implementation_authorization: User explicitly approved T113 packet and authorized implementation on 2026-07-19
+
+execution_receipt:
+  attempt_id: T113-A001
+  status: Accepted
+  evidence_directory: .ai-platform/evidence/T113
+  final_validation: >-
+    focused 23/23; full coverage 357/357; categorical coverage 98.90/100/100/98.88;
+    strict typecheck, build, lint, format, artifact and diff checks pass
+  review: >-
+    Spec compliance, engineering and QA review report no unresolved blocking finding; projection/spec remain
+    internal, use G2 native interval/transpose/animation, and preserve waterfall/public API behavior.
+  user_acceptance: >-
+    User requested T113 review and authorized T114 continuation if no issue on 2026-07-19; review found no
+    actionable issue, satisfying the conditional acceptance.
+  downstream_gate: T114 is authorized; T115 remains blocked until T114 is Accepted.
+
+work_unit:
+  title: 实现分类投影与 G2 Spec
+  goal: >-
+    建立一个确定性 categorical projection 和一个由 chartType 决定方向的 G2 5.4 interval
+    spec factory，覆盖递归分组聚合、稳定逻辑顺序、安全金额、语义颜色、标签、annotation、
+    emphasis、Tooltip 与 G2 原生 enter/update/exit animation，同时保持 waterfall 和公共 API 不变。
+  epic: E004
+  story: S004-2
+  requirements:
+    - CAT-FR-004
+    - CAT-FR-005
+    - CAT-FR-009
+    - CAT-NFR-001
+    - CAT-NFR-003
+    - CAT-NFR-004
+    - CAT-AC-003
+    - CAT-AC-006
+    - CAT-AC-007
+    - CAT-AC-008
+  priority: P0
+  depends_on:
+    - T112 Accepted
+  blocks:
+    - T115
+    - T116
+  parallel: >-
+    The work graph permits parallel execution with T114 only from the same accepted T112 baseline in separate
+    worktrees. The current accepted T112 baseline is uncommitted, so this packet defaults to sequential direct
+    execution and must not run concurrently in the current worktree.
+  conflicts_with:
+    - T114 interaction ownership
+    - T115 screen/export integration
+    - T116 runtime extraction
+    - Waterfall projection or rendering behavior
+    - FinancialChartAppearance public shape or defaults
+    - Any raw G2 public API
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - packages/editor/src/domain/model.ts
+    - packages/editor/src/domain/errors.ts
+    - packages/editor/src/domain/validation.ts
+    - packages/editor/src/domain/viewTree.ts
+    - packages/editor/src/config/chartAppearance.ts
+    - packages/editor/src/components/formatAmount.ts
+    - packages/editor/src/waterfall/projectWaterfall.ts
+    - packages/editor/src/waterfall/waterfallTypes.ts
+    - packages/editor/src/export/waterfallChartSpec.ts
+    - packages/editor/src/index.ts
+    - packages/editor/tests/export/chart-spec.test.ts
+    - vitest.config.ts
+    - packages/editor/package.json
+    - packages/editor/node_modules/@antv/g2/src/spec/animate.ts
+    - packages/editor/node_modules/@antv/g2/src/spec/coordinate.ts
+  existing_patterns:
+    - projectWaterfall first calls validateViewSpec, returns ValidationResult, catches hostile input, and never emits a partial projection after a numeric failure.
+    - Recursive narrative order comes from rootOrder and group childIds; collectLeafSourceIds provides deterministic logical leaf order for a validated tree.
+    - Waterfall aggregation uses a Neumaier accumulator and rejects non-finite or greater-than-MAX_SAFE_INTEGER results with INVALID_SOURCE_DATA / UNSAFE_AMOUNT.
+    - createWaterfallChartSpec is a pure G2Spec factory using interval, encode.key=nodeId, resolved appearance, formatAmount, Tooltip and G2 native animation.
+    - The locked G2 dependency is 5.4.8 and locally declares transpose, growInX and growInY; no dependency change is needed.
+    - Public package exports are curated only through packages/editor/src/index.ts; categorical projector/spec remain internal.
+  interfaces_or_contracts:
+    - CategoricalDatum has nodeId, label, amount, kind, sourceIds, locked and zero-based order exactly as data-model.md specifies.
+    - CategoricalProjectionResult is the standard ValidationResult wrapping an immutable CategoricalDatum array.
+    - projectCategorical accepts SourceData and ViewSpec, validates compatibility, and returns SOURCE_CONFLICT / INCOMPATIBLE_CHART_TYPE for non-categorical input.
+    - The spec factory accepts one projection plus bar or column chartType, locale, currency, reducedMotion, label visibility, annotations, emphasis and FinancialChartAppearance.
+  required_design:
+    - Bar and column use the same projection object and semantic encode x=nodeId, y=amount, color=kind and key=nodeId.
+    - Column uses Cartesian coordinates. Bar adds coordinate.transform transpose and reverses the category scale so logical order renders top-to-bottom.
+    - Public axis.x and axis.y retain visual-axis meaning. For bar, map the transposed G2 channel axis configuration accordingly instead of changing the public appearance contract.
+    - Direction-specific spec differences are limited to coordinate transform, category direction, visual-axis mapping, label placement and the native grow direction; data, key, palette, annotations, emphasis and Tooltip semantics stay equal.
+    - Ordinary amount below zero maps to negative; zero and positive map to positive; every collapsed group maps to group.
+    - reducedMotion, disabled animation or dense-canvas policy disables animation; otherwise use G2 native growInY for column, growInX for bar, morphing update and fadeOut exit.
+    - A collapsed group emits one datum whose sourceIds follow logical leaf order, amount is a compensated sum, and locked is true when any descendant is pinned. Expanded groups emit no datum of their own.
+    - Use a categorical-local, tested Neumaier accumulator. Do not move waterfall runtime merely to remove this small duplication before T116 has two integrated chart implementations to compare.
+  forbidden_changes:
+    - Do not modify React components, interactions, export runtime, waterfall source/tests, package entrypoint, dependencies or package metadata.
+    - Do not connect the categorical spec to a live Chart instance; screen and export integration belong to T115.
+    - Do not add a renderer abstraction, chart registry, plugin callback, second animation engine or generic chart runtime.
+    - Do not change FinancialChartAppearance fields, default values or public exports.
+    - Do not use any, @ts-ignore or @ts-expect-error, and do not log labels, amounts, source references or metadata.
+
+execution_constraints:
+  execution_mode: direct_after_approval
+  approval_required: Satisfied by explicit user approval on 2026-07-19.
+  direct_reason: Delegation was not authorized; repository policy requires one governed task at a time.
+  branch_or_worktree: codex/t112-categorical-data-contract
+  baseline_requirement: >-
+    T112 is user-accepted but uncommitted in this worktree. Execute against the current worktree after approval.
+    Parallel worktrees require a separately authorized commit or equivalent accepted baseline and are out of scope.
+  allowed_files:
+    - packages/editor/src/categorical/**
+    - packages/editor/src/config/chartAppearance.ts
+    - packages/editor/tests/categorical/**
+    - packages/editor/tests/export/categorical-chart-spec.test.ts
+    - vitest.config.ts
+    - .ai-platform/evidence/T113/**
+  read_only_regression_files:
+    - packages/editor/src/export/waterfallChartSpec.ts
+    - packages/editor/src/waterfall/**
+    - packages/editor/src/index.ts
+    - packages/editor/tests/export/chart-spec.test.ts
+  test_targets:
+    - packages/editor/tests/categorical/projectCategorical.test.ts
+    - packages/editor/tests/categorical/categorical-invariants.test.ts
+    - packages/editor/tests/export/categorical-chart-spec.test.ts
+    - packages/editor/tests/export/chart-spec.test.ts
+  ownership_notes:
+    - Add packages/editor/tests/categorical/**/*.test.ts to the editor-unit Vitest project and add a categorical source coverage threshold of at least 95 percent for all four metrics.
+    - chartAppearance.ts is available only for a proven internal pure helper; changing an existing type, field, default or resolution behavior is a stop condition.
+    - Stop if unrelated user edits appear in an allowed runtime or test file.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    files:
+      - packages/editor/tests/categorical/projectCategorical.test.ts
+      - packages/editor/tests/categorical/categorical-invariants.test.ts
+      - packages/editor/tests/export/categorical-chart-spec.test.ts
+    command: >-
+      pnpm exec vitest run packages/editor/tests/categorical/projectCategorical.test.ts
+      packages/editor/tests/categorical/categorical-invariants.test.ts
+      packages/editor/tests/export/categorical-chart-spec.test.ts
+      packages/editor/tests/export/chart-spec.test.ts
+    expected_failure: >-
+      New tests fail because CategoricalDatum, projectCategorical and the categorical G2 spec factory do not exist.
+      The existing waterfall chart-spec regression remains green and its expectations are not edited.
+  green:
+    command: >-
+      pnpm exec vitest run packages/editor/tests/categorical
+      packages/editor/tests/export/categorical-chart-spec.test.ts
+      packages/editor/tests/export/chart-spec.test.ts
+    expected_signal: >-
+      Projection fixtures, structural G2 spec assertions and the existing waterfall spec suite all pass with the
+      minimum internal categorical implementation.
+  refactor:
+    command: pnpm test:coverage
+    expected_signal: >-
+      Full configured coverage remains green and categorical statements, branches, functions and lines are each
+      at least 95 percent after cleanup; no waterfall runtime is moved.
+
+validation_loop:
+  commands:
+    - pnpm exec vitest run packages/editor/tests/categorical packages/editor/tests/export/categorical-chart-spec.test.ts packages/editor/tests/export/chart-spec.test.ts
+    - pnpm test:coverage
+    - pnpm typecheck
+    - pnpm build
+    - pnpm lint
+    - pnpm format:check
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation --task-id T113
+    - git diff --check
+  expected_signals:
+    - Empty, single, positive, negative, zero, duplicate-label and nested collapsed/expanded projections are deterministic.
+    - Compensated aggregation, sourceIds, pinned descendants, mixed-sign groups and unsafe overflow match the approved data model.
+    - Bar and column projections are deep-equal; spec differences are only the approved direction-sensitive fields.
+    - G2 interval, stable key, category order, actual visual axes, palette, labels, annotations, emphasis, Tooltip and native animation are structurally asserted.
+    - Existing waterfall spec tests pass without changed expectations and the package entrypoint has no new raw G2 or internal projection export.
+    - Artifact validator reports no errors or warnings for T113.
+  retry_budget: 2
+  failure_policy:
+    first_failure: Read exact output and fix only behavior directly owned by T113.
+    second_failure: Determine whether the failure is a scope, contract or environment blocker; do not widen allowed files or loosen coverage.
+    beyond_budget: Stop implementation, preserve RED/GREEN receipts and record blocked evidence.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T113/summary.md
+  diff: .ai-platform/evidence/T113/diff.patch
+  test_results: .ai-platform/evidence/T113/test-results.md
+  required:
+    - task ID, executor, attempt, worktree and direct-execution reason
+    - exact changed files and confirmation that public package exports are unchanged
+    - RED command, exit code and expected missing-implementation failure
+    - GREEN, refactor and final validation commands with exit codes
+    - projection fixture matrix and bar/column spec parity table
+    - categorical four-metric coverage and waterfall regression result
+    - spec-compliance, engineering and QA review findings
+    - residual risks and final patch
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - Projection validates first, preserves logical order and returns no partial data on any failure.
+    - Recursive collapsed groups aggregate every leaf once, preserve source order and propagate pinned locking.
+    - Bar/column share data and stable keys while visual axes and top-to-bottom order remain correct after transpose.
+    - Labels, annotations, emphasis, Tooltip, reduced motion and native G2 animations obey the existing appearance contract.
+    - No raw G2, projector, spec factory or chart runtime becomes public; waterfall behavior remains unchanged.
+  acceptance_rule: T113 moves to Needs_Review after validation; only explicit user acceptance can mark it Accepted.
+
+handoff:
+  task_status: Accepted
+  packet_review_status: User_Approved
+  recommended_execution_order: T113 before T114 in the current uncommitted worktree.
+  next_gate: Execute the user-authorized T114 packet; keep T115 blocked.
+  remote_actions: Commit, push, pull request, merge, publish and release are not authorized by this packet.
+
+stop_conditions:
+  - A required behavior needs React, interaction, export runtime, package entrypoint, dependency or waterfall changes.
+  - Bar/column parity requires changing the approved projection or public appearance contract.
+  - G2 5.4.8 cannot express the approved interval, transpose or native animation behavior.
+  - A coverage target can only pass by excluding categorical code, weakening a threshold or deleting an assertion.
+  - An unrelated user change appears in an allowed runtime or test file.
+  - Artifact validator reports an unresolved Critical/High finding or missing packet field.

@@ -1,6 +1,6 @@
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md
---- /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md	2026-07-16 11:57:54
-+++ /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/product-design.md <workspace>/tellplot/.ai-platform/docs/product-design.md
+--- <workspace>/g2touch/.ai-platform/docs/product-design.md	2026-07-16 11:57:54
++++ <workspace>/tellplot/.ai-platform/docs/product-design.md	2026-07-18 22:29:23
 @@ -1,18 +1,18 @@
 -# g2touch 产品设计 SSOT
 +# TellPlot 产品设计 SSOT
@@ -35,9 +35,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  ### CD-005 递归分组与画布直接操作
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md
---- /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md	2026-07-18 11:46:40
-+++ /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/release-report.md <workspace>/tellplot/.ai-platform/docs/release-report.md
+--- <workspace>/g2touch/.ai-platform/docs/release-report.md	2026-07-18 11:46:40
++++ <workspace>/tellplot/.ai-platform/docs/release-report.md	2026-07-18 22:29:23
 @@ -1,15 +1,15 @@
 -# g2touch 交付状态报告
 +# TellPlot 交付状态报告
@@ -69,9 +69,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
 -结论：本地 release candidate 已具备。实际发布前仍应在 GitHub-hosted runner 执行同一 CI，且发布、push、PR、merge 或 publish 必须获得单独授权。
 +结论：本地 release candidate 已具备。T109 负责建立新远端并验证 GitHub-hosted CI；npm publish 与正式版本发布必须获得单独授权。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md
---- /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md	2026-07-18 11:46:40
-+++ /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md	2026-07-18 22:31:35
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/tasks.md <workspace>/tellplot/.ai-platform/docs/tasks.md
+--- <workspace>/g2touch/.ai-platform/docs/tasks.md	2026-07-18 11:46:40
++++ <workspace>/tellplot/.ai-platform/docs/tasks.md	2026-07-18 22:31:35
 @@ -1,11 +1,11 @@
 -# g2touch 任务图
 +# TellPlot 任务图
@@ -116,9 +116,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
 -T101-T108 与 T106-CR001 已全部验收，瀑布图基础切片任务图执行完成。发布、publish、远程 CI、push、PR 或 merge 均属于单独授权的后续动作。
 +T109 完成后进入旧仓库归档决策。npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md
---- /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md	2026-07-16 17:13:10
-+++ /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/technology-decision-record.md <workspace>/tellplot/.ai-platform/docs/technology-decision-record.md
+--- <workspace>/g2touch/.ai-platform/docs/technology-decision-record.md	2026-07-16 17:13:10
++++ <workspace>/tellplot/.ai-platform/docs/technology-decision-record.md	2026-07-18 22:29:23
 @@ -1,15 +1,15 @@
 -# g2touch 技术决策记录
 +# TellPlot 技术决策记录
@@ -156,9 +156,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  ## Approval Gate
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md
---- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md	2026-07-18 22:47:06
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/evidence/T109/brand-audit.md <workspace>/tellplot/.ai-platform/evidence/T109/brand-audit.md
+--- <workspace>/g2touch/.ai-platform/evidence/T109/brand-audit.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/evidence/T109/brand-audit.md	2026-07-18 22:47:06
 @@ -0,0 +1,31 @@
 +# T109 Brand Audit
 +
@@ -191,13 +191,13 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +- the T109 forbidden-remote statements that prevent writes to the predecessor repository.
 +
 +The common credential signature scan also returned no matches. `gitleaks` is not installed locally, so repository-native pattern scanning and GitHub security facilities provide the available migration checks.
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/diff.patch /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/diff.patch
---- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/diff.patch	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/diff.patch	2026-07-18 22:47:42
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/evidence/T109/diff.patch <workspace>/tellplot/.ai-platform/evidence/T109/diff.patch
+--- <workspace>/g2touch/.ai-platform/evidence/T109/diff.patch	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/evidence/T109/diff.patch	2026-07-18 22:47:42
 @@ -0,0 +1,182 @@
-+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md
-+--- /Users/iiwish/self/g2touch/.ai-platform/docs/product-design.md	2026-07-16 11:57:54
-++++ /Users/iiwish/self/tellplot/.ai-platform/docs/product-design.md	2026-07-18 22:29:23
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/product-design.md <workspace>/tellplot/.ai-platform/docs/product-design.md
++--- <workspace>/g2touch/.ai-platform/docs/product-design.md	2026-07-16 11:57:54
+++++ <workspace>/tellplot/.ai-platform/docs/product-design.md	2026-07-18 22:29:23
 +@@ -1,18 +1,18 @@
 +-# g2touch 产品设计 SSOT
 ++# TellPlot 产品设计 SSOT
@@ -232,9 +232,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 + 
 + ### CD-005 递归分组与画布直接操作
 + 
-+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md
-+--- /Users/iiwish/self/g2touch/.ai-platform/docs/release-report.md	2026-07-18 11:46:40
-++++ /Users/iiwish/self/tellplot/.ai-platform/docs/release-report.md	2026-07-18 22:29:23
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/release-report.md <workspace>/tellplot/.ai-platform/docs/release-report.md
++--- <workspace>/g2touch/.ai-platform/docs/release-report.md	2026-07-18 11:46:40
+++++ <workspace>/tellplot/.ai-platform/docs/release-report.md	2026-07-18 22:29:23
 +@@ -1,15 +1,15 @@
 +-# g2touch 交付状态报告
 ++# TellPlot 交付状态报告
@@ -266,9 +266,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 + 
 +-结论：本地 release candidate 已具备。实际发布前仍应在 GitHub-hosted runner 执行同一 CI，且发布、push、PR、merge 或 publish 必须获得单独授权。
 ++结论：本地 release candidate 已具备。T109 负责建立新远端并验证 GitHub-hosted CI；npm publish 与正式版本发布必须获得单独授权。
-+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md
-+--- /Users/iiwish/self/g2touch/.ai-platform/docs/tasks.md	2026-07-18 11:46:40
-++++ /Users/iiwish/self/tellplot/.ai-platform/docs/tasks.md	2026-07-18 22:31:35
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/tasks.md <workspace>/tellplot/.ai-platform/docs/tasks.md
++--- <workspace>/g2touch/.ai-platform/docs/tasks.md	2026-07-18 11:46:40
+++++ <workspace>/tellplot/.ai-platform/docs/tasks.md	2026-07-18 22:31:35
 +@@ -1,11 +1,11 @@
 +-# g2touch 任务图
 ++# TellPlot 任务图
@@ -313,9 +313,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 + 
 +-T101-T108 与 T106-CR001 已全部验收，瀑布图基础切片任务图执行完成。发布、publish、远程 CI、push、PR 或 merge 均属于单独授权的后续动作。
 ++T109 完成后进入旧仓库归档决策。npm publish、正式版本发布以及旧仓库归档/删除仍属于单独授权的后续动作。
-+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md
-+--- /Users/iiwish/self/g2touch/.ai-platform/docs/technology-decision-record.md	2026-07-16 17:13:10
-++++ /Users/iiwish/self/tellplot/.ai-platform/docs/technology-decision-record.md	2026-07-18 22:29:23
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/docs/technology-decision-record.md <workspace>/tellplot/.ai-platform/docs/technology-decision-record.md
++--- <workspace>/g2touch/.ai-platform/docs/technology-decision-record.md	2026-07-16 17:13:10
+++++ <workspace>/tellplot/.ai-platform/docs/technology-decision-record.md	2026-07-18 22:29:23
 +@@ -1,15 +1,15 @@
 +-# g2touch 技术决策记录
 ++# TellPlot 技术决策记录
@@ -353,9 +353,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 + 
 + ## Approval Gate
 + 
-+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md
-+--- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/brand-audit.md	1970-01-01 08:00:00
-++++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/brand-audit.md	2026-07-18 22:47:06
++diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/evidence/T109/brand-audit.md <workspace>/tellplot/.ai-platform/evidence/T109/brand-audit.md
++--- <workspace>/g2touch/.ai-platform/evidence/T109/brand-audit.md	1970-01-01 08:00:00
+++++ <workspace>/tellplot/.ai-platform/evidence/T109/brand-audit.md	2026-07-18 22:47:06
 +@@ -0,0 +1,31 @@
 ++# T109 Brand Audit
 ++
@@ -376,15 +376,15 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 ++- DOM scope: `[data-tellplot]`
 ++- CSS namespace: `.tp-` / `--tp-`
 ++- Runtime type prefix: `TellPlot*`
-++- Environment namespdiff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/migration-inventory.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/migration-inventory.md
---- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/migration-inventory.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/migration-inventory.md	2026-07-18 22:47:06
+++- Environment namespdiff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/evidence/T109/migration-inventory.md <workspace>/tellplot/.ai-platform/evidence/T109/migration-inventory.md
+--- <workspace>/g2touch/.ai-platform/evidence/T109/migration-inventory.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/evidence/T109/migration-inventory.md	2026-07-18 22:47:06
 @@ -0,0 +1,27 @@
 +# T109 Migration Inventory
 +
 +## Source
 +
-+- Working tree: `/Users/iiwish/self/g2touch`
++- Working tree: `<workspace>/g2touch`
 +- Source HEAD: `af3aec4f5d2b74453a56cb413777a1dd93b5daf6`
 +- Remote main: `af3aec4f5d2b74453a56cb413777a1dd93b5daf6`
 +- Remote dev: `59739ed6ba5695b8edf54c2989d19105295a1c6c`
@@ -392,13 +392,13 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +
 +## Safety Copy
 +
-+- Bare mirror: `/Users/iiwish/self/g2touch-legacy.git`
++- Bare mirror: `<workspace>/g2touch-legacy.git`
 +- `git fsck --full`: exit 0
 +- Mirror heads match remote `main` and `dev`.
 +
 +## Target
 +
-+- Working tree: `/Users/iiwish/self/tellplot`
++- Working tree: `<workspace>/tellplot`
 +- Git history: independent repository initialized with `main` and no inherited commits
 +- Initial copy audit: `rsync -ani --delete` returned no differences after excluding `.git`, dependencies, build, coverage and browser-result directories
 +- Existing T101-T108 evidence comparison: `diff -qr` returned no differences before T109 evidence was added
@@ -407,9 +407,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +## Remote Boundary
 +
 +The old GitHub repository was only read through `ls-remote` and mirror clone. It was not renamed, archived, deleted, pushed or otherwise modified during T109.
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/summary.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/summary.md
---- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/summary.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/summary.md	2026-07-18 22:47:06
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/evidence/T109/summary.md <workspace>/tellplot/.ai-platform/evidence/T109/summary.md
+--- <workspace>/g2touch/.ai-platform/evidence/T109/summary.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/evidence/T109/summary.md	2026-07-18 22:47:06
 @@ -0,0 +1,18 @@
 +# T109 Summary
 +
@@ -429,9 +429,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +
 +- The first current-browser matrix had one non-reproducing Chromium focus failure; the exact isolated scenario and a clean full matrix passed without changes. Remote CI remains the independent environment check.
 +- GitHub Actions still uses major action tags; full SHA pinning remains a separately tracked supply-chain hardening item.
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/test-results.md /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/test-results.md
---- /Users/iiwish/self/g2touch/.ai-platform/evidence/T109/test-results.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/evidence/T109/test-results.md	2026-07-18 22:47:06
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/evidence/T109/test-results.md <workspace>/tellplot/.ai-platform/evidence/T109/test-results.md
+--- <workspace>/g2touch/.ai-platform/evidence/T109/test-results.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/evidence/T109/test-results.md	2026-07-18 22:47:06
 @@ -0,0 +1,28 @@
 +# T109 Test Results
 +
@@ -461,9 +461,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +- Brand and filename audits: pass with the documented historical/forbidden-remote allowlist
 +- Remote CI: pending first push
 +- Clean clone verification: pending first push
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/memory/constitution.md /Users/iiwish/self/tellplot/.ai-platform/memory/constitution.md
---- /Users/iiwish/self/g2touch/.ai-platform/memory/constitution.md	2026-07-15 10:56:11
-+++ /Users/iiwish/self/tellplot/.ai-platform/memory/constitution.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/memory/constitution.md <workspace>/tellplot/.ai-platform/memory/constitution.md
+--- <workspace>/g2touch/.ai-platform/memory/constitution.md	2026-07-15 10:56:11
++++ <workspace>/tellplot/.ai-platform/memory/constitution.md	2026-07-18 22:29:23
 @@ -1,15 +1,15 @@
 -# g2touch 项目章程
 +# TellPlot 项目章程
@@ -496,9 +496,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  - 未经用户明确授权，不执行远程 push、PR、merge 或 publish。
  - 产品 SSOT、技术决策和任务图分别经过用户明确批准。
  - 实现完成后先进行 spec compliance review，再进行代码与行为 review。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md	2026-07-16 11:58:42
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md
+--- <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md	2026-07-16 11:58:42
++++ <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/command-schema.md	2026-07-18 22:26:02
 @@ -4,7 +4,7 @@
  
  - Version: 0.3.0
@@ -508,9 +508,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  ## Common Envelope
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md	2026-07-16 13:12:43
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md
+--- <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md	2026-07-16 13:12:43
++++ <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/contracts/editor-api.md	2026-07-18 22:26:09
 @@ -1,10 +1,10 @@
 -# `@g2touch/editor` 公共 API 合同
 +# `@tellplot/editor` 公共 API 合同
@@ -542,9 +542,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  - CSS variables 可在组件 root 覆盖，未提供时使用 design contract 默认值。
  - 不修改 `html`、`body`、通用 `button`、`input` 或全局 box-sizing。
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md	2026-07-16 17:53:21
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md
+--- <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md	2026-07-16 17:53:21
++++ <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md	2026-07-18 22:26:09
 @@ -33,22 +33,22 @@
  
  ## Color Tokens
@@ -593,9 +593,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  - 图表提供可读标题、摘要和当前顺序列表；Canvas 不是唯一信息源。
  - hover-only group action 必须在 selection、focus-visible 和键盘大纲中提供等价路径。
  - 触控目标最小 32px，关键主操作 36px。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
---- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml	2026-07-16 10:28:53
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml
+--- <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml	2026-07-16 10:28:53
++++ <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T106.yaml	2026-07-18 22:26:02
 @@ -107,7 +107,7 @@
      - "e2e/accessibility.spec.ts"
      - "e2e/performance.spec.ts"
@@ -605,9 +605,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      - "Add exact @axe-core/playwright 4.12.1 root devDependency for the approved accessibility gate."
      - "Do not add Motion, Framer Motion, GSAP, a global store or another chart renderer."
    allowed_scope_correction: "T106 component wiring requires FinancialChartEditor and editorMessages, existing G2 mocks require tests/setup, and the approved 200-item browser gate requires one deterministic playground fixture. The canonical allowed scope therefore uses components/**, tests/components/** and apps/playground/src/fixtures.ts without changing product behavior or public API."
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml
---- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml	2026-07-18 11:46:18
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml
+--- <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml	2026-07-18 11:46:18
++++ <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/packets/T108.yaml	2026-07-18 22:26:02
 @@ -59,7 +59,7 @@
    branch: "codex/reset"
    current_state: "T101-T107 and T106-CR001 are Accepted. The intentionally dirty reset worktree contains the complete new workspace and evidence history. Current and compatibility Playwright browser binaries are available for the full matrices."
@@ -626,9 +626,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      - "Add CI that performs frozen install, static quality gates, coverage, build/package/matrix checks and Playwright browser validation with artifacts on failure."
      - "Copy the complete root non-performance E2E tree into exact temporary Playwright hosts. Run 36 tests each on Playwright 1.60.0 Chromium 148, Firefox 150 and WebKit 26.4, plus Playwright 1.52.0 WebKit 18.4, for 144/144 without changing the workspace lockfile."
      - "Run the accepted quickstart and all browser projects; capture desktop, compact and mobile final screenshots from the production build."
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/plan.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/plan.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/plan.md	2026-07-16 17:13:10
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/plan.md	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/plan.md <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/plan.md
+--- <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/plan.md	2026-07-16 17:13:10
++++ <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/plan.md	2026-07-18 22:26:09
 @@ -10,7 +10,7 @@
  
  ## Architecture Summary
@@ -647,9 +647,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  ## G2 Adapter
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/research.md /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/research.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/research.md	2026-07-15 11:20:10
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/research.md	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/research.md <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/research.md
+--- <workspace>/g2touch/.ai-platform/specs/001-waterfall-editor-foundation/research.md	2026-07-15 11:20:10
++++ <workspace>/tellplot/.ai-platform/specs/001-waterfall-editor-foundation/research.md	2026-07-18 22:26:02
 @@ -65,7 +65,7 @@
  
  ## Package Boundary Decision
@@ -659,9 +659,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  公共包同时提供 ESM 与 CJS runtime。package exports 为 import 映射 ESM `.d.ts`，为 require 映射 CJS `.d.cts`，并使用 packed artifact 的 Are The Types Wrong 检查阻断 declaration/module format 错配。
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/analysis.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/analysis.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/analysis.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/analysis.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/analysis.md <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/analysis.md
+--- <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/analysis.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/analysis.md	2026-07-18 22:29:23
 @@ -0,0 +1,9 @@
 +# T109 Cross-Artifact Analysis
 +
@@ -672,9 +672,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +- Medium: 0
 +
 +迁移与已确认产品定位、章程、TDR 和 T101-T108 验收结果一致。任务只改变品牌与仓库身份，不改变领域行为；旧 GitHub 仓库被列为 forbidden remote，避免迁移与归档混在同一不可逆步骤中。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md
+--- <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/checklists/requirements.md	2026-07-18 22:29:23
 @@ -0,0 +1,9 @@
 +# T109 Requirements Checklist
 +
@@ -685,9 +685,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +- [x] 包名、公共标识和验证范围明确。
 +- [x] 本地与远程停止条件明确。
 +- [x] 回退路径不依赖删除旧仓库。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml
---- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml	2026-07-18 22:31:35
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml
+--- <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/packets/T109.yaml	2026-07-18 22:31:35
 @@ -0,0 +1,109 @@
 +schema_version: "1.0"
 +packet_id: "002-tellplot-repository-migration-T109-A001"
@@ -762,7 +762,7 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +    - "pnpm test:a11y"
 +    - "pnpm test:performance"
 +    - "git diff --check"
-+    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 002-tellplot-repository-migration --task-id T109 --strict"
++    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 002-tellplot-repository-migration --task-id T109 --strict"
 +  expected_signals:
 +    - "No current source, package, selector, CSS or canonical documentation exposes the legacy namespace."
 +    - "All accepted local quality gates pass under the @tellplot package identity."
@@ -798,9 +798,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +  task_status: "In_Progress"
 +  next_gate: "Complete remote CI and repository protection, then request acceptance before any legacy-repository action."
 +  remote_actions: "Creating and pushing iiwish/tellplot is authorized; npm publish and old-repository changes are not authorized."
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/plan.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/plan.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/plan.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/plan.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/plan.md <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/plan.md
+--- <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/plan.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/plan.md	2026-07-18 22:29:23
 @@ -0,0 +1,22 @@
 +# TellPlot 品牌与仓库迁移 Plan
 +
@@ -824,9 +824,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +- 未推送前删除新目录即可回退，源工作树与旧远端不受影响。
 +- 已推送后删除新远端即可回退；旧历史镜像位于本地 bare backup。
 +- 任何验证失败都阻断提交、推送或仓库保护步骤。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/spec.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/spec.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/spec.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/spec.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/spec.md <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/spec.md
+--- <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/spec.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/spec.md	2026-07-18 22:29:23
 @@ -0,0 +1,28 @@
 +# TellPlot 品牌与仓库迁移 Spec
 +
@@ -856,9 +856,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +- 不修改财务领域模型、交互行为或视觉设计。
 +- 不执行 npm publish、正式版本发布或网站部署。
 +- 不处理旧 GitHub 仓库的最终归档或删除。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/tasks.md /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/tasks.md
---- /Users/iiwish/self/g2touch/.ai-platform/specs/002-tellplot-repository-migration/tasks.md	1970-01-01 08:00:00
-+++ /Users/iiwish/self/tellplot/.ai-platform/specs/002-tellplot-repository-migration/tasks.md	2026-07-18 22:31:35
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/tasks.md <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/tasks.md
+--- <workspace>/g2touch/.ai-platform/specs/002-tellplot-repository-migration/tasks.md	1970-01-01 08:00:00
++++ <workspace>/tellplot/.ai-platform/specs/002-tellplot-repository-migration/tasks.md	2026-07-18 22:31:35
 @@ -0,0 +1,23 @@
 +# TellPlot 品牌与仓库迁移任务
 +
@@ -883,9 +883,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
 +- TDD plan: RED brand audit；GREEN namespace migration；REFACTOR canonical documentation；不修改产品行为。
 +- Packet path: `packets/T109.yaml`
 +- Evidence required: inventory、mirror fsck、brand audit、local validation、remote CI、repository rules、old remote immutability proof。
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/AGENTS.md /Users/iiwish/self/tellplot/AGENTS.md
---- /Users/iiwish/self/g2touch/AGENTS.md	2026-07-15 11:08:42
-+++ /Users/iiwish/self/tellplot/AGENTS.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/AGENTS.md <workspace>/tellplot/AGENTS.md
+--- <workspace>/g2touch/AGENTS.md	2026-07-15 11:08:42
++++ <workspace>/tellplot/AGENTS.md	2026-07-18 22:29:23
 @@ -1,15 +1,15 @@
 -# AGENTS.md - g2touch AI Agent Guide
 +# AGENTS.md - TellPlot AI Agent Guide
@@ -906,9 +906,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  ## 工作边界
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/LICENSE /Users/iiwish/self/tellplot/LICENSE
---- /Users/iiwish/self/g2touch/LICENSE	2026-07-15 09:33:19
-+++ /Users/iiwish/self/tellplot/LICENSE	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/LICENSE <workspace>/tellplot/LICENSE
+--- <workspace>/g2touch/LICENSE	2026-07-15 09:33:19
++++ <workspace>/tellplot/LICENSE	2026-07-18 22:29:23
 @@ -1,6 +1,6 @@
  MIT License
  
@@ -917,9 +917,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/README.md /Users/iiwish/self/tellplot/README.md
---- /Users/iiwish/self/g2touch/README.md	2026-07-15 11:03:03
-+++ /Users/iiwish/self/tellplot/README.md	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/README.md <workspace>/tellplot/README.md
+--- <workspace>/g2touch/README.md	2026-07-15 11:03:03
++++ <workspace>/tellplot/README.md	2026-07-18 22:29:23
 @@ -1,11 +1,29 @@
 -# g2touch
 +# TellPlot
@@ -970,9 +970,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  ## 当前里程碑
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/index.html /Users/iiwish/self/tellplot/apps/playground/index.html
---- /Users/iiwish/self/g2touch/apps/playground/index.html	2026-07-15 13:39:42
-+++ /Users/iiwish/self/tellplot/apps/playground/index.html	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/apps/playground/index.html <workspace>/tellplot/apps/playground/index.html
+--- <workspace>/g2touch/apps/playground/index.html	2026-07-15 13:39:42
++++ <workspace>/tellplot/apps/playground/index.html	2026-07-18 22:29:23
 @@ -4,7 +4,7 @@
      <meta charset="UTF-8" />
      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -982,9 +982,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    </head>
    <body>
      <div id="root"></div>
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/package.json /Users/iiwish/self/tellplot/apps/playground/package.json
---- /Users/iiwish/self/g2touch/apps/playground/package.json	2026-07-16 10:42:42
-+++ /Users/iiwish/self/tellplot/apps/playground/package.json	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/apps/playground/package.json <workspace>/tellplot/apps/playground/package.json
+--- <workspace>/g2touch/apps/playground/package.json	2026-07-16 10:42:42
++++ <workspace>/tellplot/apps/playground/package.json	2026-07-18 22:26:02
 @@ -1,5 +1,5 @@
  {
 -  "name": "@g2touch/playground",
@@ -1001,9 +1001,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      "lucide-react": "1.24.0",
      "react": "19.2.7",
      "react-dom": "19.2.7"
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/src/App.tsx /Users/iiwish/self/tellplot/apps/playground/src/App.tsx
---- /Users/iiwish/self/g2touch/apps/playground/src/App.tsx	2026-07-16 11:03:22
-+++ /Users/iiwish/self/tellplot/apps/playground/src/App.tsx	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/apps/playground/src/App.tsx <workspace>/tellplot/apps/playground/src/App.tsx
+--- <workspace>/g2touch/apps/playground/src/App.tsx	2026-07-16 11:03:22
++++ <workspace>/tellplot/apps/playground/src/App.tsx	2026-07-18 22:29:23
 @@ -6,7 +6,7 @@
    type ExportError,
    type FinancialChartEditorHandle,
@@ -1022,18 +1022,18 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
        <header className="playground-filebar" aria-label="文件与导出">
          <div className="playground-filebar__actions">
            <button
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/src/fixtures.ts /Users/iiwish/self/tellplot/apps/playground/src/fixtures.ts
---- /Users/iiwish/self/g2touch/apps/playground/src/fixtures.ts	2026-07-15 16:23:49
-+++ /Users/iiwish/self/tellplot/apps/playground/src/fixtures.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/apps/playground/src/fixtures.ts <workspace>/tellplot/apps/playground/src/fixtures.ts
+--- <workspace>/g2touch/apps/playground/src/fixtures.ts	2026-07-15 16:23:49
++++ <workspace>/tellplot/apps/playground/src/fixtures.ts	2026-07-18 22:26:02
 @@ -1,4 +1,4 @@
 -import type { SourceData } from '@g2touch/editor';
 +import type { SourceData } from '@tellplot/editor';
  
  const financialFixture = {
    schemaVersion: '1.0.0',
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/src/main.tsx /Users/iiwish/self/tellplot/apps/playground/src/main.tsx
---- /Users/iiwish/self/g2touch/apps/playground/src/main.tsx	2026-07-15 13:39:42
-+++ /Users/iiwish/self/tellplot/apps/playground/src/main.tsx	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/apps/playground/src/main.tsx <workspace>/tellplot/apps/playground/src/main.tsx
+--- <workspace>/g2touch/apps/playground/src/main.tsx	2026-07-15 13:39:42
++++ <workspace>/tellplot/apps/playground/src/main.tsx	2026-07-18 22:26:02
 @@ -1,7 +1,7 @@
  import { StrictMode } from 'react';
  import { createRoot } from 'react-dom/client';
@@ -1043,9 +1043,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  import { App } from './App';
  import './playground.css';
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/tsconfig.json /Users/iiwish/self/tellplot/apps/playground/tsconfig.json
---- /Users/iiwish/self/g2touch/apps/playground/tsconfig.json	2026-07-15 13:57:10
-+++ /Users/iiwish/self/tellplot/apps/playground/tsconfig.json	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/apps/playground/tsconfig.json <workspace>/tellplot/apps/playground/tsconfig.json
+--- <workspace>/g2touch/apps/playground/tsconfig.json	2026-07-15 13:57:10
++++ <workspace>/tellplot/apps/playground/tsconfig.json	2026-07-18 22:26:02
 @@ -4,7 +4,7 @@
      "skipLibCheck": true,
      "types": ["node", "vite/client", "react", "react-dom"],
@@ -1055,9 +1055,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      }
    },
    "include": ["src", "vite.config.ts"]
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/apps/playground/vite.config.ts /Users/iiwish/self/tellplot/apps/playground/vite.config.ts
---- /Users/iiwish/self/g2touch/apps/playground/vite.config.ts	2026-07-15 14:00:23
-+++ /Users/iiwish/self/tellplot/apps/playground/vite.config.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/apps/playground/vite.config.ts <workspace>/tellplot/apps/playground/vite.config.ts
+--- <workspace>/g2touch/apps/playground/vite.config.ts	2026-07-15 14:00:23
++++ <workspace>/tellplot/apps/playground/vite.config.ts	2026-07-18 22:26:02
 @@ -7,13 +7,13 @@
    resolve: {
      alias: [
@@ -1074,9 +1074,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
          replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
        },
      ],
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/accessibility.spec.ts /Users/iiwish/self/tellplot/e2e/accessibility.spec.ts
---- /Users/iiwish/self/g2touch/e2e/accessibility.spec.ts	2026-07-16 18:52:43
-+++ /Users/iiwish/self/tellplot/e2e/accessibility.spec.ts	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/e2e/accessibility.spec.ts <workspace>/tellplot/e2e/accessibility.spec.ts
+--- <workspace>/g2touch/e2e/accessibility.spec.ts	2026-07-16 18:52:43
++++ <workspace>/tellplot/e2e/accessibility.spec.ts	2026-07-18 22:26:09
 @@ -1,8 +1,8 @@
  import AxeBuilder from '@axe-core/playwright';
  import { expect, test, type Page } from '@playwright/test';
@@ -1088,9 +1088,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
    process.platform === 'darwin' ? 'Meta' : 'Control';
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/export.spec.ts /Users/iiwish/self/tellplot/e2e/export.spec.ts
---- /Users/iiwish/self/g2touch/e2e/export.spec.ts	2026-07-17 11:54:19
-+++ /Users/iiwish/self/tellplot/e2e/export.spec.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/e2e/export.spec.ts <workspace>/tellplot/e2e/export.spec.ts
+--- <workspace>/g2touch/e2e/export.spec.ts	2026-07-17 11:54:19
++++ <workspace>/tellplot/e2e/export.spec.ts	2026-07-18 22:26:02
 @@ -2,7 +2,7 @@
  
  import { expect, test, type Download, type Page } from '@playwright/test';
@@ -1156,9 +1156,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      .locator('canvas')
      .first()
      .evaluate(element => {
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/interaction-cancel.spec.ts /Users/iiwish/self/tellplot/e2e/interaction-cancel.spec.ts
---- /Users/iiwish/self/g2touch/e2e/interaction-cancel.spec.ts	2026-07-17 11:10:22
-+++ /Users/iiwish/self/tellplot/e2e/interaction-cancel.spec.ts	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/e2e/interaction-cancel.spec.ts <workspace>/tellplot/e2e/interaction-cancel.spec.ts
+--- <workspace>/g2touch/e2e/interaction-cancel.spec.ts	2026-07-17 11:10:22
++++ <workspace>/tellplot/e2e/interaction-cancel.spec.ts	2026-07-18 22:26:09
 @@ -1,7 +1,7 @@
  import { expect, test, type Locator, type Page } from '@playwright/test';
  
@@ -1196,9 +1196,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    await page.mouse.up();
  
    await expect(page.locator(COMMAND_FEEDBACK)).toContainText('INVALID_DROP_TARGET');
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/performance.spec.ts /Users/iiwish/self/tellplot/e2e/performance.spec.ts
---- /Users/iiwish/self/g2touch/e2e/performance.spec.ts	2026-07-17 12:15:36
-+++ /Users/iiwish/self/tellplot/e2e/performance.spec.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/e2e/performance.spec.ts <workspace>/tellplot/e2e/performance.spec.ts
+--- <workspace>/g2touch/e2e/performance.spec.ts	2026-07-17 12:15:36
++++ <workspace>/tellplot/e2e/performance.spec.ts	2026-07-18 22:26:02
 @@ -1,6 +1,6 @@
  import { expect, test, type Locator, type Page } from '@playwright/test';
  
@@ -1336,9 +1336,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    );
    expect(samples).toHaveLength(SAMPLE_COUNT);
    const sorted = [...samples].sort((left, right) => left - right);
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/quickstart.spec.ts /Users/iiwish/self/tellplot/e2e/quickstart.spec.ts
---- /Users/iiwish/self/g2touch/e2e/quickstart.spec.ts	2026-07-17 10:55:12
-+++ /Users/iiwish/self/tellplot/e2e/quickstart.spec.ts	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/e2e/quickstart.spec.ts <workspace>/tellplot/e2e/quickstart.spec.ts
+--- <workspace>/g2touch/e2e/quickstart.spec.ts	2026-07-17 10:55:12
++++ <workspace>/tellplot/e2e/quickstart.spec.ts	2026-07-18 22:26:09
 @@ -2,8 +2,8 @@
  
  import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
@@ -1385,9 +1385,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    await expect(page.getByRole('treeitem', { name: new RegExp(targetLabel) })).toHaveAttribute(
      'data-drop-indicator',
      'before',
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/rendering.spec.ts /Users/iiwish/self/tellplot/e2e/rendering.spec.ts
---- /Users/iiwish/self/g2touch/e2e/rendering.spec.ts	2026-07-17 11:59:03
-+++ /Users/iiwish/self/tellplot/e2e/rendering.spec.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/e2e/rendering.spec.ts <workspace>/tellplot/e2e/rendering.spec.ts
+--- <workspace>/g2touch/e2e/rendering.spec.ts	2026-07-17 11:59:03
++++ <workspace>/tellplot/e2e/rendering.spec.ts	2026-07-18 22:26:02
 @@ -19,8 +19,8 @@
  async function openReadyEditor(page: Page, viewport: Viewport): Promise<void> {
    await page.setViewportSize(viewport);
@@ -1464,9 +1464,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    await expectNoHorizontalOverflow(page);
    await attachChromiumScreenshot(page, browserName, testInfo, 'mobile-final.png');
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/e2e/waterfall-editor.spec.ts /Users/iiwish/self/tellplot/e2e/waterfall-editor.spec.ts
---- /Users/iiwish/self/g2touch/e2e/waterfall-editor.spec.ts	2026-07-17 11:46:52
-+++ /Users/iiwish/self/tellplot/e2e/waterfall-editor.spec.ts	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/e2e/waterfall-editor.spec.ts <workspace>/tellplot/e2e/waterfall-editor.spec.ts
+--- <workspace>/g2touch/e2e/waterfall-editor.spec.ts	2026-07-17 11:46:52
++++ <workspace>/tellplot/e2e/waterfall-editor.spec.ts	2026-07-18 22:26:09
 @@ -2,8 +2,8 @@
  
  import { expect, test, type Locator, type Page } from '@playwright/test';
@@ -1538,9 +1538,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
    const points = await waterfallBarPoints(canvas);
    const box = await canvas.boundingBox();
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/package.json /Users/iiwish/self/tellplot/package.json
---- /Users/iiwish/self/g2touch/package.json	2026-07-17 12:31:52
-+++ /Users/iiwish/self/tellplot/package.json	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/package.json <workspace>/tellplot/package.json
+--- <workspace>/g2touch/package.json	2026-07-17 12:31:52
++++ <workspace>/tellplot/package.json	2026-07-18 22:29:23
 @@ -1,7 +1,14 @@
  {
 -  "name": "g2touch-workspace",
@@ -1575,9 +1575,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      "test:react-matrix": "node packages/editor/tests/react-matrix/run-react-matrix.mjs",
      "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
      "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/package.json /Users/iiwish/self/tellplot/packages/editor/package.json
---- /Users/iiwish/self/g2touch/packages/editor/package.json	2026-07-16 10:36:07
-+++ /Users/iiwish/self/tellplot/packages/editor/package.json	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/package.json <workspace>/tellplot/packages/editor/package.json
+--- <workspace>/g2touch/packages/editor/package.json	2026-07-16 10:36:07
++++ <workspace>/tellplot/packages/editor/package.json	2026-07-18 22:29:23
 @@ -1,7 +1,17 @@
  {
 -  "name": "@g2touch/editor",
@@ -1597,9 +1597,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    "type": "module",
    "sideEffects": [
      "**/*.css"
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/AccessibleChartSummary.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/AccessibleChartSummary.tsx
---- /Users/iiwish/self/g2touch/packages/editor/src/components/AccessibleChartSummary.tsx	2026-07-17 11:51:32
-+++ /Users/iiwish/self/tellplot/packages/editor/src/components/AccessibleChartSummary.tsx	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/components/AccessibleChartSummary.tsx <workspace>/tellplot/packages/editor/src/components/AccessibleChartSummary.tsx
+--- <workspace>/g2touch/packages/editor/src/components/AccessibleChartSummary.tsx	2026-07-17 11:51:32
++++ <workspace>/tellplot/packages/editor/src/components/AccessibleChartSummary.tsx	2026-07-18 22:26:09
 @@ -61,7 +61,7 @@
  }: AccessibleChartSummaryProps): React.JSX.Element {
    const copy = SUMMARY_COPY[locale];
@@ -1609,9 +1609,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
        <p>{copy.intro(title, projection.length)}</p>
        <ol>
          {projection.map(datum => {
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/EditorToolbar.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/EditorToolbar.tsx
---- /Users/iiwish/self/g2touch/packages/editor/src/components/EditorToolbar.tsx	2026-07-16 18:52:43
-+++ /Users/iiwish/self/tellplot/packages/editor/src/components/EditorToolbar.tsx	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/components/EditorToolbar.tsx <workspace>/tellplot/packages/editor/src/components/EditorToolbar.tsx
+--- <workspace>/g2touch/packages/editor/src/components/EditorToolbar.tsx	2026-07-16 18:52:43
++++ <workspace>/tellplot/packages/editor/src/components/EditorToolbar.tsx	2026-07-18 22:29:23
 @@ -33,7 +33,7 @@
  }): React.JSX.Element {
    return enabled ? (
@@ -1687,9 +1687,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
              <HistoryTool
                enabled={canUndo}
                label={messages.undo}
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/FinancialChartEditor.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/FinancialChartEditor.tsx
---- /Users/iiwish/self/g2touch/packages/editor/src/components/FinancialChartEditor.tsx	2026-07-17 11:58:15
-+++ /Users/iiwish/self/tellplot/packages/editor/src/components/FinancialChartEditor.tsx	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/components/FinancialChartEditor.tsx <workspace>/tellplot/packages/editor/src/components/FinancialChartEditor.tsx
+--- <workspace>/g2touch/packages/editor/src/components/FinancialChartEditor.tsx	2026-07-17 11:58:15
++++ <workspace>/tellplot/packages/editor/src/components/FinancialChartEditor.tsx	2026-07-18 22:26:09
 @@ -108,8 +108,8 @@
    readonly title: string;
  }): React.JSX.Element {
@@ -1831,9 +1831,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
                  disabled={chartGroupLabel.trim().length === 0}
                  type="submit"
                >
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/InspectorPanel.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/InspectorPanel.tsx
---- /Users/iiwish/self/g2touch/packages/editor/src/components/InspectorPanel.tsx	2026-07-17 11:52:26
-+++ /Users/iiwish/self/tellplot/packages/editor/src/components/InspectorPanel.tsx	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/components/InspectorPanel.tsx <workspace>/tellplot/packages/editor/src/components/InspectorPanel.tsx
+--- <workspace>/g2touch/packages/editor/src/components/InspectorPanel.tsx	2026-07-17 11:52:26
++++ <workspace>/tellplot/packages/editor/src/components/InspectorPanel.tsx	2026-07-18 22:26:09
 @@ -72,13 +72,13 @@
    }
  
@@ -1966,9 +1966,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
                type="button"
                disabled={readOnly}
                aria-description={readOnly ? messages.readOnlyReason : undefined}
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/OutlinePanel.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/OutlinePanel.tsx
---- /Users/iiwish/self/g2touch/packages/editor/src/components/OutlinePanel.tsx	2026-07-16 16:42:04
-+++ /Users/iiwish/self/tellplot/packages/editor/src/components/OutlinePanel.tsx	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/components/OutlinePanel.tsx <workspace>/tellplot/packages/editor/src/components/OutlinePanel.tsx
+--- <workspace>/g2touch/packages/editor/src/components/OutlinePanel.tsx	2026-07-16 16:42:04
++++ <workspace>/tellplot/packages/editor/src/components/OutlinePanel.tsx	2026-07-18 22:26:09
 @@ -238,7 +238,7 @@
    return (
      <div
@@ -2077,9 +2077,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
                <GripVertical size={14} />
                <span>{activeEntry.label}</span>
              </div>
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/PanelOverlay.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/PanelOverlay.tsx
---- /Users/iiwish/self/g2touch/packages/editor/src/components/PanelOverlay.tsx	2026-07-15 19:15:14
-+++ /Users/iiwish/self/tellplot/packages/editor/src/components/PanelOverlay.tsx	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/components/PanelOverlay.tsx <workspace>/tellplot/packages/editor/src/components/PanelOverlay.tsx
+--- <workspace>/g2touch/packages/editor/src/components/PanelOverlay.tsx	2026-07-15 19:15:14
++++ <workspace>/tellplot/packages/editor/src/components/PanelOverlay.tsx	2026-07-18 22:26:09
 @@ -94,9 +94,9 @@
    }, []);
  
@@ -2108,9 +2108,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
            type="button"
            ref={closeRef}
            aria-label={closeLabel}
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/components/WaterfallCanvas.tsx /Users/iiwish/self/tellplot/packages/editor/src/components/WaterfallCanvas.tsx
---- /Users/iiwish/self/g2touch/packages/editor/src/components/WaterfallCanvas.tsx	2026-07-17 12:13:22
-+++ /Users/iiwish/self/tellplot/packages/editor/src/components/WaterfallCanvas.tsx	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/components/WaterfallCanvas.tsx <workspace>/tellplot/packages/editor/src/components/WaterfallCanvas.tsx
+--- <workspace>/g2touch/packages/editor/src/components/WaterfallCanvas.tsx	2026-07-17 12:13:22
++++ <workspace>/tellplot/packages/editor/src/components/WaterfallCanvas.tsx	2026-07-18 22:26:09
 @@ -245,7 +245,7 @@
    try {
      callback(issue);
@@ -2327,9 +2327,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
            data-node-id={interaction.nodeId}
            data-testid="chart-drag-overlay"
            ref={overlayRef}
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/exportOptions.ts /Users/iiwish/self/tellplot/packages/editor/src/export/exportOptions.ts
---- /Users/iiwish/self/g2touch/packages/editor/src/export/exportOptions.ts	2026-07-16 11:03:22
-+++ /Users/iiwish/self/tellplot/packages/editor/src/export/exportOptions.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/export/exportOptions.ts <workspace>/tellplot/packages/editor/src/export/exportOptions.ts
+--- <workspace>/g2touch/packages/editor/src/export/exportOptions.ts	2026-07-16 11:03:22
++++ <workspace>/tellplot/packages/editor/src/export/exportOptions.ts	2026-07-18 22:26:02
 @@ -1,6 +1,6 @@
  import { exportError, type ExportOptions, type NormalizedExportOptions } from './exportTypes';
  
@@ -2338,9 +2338,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  function safeFilename(filename: string | undefined, format: 'svg' | 'png'): string {
    const raw = (filename ?? DEFAULT_FILENAME).trim();
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/exportTypes.ts /Users/iiwish/self/tellplot/packages/editor/src/export/exportTypes.ts
---- /Users/iiwish/self/g2touch/packages/editor/src/export/exportTypes.ts	2026-07-16 10:47:32
-+++ /Users/iiwish/self/tellplot/packages/editor/src/export/exportTypes.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/export/exportTypes.ts <workspace>/tellplot/packages/editor/src/export/exportTypes.ts
+--- <workspace>/g2touch/packages/editor/src/export/exportTypes.ts	2026-07-16 10:47:32
++++ <workspace>/tellplot/packages/editor/src/export/exportTypes.ts	2026-07-18 22:26:02
 @@ -16,7 +16,7 @@
  export type ExportErrorCode = 'INVALID_EXPORT_OPTIONS' | 'EXPORT_UNAVAILABLE' | 'EXPORT_FAILED';
  
@@ -2359,9 +2359,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      code,
      path,
    });
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/pngExport.ts /Users/iiwish/self/tellplot/packages/editor/src/export/pngExport.ts
---- /Users/iiwish/self/g2touch/packages/editor/src/export/pngExport.ts	2026-07-17 11:54:19
-+++ /Users/iiwish/self/tellplot/packages/editor/src/export/pngExport.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/export/pngExport.ts <workspace>/tellplot/packages/editor/src/export/pngExport.ts
+--- <workspace>/g2touch/packages/editor/src/export/pngExport.ts	2026-07-17 11:54:19
++++ <workspace>/tellplot/packages/editor/src/export/pngExport.ts	2026-07-18 22:26:02
 @@ -51,7 +51,7 @@
      typeof error === 'object' &&
      error !== null &&
@@ -2380,9 +2380,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      ) {
        throw error;
      }
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/export/svgExport.ts /Users/iiwish/self/tellplot/packages/editor/src/export/svgExport.ts
---- /Users/iiwish/self/g2touch/packages/editor/src/export/svgExport.ts	2026-07-17 11:54:19
-+++ /Users/iiwish/self/tellplot/packages/editor/src/export/svgExport.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/export/svgExport.ts <workspace>/tellplot/packages/editor/src/export/svgExport.ts
+--- <workspace>/g2touch/packages/editor/src/export/svgExport.ts	2026-07-17 11:54:19
++++ <workspace>/tellplot/packages/editor/src/export/svgExport.ts	2026-07-18 22:26:02
 @@ -92,7 +92,7 @@
        typeof error === 'object' &&
        error !== null &&
@@ -2401,9 +2401,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    );
  }
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/react/useEditorController.ts /Users/iiwish/self/tellplot/packages/editor/src/react/useEditorController.ts
---- /Users/iiwish/self/g2touch/packages/editor/src/react/useEditorController.ts	2026-07-17 11:52:09
-+++ /Users/iiwish/self/tellplot/packages/editor/src/react/useEditorController.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/react/useEditorController.ts <workspace>/tellplot/packages/editor/src/react/useEditorController.ts
+--- <workspace>/g2touch/packages/editor/src/react/useEditorController.ts	2026-07-17 11:52:09
++++ <workspace>/tellplot/packages/editor/src/react/useEditorController.ts	2026-07-18 22:26:02
 @@ -162,7 +162,7 @@
  
  function callbackFailure(identity: CallbackIdentity): void {
@@ -2413,9 +2413,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    } catch {
      return;
    }
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/src/styles/editor.css /Users/iiwish/self/tellplot/packages/editor/src/styles/editor.css
---- /Users/iiwish/self/g2touch/packages/editor/src/styles/editor.css	2026-07-17 11:57:59
-+++ /Users/iiwish/self/tellplot/packages/editor/src/styles/editor.css	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/src/styles/editor.css <workspace>/tellplot/packages/editor/src/styles/editor.css
+--- <workspace>/g2touch/packages/editor/src/styles/editor.css	2026-07-17 11:57:59
++++ <workspace>/tellplot/packages/editor/src/styles/editor.css	2026-07-18 22:26:09
 @@ -1,25 +1,25 @@
 -.gt-editor,
 -.gt-editor * {
@@ -3744,9 +3744,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      scroll-behavior: auto !important;
      transition-duration: 0ms !important;
      animation-duration: 0ms !important;
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/fixture/package.json /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/fixture/package.json
---- /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/fixture/package.json	2026-07-17 10:21:43
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/fixture/package.json	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/browser-matrix/fixture/package.json <workspace>/tellplot/packages/editor/tests/browser-matrix/fixture/package.json
+--- <workspace>/g2touch/packages/editor/tests/browser-matrix/fixture/package.json	2026-07-17 10:21:43
++++ <workspace>/tellplot/packages/editor/tests/browser-matrix/fixture/package.json	2026-07-18 22:26:02
 @@ -1,5 +1,5 @@
  {
 -  "name": "g2touch-playwright-previous-matrix",
@@ -3754,9 +3754,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    "version": "0.0.0",
    "private": true,
    "type": "module",
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/run-previous-browsers.mjs /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/run-previous-browsers.mjs
---- /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/run-previous-browsers.mjs	2026-07-17 11:46:32
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/run-previous-browsers.mjs	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/browser-matrix/run-previous-browsers.mjs <workspace>/tellplot/packages/editor/tests/browser-matrix/run-previous-browsers.mjs
+--- <workspace>/g2touch/packages/editor/tests/browser-matrix/run-previous-browsers.mjs	2026-07-17 11:46:32
++++ <workspace>/tellplot/packages/editor/tests/browser-matrix/run-previous-browsers.mjs	2026-07-18 22:26:02
 @@ -25,7 +25,7 @@
      id: 'previous-release',
      fixture: join(HERE, 'fixture'),
@@ -3851,9 +3851,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
        );
      }
    } catch (error) {
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json
---- /Users/iiwish/self/g2touch/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json	2026-07-17 10:48:21
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json <workspace>/tellplot/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json
+--- <workspace>/g2touch/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json	2026-07-17 10:48:21
++++ <workspace>/tellplot/packages/editor/tests/browser-matrix/webkit-previous-major-fixture/package.json	2026-07-18 22:26:02
 @@ -1,5 +1,5 @@
  {
 -  "name": "g2touch-playwright-webkit-previous-major-matrix",
@@ -3861,9 +3861,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    "version": "0.0.0",
    "private": true,
    "type": "module",
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/accessibility.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/accessibility.test.tsx
---- /Users/iiwish/self/g2touch/packages/editor/tests/components/accessibility.test.tsx	2026-07-17 11:54:19
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/components/accessibility.test.tsx	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/components/accessibility.test.tsx <workspace>/tellplot/packages/editor/tests/components/accessibility.test.tsx
+--- <workspace>/g2touch/packages/editor/tests/components/accessibility.test.tsx	2026-07-17 11:54:19
++++ <workspace>/tellplot/packages/editor/tests/components/accessibility.test.tsx	2026-07-18 22:26:02
 @@ -103,7 +103,7 @@
  
        const dialog = await screen.findByRole('dialog', { name: panel.dialog });
@@ -3900,9 +3900,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      chartStage.setAttribute('data-interaction-state', 'dragging');
  
      await expect(ref.current?.exportImage({ format: 'png' })).rejects.toMatchObject({
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/keyboard.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/keyboard.test.tsx
---- /Users/iiwish/self/g2touch/packages/editor/tests/components/keyboard.test.tsx	2026-07-16 13:50:02
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/components/keyboard.test.tsx	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/components/keyboard.test.tsx <workspace>/tellplot/packages/editor/tests/components/keyboard.test.tsx
+--- <workspace>/g2touch/packages/editor/tests/components/keyboard.test.tsx	2026-07-16 13:50:02
++++ <workspace>/tellplot/packages/editor/tests/components/keyboard.test.tsx	2026-07-18 22:26:09
 @@ -287,7 +287,7 @@
      fireEvent.keyDown(opening, { key: 'ArrowDown', altKey: true });
  
@@ -3932,9 +3932,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      expect(document.activeElement).toBe(secondBeta);
    });
  
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/outline.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/outline.test.tsx
---- /Users/iiwish/self/g2touch/packages/editor/tests/components/outline.test.tsx	2026-07-16 16:50:58
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/components/outline.test.tsx	2026-07-18 22:30:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/components/outline.test.tsx <workspace>/tellplot/packages/editor/tests/components/outline.test.tsx
+--- <workspace>/g2touch/packages/editor/tests/components/outline.test.tsx	2026-07-16 16:50:58
++++ <workspace>/tellplot/packages/editor/tests/components/outline.test.tsx	2026-07-18 22:30:02
 @@ -87,7 +87,7 @@
      clientY: 105,
    });
@@ -4055,9 +4055,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      expect(feedback?.textContent).toContain('ACTION_CANCELLED');
      expect(feedback?.textContent).not.toContain('INVALID_DROP_TARGET');
      await waitFor(() => {
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/components/states.test.tsx /Users/iiwish/self/tellplot/packages/editor/tests/components/states.test.tsx
---- /Users/iiwish/self/g2touch/packages/editor/tests/components/states.test.tsx	2026-07-17 12:38:06
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/components/states.test.tsx	2026-07-18 22:30:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/components/states.test.tsx <workspace>/tellplot/packages/editor/tests/components/states.test.tsx
+--- <workspace>/g2touch/packages/editor/tests/components/states.test.tsx	2026-07-17 12:38:06
++++ <workspace>/tellplot/packages/editor/tests/components/states.test.tsx	2026-07-18 22:30:02
 @@ -140,7 +140,7 @@
  }
  
@@ -4272,9 +4272,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
        expect(onMove).not.toHaveBeenCalled();
        expect(onCancel).toHaveBeenLastCalledWith(reason);
      };
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/export/options.test.ts /Users/iiwish/self/tellplot/packages/editor/tests/export/options.test.ts
---- /Users/iiwish/self/g2touch/packages/editor/tests/export/options.test.ts	2026-07-16 10:47:32
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/export/options.test.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/export/options.test.ts <workspace>/tellplot/packages/editor/tests/export/options.test.ts
+--- <workspace>/g2touch/packages/editor/tests/export/options.test.ts	2026-07-16 10:47:32
++++ <workspace>/tellplot/packages/editor/tests/export/options.test.ts	2026-07-18 22:26:02
 @@ -18,7 +18,7 @@
        format: 'png',
        pixelRatio: 2,
@@ -4302,9 +4302,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
        code: 'INVALID_EXPORT_OPTIONS',
        path: '/format',
        message: 'Export options are invalid.',
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/export/png.test.ts /Users/iiwish/self/tellplot/packages/editor/tests/export/png.test.ts
---- /Users/iiwish/self/g2touch/packages/editor/tests/export/png.test.ts	2026-07-16 10:34:05
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/export/png.test.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/export/png.test.ts <workspace>/tellplot/packages/editor/tests/export/png.test.ts
+--- <workspace>/g2touch/packages/editor/tests/export/png.test.ts	2026-07-16 10:34:05
++++ <workspace>/tellplot/packages/editor/tests/export/png.test.ts	2026-07-18 22:26:02
 @@ -80,7 +80,7 @@
          suggestedFilename: 'bridge.png',
        }),
@@ -4314,9 +4314,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
        code: 'EXPORT_FAILED',
        path: '/export/png',
        message: 'Image export failed.',
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/import-cjs.cjs /Users/iiwish/self/tellplot/packages/editor/tests/package/import-cjs.cjs
---- /Users/iiwish/self/g2touch/packages/editor/tests/package/import-cjs.cjs	2026-07-16 11:04:27
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/package/import-cjs.cjs	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/package/import-cjs.cjs <workspace>/tellplot/packages/editor/tests/package/import-cjs.cjs
+--- <workspace>/g2touch/packages/editor/tests/package/import-cjs.cjs	2026-07-16 11:04:27
++++ <workspace>/tellplot/packages/editor/tests/package/import-cjs.cjs	2026-07-18 22:26:09
 @@ -32,7 +32,7 @@
  if (stylesheet.trim().length === 0) {
    throw new Error('CJS package styles.css export is empty');
@@ -4326,9 +4326,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    throw new Error('CJS package stylesheet is missing the editor scope');
  }
  if (/^\s*(?::root|html|body)\b/m.test(stylesheet)) {
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/import-esm.mjs /Users/iiwish/self/tellplot/packages/editor/tests/package/import-esm.mjs
---- /Users/iiwish/self/g2touch/packages/editor/tests/package/import-esm.mjs	2026-07-16 11:04:27
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/package/import-esm.mjs	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/package/import-esm.mjs <workspace>/tellplot/packages/editor/tests/package/import-esm.mjs
+--- <workspace>/g2touch/packages/editor/tests/package/import-esm.mjs	2026-07-16 11:04:27
++++ <workspace>/tellplot/packages/editor/tests/package/import-esm.mjs	2026-07-18 22:26:09
 @@ -33,7 +33,7 @@
  if (stylesheet.trim().length === 0) {
    throw new Error('ESM package styles.css export is empty');
@@ -4338,9 +4338,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    throw new Error('ESM package stylesheet is missing the editor scope');
  }
  if (/^\s*(?::root|html|body)\b/m.test(stylesheet)) {
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/public-api.test.ts /Users/iiwish/self/tellplot/packages/editor/tests/package/public-api.test.ts
---- /Users/iiwish/self/g2touch/packages/editor/tests/package/public-api.test.ts	2026-07-16 10:30:34
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/package/public-api.test.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/package/public-api.test.ts <workspace>/tellplot/packages/editor/tests/package/public-api.test.ts
+--- <workspace>/g2touch/packages/editor/tests/package/public-api.test.ts	2026-07-16 10:30:34
++++ <workspace>/tellplot/packages/editor/tests/package/public-api.test.ts	2026-07-18 22:26:02
 @@ -2,7 +2,7 @@
  
  import * as editor from '../../src/index';
@@ -4350,9 +4350,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    it('exposes only the approved T107 runtime API', () => {
      expect(Object.keys(editor).sort()).toEqual([
        'FinancialChartEditor',
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/package/types-consumer.ts /Users/iiwish/self/tellplot/packages/editor/tests/package/types-consumer.ts
---- /Users/iiwish/self/g2touch/packages/editor/tests/package/types-consumer.ts	2026-07-16 12:52:47
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/package/types-consumer.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/package/types-consumer.ts <workspace>/tellplot/packages/editor/tests/package/types-consumer.ts
+--- <workspace>/g2touch/packages/editor/tests/package/types-consumer.ts	2026-07-16 12:52:47
++++ <workspace>/tellplot/packages/editor/tests/package/types-consumer.ts	2026-07-18 22:26:02
 @@ -21,7 +21,7 @@
    type SourceData,
    type ValidationResult,
@@ -4362,9 +4362,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
  
  declare const source: SourceData;
  declare const view: ViewSpec;
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/index.html /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/index.html
---- /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/index.html	2026-07-16 18:45:48
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/index.html	2026-07-18 22:29:23
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/react-matrix/consumer/index.html <workspace>/tellplot/packages/editor/tests/react-matrix/consumer/index.html
+--- <workspace>/g2touch/packages/editor/tests/react-matrix/consumer/index.html	2026-07-16 18:45:48
++++ <workspace>/tellplot/packages/editor/tests/react-matrix/consumer/index.html	2026-07-18 22:29:23
 @@ -3,7 +3,7 @@
    <head>
      <meta charset="UTF-8" />
@@ -4374,9 +4374,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    </head>
    <body>
      <div id="root"></div>
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/src/main.mjs /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/src/main.mjs
---- /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/consumer/src/main.mjs	2026-07-16 18:45:48
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/consumer/src/main.mjs	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/react-matrix/consumer/src/main.mjs <workspace>/tellplot/packages/editor/tests/react-matrix/consumer/src/main.mjs
+--- <workspace>/g2touch/packages/editor/tests/react-matrix/consumer/src/main.mjs	2026-07-16 18:45:48
++++ <workspace>/tellplot/packages/editor/tests/react-matrix/consumer/src/main.mjs	2026-07-18 22:26:02
 @@ -1,5 +1,5 @@
 -import { FinancialChartEditor } from '@g2touch/editor';
 -import '@g2touch/editor/styles.css';
@@ -4394,9 +4394,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
    reactVersion: React.version,
    unmount() {
      root.unmount();
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/run-react-matrix.mjs /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/run-react-matrix.mjs
---- /Users/iiwish/self/g2touch/packages/editor/tests/react-matrix/run-react-matrix.mjs	2026-07-17 11:49:44
-+++ /Users/iiwish/self/tellplot/packages/editor/tests/react-matrix/run-react-matrix.mjs	2026-07-18 22:26:09
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/packages/editor/tests/react-matrix/run-react-matrix.mjs <workspace>/tellplot/packages/editor/tests/react-matrix/run-react-matrix.mjs
+--- <workspace>/g2touch/packages/editor/tests/react-matrix/run-react-matrix.mjs	2026-07-17 11:49:44
++++ <workspace>/tellplot/packages/editor/tests/react-matrix/run-react-matrix.mjs	2026-07-18 22:26:09
 @@ -178,9 +178,9 @@
      try {
        await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -4492,9 +4492,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
        assert.equal(installedManifest.version, sourceManifest.version);
        assert.equal(installedManifest.exports?.['./styles.css'], './dist/styles.css');
        await run('pnpm', ['run', 'build'], { cwd: directory });
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/playwright.config.ts /Users/iiwish/self/tellplot/playwright.config.ts
---- /Users/iiwish/self/g2touch/playwright.config.ts	2026-07-17 13:01:19
-+++ /Users/iiwish/self/tellplot/playwright.config.ts	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/playwright.config.ts <workspace>/tellplot/playwright.config.ts
+--- <workspace>/g2touch/playwright.config.ts	2026-07-17 13:01:19
++++ <workspace>/tellplot/playwright.config.ts	2026-07-18 22:26:02
 @@ -1,6 +1,6 @@
  import { defineConfig, devices } from '@playwright/test';
  
@@ -4512,9 +4512,9 @@ diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverag
      url: e2eBaseUrl,
      reuseExistingServer: false,
    },
-diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence /Users/iiwish/self/g2touch/pnpm-lock.yaml /Users/iiwish/self/tellplot/pnpm-lock.yaml
---- /Users/iiwish/self/g2touch/pnpm-lock.yaml	2026-07-16 10:42:42
-+++ /Users/iiwish/self/tellplot/pnpm-lock.yaml	2026-07-18 22:26:02
+diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=coverage --exclude=playwright-report --exclude=test-results --exclude=.ai-platform/evidence <workspace>/g2touch/pnpm-lock.yaml <workspace>/tellplot/pnpm-lock.yaml
+--- <workspace>/g2touch/pnpm-lock.yaml	2026-07-16 10:42:42
++++ <workspace>/tellplot/pnpm-lock.yaml	2026-07-18 22:26:02
 @@ -83,7 +83,7 @@
        '@antv/g2':
          specifier: 5.4.8

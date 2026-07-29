@@ -86,6 +86,10 @@ export function EditorToolbar({
   onUndo,
   onRedo,
 }: EditorToolbarProps): React.JSX.Element {
+  if (!showToolbar) {
+    return <></>;
+  }
+
   const statusLabel = valid ? messages.validated : messages.invalidData;
 
   return (
@@ -138,27 +142,23 @@ export function EditorToolbar({
             <PanelRight size={17} aria-hidden="true" />
           </button>
         ) : null}
-        {showToolbar ? (
-          <>
-            <span className="tp-action-divider" aria-hidden="true" />
-            <HistoryTool
-              enabled={canUndo}
-              label={messages.undo}
-              reason={readOnly ? messages.readOnlyReason : messages.undoUnavailable}
-              onClick={onUndo}
-            >
-              <Undo2 size={17} aria-hidden="true" />
-            </HistoryTool>
-            <HistoryTool
-              enabled={canRedo}
-              label={messages.redo}
-              reason={readOnly ? messages.readOnlyReason : messages.redoUnavailable}
-              onClick={onRedo}
-            >
-              <Redo2 size={17} aria-hidden="true" />
-            </HistoryTool>
-          </>
-        ) : null}
+        <span className="tp-action-divider" aria-hidden="true" />
+        <HistoryTool
+          enabled={canUndo}
+          label={messages.undo}
+          reason={readOnly ? messages.readOnlyReason : messages.undoUnavailable}
+          onClick={onUndo}
+        >
+          <Undo2 size={17} aria-hidden="true" />
+        </HistoryTool>
+        <HistoryTool
+          enabled={canRedo}
+          label={messages.redo}
+          reason={readOnly ? messages.readOnlyReason : messages.redoUnavailable}
+          onClick={onRedo}
+        >
+          <Redo2 size={17} aria-hidden="true" />
+        </HistoryTool>
       </div>
     </header>
   );

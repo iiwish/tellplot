@@ -4,6 +4,24 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'g2-runtime',
+              test: /node_modules[\\/]@antv[\\/]g2[\\/]/,
+              priority: 10,
+              minSize: 96 * 1024,
+              // Rolldown applies this target before minification.
+              maxSize: 1_300 * 1024,
+            },
+          ],
+        },
+      },
+    },
+  },
   resolve: {
     alias: [
       {

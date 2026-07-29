@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 
+import { activateInspectorPanel } from './editorPanels';
+
 interface Viewport {
   readonly width: number;
   readonly height: number;
@@ -18,7 +20,7 @@ const MOBILE = { width: 390, height: 844 } satisfies Viewport;
 
 async function openReadyEditor(page: Page, viewport: Viewport): Promise<void> {
   await page.setViewportSize(viewport);
-  await page.goto('/');
+  await page.goto('/playground');
   await expect(page.locator('[data-tellplot][data-editor-state="ready"]')).toBeVisible();
   await expect(page.getByTestId('tellplot-chart-stage')).toBeVisible();
 }
@@ -76,9 +78,9 @@ async function positiveBarBounds(canvas: Locator): Promise<readonly RenderedBarB
         const alpha = pixels[offset + 3] ?? 0;
         if (
           alpha > 120 &&
-          Math.abs(red - 22) <= 8 &&
-          Math.abs(green - 131) <= 8 &&
-          Math.abs(blue - 99) <= 8
+          Math.abs(red - 18) <= 8 &&
+          Math.abs(green - 183) <= 8 &&
+          Math.abs(blue - 106) <= 8
         ) {
           ys.push(y);
         }
@@ -155,23 +157,23 @@ test('renders a real nonblank G2 canvas in the desktop analytical plane', async 
   expect(canvasBox?.width ?? 0).toBeGreaterThan(400);
   expect(canvasBox?.height ?? 0).toBeGreaterThan(360);
 
-  const outlineBox = await page.getByRole('tree', { name: '结构大纲' }).boundingBox();
+  const usageBox = await page
+    .getByRole('complementary', { name: '在项目中使用 TellPlot' })
+    .boundingBox();
   const chartBox = await page.getByTestId('tellplot-chart-stage').boundingBox();
-  const inspectorBox = await page.getByRole('complementary', { name: '检查器' }).boundingBox();
-  expect(outlineBox).not.toBeNull();
+  const railBox = await page
+    .getByRole('complementary', { name: '结构大纲 / 检查器' })
+    .boundingBox();
+  expect(usageBox).not.toBeNull();
   expect(chartBox).not.toBeNull();
-  expect(inspectorBox).not.toBeNull();
-  expect((outlineBox?.x ?? 0) + (outlineBox?.width ?? 0)).toBeLessThanOrEqual(
-    (chartBox?.x ?? 0) + 1,
-  );
-  expect((chartBox?.x ?? 0) + (chartBox?.width ?? 0)).toBeLessThanOrEqual(
-    (inspectorBox?.x ?? 0) + 1,
-  );
+  expect(railBox).not.toBeNull();
+  expect((usageBox?.x ?? 0) + (usageBox?.width ?? 0)).toBeLessThanOrEqual((chartBox?.x ?? 0) + 1);
+  expect((chartBox?.x ?? 0) + (chartBox?.width ?? 0)).toBeLessThanOrEqual((railBox?.x ?? 0) + 1);
   await expectNoHorizontalOverflow(page);
   await attachChromiumScreenshot(page, browserName, testInfo, 'desktop-final.png');
 });
 
-test('keeps the chart visible and exposes the inspector drawer at 1024px', async ({
+test('keeps the chart visible and exposes the inspector tab at 1024px', async ({
   browserName,
   page,
 }, testInfo) => {
@@ -189,18 +191,16 @@ test('keeps the chart visible and exposes the inspector drawer at 1024px', async
   expect(canvasBox?.width ?? 0).toBeGreaterThan(500);
   expect(canvasBox?.height ?? 0).toBeGreaterThan(430);
   await expect(page.getByRole('tree', { name: '结构大纲' })).toBeVisible();
-  await expect(page.getByRole('complementary', { name: '检查器' })).toBeHidden();
+  await expect(page.getByRole('tab', { name: '检查器' })).toHaveAttribute('aria-selected', 'false');
 
   await page.getByRole('treeitem', { name: /销量增长/ }).click();
-  await page.getByRole('button', { name: '打开检查器' }).click();
-  const drawer = page.getByRole('dialog', { name: '检查器' });
-  await expect(drawer).toBeVisible();
-  await expect(page.locator('[data-tellplot="editor"]')).toHaveAttribute(
+  await activateInspectorPanel(page);
+  const inspector = page.getByRole('tabpanel', { name: '检查器' });
+  await expect(inspector.getByRole('textbox', { name: '注释' })).toBeVisible();
+  await expect(page.locator('[data-tellplot="editor"]')).not.toHaveAttribute(
     'data-overlay-open',
     'true',
   );
-  await expect(drawer.getByRole('textbox', { name: '注释' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '关闭检查器' })).toBeVisible();
   const fileImport = page.getByRole('button', { name: '导入 ViewSpec', exact: true });
   expect(
     await fileImport.evaluate(element => {
@@ -211,7 +211,7 @@ test('keeps the chart visible and exposes the inspector drawer at 1024px', async
       );
       return hit !== null && element.contains(hit);
     }),
-  ).toBe(false);
+  ).toBe(true);
   await expectNoHorizontalOverflow(page);
   await attachChromiumScreenshot(page, browserName, testInfo, 'compact-final.png');
 });

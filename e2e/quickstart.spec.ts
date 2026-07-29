@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 
 import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
 
+import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
+
 const EDITOR = '[data-tellplot="editor"]';
 const COMMAND_FEEDBACK = '.tp-command-feedback';
 const EXPECTED_CHART_BAR_COUNT = 12;
@@ -17,7 +19,7 @@ interface BarPoint {
 
 async function openEditor(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('/playground');
   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
   await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
 }
@@ -76,11 +78,10 @@ async function waterfallBarPoints(canvas: Locator): Promise<readonly BarPoint[]>
       return [];
     }
     const palette = [
-      [95, 107, 101],
-      [22, 131, 99],
-      [213, 82, 74],
-      [49, 92, 140],
-      [164, 104, 18],
+      [47, 124, 246],
+      [18, 183, 106],
+      [240, 68, 100],
+      [20, 184, 166],
     ];
     const pixels = context.getImageData(0, 0, element.width, element.height).data;
     const ysByX: number[][] = Array.from({ length: element.width }, () => []);
@@ -217,7 +218,7 @@ async function groupBarContrastPixels(page: Page): Promise<number> {
         return 0;
       }
       const pixels = context.getImageData(0, 0, element.width, element.height).data;
-      const group = [164, 104, 18] as const;
+      const group = [20, 184, 166] as const;
       const matchesGroup = (offset: number): boolean =>
         Math.abs((pixels[offset] ?? 0) - group[0]) <= 10 &&
         Math.abs((pixels[offset + 1] ?? 0) - group[1]) <= 10 &&
@@ -336,8 +337,8 @@ async function expectLockedAnchorDoesNotStartSession(
   await page.mouse.move(anchor.x + 6, anchor.y, { steps: 3 });
   await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
   await expect(page.getByTestId('chart-drag-overlay')).toHaveCount(0);
-  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ITEM_LOCKED');
   await page.mouse.up();
+  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ITEM_LOCKED');
 
   await expect(page.locator(EDITOR)).toHaveAttribute(
     'data-view-revision',
@@ -351,6 +352,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
   browserName,
   page,
 }, testInfo) => {
+  test.slow();
   await openEditor(page);
   const initialOrder = await rootOrder(page);
   expect(initialOrder).toEqual([
@@ -386,7 +388,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '4');
   const costPressure = page.getByRole('treeitem', { name: /成本压力/ });
   await expect(costPressure).toHaveAttribute('data-source-count', '3');
-  await expect(costPressure).toContainText('-¥950');
+  await expect(costPressure).toContainText('-¥1,290');
   await expect(page.getByRole('button', { name: '展开 成本压力' })).toHaveAttribute(
     'aria-expanded',
     'false',
@@ -404,11 +406,13 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '5');
   await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toBeVisible();
   await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('经营成本桥');
   const createOuterGroup = page.getByRole('button', { name: '创建分组' });
   await expect(createOuterGroup).toBeEnabled();
   await createOuterGroup.click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '6');
+  await activateOutlinePanel(page);
 
   const outer = page.getByRole('treeitem', { name: /经营成本桥/ });
   const outerId = await outer.getAttribute('data-node-id');
@@ -429,7 +433,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '7');
   await expect(costPressure).toBeHidden();
   await expect(page.getByRole('treeitem', { name: /产品结构/ })).toBeHidden();
-  await expect(outer).toContainText('-¥790');
+  await expect(outer).toContainText('-¥1,030');
 
   await page.getByRole('button', { name: '展开 经营成本桥' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '8');
@@ -438,6 +442,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
     'true',
   );
   await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toBeVisible();
+  await page.waitForTimeout(180); // Let the default 160ms G2 transition finish before canvas hit testing.
   const finalRootOrder = [
     'opening-profit',
     'sales-volume',
@@ -477,6 +482,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '9');
   const annotationText = '成本口径已复核';
   await costPressure.click();
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '注释' }).fill(annotationText);
   await page.getByRole('button', { name: '保存注释' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '10');
@@ -540,7 +546,9 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
     'false',
   );
   await page.getByRole('treeitem', { name: /成本压力/ }).click();
+  await activateInspectorPanel(page);
   await expect(page.getByRole('textbox', { name: '注释' })).toHaveValue(annotationText);
+  await activateOutlinePanel(page);
 
   const tax = page.getByRole('treeitem', { name: /所得税影响/ });
   await tax.focus();

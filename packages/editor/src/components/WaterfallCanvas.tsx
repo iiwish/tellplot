@@ -1,6 +1,5 @@
-import type { Chart as G2Chart, G2Spec } from '@antv/g2';
 import { FoldVertical, Ungroup, UnfoldVertical } from 'lucide-react';
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   resolveFinancialChartAppearance,
@@ -9,23 +8,33 @@ import {
 import type { GroupId, ViewNodeId } from '../domain/ids';
 import type { Annotation, Emphasis, ViewSpec } from '../domain/model';
 import { locateViewNode, ownGroup } from '../domain/viewTree';
+import { projectExpandedGroupRegions } from '../charts/groupRegions';
+import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
+import type { WaterfallDatum, WaterfallProjection } from '../charts/waterfall/types';
 import {
-  createWaterfallChartSpec,
-  shouldShowWaterfallValueLabels,
-} from '../export/waterfallChartSpec';
+  projectChartCategoryBounds,
+  isChartCategoryTargetWithinGroup,
+  resolveChartCategoryDropTarget,
+  resolveChartCategoryMinimumTargetHit,
+  projectChartCategorySourceGroupBounds,
+  resolveChartCategorySourceGroupExitTarget,
+  type ChartCategoryBounds,
+  type ChartCategoryGroupBounds,
+} from '../interactions/categoryAxis';
 import {
+  readChartCategoryElementPointer,
   readChartElementBounds,
-  readChartElementPointer,
   readChartPointerPoint,
-  readChartTargetX,
-  resolveChartMinimumTargetHit,
-  resolveChartHorizontalDropTarget,
-  type ChartElementPointer,
-  type ChartHorizontalBounds,
+  readChartTargetCoordinate,
+  type ChartCategoryElementPointer,
   type ChartPointerPoint,
 } from '../interactions/chartPointer';
-import { resolvePointerMoveTarget, type MoveTargetEdge } from '../interactions/moveTargets';
-import type { WaterfallDatum, WaterfallProjection } from '../waterfall/waterfallTypes';
+import {
+  resolvePointerDropPlacement,
+  resolvePointerMoveTarget,
+  type MoveTargetPlacement,
+} from '../interactions/moveTargets';
+import { createG2ChartRuntime, type G2ChartRuntime } from '../rendering/g2/chartRuntime';
 import type { EditorLocale } from './formatAmount';
 import { AccessibleChartSummary } from './AccessibleChartSummary';
 
@@ -35,24 +44,6 @@ const MINIMUM_POINTER_TARGET_SIZE = 32;
 const CHART_ERROR = { code: 'CHART_RENDER_ERROR', path: '/chart' } as const;
 const EMPTY_EMPHASIS: Readonly<Record<ViewNodeId, Emphasis>> = {};
 const EMPTY_ANNOTATIONS: Readonly<Record<ViewNodeId, Annotation>> = {};
-
-type G2ChartConstructor = typeof G2Chart;
-
-let chartConstructorPromise: Promise<G2ChartConstructor> | undefined;
-
-function loadChartConstructor(): Promise<G2ChartConstructor> {
-  if (chartConstructorPromise !== undefined) {
-    return chartConstructorPromise;
-  }
-  const pending = import('@antv/g2').then(module => module.Chart);
-  chartConstructorPromise = pending;
-  void pending.catch(() => {
-    if (chartConstructorPromise === pending) {
-      chartConstructorPromise = undefined;
-    }
-  });
-  return pending;
-}
 
 interface ChartCopy {
   readonly eyebrow: string;
@@ -64,17 +55,6 @@ interface ChartCopy {
   readonly ungroup: string;
 }
 
-interface ChartRenderRequest {
-  readonly id: number;
-  readonly projection: WaterfallProjection;
-  readonly spec: G2Spec;
-}
-
-interface ChartEventRegistration {
-  readonly name: string;
-  readonly listener: (event: unknown) => void;
-}
-
 interface ChartMoveTarget {
   readonly containerId: 'root' | GroupId;
   readonly index: number;
@@ -84,7 +64,7 @@ type ChartCancelReason = 'cancelled' | 'invalid-target' | 'item-locked';
 
 export interface ChartDropTarget {
   readonly nodeId: ViewNodeId;
-  readonly edge: MoveTargetEdge;
+  readonly placement: MoveTargetPlacement;
 }
 
 export type ChartInteractionPreview =
@@ -122,8 +102,10 @@ interface ChartDragSession {
   readonly nodeId: ViewNodeId;
   readonly label: string;
   readonly canvas: HTMLCanvasElement;
+  readonly viewSpec: ViewSpec;
   readonly start: ChartPointerPoint;
-  readonly orderedBounds: readonly ChartHorizontalBounds[];
+  readonly orderedBounds: readonly ChartCategoryBounds[];
+  readonly sourceGroupBounds: readonly ChartCategoryGroupBounds[];
   current: ChartPointerPoint;
   moved: boolean;
   target: ChartDropTarget | null;
@@ -195,6 +177,7 @@ export interface ChartRenderIssue {
 export interface WaterfallCanvasProps {
   readonly projection: WaterfallProjection;
   readonly viewSpec?: ViewSpec;
+  readonly groupRegionViewSpec?: ViewSpec;
   readonly readOnly?: boolean;
   readonly title?: string;
   readonly locale?: EditorLocale;
@@ -374,24 +357,11 @@ function draggableDatum(datum: WaterfallDatum | undefined): WaterfallDatum | und
     : undefined;
 }
 
-function finishActiveAnimations(chart: G2Chart): void {
-  try {
-    for (const animation of chart.getContext().animations ?? []) {
-      try {
-        animation.finish();
-      } catch {
-        // Finishing an already-disposed animation is best effort.
-      }
-    }
-  } catch {
-    // A renderer without an animation context does not block the next request.
-  }
-}
-
 /** Owns the real G2 canvas lifecycle for one immutable waterfall projection. */
 export function WaterfallCanvas({
   projection,
   viewSpec,
+  groupRegionViewSpec,
   readOnly = false,
   title,
   locale = 'zh-CN',
@@ -412,12 +382,7 @@ export function WaterfallCanvas({
   const stageRef = useRef<HTMLElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<G2Chart | undefined>(undefined);
-  const requestIdRef = useRef(0);
-  const attemptedRequestIdRef = useRef(0);
-  const latestRequestRef = useRef<ChartRenderRequest | undefined>(undefined);
-  const flushRenderRef = useRef<() => Promise<void>>(async () => undefined);
-  const registrationsRef = useRef<readonly ChartEventRegistration[]>([]);
+  const chartRuntimeRef = useRef<G2ChartRuntime<WaterfallProjection> | undefined>(undefined);
   const onRenderErrorRef = useRef(onRenderError);
   const interactionConfigRef = useRef<ChartInteractionConfig>({
     projection,
@@ -434,7 +399,6 @@ export function WaterfallCanvas({
   const marqueeSessionRef = useRef<ChartMarqueeSession | null>(null);
   const pendingPointerRef = useRef<ChartPointerPoint | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const renderFrameRef = useRef<{ readonly ownerWindow: Window; readonly id: number } | null>(null);
   const applyPointerRef = useRef<() => void>(() => undefined);
   const cancelDragRef = useRef<(reason?: ChartCancelReason) => ChartDragSession | null>(() => null);
   const cancelSelectionPressRef = useRef<() => void>(() => undefined);
@@ -449,6 +413,7 @@ export function WaterfallCanvas({
   const [groupActions, setGroupActions] = useState<ChartGroupActions | null>(null);
   const titleId = useId();
   const systemReducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
+  const compactViewport = useMediaQuery(MOBILE_VIEWPORT_QUERY);
   const isEmpty =
     empty ??
     !projection.some(
@@ -463,6 +428,18 @@ export function WaterfallCanvas({
   const visibleTitle = resolvedAppearance.title;
 
   const interactionTarget = interaction.state === 'dragging' ? interaction.target : null;
+  const visibleInteractionTarget =
+    interactionTarget ?? (externalPreview.state === 'dragging' ? externalPreview.target : null);
+  const regionViewSpec = groupRegionViewSpec ?? viewSpec;
+  const activeGroupRegionId =
+    viewSpec !== undefined && visibleInteractionTarget?.placement === 'inside'
+      ? ownGroup(viewSpec, visibleInteractionTarget.nodeId)?.id
+      : undefined;
+  const groupRegions = useMemo(
+    () =>
+      regionViewSpec === undefined ? [] : projectExpandedGroupRegions(regionViewSpec, projection),
+    [projection, regionViewSpec],
+  );
 
   useLayoutEffect(() => {
     onRenderErrorRef.current = onRenderError;
@@ -509,8 +486,6 @@ export function WaterfallCanvas({
 
   useLayoutEffect(() => {
     let cancelled = false;
-    let destroyed = false;
-    let rendering = false;
     const isEffectDisposed = (): boolean => cancelled;
 
     const host = hostRef.current;
@@ -676,7 +651,10 @@ export function WaterfallCanvas({
       if (session === null) {
         return;
       }
-      if (session.target?.nodeId === target?.nodeId && session.target?.edge === target?.edge) {
+      if (
+        session.target?.nodeId === target?.nodeId &&
+        session.target?.placement === target?.placement
+      ) {
         return;
       }
       session.target = target;
@@ -692,15 +670,12 @@ export function WaterfallCanvas({
       });
     };
 
-    const startElementPointerSession = (pointer: ChartElementPointer): void => {
+    const startElementPointerSession = (pointer: ChartCategoryElementPointer): void => {
       const config = interactionConfigRef.current;
       if (isEffectDisposed()) {
         return;
       }
-      const chart = chartRef.current;
-      if (chart !== undefined) {
-        finishActiveAnimations(chart);
-      }
+      chartRuntimeRef.current?.finishAnimations();
       const projectedDatum = config.projection.find(
         candidate => candidate.nodeId === pointer.nodeId,
       );
@@ -732,25 +707,32 @@ export function WaterfallCanvas({
         return;
       }
       const itemId = datum.nodeId;
-      const location = locateViewNode(config.viewSpec, itemId);
-      if (location === undefined) {
+      if (locateViewNode(config.viewSpec, itemId) === undefined) {
         return;
       }
-      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
-      const boundsByNode = new Map<ViewNodeId, ChartHorizontalBounds>();
+      const sceneBounds = readChartElementBounds(chartRuntimeRef.current?.getContext());
+      const boundsByNode = new Map<ViewNodeId, ChartCategoryBounds>();
       for (const bounds of sceneBounds) {
-        boundsByNode.set(bounds.nodeId, bounds);
+        const categoryBounds = projectChartCategoryBounds(bounds, 'x');
+        if (categoryBounds !== undefined) {
+          boundsByNode.set(bounds.nodeId, categoryBounds);
+        }
       }
       boundsByNode.set(itemId, {
         nodeId: itemId,
-        minX: pointer.minX,
-        maxX: pointer.maxX,
+        min: pointer.min,
+        center: (pointer.min + pointer.max) / 2,
+        max: pointer.max,
       });
-      const orderedBounds: ChartHorizontalBounds[] = [];
-      for (const nodeId of location.values) {
-        const bounds = boundsByNode.get(nodeId);
+      const orderedBounds: ChartCategoryBounds[] = [];
+      const visibleBounds: ChartCategoryBounds[] = [];
+      for (const candidate of config.projection) {
+        const bounds = boundsByNode.get(candidate.nodeId);
         if (bounds !== undefined) {
-          orderedBounds.push(bounds);
+          visibleBounds.push(bounds);
+          if (draggableDatum(candidate) !== undefined) {
+            orderedBounds.push(bounds);
+          }
         }
       }
 
@@ -762,8 +744,14 @@ export function WaterfallCanvas({
         nodeId: datum.nodeId,
         label: datum.label,
         canvas,
+        viewSpec: config.viewSpec,
         start: pointer,
         orderedBounds,
+        sourceGroupBounds: projectChartCategorySourceGroupBounds(
+          config.viewSpec,
+          itemId,
+          visibleBounds,
+        ),
         current: pointer,
         moved: false,
         target: null,
@@ -773,10 +761,12 @@ export function WaterfallCanvas({
     };
 
     const handleElementPointerDown = (event: unknown): void => {
-      setGroupActions(null);
-      const pointer = readChartElementPointer(event);
-      if (pointer !== undefined) {
-        startElementPointerSession(pointer);
+      const pointer = readChartCategoryElementPointer(event, 'x');
+      if (pointer.ok) {
+        setGroupActions(current => (current?.nodeId === pointer.value.nodeId ? current : null));
+        startElementPointerSession(pointer.value);
+      } else {
+        setGroupActions(null);
       }
     };
 
@@ -787,6 +777,7 @@ export function WaterfallCanvas({
       }
       if (!session.attemptedDrag && Math.abs(point.x - session.start.x) >= 4) {
         session.attemptedDrag = true;
+        setGroupActions(null);
         notifyCancel(interactionConfigRef.current.onCancel, session.dragCancelReason);
         resetSelectionPress();
       }
@@ -802,25 +793,66 @@ export function WaterfallCanvas({
       if (!session.moved && Math.abs(point.x - session.start.x) < 4) {
         return true;
       }
-      const horizontalTarget = resolveChartHorizontalDropTarget({
+      setGroupActions(null);
+      const dropResult = resolveChartCategoryDropTarget({
+        axis: 'x',
         itemId: session.itemId,
-        startPointerX: session.start.x,
-        pointerX: point.x,
+        startPointer: session.start,
+        pointer: point,
         orderedBounds: session.orderedBounds,
+        boundsRevision: 0,
+        currentRevision: 0,
+        minimumDragDistance: 0,
       });
-      const target =
-        horizontalTarget === null
+      const targetBounds = dropResult.ok
+        ? session.orderedBounds.find(bounds => bounds.nodeId === dropResult.target.nodeId)
+        : undefined;
+      const exitTarget = resolveChartCategorySourceGroupExitTarget(
+        'x',
+        session.start,
+        point,
+        session.sourceGroupBounds,
+      );
+      const useExitTarget =
+        exitTarget !== undefined &&
+        ((!dropResult.ok && dropResult.reason === 'NO_TARGET') ||
+          (dropResult.ok &&
+            isChartCategoryTargetWithinGroup(
+              session.viewSpec,
+              exitTarget.nodeId,
+              dropResult.target.nodeId,
+            )));
+      const target = useExitTarget
+        ? { nodeId: exitTarget.nodeId, placement: exitTarget.edge }
+        : !dropResult.ok || targetBounds === undefined
           ? null
-          : { nodeId: horizontalTarget.nodeId, edge: horizontalTarget.edge };
+          : {
+              nodeId: dropResult.target.nodeId,
+              placement: resolvePointerDropPlacement(
+                interactionConfigRef.current.viewSpec as ViewSpec,
+                dropResult.target.nodeId,
+                targetBounds.max === targetBounds.min
+                  ? Number.NaN
+                  : (point.x - targetBounds.min) / (targetBounds.max - targetBounds.min),
+                dropResult.target.edge,
+              ),
+            };
+      const indicator =
+        (useExitTarget ? exitTarget.target : undefined) ??
+        (dropResult.ok && target?.placement !== 'inside' ? dropResult.target.target : undefined);
       const wasPending = !session.moved;
       session.moved = true;
       schedulePointer(point);
       if (wasPending) {
         session.target = target;
-        if (horizontalTarget === null) {
+        if (indicator === undefined) {
           hostRef.current?.style.removeProperty('--tp-chart-drop-x');
         } else {
-          hostRef.current?.style.setProperty('--tp-chart-drop-x', `${horizontalTarget.targetX}px`);
+          if (target?.placement === 'inside') {
+            hostRef.current?.style.removeProperty('--tp-chart-drop-x');
+          } else {
+            hostRef.current?.style.setProperty('--tp-chart-drop-x', `${indicator}px`);
+          }
         }
         publishInteraction({
           state: 'dragging',
@@ -829,7 +861,7 @@ export function WaterfallCanvas({
         });
         return true;
       }
-      publishTarget(target, horizontalTarget?.targetX);
+      publishTarget(target, target?.placement === 'inside' ? undefined : indicator);
       return true;
     };
 
@@ -852,12 +884,13 @@ export function WaterfallCanvas({
       ) {
         return;
       }
-      const pointer = readChartElementPointer(event);
+      const pointerResult = readChartCategoryElementPointer(event, 'x');
       const config = interactionConfigRef.current;
-      const chart = chartRef.current;
-      if (pointer === undefined || config.viewSpec === undefined || chart === undefined) {
+      const runtime = chartRuntimeRef.current;
+      if (!pointerResult.ok || config.viewSpec === undefined || runtime === undefined) {
         return;
       }
+      const pointer = pointerResult.value;
       const datum = config.projection.find(candidate => candidate.nodeId === pointer.nodeId);
       if (datum === undefined) {
         return;
@@ -867,7 +900,7 @@ export function WaterfallCanvas({
         setGroupActions(null);
         return;
       }
-      const bounds = readChartElementBounds(chart.getContext()).find(
+      const bounds = readChartElementBounds(runtime.getContext()).find(
         element => element.nodeId === datum.nodeId,
       );
       if (bounds === undefined) {
@@ -892,7 +925,6 @@ export function WaterfallCanvas({
     };
 
     const handlePlotPointerDown = (event: unknown): void => {
-      setGroupActions(null);
       const config = interactionConfigRef.current;
       if (dragSessionRef.current !== null || selectionPressSessionRef.current !== null) {
         return;
@@ -902,8 +934,7 @@ export function WaterfallCanvas({
       if (point === undefined || canvas === null || canvas === undefined) {
         return;
       }
-      const chart = chartRef.current;
-      const sceneBounds = chart === undefined ? [] : readChartElementBounds(chart.getContext());
+      const sceneBounds = readChartElementBounds(chartRuntimeRef.current?.getContext());
       const pointHitsMark = sceneBounds.some(
         bounds =>
           point.x >= bounds.minX &&
@@ -914,17 +945,26 @@ export function WaterfallCanvas({
       if (pointHitsMark) {
         return;
       }
+      setGroupActions(null);
       const ownerWindow = canvas.ownerDocument.defaultView;
       const usesMinimumTargets =
         ownerWindow !== null &&
         typeof ownerWindow.matchMedia === 'function' &&
         ownerWindow.matchMedia(MOBILE_VIEWPORT_QUERY).matches;
       const expandedTarget = usesMinimumTargets
-        ? resolveChartMinimumTargetHit(point, sceneBounds, MINIMUM_POINTER_TARGET_SIZE)
-        : undefined;
-      if (expandedTarget !== undefined) {
+        ? resolveChartCategoryMinimumTargetHit(point, sceneBounds, MINIMUM_POINTER_TARGET_SIZE, 'x')
+        : { ok: false as const, reason: 'NO_TARGET' as const };
+      if (expandedTarget.ok) {
         resetMarquee('cancelled');
-        startElementPointerSession(expandedTarget);
+        startElementPointerSession({
+          ...point,
+          axis: 'x',
+          nodeId: expandedTarget.hit.nodeId,
+          edge: expandedTarget.hit.edge,
+          min: expandedTarget.hit.min,
+          max: expandedTarget.hit.max,
+          target: expandedTarget.hit.target,
+        });
         return;
       }
       if (
@@ -999,7 +1039,7 @@ export function WaterfallCanvas({
       const resolved = resolvePointerMoveTarget(config.viewSpec, {
         itemId: session.itemId,
         targetNodeId: target.nodeId,
-        edge: target.edge,
+        placement: target.placement,
       });
       if (!resolved.ok) {
         notifyCancel(config.onCancel, 'invalid-target');
@@ -1018,10 +1058,10 @@ export function WaterfallCanvas({
       if (marquee !== null && point !== undefined && point.pointerId === marquee.pointerId) {
         marquee.current = point;
         const bounds = marqueeRect(marquee.start, point);
-        const chart = chartRef.current;
+        const runtime = chartRuntimeRef.current;
         const config = interactionConfigRef.current;
         resetMarquee();
-        if (bounds.width < 4 || bounds.height < 4 || chart === undefined) {
+        if (bounds.width < 4 || bounds.height < 4 || runtime === undefined) {
           notifyCancel(config.onCancel, 'cancelled');
           return;
         }
@@ -1036,7 +1076,7 @@ export function WaterfallCanvas({
             )
             .map(datum => datum.nodeId),
         );
-        const selectedIds = readChartElementBounds(chart.getContext())
+        const selectedIds = readChartElementBounds(runtime.getContext())
           .filter(
             element =>
               selectable.has(element.nodeId) &&
@@ -1171,101 +1211,45 @@ export function WaterfallCanvas({
     ownerDocument?.addEventListener('keydown', handleKeyDown);
     ownerWindow?.addEventListener('blur', handleWindowBlur);
 
-    const flushRender = async (): Promise<void> => {
-      const chart = chartRef.current;
-      if (chart === undefined || isEffectDisposed() || rendering) {
-        return;
-      }
-
-      rendering = true;
-      try {
-        while (!isEffectDisposed()) {
-          const request = latestRequestRef.current;
-          if (request === undefined || request.id === attemptedRequestIdRef.current) {
-            break;
-          }
-
-          const attemptId = request.id;
-          let succeeded = false;
-          try {
-            chart.options(request.spec);
-            await chart.render();
-            succeeded = true;
-          } catch {
-            succeeded = false;
-          }
-          if (isEffectDisposed()) {
+    if (host === null) {
+      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+      setRenderFailure({ projection: interactionConfigRef.current.projection, issue: CHART_ERROR });
+      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
+    } else {
+      const runtime = createG2ChartRuntime<WaterfallProjection>({
+        container: host,
+        events: [
+          { name: 'element:pointerdown', listener: handleElementPointerDown },
+          { name: 'element:pointerover', listener: handleElementPointerOver },
+          { name: 'element:pointermove', listener: handleElementPointerMove },
+          { name: 'element:pointerout', listener: handleElementPointerOut },
+          { name: 'plot:pointerdown', listener: handlePlotPointerDown },
+          { name: 'plot:pointermove', listener: handlePlotPointerMove },
+          { name: 'plot:pointerup', listener: handlePlotPointerUp },
+          { name: 'plot:pointerupoutside', listener: handlePlotPointerUpOutside },
+        ],
+        onRenderSettled: settlement => {
+          if (isEffectDisposed() || !settlement.latest) {
             return;
           }
-          attemptedRequestIdRef.current = attemptId;
-          if (latestRequestRef.current?.id !== attemptId) {
-            continue;
-          }
-
-          if (succeeded) {
+          if (settlement.status === 'success') {
             setRenderFailure(null);
             notifyRenderIssue(onRenderErrorRef.current, null);
-          } else {
-            console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
-            setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
-            notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
+            return;
           }
-          break;
-        }
-      } finally {
-        rendering = false;
-        const latest = latestRequestRef.current;
-        if (
-          !isEffectDisposed() &&
-          latest !== undefined &&
-          latest.id !== attemptedRequestIdRef.current
-        ) {
-          void flushRenderRef.current();
-        }
-      }
-    };
-    flushRenderRef.current = flushRender;
-
-    const initializeChart = async (): Promise<void> => {
-      const Chart = await loadChartConstructor();
-      if (isEffectDisposed()) {
-        return;
-      }
-      const host = hostRef.current;
-      if (host === null) {
-        throw new Error('Chart host is unavailable');
-      }
-
-      const chart = new Chart({ container: host, autoFit: true });
-      chartRef.current = chart;
-      const registrations: readonly ChartEventRegistration[] = [
-        { name: 'element:pointerdown', listener: handleElementPointerDown },
-        { name: 'element:pointerover', listener: handleElementPointerOver },
-        { name: 'element:pointermove', listener: handleElementPointerMove },
-        { name: 'element:pointerout', listener: handleElementPointerOut },
-        { name: 'plot:pointerdown', listener: handlePlotPointerDown },
-        { name: 'plot:pointermove', listener: handlePlotPointerMove },
-        { name: 'plot:pointerup', listener: handlePlotPointerUp },
-        { name: 'plot:pointerupoutside', listener: handlePlotPointerUpOutside },
-      ];
-      registrationsRef.current = registrations;
-      for (const registration of registrations) {
-        chart.on(registration.name, registration.listener);
-      }
-      await flushRender();
-    };
-
-    void initializeChart().catch(() => {
-      if (isEffectDisposed()) {
-        return;
-      }
-      console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
-      const request = latestRequestRef.current;
-      if (request !== undefined) {
-        setRenderFailure({ projection: request.projection, issue: CHART_ERROR });
-      }
-      notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
-    });
+          console.error('tellplot chart render failed: CHART_RENDER_ERROR /chart');
+          setRenderFailure({ projection: settlement.value, issue: CHART_ERROR });
+          notifyRenderIssue(onRenderErrorRef.current, CHART_ERROR);
+        },
+        onCallbackError: () => {
+          console.error('tellplot chart runtime callback failed at /chart');
+        },
+        onCleanupError: () => {
+          console.error('tellplot chart cleanup failed at /chart');
+        },
+      });
+      chartRuntimeRef.current = runtime;
+    }
 
     return () => {
       cancelled = true;
@@ -1278,73 +1262,40 @@ export function WaterfallCanvas({
       cancelSelectionPressRef.current = () => undefined;
       cancelMarqueeRef.current = () => undefined;
       cancelPointerFrame();
-      if (renderFrameRef.current !== null) {
-        renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
-        renderFrameRef.current = null;
-      }
       applyPointerRef.current = () => undefined;
-      const chart = chartRef.current;
-      if (chart === undefined || destroyed) {
-        return;
-      }
-      for (const registration of registrationsRef.current) {
-        chart.off(registration.name, registration.listener);
-      }
-      registrationsRef.current = [];
-      destroyed = true;
-      try {
-        chart.destroy();
-      } catch {
-        console.error('tellplot chart cleanup failed at /chart');
-      } finally {
-        chartRef.current = undefined;
-      }
+      chartRuntimeRef.current?.dispose();
+      chartRuntimeRef.current = undefined;
     };
   }, []);
 
   useLayoutEffect(() => {
-    requestIdRef.current += 1;
-    latestRequestRef.current = {
-      id: requestIdRef.current,
-      projection,
+    chartRuntimeRef.current?.request({
+      value: projection,
       spec: createWaterfallChartSpec({
         projection,
         locale,
         currency,
         reducedMotion: shouldReduceMotion,
-        showValueLabels: shouldShowWaterfallValueLabels(projection),
+        showValueLabels: shouldShowWaterfallValueLabels(projection, compactViewport),
         annotations,
         emphasis,
         appearance,
+        groupRegions,
+        activeGroupRegionId,
       }),
-    };
-    const chart = chartRef.current;
-    if (chart !== undefined) {
-      const ownerWindow = hostRef.current?.ownerDocument.defaultView;
-      const flushLatest = (): void => {
-        renderFrameRef.current = null;
-        const activeChart = chartRef.current;
-        if (activeChart === undefined) {
-          return;
-        }
-        finishActiveAnimations(activeChart);
-        void flushRenderRef.current();
-      };
-      if (
-        ownerWindow !== undefined &&
-        ownerWindow !== null &&
-        typeof ownerWindow.requestAnimationFrame === 'function'
-      ) {
-        if (renderFrameRef.current !== null) {
-          renderFrameRef.current.ownerWindow.cancelAnimationFrame(renderFrameRef.current.id);
-        }
-        const id = ownerWindow.requestAnimationFrame(flushLatest);
-        renderFrameRef.current = { ownerWindow, id };
-      } else {
-        queueMicrotask(flushLatest);
-      }
-    }
-  }, [annotations, appearance, currency, emphasis, locale, projection, shouldReduceMotion]);
+    });
+  }, [
+    activeGroupRegionId,
+    annotations,
+    appearance,
+    compactViewport,
+    currency,
+    emphasis,
+    groupRegions,
+    locale,
+    projection,
+    shouldReduceMotion,
+  ]);
 
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -1358,31 +1309,45 @@ export function WaterfallCanvas({
       host.removeAttribute('data-preview-source');
       if (interactionTarget === null) {
         host.removeAttribute('data-drop-indicator');
+        host.removeAttribute('data-drop-inside');
         host.removeAttribute('data-drop-node-id');
         host.style.removeProperty('--tp-chart-drop-x');
       }
       return;
     }
     const target = externalPreview.state === 'dragging' ? externalPreview.target : null;
-    const chart = chartRef.current;
-    if (externalStarted && chart !== undefined) {
-      finishActiveAnimations(chart);
+    const runtime = chartRuntimeRef.current;
+    if (externalStarted) {
+      runtime?.finishAnimations();
     }
-    const targetX =
-      target === null || chart === undefined
+    const targetCoordinate =
+      target === null || runtime === undefined
         ? undefined
-        : readChartTargetX(chart.getContext(), target.nodeId, target.edge);
-    if (target === null || targetX === undefined) {
+        : target.placement === 'inside'
+          ? undefined
+          : readChartTargetCoordinate(runtime.getContext(), target.nodeId, target.placement, 'x');
+    if (target === null || (target.placement !== 'inside' && !targetCoordinate?.ok)) {
       host.removeAttribute('data-drop-indicator');
+      host.removeAttribute('data-drop-inside');
       host.removeAttribute('data-drop-node-id');
       host.removeAttribute('data-preview-source');
       host.style.removeProperty('--tp-chart-drop-x');
       return;
     }
-    host.setAttribute('data-drop-indicator', target.edge);
+    if (target.placement === 'inside') {
+      host.removeAttribute('data-drop-indicator');
+      host.setAttribute('data-drop-inside', 'true');
+    } else {
+      host.removeAttribute('data-drop-inside');
+      host.setAttribute('data-drop-indicator', target.placement);
+    }
     host.setAttribute('data-drop-node-id', target.nodeId);
     host.setAttribute('data-preview-source', 'outline');
-    host.style.setProperty('--tp-chart-drop-x', `${targetX}px`);
+    if (targetCoordinate?.ok) {
+      host.style.setProperty('--tp-chart-drop-x', `${targetCoordinate.value}px`);
+    } else {
+      host.style.removeProperty('--tp-chart-drop-x');
+    }
   }, [externalPreview, interaction.state, interactionTarget]);
 
   const externalInteractionActive =
@@ -1438,7 +1403,14 @@ export function WaterfallCanvas({
           aria-hidden="true"
           className="tp-chart-stage__plot"
           data-drop-indicator={
-            interaction.state === 'dragging' ? interaction.target?.edge : undefined
+            interaction.state === 'dragging' && interaction.target?.placement !== 'inside'
+              ? interaction.target?.placement
+              : undefined
+          }
+          data-drop-inside={
+            interaction.state === 'dragging' && interaction.target?.placement === 'inside'
+              ? 'true'
+              : undefined
           }
           data-drop-node-id={
             interaction.state === 'dragging' ? interaction.target?.nodeId : undefined

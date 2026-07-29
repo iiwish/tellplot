@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SourceData, ViewSpec } from '../../src/domain/model';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
 
 const sourceData: SourceData = {
   schemaVersion: '1.0.0',

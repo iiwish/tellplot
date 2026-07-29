@@ -1,6 +1,6 @@
-import { readFile } from 'node:fs/promises';
-
 import { expect, test, type Locator, type Page } from '@playwright/test';
+
+import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
 
 const EDITOR = '[data-tellplot="editor"]';
 const COMMAND_FEEDBACK = '.tp-command-feedback';
@@ -19,7 +19,7 @@ interface BarPoint {
 
 async function openEditor(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('/playground');
   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
   await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
 }
@@ -35,18 +35,12 @@ async function rootOrder(page: Page): Promise<readonly string[]> {
     );
 }
 
-async function exportedViewSpecBytes(page: Page): Promise<Buffer> {
-  await page.getByRole('button', { name: '导出' }).click();
-  const item = page.getByRole('menuitem', { name: 'ViewSpec JSON' });
-  const downloadPromise = page.waitForEvent('download');
-  await item.click();
-  const download = await downloadPromise;
-  const path = await download.path();
-  expect(path).not.toBeNull();
-  if (path === null) {
-    throw new Error('Expected a local ViewSpec download path');
-  }
-  return readFile(path);
+async function serializedViewSpecBytes(page: Page): Promise<Buffer> {
+  const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
+  await guide.getByRole('tab', { name: '视图状态' }).click();
+  const input = page.getByRole('textbox', { name: 'TellPlot 视图状态' });
+  await expect(input).toBeVisible();
+  return Buffer.from(await input.inputValue());
 }
 
 async function paintedPixelCount(canvas: Locator): Promise<number> {
@@ -70,6 +64,31 @@ async function paintedPixelCount(canvas: Locator): Promise<number> {
       }
     }
     return painted;
+  });
+}
+
+async function canvasPixelHash(canvas: Locator): Promise<number> {
+  return canvas.evaluate(element => {
+    if (!(element instanceof HTMLCanvasElement)) {
+      return 0;
+    }
+    const context = element.getContext('2d');
+    if (context === null) {
+      return 0;
+    }
+    const pixels = context.getImageData(0, 0, element.width, element.height).data;
+    let hash = 2_166_136_261;
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      hash ^= pixels[offset] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+      hash ^= pixels[offset + 1] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+      hash ^= pixels[offset + 2] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+      hash ^= pixels[offset + 3] ?? 0;
+      hash = Math.imul(hash, 16_777_619);
+    }
+    return hash >>> 0;
   });
 }
 
@@ -133,11 +152,10 @@ async function waterfallBarPoints(canvas: Locator): Promise<readonly BarPoint[]>
       return [];
     }
     const palette = [
-      [95, 107, 101],
-      [22, 131, 99],
-      [213, 82, 74],
-      [49, 92, 140],
-      [164, 104, 18],
+      [47, 124, 246],
+      [18, 183, 106],
+      [240, 68, 100],
+      [20, 184, 166],
     ];
     const pixels = context.getImageData(0, 0, element.width, element.height).data;
     const ysByX: number[][] = Array.from({ length: element.width }, () => []);
@@ -299,7 +317,7 @@ test('chart, outline, and keyboard produce the same post-removal move result', a
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(outlineCanvas, 'outline');
   const outlineOrder = await rootOrder(page);
-  const outlineViewSpec = await exportedViewSpecBytes(page);
+  const outlineViewSpec = await serializedViewSpecBytes(page);
 
   await openEditor(page);
   const keyboardCanvas = await markCanvas(page, 'keyboard');
@@ -309,7 +327,7 @@ test('chart, outline, and keyboard produce the same post-removal move result', a
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(keyboardCanvas, 'keyboard');
   const keyboardOrder = await rootOrder(page);
-  const keyboardViewSpec = await exportedViewSpecBytes(page);
+  const keyboardViewSpec = await serializedViewSpecBytes(page);
 
   await openEditor(page);
   const chartCanvas = await markCanvas(page, 'chart');
@@ -317,7 +335,7 @@ test('chart, outline, and keyboard produce the same post-removal move result', a
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(chartCanvas, 'chart');
   const chartOrder = await rootOrder(page);
-  const chartViewSpec = await exportedViewSpecBytes(page);
+  const chartViewSpec = await serializedViewSpecBytes(page);
 
   expect(outlineOrder).toEqual(keyboardOrder);
   expect(chartOrder).toEqual(keyboardOrder);
@@ -348,8 +366,10 @@ test('creates, collapses, expands, and ungroups a conserved group from the real 
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await expectCanvasRetained(canvas, 'group-flow');
 
@@ -363,19 +383,81 @@ test('creates, collapses, expands, and ungroups a conserved group from the real 
     'false',
   );
   await expect(page.getByRole('treeitem', { name: /销量增长/ })).toBeHidden();
-  await expect(groupRow).toContainText('1,280');
+  await expect(groupRow).toContainText('1,520');
 
   await page.getByRole('button', { name: '展开 增长驱动' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '3');
   await expectCanvasRetained(canvas, 'group-flow');
   await expect(page.getByRole('treeitem', { name: /销量增长/ })).toBeVisible();
   await groupRow.click();
+  await activateInspectorPanel(page);
   await page.getByRole('button', { name: '取消分组' }).click();
+  await activateOutlinePanel(page);
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '4');
   await expectCanvasRetained(canvas, 'group-flow');
   await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveCount(0);
   expect(await rootOrder(page)).toEqual(baselineOrder);
   await expect(page.getByRole('treeitem', { name: /期末净利润/ })).toContainText('3,440');
+});
+
+test('chart click retains group actions while a boundary drag moves one child out', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openEditor(page);
+  await page.getByRole('treeitem', { name: /销量增长/ }).click();
+  await page
+    .getByRole('treeitem', { name: /价格提升/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await page
+    .getByRole('treeitem', { name: /产品结构/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
+  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+  await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+
+  const groupRow = page.getByRole('treeitem', { name: /增长驱动/ });
+  const groupId = await groupRow.getAttribute('data-node-id');
+  expect(groupId).not.toBeNull();
+  await expect(groupRow).toHaveAttribute('data-source-count', '3');
+
+  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+  await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+  const points = await waterfallBarPoints(canvas);
+  const groupedCanvasHash = await canvasPixelHash(canvas);
+  const firstChild = points[1];
+  const lastChild = points[3];
+  expect(firstChild).toBeDefined();
+  expect(lastChild).toBeDefined();
+  if (firstChild === undefined || lastChild === undefined || groupId === null) {
+    return;
+  }
+
+  await page.mouse.move(firstChild.x, firstChild.y);
+  await expect(page.getByRole('button', { name: '折叠分组: 增长驱动' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '取消分组: 增长驱动' })).toBeVisible();
+  await page.mouse.click(firstChild.x, firstChild.y);
+  await expect(page.getByRole('button', { name: '折叠分组: 增长驱动' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '取消分组: 增长驱动' })).toBeVisible();
+
+  await page.mouse.move(lastChild.x, lastChild.y);
+  await page.mouse.down();
+  await page.mouse.move(lastChild.maxX + 2, lastChild.y, { steps: 6 });
+  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
+  await expect(page.locator('.tp-chart-group-actions')).toHaveCount(0);
+  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-indicator', 'after');
+  await expect(page.getByTestId('tellplot-chart')).toHaveAttribute('data-drop-node-id', groupId);
+  await expect.poll(() => canvasPixelHash(canvas)).not.toBe(groupedCanvasHash);
+  const previewCanvasHash = await canvasPixelHash(canvas);
+  await page.mouse.up();
+
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+  await expect(groupRow).toHaveAttribute('data-source-count', '2');
+  await expect(page.getByRole('treeitem', { name: /产品结构/ })).toHaveAttribute('aria-level', '1');
+  await expect(page.getByRole('treeitem', { name: /销量增长/ })).toHaveAttribute('aria-level', '2');
+  await expect.poll(() => canvasPixelHash(canvas)).toBe(previewCanvasHash);
 });
 
 test('creates a nested group from contiguous sibling nodes and preserves recursive levels', async ({
@@ -386,13 +468,17 @@ test('creates a nested group from contiguous sibling nodes and preserves recursi
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
 
+  await activateOutlinePanel(page);
   await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
   await page.getByRole('button', { name: '创建分组' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+  await activateOutlinePanel(page);
 
   const outer = page.getByRole('treeitem', { name: /经营桥/ });
   const inner = page.getByRole('treeitem', { name: /增长驱动/ });
@@ -406,6 +492,60 @@ test('creates a nested group from contiguous sibling nodes and preserves recursi
   await page.getByRole('button', { name: '展开 经营桥' }).click();
   await expect(inner).toBeVisible();
   await expect(sales).toBeVisible();
+});
+
+test('marquee across an expanded group promotes its complete boundary into an outer group', async ({
+  page,
+}) => {
+  await openEditor(page);
+  await page.getByRole('treeitem', { name: /销量增长/ }).click();
+  await page
+    .getByRole('treeitem', { name: /价格提升/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await page
+    .getByRole('treeitem', { name: /产品结构/ })
+    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
+  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+  await page.getByRole('button', { name: '创建分组' }).click();
+
+  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+  await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+  const points = await waterfallBarPoints(canvas);
+  const box = await canvas.boundingBox();
+  const selectedChild = points[3];
+  const outsideItem = points[4];
+  expect(box).not.toBeNull();
+  expect(selectedChild).toBeDefined();
+  expect(outsideItem).toBeDefined();
+  if (box === null || selectedChild === undefined || outsideItem === undefined) {
+    return;
+  }
+
+  await page.mouse.move(selectedChild.minX - 4, box.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(outsideItem.maxX + 4, box.y + box.height - 36, { steps: 8 });
+  await page.mouse.up();
+
+  const dialog = page.getByRole('dialog', { name: '创建折叠分组' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-selection-mode="lifted"]')).toContainText('按分组边界');
+  await dialog.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
+  await dialog.getByRole('button', { name: '创建分组' }).click();
+
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+  await activateOutlinePanel(page);
+  const outer = page.getByRole('treeitem', { name: /经营桥/ });
+  await expect(outer).toHaveAttribute('data-source-count', '4');
+  await expect(page.getByRole('button', { name: '展开 经营桥' })).toBeVisible();
+  await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toBeHidden();
+
+  await page.getByRole('button', { name: '展开 经营桥' }).click();
+  await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveAttribute('aria-level', '2');
+  await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toHaveAttribute(
+    'aria-level',
+    '2',
+  );
 });
 
 test('blank-chart marquee creates one initially collapsed direct group', async ({ page }) => {

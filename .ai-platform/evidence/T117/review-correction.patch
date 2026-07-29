@@ -1,0 +1,3922 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 23b8a4f..82e292c 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -2,9 +2,9 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.6.0
++- Version: 0.9.0
+ - Status: Not_Released
+-- Last updated: 2026-07-20
++- Last updated: 2026-07-23
+ - Working branch: `codex/t112-categorical-data-contract`
+ 
+ ## Current State
+@@ -12,7 +12,10 @@
+ TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 多图表基础能力已完成并验收；G002 已形成
+ `@tellplot/editor@0.1.0-beta.1` release candidate，状态为 `Needs_Review`。当前包提供瀑布图、分类条形图和
+ 分类柱状图，以及共享数据/视图模型、确定性命令、结构大纲、历史、持久化、安全语义配置、SVG/PNG
+-导出和无障碍支持。
++导出和无障碍支持。组件使用者可通过 `panels` 独立隐藏结构大纲、检查器和工具栏，也可通过可选 `layout`
++改变大纲位置和检查器呈现；未传入 `layout` 时保持既有默认布局。playground 在桌面端默认同时显示左侧
++亮色实时图表文档、中间图表和右侧大纲/检查器标签栏，紧凑视口使用 dialog。左侧合法 JSON 修改经过
++source/view 公共校验后更新图形，右侧确定性命令产生的 `ViewSpec` 反向回写；非法草稿不改变图形。
+ 
+ G2 继续独占图形渲染、场景边界、事件和动画。TellPlot 不包含 Dashboard、第二渲染引擎或通用图表
+ plugin registry。
+@@ -27,16 +30,18 @@ plugin registry。
+ 
+ ## Needs Review
+ 
+-- G002 / T117：Beta 公共 API、package README/LICENSE、developer docs、changelog、版本、tarball allowlist 和
+-  release-candidate validation 已完成，等待一次目标级用户验收。
++- G002 / T117：Beta 公共 API、package README/LICENSE、developer docs、changelog、版本、tarball allowlist、
++  可配置 panel/布局、双向 playground 开发者编辑器及 release-candidate validation 已完成，等待一次目标级用户验收。
++- G002-R1 / T118：分组上下文、跨层拖拽、自动解散和展开分组区域已完成，等待目标级用户验收。
+ 
+ ## Validation Evidence
+ 
+-- G002 fresh unit/coverage：393/393；domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+-- current Chromium/Firefox/WebKit：132/132。
+-- previous browser release：132/132；WebKit 18.4：44/44。
+-- accessibility：27/27；React 18/19、ESM/CJS/types/compile-checked quickstart/package checks 通过。
+-- 200-item fresh performance：waterfall p95 135.1ms；categorical p95 67.5ms；预算 150ms。
++- fresh unit/coverage：417/417；statements 86.08%、branches 80.81%、functions 88.57%、lines 86.24%，
++  受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
++- current Chromium/Firefox/WebKit：150/150。
++- previous browser release：150/150；WebKit 18.4：50/50。
++- accessibility：33/33；React 18/19、ESM/CJS/types/compile-checked quickstart/package checks 通过。
++- 200-item fresh performance：waterfall p95 89.5ms；categorical p95 75.9ms；预算 150ms。
+ - tarball 为 `@tellplot/editor@0.1.0-beta.1`，仅包含 13 个 dist/metadata/README/LICENSE 文件。
+ - strict artifact validator、format、lint、typecheck、build 和 diff checks 通过。
+ 
+@@ -47,8 +52,7 @@ plugin registry。
+ - 当前已验收 T112-T116 工作仍位于未提交的 working branch；stage、commit、push、PR 和 merge 未获授权。
+ - `@tellplot/editor@0.1.0-beta.1` 只完成本地 release-candidate 验证，npm publish 和正式 release 未执行。
+ - playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
+-- fresh waterfall performance p95 为 135.1ms，仍低于 150ms 阻断预算，但余量小于分类图；后续 release
+-  candidate 应继续保留真实浏览器监测，不弱化预算。
++- 200-item performance 继续保留 150ms 阻断预算和真实浏览器监测，不弱化预算。
+ - GitHub 私有仓库计划无法强制 branch protection/rulesets；服务端 required checks 仍受外部计划限制。
+ 
+ ## Next Gate
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 9fe87ed..5198aff 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.23.0
++- Version: 0.25.0
+ - Status: Active
+-- Last updated: 2026-07-20
+-- Scope: T101-T116 已验收；G002 / T117 为 Beta 候选；G002-R1 分组与跨层编辑体验执行中
++- Last updated: 2026-07-23
++- Scope: T101-T116 已验收；G002 / T117 与 G002-R1 / T118 均等待目标级验收
+ 
+ ## Goal-Level Delivery
+ 
+@@ -20,8 +20,8 @@
+ | Goal | Status | Outcome |
+ | --- | --- | --- |
+ | G001 - 多图表基础能力 | Accepted | T101-T116；waterfall、bar、column 与共享 G2 runtime 完整验收 |
+-| G002 - 轻量图表库 Beta | Needs_Review | T117；公共 API、集成文档、发布包和 beta 质量闭环 |
+-| G002-R1 - 分组与跨层编辑体验 | In_Progress | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
++| G002 - 轻量图表库 Beta | Needs_Review | T117；公共 API、双向演示编辑器、发布包和 beta 质量闭环 |
++| G002-R1 - 分组与跨层编辑体验 | Needs_Review | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
+ | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
+ | G004 - 开源项目成熟度 | Later | 贡献、版本、发布和长期维护体验 |
+ 
+@@ -159,9 +159,12 @@
+ 
+ ## G002 Execution
+ 
+-G002 已由用户于 2026-07-20 明确批准，内部以 T117 作为单一目标级 governed task 连续完成。权威目标图
+-位于 `.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md`，当前只等待 G002 整体验收。旧仓库处置、
+-npm publish 和正式发布保持独立闸门。
++G002 已由用户于 2026-07-20 明确批准，内部以 T117 作为单一目标级 governed task 连续完成。T117-A003
++已交付可配置 panel 显隐、可选布局策略和桌面端左代码/中图表/右 panel rail 演示布局。用户于 2026-07-23
++授权 T117-A004，将左栏升级为安全、亮色、双向同步的实时图表文档编辑器；公共 API、source/view schema、
++核心命令和 G2 runtime 保持不变。该修正已通过完整发布候选门禁，G002 / T117 进入 `Needs_Review`。权威
++目标图位于 `.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md`。旧仓库处置、npm publish 和正式
++发布保持独立闸门。
+ 
+ ## G002-R1 Execution
+ 
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/analysis.md b/.ai-platform/specs/005-lightweight-chart-library-beta/analysis.md
+index 8cff165..9f3f99e 100644
+--- a/.ai-platform/specs/005-lightweight-chart-library-beta/analysis.md
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/analysis.md
+@@ -2,11 +2,11 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.1.0
++- Version: 0.4.0
+ - Status: Completed
+ - Feature ID: `005-lightweight-chart-library-beta`
+ - Goal ID: `G002`
+-- Last updated: 2026-07-20
++- Last updated: 2026-07-23
+ 
+ ## Result
+ 
+@@ -23,6 +23,17 @@
+ - command source 的 `ai` literal 没有 production consumer，删除后由 parser rejection 与 host command tests 锁定；
+   该变化符合用户明确确认的产品边界，并在首次 beta 前完成。
+ - package tarball、React matrix 和 browser gates 已存在，G002 只补全 README/LICENSE/allowlist 与目标级证据。
++- playground 使用面板只引用已确认的 package import、`FinancialChartEditor` 和 `chartAppearance`，不新增
++  runtime export、schema、dependency 或 G2 公共出口。
++- `panels` 已提供 outline、inspector 和 toolbar 的独立显隐合同；新增 `layout` 只负责可选位置与呈现模式，
++  默认值保持当前 split layout，因此不是 breaking change。
++- 演示页通过公共 `layout` 消费右侧标签栏，不导入 `OutlinePanel`/`InspectorPanel` 或依赖内部 CSS 排序。
++- 双向编辑器的文档是 playground 本地组合，不进入 package export 或持久化 schema；它只组合已经确认的
++  `SourceData`、`ViewSpec`、`FinancialChartAppearance`、`FinancialChartEditorPanels` 和
++  `FinancialChartEditorLayout`。
++- 左到右使用结构化 JSON 解析和现有公共 validators，非法草稿不提交；右到左消费既有
++  `onViewSpecChange`，因此直接操作、大纲、键盘和宿主命令继续共享同一确定性命令结果。
++- 不采用 Monaco/CodeMirror、远程编译或任意 JS 执行，避免为演示能力增加依赖、安全面和第二运行时。
+ 
+ ## Constitution Check
+ 
+@@ -30,6 +41,7 @@
+ - P-006：G2 ownership 不变。
+ - P-009：不创建新的 runtime abstraction。
+ - P-010：完整 release-candidate evidence 保留。
++- P-003/P-005：原始 source 与可编辑 view 保持显式分离，右侧图形动作不反向改写金额。
+ 
+ ## Execution Readiness
+ 
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md b/.ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md
+index 328a57d..46e6391 100644
+--- a/.ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/checklists/requirements.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.1.0
++- Version: 0.4.0
+ - Status: Completed
+-- Source spec: `../spec.md` 0.1.0 Confirmed
+-- Last updated: 2026-07-20
++- Source spec: `../spec.md` 0.4.0 Confirmed
++- Last updated: 2026-07-23
+ 
+ ## Product And Scope
+ 
+@@ -22,12 +22,24 @@
+ - [x] 是否定义 schema、受控/非受控、error 和 migration 文档？[Documentation]
+ - [x] 是否用 compile-checked consumer 防止示例漂移？[Quality]
+ - [x] 是否披露 `ai` command source 的 beta 前收窄？[Compatibility]
++- [x] 是否让演示页代码只使用真实 beta 公共 API 和安全配置？[Integration]
++- [x] 是否定义 dialog、tabs、复制反馈、焦点返回和移动端可用性？[Accessibility]
++- [x] 是否保持 `panels` 的 outline/inspector/toolbar 独立显隐能力？[API]
++- [x] 是否让未配置用户保持当前默认布局，并只以可选 `layout` 启用右侧标签栏？[Compatibility]
++- [x] 是否避免通过 playground CSS 依赖编辑器内部 DOM 排序？[Architecture]
++- [x] 左侧文档是否精确覆盖当前 source、view、appearance、panels 和 layout？[Consistency]
++- [x] 合法左侧修改是否更新图形，右侧命令是否只回写 `ViewSpec`？[Bidirectional]
++- [x] 非法草稿是否保留且不改变最后一次合法图形状态？[Safety]
++- [x] 是否明确禁止 eval、任意 JS/TS 执行、远程编译和新增编辑器依赖？[Security]
++- [x] 是否保留独立接入示例并采用亮色代码主题？[Developer Experience]
+ 
+ ## Validation
+ 
+ - [x] 是否保留 unit/coverage、package、React、browser、a11y、performance 和 export gates？[Regression]
+ - [x] 是否要求 strict types、无 escape type 和无内部 G2 export？[Safety]
+ - [x] 是否要求 goal-level diff、test results、review 和 residual risk？[Evidence]
++- [x] 是否覆盖默认、右侧标签栏、单面板、无面板与窄屏退化？[Layout]
++- [x] 是否覆盖解析单测、左到右、右到左、非法输入、键盘应用与移动端？[Live Editor]
+ 
+ ## Findings
+ 
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml b/.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml
+index e29011f..0644382 100644
+--- a/.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml
+@@ -34,12 +34,17 @@ work_unit:
+     - BETA-FR-005
+     - BETA-FR-006
+     - BETA-FR-007
++    - BETA-FR-008
++    - BETA-FR-009
++    - BETA-FR-010
+     - BETA-NFR-001
+     - BETA-NFR-002
+     - BETA-NFR-003
+     - BETA-NFR-004
+     - BETA-NFR-005
+     - BETA-NFR-006
++    - BETA-NFR-007
++    - BETA-NFR-008
+ 
+ codebase_context:
+   local_instructions:
+@@ -84,9 +89,11 @@ execution_constraints:
+     - packages/editor/tests/domain/commands.test.ts
+     - packages/editor/tests/package/**
+     - packages/editor/tests/react-matrix/run-react-matrix.mjs
++    - apps/playground/src/**
++    - e2e/**
+     - .ai-platform/**
+   forbidden_changes:
+-    - No new chart type, UI, visual, interaction, projection, rendering, export or persistence behavior.
++    - No new chart type, editor visual, chart interaction, projection, rendering, export or persistence behavior.
+     - No new, removed or upgraded dependency.
+     - No G2Spec, Chart instance, internal runtime or registry in the public API.
+     - No remote Git, npm publish, GitHub Release, merge or old-repository action.
+@@ -150,10 +157,69 @@ review_contract:
+ 
+ handoff:
+   goal_status: Needs_Review
+-  execution_attempt: T117-A001
++  execution_attempt: T117-A004
+   next_gate: Present one goal-level outcome and wait for explicit G002 user acceptance.
+   remote_actions: Not authorized.
+ 
++review_correction:
++  execution_attempt: T117-A002
++  authorization: User explicitly requested the playground usage button and configuration guide on 2026-07-22.
++  scope:
++    - Add a toolbar usage trigger.
++    - Show install, React import and chartAppearance examples in an accessible responsive dialog.
++    - Provide copy feedback and browser regression coverage.
++  forbidden:
++    - Public API, schema, dependency, core editor, chart behavior, remote Git and publish changes.
++
++layout_review_correction:
++  execution_attempt: T117-A003
++  authorization: >-
++    User explicitly approved the persistent-code, center-chart, right-panel layout and confirmed panel visibility
++    must remain configurable on 2026-07-22.
++  allowed_files:
++    - packages/editor/src/react/editorTypes.ts
++    - packages/editor/src/index.ts
++    - packages/editor/src/components/FinancialChartEditor.tsx
++    - packages/editor/src/components/EditorToolbar.tsx
++    - packages/editor/src/components/PanelRail.tsx
++    - packages/editor/src/styles/editor.css
++    - packages/editor/tests/components/**
++    - packages/editor/tests/package/**
++    - apps/playground/src/**
++    - docs/api.md
++    - e2e/**
++    - .ai-platform/**
++  scope:
++    - Keep the existing default split layout unchanged.
++    - Add typed optional outline placement and inspector presentation configuration.
++    - Keep outline, inspector and toolbar visibility independently configurable through panels.
++    - Show code by default on desktop and use a dialog on compact viewports.
++    - Render the playground with chart center and an accessible right-side outline/inspector tab rail.
++  forbidden:
++    - No schema, chart projection, chart interaction, export, dependency, G2 runtime, remote Git or publish changes.
++
++live_editor_review_correction:
++  execution_attempt: T117-A004
++  authorization: >-
++    User explicitly requested an ECharts-like bidirectional demo editor with a light code theme on 2026-07-23.
++  allowed_files:
++    - apps/playground/src/**
++    - apps/playground/tests/**
++    - e2e/**
++    - vitest.config.ts
++    - .ai-platform/**
++    - AGENTS.md
++  scope:
++    - Serialize the current playground source, view, appearance, panels and layout into one deterministic document.
++    - Apply validated JSON edits to the chart after a short debounce and on Ctrl/Cmd+Enter.
++    - Reflect command-produced ViewSpec changes back into the editor without rewriting source amounts.
++    - Keep invalid drafts visible while preserving the last valid chart state and exposing a stable error path.
++    - Use a dependency-free accessible light editor and keep installation/React/configuration examples available.
++  forbidden:
++    - No eval, new Function, arbitrary JavaScript or TypeScript execution, remote compilation or iframe runtime.
++    - No public API, source/view schema, dependency, core command, chart projection, G2 runtime or export change.
++    - No remote Git, publish or release action.
++
+ stop_conditions:
+   - A runtime behavior, visual, schema, dependency or new public API is required.
+   - Any accepted G001 regression remains red after a narrow reproducible fix attempt.
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/plan.md b/.ai-platform/specs/005-lightweight-chart-library-beta/plan.md
+index d568223..e091221 100644
+--- a/.ai-platform/specs/005-lightweight-chart-library-beta/plan.md
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/plan.md
+@@ -4,10 +4,10 @@
+ 
+ - Feature ID: `005-lightweight-chart-library-beta`
+ - Goal ID: `G002`
+-- Version: 0.1.0
++- Version: 0.4.0
+ - Status: Confirmed
+-- Last updated: 2026-07-20
+-- Approval: 用户已批准 G002 目标级连续执行
++- Last updated: 2026-07-23
++- Approval: 用户已批准 G002 目标级连续执行、演示页常驻代码、可选面板布局和双向实时图表文档
+ 
+ ## Baseline
+ 
+@@ -25,6 +25,14 @@
+ 4. 将 `@tellplot/editor` 版本设为 `0.1.0-beta.1`，补齐 README、LICENSE、CHANGELOG 和迁移规则。
+ 5. 运行 package、React、当前/上一浏览器、a11y、performance、export 和完整静态门禁。
+ 6. 生成 task-only diff、test results、review 和目标级 summary，状态停在 `Needs_Review`。
++7. 参考编辑器工具栏提供“使用”对话面板，直接展示安装、最小 React 引入和安全配置代码；入口不修改核心
++   编辑器 runtime、公共 API 或图表行为。
++8. 将桌面使用代码改为默认常驻左栏；以向后兼容的 `layout` 配置让演示页使用右侧大纲/检查器标签栏，
++   `panels` 继续独立控制面板显隐，窄屏沿用对话面板。
++9. 将静态左栏升级为亮色开发者面板：默认编辑一份由当前状态序列化的安全 JSON 图表文档，短延迟校验后
++   更新图形；右侧命令变更只回写 `viewSpec`，不把图形编辑解释为源金额变更。
++10. 非法草稿保持可编辑并明确显示第一个错误路径，图表继续使用最后一次合法文档；安装、React 与配置代码
++    保留在独立“接入示例”模式，不新增代码编辑器或执行器依赖。
+ 
+ ## Public API Decision
+ 
+@@ -53,12 +61,19 @@ Beta runtime exports 保持十个：
+ - `docs/errors.md`：validation、command、export 和接入故障处理。
+ - `docs/migration.md`：beta SemVer、schema 1/2、0.1.0-beta.1 升级检查。
+ - `CHANGELOG.md`：beta release scope。
++- playground 使用面板：安装、最小 React 引入与 `chartAppearance` 配置的即时可复制版本。
++- playground 实时配置：`sourceData`、`viewSpec`、`chartAppearance`、`panels`、`layout` 的确定性 JSON
++  序列化、解析、校验和双向同步；仅属于演示页，不是 package public API。
++- `FinancialChartEditor` layout：默认 split 布局不变；可选 outline placement 与 tabbed inspector mode，
++  不公开内部 panel component。
+ 
+ ## Test Strategy
+ 
+ - RED：beta contract tests 先要求版本、README/tarball、compiled quickstart 和 command source 收窄。
+ - GREEN：最小修改 package/docs/command source 与测试。
+ - REFACTOR：统一陈旧 T107/AI 文案，不扩展 runtime。
++- Review correction RED：先锁定图表文档解析、非法草稿身份保持和浏览器双向同步。
++- Review correction GREEN：实现无依赖亮色 textarea 编辑器、延迟应用和外部 revision 回写。
+ - Final：format、lint、typecheck、unit/coverage、build、package、React matrix、current/previous browsers、a11y、
+   performance、strict artifact validator、diff check。
+ 
+@@ -67,5 +82,10 @@ Beta runtime exports 保持十个：
+ - 不把文档愿望变成新 runtime API。
+ - 不因 G2 chunk warning增加分包或 dependency。
+ - 不把 beta version 等同于 publish 授权。
+-- 不修改 chart projection、rendering、interaction、appearance、export behavior 或截图基线。
++- 不修改 chart projection、rendering、interaction、appearance 或 export behavior。
++- 使用面板只消费已经确认的公共 API；不维护第二份虚构配置合同。
++- 面板布局由组件公共配置实现，不用 playground CSS 猜测或重排内部 DOM。
++- 不执行用户输入的 JavaScript；图表文档只经过 `JSON.parse`、封闭字段校验、`validateSourceData` 和
++  `validateViewSpec`。
++- 左侧合法 source 变更显式重建受控编辑器状态；右侧命令仍只能改变 `ViewSpec`，保持 source/view 分离。
+ - 任何 full gate 行为回归只做最小缺陷修复；需要产品/视觉/schema 变化时停止。
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/spec.md b/.ai-platform/specs/005-lightweight-chart-library-beta/spec.md
+index 9cd9390..e78f572 100644
+--- a/.ai-platform/specs/005-lightweight-chart-library-beta/spec.md
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/spec.md
+@@ -4,10 +4,11 @@
+ 
+ - Feature ID: `005-lightweight-chart-library-beta`
+ - Goal ID: `G002`
+-- Version: 0.1.0
++- Version: 0.4.0
+ - Status: Confirmed
+-- Last updated: 2026-07-20
+-- Approval: 用户于 2026-07-20 明确批准 G002 轻量图表库 Beta
++- Last updated: 2026-07-23
++- Approval: 用户于 2026-07-20 明确批准 G002；于 2026-07-22 明确批准演示页常驻代码与可选面板布局；于
++  2026-07-23 明确要求演示代码与图形双向实时对应并采用亮色主题
+ 
+ ## Goal
+ 
+@@ -22,6 +23,9 @@
+ - 开发者可以查到公共 runtime exports、主要类型、错误模型、schema 兼容和配置边界。
+ - 发布包只包含运行所需 dist、声明、样式、README、LICENSE 和 package metadata。
+ - beta 包在 React 18/19、ESM/CJS、当前/上一发布浏览器中通过真实消费验证。
++- 开发者可以从演示页直接查看并复制与真实公共 API 一致的安装、引入和安全配置示例。
++- 开发者可以在演示页编辑一份可校验的图表文档实时查看效果，图形编辑产生的 `ViewSpec` 变化也会确定性
++  回写到同一份文档。
+ 
+ ## Requirements
+ 
+@@ -60,6 +64,25 @@ package.json；不包含源码、测试、playground、evidence 或内部文档
+ G002 内部工作流连续执行，不逐项请求用户验收；最终统一提供 API、文档、tarball、测试和 residual risk
+ evidence，并停在 `Needs_Review`。
+ 
++### BETA-FR-008 演示页集成入口
++
++参考编辑器工具栏提供“使用”入口，以可访问对话面板展示安装命令、React 最小引入和
++`chartAppearance` 配置。代码必须来自当前 beta 公共 API，不暴露 G2 instance 或内部 runtime；复制操作具有
++明确反馈，面板支持键盘关闭和移动端视口。
++
++### BETA-FR-009 开发者演示布局
++
++桌面演示页默认同时显示左侧使用代码、中间图表和右侧结构大纲/检查器标签栏；窄屏退化为按需对话面板。
++`FinancialChartEditor` 提供可选、类型化的 `layout` 配置控制结构大纲位置和检查器呈现模式，同时继续通过
++`panels` 分别隐藏 outline、inspector 和 toolbar。未传 `layout` 时保持现有左侧大纲、右侧检查器默认布局。
++
++### BETA-FR-010 双向图表文档编辑
++
++演示页左侧默认显示亮色实时图表文档编辑器。文档精确包含当前 `sourceData`、`viewSpec`、
++`chartAppearance`、`panels` 和 `layout`；合法 JSON 修改经过严格校验后更新右侧图表，右侧直接操作、结构大纲、
++键盘和检查器命令产生的 `ViewSpec` 变化反向更新左侧文档。非法草稿保留在编辑器中并显示稳定错误路径，右侧
++保持最后一次合法状态。安装、React 和配置示例保留为独立“接入示例”视图。
++
+ ## Non-Functional Requirements
+ 
+ - BETA-NFR-001：无新增 runtime/dev dependency。
+@@ -68,14 +91,18 @@ evidence，并停在 `Needs_Review`。
+ - BETA-NFR-004：文档示例与真实公共类型保持同步。
+ - BETA-NFR-005：包内容与 public exports 由确定性 contract tests 锁定。
+ - BETA-NFR-006：核心包不发起网络请求，普通日志不包含金额、标签或来源明细。
++- BETA-NFR-007：布局配置是向后兼容的可选公共类型，不导出内部 panel component 或 CSS selector 合同。
++- BETA-NFR-008：实时编辑器只解析本地 JSON 并复用公共数据校验；不得使用 `eval`、`new Function`、任意
++  JavaScript/TypeScript 执行、远程编译、iframe runtime 或新增编辑器依赖。
+ 
+ ## Non-Goals
+ 
+ - 新图表类型、运行中图表切换或多序列图表。
+-- 新 UI、视觉改版或交互行为变更。
++- 未经配置改变核心编辑器默认视觉，或改变图表交互行为。
+ - G2 分包、替换 G2、第二渲染引擎或通用插件系统。
+ - 新状态库、动画库、文档站框架或 release automation dependency。
+ - npm publish、GitHub Release、push、PR、merge 或旧仓库处置。
++- 通用代码 IDE、任意 JavaScript/TypeScript 执行环境、生产组件内置代码编辑器或新的公共文档 schema。
+ 
+ ## Success Criteria
+ 
+@@ -84,6 +111,12 @@ evidence，并停在 `Needs_Review`。
+ - BETA-SC-003：`pnpm pack --dry-run --json` 内容满足 BETA-FR-005，版本为 `0.1.0-beta.1`。
+ - BETA-SC-004：publint、attw、ESM/CJS/types consumers 全部通过。
+ - BETA-SC-005：完整 release-candidate gates 通过，无 unresolved Critical/High/Medium finding。
++- BETA-SC-006：演示页使用入口在桌面和移动视口可用，示例通过类型检查，dialog、tabs、复制反馈和焦点返回
++  通过真实浏览器与可访问性验证。
++- BETA-SC-007：桌面端代码、图表和右侧 panel rail 同时可见；`layout` 与 `panels` 的默认、右侧标签栏、单面板
++  和无面板组合通过组件、类型、浏览器与无障碍测试。
++- BETA-SC-008：左侧合法修改实时更新图形，右侧结构编辑回写左侧 `viewSpec`，非法草稿不改变图形；编辑器
++  采用亮色主题，并通过解析单测、双向浏览器测试、移动视口与可访问性检查。
+ 
+ ## Approval Gate
+ 
+diff --git a/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md b/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
+index d68ba0f..a96cb3f 100644
+--- a/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
++++ b/.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md
+@@ -4,9 +4,9 @@
+ 
+ - Feature ID: `005-lightweight-chart-library-beta`
+ - Goal ID: `G002`
+-- Version: 0.1.0
++- Version: 0.4.0
+ - Status: Confirmed
+-- Last updated: 2026-07-20
++- Last updated: 2026-07-23
+ - Approval: 用户于 2026-07-20 明确批准 G002；内部任务无需逐项用户验收
+ 
+ ## T117 - 交付 G002 轻量图表库 Beta
+@@ -15,16 +15,21 @@
+ - Priority: P0
+ - Dependencies: G001 / T101-T116 Accepted
+ - Blocks: npm publish、G003 新图表扩展
+-- Story / Requirement: G002；BETA-FR-001 至 BETA-FR-007；BETA-NFR-001 至 BETA-NFR-006
++- Story / Requirement: G002；BETA-FR-001 至 BETA-FR-008；BETA-NFR-001 至 BETA-NFR-006
++- Story / Requirement extension: BETA-FR-009；BETA-NFR-007
++- Story / Requirement extension: BETA-FR-010；BETA-NFR-008
+ - Parallel: false；G002 作为一个目标级 governed task 连续执行
+ - Conflicts with: 新图表、runtime 行为、依赖升级、远程 Git、npm publish、正式 release
+ - Goal: 交付可安装、可理解、可集成、可验证的 `@tellplot/editor@0.1.0-beta.1` release candidate。
+ - Allowed files: `README.md`、`CHANGELOG.md`、`docs/**`、`package.json`、`packages/editor/package.json`、
+   `packages/editor/README.md`、`packages/editor/LICENSE`、`packages/editor/src/domain/commands.ts`、
+   `packages/editor/tests/domain/commands.test.ts`、`packages/editor/tests/package/**`、
+-  `packages/editor/tests/react-matrix/run-react-matrix.mjs`、`.ai-platform/**`
+-- Read-only behavior: charts、rendering、components、interactions、export implementation、styles、playground、E2E
+-  behavior and screenshots
++  `packages/editor/tests/react-matrix/run-react-matrix.mjs`、`packages/editor/src/react/editorTypes.ts`、
++  `packages/editor/src/index.ts`、`packages/editor/src/components/FinancialChartEditor.tsx`、
++  `packages/editor/src/components/EditorToolbar.tsx`、`packages/editor/src/components/PanelRail.tsx`、
++  `packages/editor/src/styles/editor.css`、
++  `packages/editor/tests/components/**`、`apps/playground/src/**`、`e2e/**`、`.ai-platform/**`
++- Read-only behavior: chart projection/rendering、chart interactions、export implementation and source/view schema
+ - Test targets: public exports、command source、compile-checked quickstart、tarball allowlist、ESM/CJS/types、
+   React 18/19、当前/上一浏览器、a11y、performance、export regression
+ - Deliverables: beta package metadata；package README/LICENSE；developer docs；CHANGELOG；tarball；目标级 evidence
+@@ -33,8 +38,11 @@
+   - developer documentation and compile-checked examples
+   - package metadata, README, LICENSE, changelog and tarball allowlist
+   - package/React/browser/a11y/performance release-candidate validation
++  - playground usage dialog、copy feedback and responsive accessibility
++  - persistent developer code pane、optional panel layout and visibility combinations
++  - safe live chart document、light editor and deterministic bidirectional synchronization
+   - goal-level spec/engineering/QA review and evidence
+-- Acceptance criteria: BETA-SC-001 至 BETA-SC-005 全部满足；无 unresolved Critical/High/Medium finding；
++- Acceptance criteria: BETA-SC-001 至 BETA-SC-008 全部满足；无 unresolved Critical/High/Medium finding；
+   npm publish、远程 Git 和正式 release 未执行。
+ - Definition of Done: TDD receipt、完整 release-candidate gates、三层 review 与目标级 evidence 完整；G002 和
+   T117 同步进入 `Needs_Review`，只向用户请求一次目标验收。
+@@ -46,9 +54,15 @@
+   REFACTOR 只清理陈旧公共文案。
+ - Packet path: `.ai-platform/specs/005-lightweight-chart-library-beta/packets/T117.yaml`
+ - Evidence required: `.ai-platform/evidence/T117/` 中的目标级 summary、tests、diff、pack manifest、API surface 和 review
+-- User review: 只在整个 G002 完成后进入 `Needs_Review`。
++- User review: G002 已完成 T117-A004 复核修正并进入 `Needs_Review`，等待用户目标级验收。
+ - Execution variance: compile-checked CSS import 需要为 styles subpath 声明 `types` condition；React tarball
+   consumer 的 manifest assertion 同步验证该 metadata，不改变 runtime、CSS 内容或导入路径。
+-- Review state: spec compliance、bug/code quality 与 QA review 无 blocking finding；393/393 unit/coverage、
+-  current browser 132/132、previous browser 132/132 + WebKit 18.4 44/44、a11y 27/27、React 18/19、package、
++- Review state: spec compliance、bug/code quality 与 QA review 无 blocking finding；417/417 unit/coverage、
++  current browser 150/150、previous browser 150/150 + WebKit 18.4 50/50、a11y 33/33、React 18/19、package、
+   type/lint/format/build/performance 均通过。
++- Review correction: T117-A002 演示页使用入口通过 410/410 unit/coverage、current browser 138/138、previous
++  browser 138/138 + WebKit 18.4 46/46、a11y 33/33、package、type/lint/format/build/performance。
++- Review correction: T117-A003 已完成并通过复核；桌面常驻代码、右侧 panel tabs、可选布局 API 和
++  独立 panel 显隐组合均已验证，默认组件布局保持不变。
++- Review correction: T117-A004 已完成并通过复核；playground 使用安全 JSON 图表文档、亮色无依赖编辑器和
++  确定性双向同步，不修改 package public API、source/view schema、核心命令或 G2 runtime。
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/tasks.md b/.ai-platform/specs/006-group-cross-level-experience/tasks.md
+index 7684822..42d7c0b 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/tasks.md
++++ b/.ai-platform/specs/006-group-cross-level-experience/tasks.md
+@@ -11,7 +11,7 @@
+ 
+ ## T118 - 交付 G002-R1 分组与跨层编辑体验
+ 
+-- Status: In_Progress
++- Status: Needs_Review
+ - Priority: P0
+ - Dependencies: G001 Accepted；G002 / T117 release candidate complete
+ - Blocks: G002 目标级复验与后续基础图表扩展
+@@ -44,4 +44,4 @@
+ - TDD plan: RED contextual/inside/dissolve/region tests；GREEN minimal command/adapter/G2 implementation；REFACTOR shared region code only.
+ - Packet path: `.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml`
+ - Evidence required: `.ai-platform/evidence/T118/summary.md`、`test-results.md`、`diff.patch`、`review.md`、visual evidence
+-- User review: 只在整个 G002-R1 完成后进入 `Needs_Review`。
++- User review: G002-R1 已进入 `Needs_Review`，等待用户目标级验收。
+diff --git a/AGENTS.md b/AGENTS.md
+index 4de7c18..9d9f3d3 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -2,7 +2,7 @@
+ 
+ ## 项目状态
+ 
+-- 当前阶段：T101-T116 已验收；G002 / T117 为 Beta 候选；G002-R1 / T118 分组与跨层编辑体验执行中。
++- 当前阶段：T101-T116 已验收；G002 / T117 与 G002-R1 / T118 均等待目标级验收。
+ - 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
+ - 产品 SSOT：`.ai-platform/docs/product-design.md`。
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+diff --git a/apps/playground/src/App.tsx b/apps/playground/src/App.tsx
+index b411592..19fd077 100644
+--- a/apps/playground/src/App.tsx
++++ b/apps/playground/src/App.tsx
+@@ -4,28 +4,103 @@ import {
+   parseViewSpec,
+   serializeViewSpec,
+   type ExportError,
++  type FinancialChartAppearance,
+   type FinancialChartEditorHandle,
++  type FinancialChartEditorLayout,
++  type FinancialChartEditorPanels,
++  type SourceData,
+   type ViewSpec,
+ } from '@tellplot/editor';
+-import { Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
++import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
+ import { useEffect, useMemo, useRef, useState } from 'react';
+ 
+ import { getPlaygroundChartType, getPlaygroundFixture } from './fixtures';
++import { PLAYGROUND_CHART_DOCUMENT_VERSION, type PlaygroundChartDocument } from './chartDocument';
++import { UsageGuide } from './UsageGuide';
++
++const COMPACT_USAGE_QUERY = '(max-width: 1179px)';
++const DEFAULT_PANELS: FinancialChartEditorPanels = {
++  outline: true,
++  inspector: true,
++  toolbar: true,
++};
++const DEFAULT_LAYOUT: FinancialChartEditorLayout = {
++  outlinePlacement: 'right',
++  inspectorMode: 'tab',
++};
++
++function initialAppearance(
++  sourceData: SourceData,
++  viewSpec: ViewSpec | undefined,
++): FinancialChartAppearance {
++  const title =
++    viewSpec?.chartType === 'bar'
++      ? '分类条形图'
++      : viewSpec?.chartType === 'column'
++        ? '分类柱状图'
++        : '经营变动瀑布图';
++  return {
++    title,
++    palette: {
++      start: '#5F6B65',
++      positive: '#168363',
++      negative: '#D5524A',
++      subtotal: '#315C8C',
++      group: '#A46812',
++      end: '#315C8C',
++    },
++    axis: { x: true, y: true },
++    valueLabels: 'auto',
++    tooltip: true,
++    animation: { enabled: true, duration: 160 },
++    groupRegion: { enabled: true, fillOpacity: 0.06, label: 'auto' },
++    numberFormat: {
++      minimumFractionDigits: 0,
++      maximumFractionDigits: sourceData.currency === undefined ? 2 : 0,
++      currencyDisplay: 'narrowSymbol',
++    },
++  };
++}
++
++function compactUsageViewport(): boolean {
++  return window.matchMedia(COMPACT_USAGE_QUERY).matches;
++}
++
++function useCompactUsageLayout(): boolean {
++  const [compact, setCompact] = useState(compactUsageViewport);
++
++  useEffect(() => {
++    const media = window.matchMedia(COMPACT_USAGE_QUERY);
++    const update = (): void => setCompact(media.matches);
++    media.addEventListener('change', update);
++    return () => media.removeEventListener('change', update);
++  }, []);
++
++  return compact;
++}
+ 
+ export function App(): React.JSX.Element {
+-  const sourceData = useMemo(() => getPlaygroundFixture(window.location.search), []);
++  const fixtureSourceData = useMemo(() => getPlaygroundFixture(window.location.search), []);
++  const [sourceData, setSourceData] = useState<SourceData>(fixtureSourceData);
+   const initialChartType = useMemo(() => getPlaygroundChartType(window.location.search), []);
+   const initialView = useMemo(
+     () =>
+       createInitialViewSpec(
+-        sourceData,
++        fixtureSourceData,
+         initialChartType === undefined ? undefined : { chartType: initialChartType },
+       ),
+-    [initialChartType, sourceData],
++    [fixtureSourceData, initialChartType],
+   );
+   const [viewSpec, setViewSpec] = useState<ViewSpec | undefined>(() =>
+     initialView.ok ? initialView.value : undefined,
+   );
++  const [chartAppearance, setChartAppearance] = useState<FinancialChartAppearance>(() =>
++    initialAppearance(fixtureSourceData, initialView.ok ? initialView.value : undefined),
++  );
++  const [panels, setPanels] = useState<FinancialChartEditorPanels>(DEFAULT_PANELS);
++  const [layout, setLayout] = useState<FinancialChartEditorLayout>(DEFAULT_LAYOUT);
++  const compactUsage = useCompactUsageLayout();
++  const [usageOpen, setUsageOpen] = useState(() => !compactUsageViewport());
+   const [exportOpen, setExportOpen] = useState(false);
+   const [busy, setBusy] = useState<'svg' | 'png' | 'json' | 'import' | null>(null);
+   const [fileStatus, setFileStatus] = useState({
+@@ -34,10 +109,30 @@ export function App(): React.JSX.Element {
+     tone: 'neutral' as 'neutral' | 'success' | 'error',
+   });
+   const editorRef = useRef<FinancialChartEditorHandle>(null);
++  const usageButtonRef = useRef<HTMLButtonElement>(null);
+   const exportButtonRef = useRef<HTMLButtonElement>(null);
+   const exportControlRef = useRef<HTMLDivElement>(null);
+   const exportMenuRef = useRef<HTMLDivElement>(null);
+   const importInputRef = useRef<HTMLInputElement>(null);
++  const chartDocument = useMemo<PlaygroundChartDocument | null>(
++    () =>
++      viewSpec === undefined
++        ? null
++        : {
++            documentVersion: PLAYGROUND_CHART_DOCUMENT_VERSION,
++            sourceData,
++            viewSpec,
++            chartAppearance,
++            panels,
++            layout,
++          },
++    [chartAppearance, layout, panels, sourceData, viewSpec],
++  );
++
++  const closeUsageGuide = (): void => {
++    setUsageOpen(false);
++    window.requestAnimationFrame(() => usageButtonRef.current?.focus());
++  };
+ 
+   useEffect(() => {
+     if (!exportOpen) {
+@@ -189,10 +284,43 @@ export function App(): React.JSX.Element {
+     }
+   };
+ 
++  const applyChartDocument = (next: PlaygroundChartDocument): void => {
++    setSourceData(next.sourceData);
++    setViewSpec(next.viewSpec);
++    setChartAppearance(next.chartAppearance);
++    setPanels(next.panels);
++    setLayout(next.layout);
++    setFileStatus({
++      code: 'DOCUMENT_APPLIED',
++      message: `revision ${next.viewSpec.revision}`,
++      tone: 'success',
++    });
++  };
++
+   return (
+     <main className="playground" aria-label="TellPlot 参考编辑器">
+-      <header className="playground-filebar" aria-label="文件与导出">
++      <header className="playground-filebar" aria-label="使用、文件与导出">
+         <div className="playground-filebar__actions">
++          <button
++            ref={usageButtonRef}
++            className="playground-tool-button"
++            type="button"
++            aria-label={usageOpen ? '隐藏使用代码' : '显示使用代码'}
++            aria-controls="playground-usage-guide"
++            aria-expanded={usageOpen}
++            title={usageOpen ? '隐藏使用代码' : '显示使用代码'}
++            onClick={() => {
++              setExportOpen(false);
++              if (usageOpen) {
++                closeUsageGuide();
++              } else {
++                setUsageOpen(true);
++              }
++            }}
++          >
++            <Code2 size={17} aria-hidden="true" />
++            <span>使用</span>
++          </button>
+           <button
+             className="playground-tool-button"
+             type="button"
+@@ -266,16 +394,39 @@ export function App(): React.JSX.Element {
+           <span>{fileStatus.message}</span>
+         </div>
+       </header>
+-      <div className="playground-editor-surface">
+-        <FinancialChartEditor
+-          ref={editorRef}
+-          sourceData={sourceData}
+-          {...(viewSpec === undefined ? {} : { viewSpec })}
+-          height="100%"
+-          locale="zh-CN"
+-          onViewSpecChange={setViewSpec}
+-        />
++      <div className="playground-workspace" data-usage-open={usageOpen && !compactUsage}>
++        {usageOpen && !compactUsage ? (
++          <UsageGuide
++            id="playground-usage-guide"
++            variant="panel"
++            document={chartDocument}
++            onApplyDocument={applyChartDocument}
++            onClose={closeUsageGuide}
++          />
++        ) : null}
++        <div className="playground-editor-surface">
++          <FinancialChartEditor
++            ref={editorRef}
++            sourceData={sourceData}
++            {...(viewSpec === undefined ? {} : { viewSpec })}
++            height="100%"
++            locale="zh-CN"
++            chartAppearance={chartAppearance}
++            panels={panels}
++            layout={layout}
++            onViewSpecChange={setViewSpec}
++          />
++        </div>
+       </div>
++      {usageOpen && compactUsage ? (
++        <UsageGuide
++          id="playground-usage-guide"
++          variant="dialog"
++          document={chartDocument}
++          onApplyDocument={applyChartDocument}
++          onClose={closeUsageGuide}
++        />
++      ) : null}
+     </main>
+   );
+ }
+diff --git a/apps/playground/src/LiveChartEditor.tsx b/apps/playground/src/LiveChartEditor.tsx
+new file mode 100644
+index 0000000..6729ecd
+--- /dev/null
++++ b/apps/playground/src/LiveChartEditor.tsx
+@@ -0,0 +1,227 @@
++import { Check, Copy, Play } from 'lucide-react';
++import { useEffect, useRef, useState } from 'react';
++
++import {
++  parsePlaygroundChartDocument,
++  serializePlaygroundChartDocument,
++  type PlaygroundChartDocument,
++  type PlaygroundChartDocumentError,
++} from './chartDocument';
++import { writeClipboard } from './clipboard';
++
++const APPLY_DELAY_MS = 320;
++
++type EditorStatus =
++  | { readonly tone: 'success'; readonly code: 'LIVE_SYNCED'; readonly path: '已同步' }
++  | { readonly tone: 'neutral'; readonly code: 'VALIDATING'; readonly path: '正在校验' }
++  | {
++      readonly tone: 'error';
++      readonly code: PlaygroundChartDocumentError['code'];
++      readonly path: string;
++    };
++
++interface LiveChartEditorProps {
++  readonly id: string;
++  readonly document: PlaygroundChartDocument | null;
++  readonly labelledBy: string;
++  readonly onApply: (document: PlaygroundChartDocument) => void;
++}
++
++interface LiveEditorState {
++  readonly draft: string;
++  readonly upstream: string;
++  readonly status: EditorStatus;
++}
++
++function documentStatus(document: PlaygroundChartDocument | null): EditorStatus {
++  return document === null
++    ? { tone: 'error', code: 'INVALID_DOCUMENT', path: '/viewSpec' }
++    : { tone: 'success', code: 'LIVE_SYNCED', path: '已同步' };
++}
++
++export function LiveChartEditor({
++  id,
++  document,
++  labelledBy,
++  onApply,
++}: LiveChartEditorProps): React.JSX.Element {
++  const serialized = document === null ? '' : serializePlaygroundChartDocument(document);
++  const [editorState, setEditorState] = useState<LiveEditorState>(() => ({
++    draft: serialized,
++    upstream: serialized,
++    status: documentStatus(document),
++  }));
++  if (serialized !== editorState.upstream) {
++    setEditorState({
++      draft: serialized,
++      upstream: serialized,
++      status: documentStatus(document),
++    });
++  }
++  const { draft, status } = editorState;
++  const [copied, setCopied] = useState(false);
++  const applyTimerRef = useRef<number | undefined>(undefined);
++  const copyTimerRef = useRef<number | undefined>(undefined);
++  const gutterRef = useRef<HTMLPreElement>(null);
++
++  useEffect(
++    () => () => {
++      if (applyTimerRef.current !== undefined) {
++        window.clearTimeout(applyTimerRef.current);
++      }
++      if (copyTimerRef.current !== undefined) {
++        window.clearTimeout(copyTimerRef.current);
++      }
++    },
++    [],
++  );
++
++  const applyDraft = (nextDraft: string): void => {
++    if (applyTimerRef.current !== undefined) {
++      window.clearTimeout(applyTimerRef.current);
++    }
++    const result = parsePlaygroundChartDocument(nextDraft);
++    if (!result.ok) {
++      setEditorState(current => ({
++        ...current,
++        draft: nextDraft,
++        status: { tone: 'error', code: result.error.code, path: result.error.path },
++      }));
++      return;
++    }
++    const canonical = serializePlaygroundChartDocument(result.value);
++    setEditorState({
++      draft: canonical,
++      upstream: canonical,
++      status: { tone: 'success', code: 'LIVE_SYNCED', path: '已同步' },
++    });
++    onApply(result.value);
++  };
++
++  const scheduleApply = (nextDraft: string): void => {
++    if (applyTimerRef.current !== undefined) {
++      window.clearTimeout(applyTimerRef.current);
++    }
++    setEditorState(current => ({
++      ...current,
++      status: { tone: 'neutral', code: 'VALIDATING', path: '正在校验' },
++    }));
++    applyTimerRef.current = window.setTimeout(() => applyDraft(nextDraft), APPLY_DELAY_MS);
++  };
++
++  const insertIndent = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
++    const input = event.currentTarget;
++    const start = input.selectionStart;
++    const end = input.selectionEnd;
++    const nextDraft = `${draft.slice(0, start)}  ${draft.slice(end)}`;
++    setEditorState(current => ({ ...current, draft: nextDraft }));
++    scheduleApply(nextDraft);
++    window.requestAnimationFrame(() => {
++      input.setSelectionRange(start + 2, start + 2);
++    });
++  };
++
++  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
++    if (event.key === 'Tab') {
++      event.preventDefault();
++      insertIndent(event);
++      return;
++    }
++    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
++      event.preventDefault();
++      applyDraft(draft);
++    }
++  };
++
++  const copyDraft = async (): Promise<void> => {
++    if (copyTimerRef.current !== undefined) {
++      window.clearTimeout(copyTimerRef.current);
++    }
++    try {
++      await writeClipboard(draft);
++      setCopied(true);
++      copyTimerRef.current = window.setTimeout(() => setCopied(false), 1_800);
++    } catch {
++      setCopied(false);
++    }
++  };
++
++  const lineNumbers = Array.from(
++    { length: Math.max(1, draft.split('\n').length) },
++    (_, index) => index + 1,
++  ).join('\n');
++
++  return (
++    <section
++      id={id}
++      className="playground-live-editor"
++      role="tabpanel"
++      aria-labelledby={labelledBy}
++    >
++      <div className="playground-live-editor__toolbar">
++        <code>tellplot.config.json</code>
++        <div className="playground-live-editor__actions">
++          <span
++            className="playground-live-editor__status"
++            data-tone={status.tone}
++            role="status"
++            aria-label="图表文档状态"
++            aria-live="polite"
++            aria-atomic="true"
++          >
++            <strong>{status.code}</strong>
++            <span>{status.path}</span>
++          </span>
++          <button
++            className="playground-icon-button"
++            type="button"
++            aria-label="复制图表文档"
++            title="复制图表文档"
++            disabled={draft === ''}
++            onClick={() => void copyDraft()}
++          >
++            {copied ? (
++              <Check size={16} aria-hidden="true" />
++            ) : (
++              <Copy size={16} aria-hidden="true" />
++            )}
++          </button>
++          <button
++            className="playground-icon-button playground-icon-button--apply"
++            type="button"
++            aria-label="立即应用图表文档"
++            title="立即应用图表文档"
++            disabled={draft === ''}
++            onClick={() => applyDraft(draft)}
++          >
++            <Play size={16} aria-hidden="true" />
++          </button>
++        </div>
++      </div>
++      <div className="playground-live-editor__input" data-disabled={document === null}>
++        <pre ref={gutterRef} className="playground-live-editor__gutter" aria-hidden="true">
++          {lineNumbers}
++        </pre>
++        <textarea
++          aria-label="TellPlot 图表文档"
++          value={draft}
++          disabled={document === null}
++          spellCheck={false}
++          autoCapitalize="off"
++          autoCorrect="off"
++          onChange={event => {
++            const nextDraft = event.currentTarget.value;
++            setEditorState(current => ({ ...current, draft: nextDraft }));
++            scheduleApply(nextDraft);
++          }}
++          onKeyDown={handleKeyDown}
++          onScroll={event => {
++            if (gutterRef.current !== null) {
++              gutterRef.current.scrollTop = event.currentTarget.scrollTop;
++            }
++          }}
++        />
++      </div>
++    </section>
++  );
++}
+diff --git a/apps/playground/src/UsageGuide.tsx b/apps/playground/src/UsageGuide.tsx
+new file mode 100644
+index 0000000..3a00d73
+--- /dev/null
++++ b/apps/playground/src/UsageGuide.tsx
+@@ -0,0 +1,405 @@
++import { Braces, Check, Copy, FileJson2, PackageOpen, SlidersHorizontal, X } from 'lucide-react';
++import { useEffect, useRef, useState } from 'react';
++
++import type { PlaygroundChartDocument } from './chartDocument';
++import { writeClipboard } from './clipboard';
++import { LiveChartEditor } from './LiveChartEditor';
++
++const INSTALL_CODE = 'pnpm add @tellplot/editor @antv/g2 react react-dom';
++
++const REACT_CODE = `import {
++  FinancialChartEditor,
++  type WaterfallSourceData,
++} from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
++
++const sourceData: WaterfallSourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'waterfall',
++  datasetId: 'profit-bridge',
++  currency: 'CNY',
++  items: [
++    { id: 'opening', label: '期初利润', amount: 1000, kind: 'start' },
++    { id: 'growth', label: '收入增长', amount: 240, kind: 'contribution' },
++    { id: 'cost', label: '成本增加', amount: -90, kind: 'contribution' },
++    { id: 'ending', label: '期末利润', amount: 1150, kind: 'end' },
++  ],
++};
++
++export function ProfitBridge() {
++  return (
++    <FinancialChartEditor
++      sourceData={sourceData}
++      locale="zh-CN"
++      height={520}
++    />
++  );
++}`;
++
++const APPEARANCE_CODE = `import {
++  FinancialChartEditor,
++  type FinancialChartAppearance,
++  type FinancialChartEditorLayout,
++  type FinancialChartEditorPanels,
++  type WaterfallSourceData,
++} from '@tellplot/editor';
++
++const chartAppearance: FinancialChartAppearance = {
++  title: '经营变动瀑布图',
++  palette: {
++    positive: '#168363',
++    negative: '#D5524A',
++    group: '#A46812',
++  },
++  axis: { x: true, y: true },
++  valueLabels: 'auto',
++  tooltip: true,
++  animation: { enabled: true, duration: 160 },
++  groupRegion: {
++    enabled: true,
++    fillOpacity: 0.06,
++    label: 'auto',
++  },
++  numberFormat: {
++    minimumFractionDigits: 0,
++    maximumFractionDigits: 0,
++    currencyDisplay: 'narrowSymbol',
++  },
++};
++
++const panels: FinancialChartEditorPanels = {
++  outline: false,
++  inspector: false,
++  toolbar: true,
++};
++
++const layout: FinancialChartEditorLayout = {
++  outlinePlacement: 'right',
++  inspectorMode: 'tab',
++};
++
++interface ConfiguredProfitBridgeProps {
++  readonly sourceData: WaterfallSourceData;
++}
++
++export function ConfiguredProfitBridge({ sourceData }: ConfiguredProfitBridgeProps) {
++  return (
++    <FinancialChartEditor
++      sourceData={sourceData}
++      chartAppearance={chartAppearance}
++      panels={panels}
++      layout={layout}
++    />
++  );
++}`;
++
++const GUIDE_TABS = [
++  {
++    id: 'install',
++    label: '安装',
++    icon: PackageOpen,
++    code: INSTALL_CODE,
++    copyLabel: '复制安装命令',
++  },
++  {
++    id: 'react',
++    label: 'React',
++    icon: Braces,
++    code: REACT_CODE,
++    copyLabel: '复制 React 代码',
++  },
++  {
++    id: 'appearance',
++    label: '配置',
++    icon: SlidersHorizontal,
++    code: APPEARANCE_CODE,
++    copyLabel: '复制配置代码',
++  },
++] as const;
++
++type GuideTabId = (typeof GUIDE_TABS)[number]['id'];
++type DeveloperView = 'live' | 'examples';
++type CopyState = 'idle' | 'copied' | 'failed';
++
++interface UsageGuideProps {
++  readonly id: string;
++  readonly variant: 'panel' | 'dialog';
++  readonly document: PlaygroundChartDocument | null;
++  readonly onApplyDocument: (document: PlaygroundChartDocument) => void;
++  readonly onClose: () => void;
++}
++
++export function UsageGuide({
++  id,
++  variant,
++  document,
++  onApplyDocument,
++  onClose,
++}: UsageGuideProps): React.JSX.Element {
++  const [developerView, setDeveloperView] = useState<DeveloperView>('live');
++  const [activeTab, setActiveTab] = useState<GuideTabId>('install');
++  const [copyState, setCopyState] = useState<CopyState>('idle');
++  const dialogRef = useRef<HTMLDialogElement>(null);
++  const closeButtonRef = useRef<HTMLButtonElement>(null);
++  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
++  const developerViewRefs = useRef<(HTMLButtonElement | null)[]>([]);
++  const copyResetRef = useRef<number | undefined>(undefined);
++  const selectedTab = GUIDE_TABS.find(tab => tab.id === activeTab) ?? GUIDE_TABS[0];
++
++  useEffect(() => {
++    if (variant !== 'dialog') {
++      return undefined;
++    }
++    const dialog = dialogRef.current;
++    if (dialog === null) {
++      return undefined;
++    }
++    dialog.showModal();
++    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
++    return () => {
++      window.cancelAnimationFrame(focusFrame);
++      if (dialog.open) {
++        dialog.close();
++      }
++    };
++  }, [variant]);
++
++  useEffect(
++    () => () => {
++      if (copyResetRef.current !== undefined) {
++        window.clearTimeout(copyResetRef.current);
++      }
++    },
++    [],
++  );
++
++  const selectTab = (tabId: GuideTabId): void => {
++    setActiveTab(tabId);
++    setCopyState('idle');
++  };
++
++  const selectDeveloperView = (view: DeveloperView): void => {
++    setDeveloperView(view);
++    setCopyState('idle');
++  };
++
++  const navigateDeveloperViews = (
++    event: React.KeyboardEvent<HTMLButtonElement>,
++    index: number,
++  ): void => {
++    const views: readonly DeveloperView[] = ['live', 'examples'];
++    let target: number | undefined;
++    if (event.key === 'ArrowRight') {
++      target = (index + 1) % views.length;
++    } else if (event.key === 'ArrowLeft') {
++      target = (index - 1 + views.length) % views.length;
++    } else if (event.key === 'Home') {
++      target = 0;
++    } else if (event.key === 'End') {
++      target = views.length - 1;
++    }
++    if (target === undefined) {
++      return;
++    }
++    event.preventDefault();
++    const view = views[target];
++    if (view !== undefined) {
++      selectDeveloperView(view);
++      developerViewRefs.current[target]?.focus();
++    }
++  };
++
++  const navigateTabs = (event: React.KeyboardEvent<HTMLButtonElement>, index: number): void => {
++    let target: number | undefined;
++    if (event.key === 'ArrowRight') {
++      target = (index + 1) % GUIDE_TABS.length;
++    } else if (event.key === 'ArrowLeft') {
++      target = (index - 1 + GUIDE_TABS.length) % GUIDE_TABS.length;
++    } else if (event.key === 'Home') {
++      target = 0;
++    } else if (event.key === 'End') {
++      target = GUIDE_TABS.length - 1;
++    }
++    if (target === undefined) {
++      return;
++    }
++    event.preventDefault();
++    const tab = GUIDE_TABS[target];
++    if (tab !== undefined) {
++      selectTab(tab.id);
++      tabRefs.current[target]?.focus();
++    }
++  };
++
++  const copySelectedCode = async (): Promise<void> => {
++    if (copyResetRef.current !== undefined) {
++      window.clearTimeout(copyResetRef.current);
++    }
++    try {
++      await writeClipboard(selectedTab.code);
++      setCopyState('copied');
++    } catch {
++      setCopyState('failed');
++    }
++    copyResetRef.current = window.setTimeout(() => setCopyState('idle'), 1800);
++  };
++
++  const content = (
++    <div className="playground-usage-content">
++      <header className="playground-usage-header">
++        <div>
++          <h2 id={`${id}-title`}>在项目中使用 TellPlot</h2>
++          <code>{developerView === 'live' ? 'tellplot.config.json' : '@tellplot/editor'}</code>
++        </div>
++        <button
++          ref={closeButtonRef}
++          className="playground-icon-button"
++          type="button"
++          aria-label="关闭使用说明"
++          title="关闭"
++          onClick={onClose}
++        >
++          <X size={18} aria-hidden="true" />
++        </button>
++      </header>
++
++      <div className="playground-developer-tabs" role="tablist" aria-label="开发者工具">
++        {(
++          [
++            { id: 'live', label: '实时配置', icon: FileJson2 },
++            { id: 'examples', label: '接入示例', icon: Braces },
++          ] as const
++        ).map((view, index) => {
++          const Icon = view.icon;
++          const selected = view.id === developerView;
++          return (
++            <button
++              key={view.id}
++              ref={element => {
++                developerViewRefs.current[index] = element;
++              }}
++              id={`${id}-developer-tab-${view.id}`}
++              type="button"
++              role="tab"
++              aria-selected={selected}
++              aria-controls={`${id}-developer-panel-${view.id}`}
++              tabIndex={selected ? 0 : -1}
++              onClick={() => selectDeveloperView(view.id)}
++              onKeyDown={event => navigateDeveloperViews(event, index)}
++            >
++              <Icon size={16} aria-hidden="true" />
++              <span>{view.label}</span>
++            </button>
++          );
++        })}
++      </div>
++
++      {developerView === 'live' ? (
++        <LiveChartEditor
++          id={`${id}-developer-panel-live`}
++          labelledBy={`${id}-developer-tab-live`}
++          document={document}
++          onApply={onApplyDocument}
++        />
++      ) : (
++        <section
++          id={`${id}-developer-panel-examples`}
++          className="playground-usage-examples"
++          role="tabpanel"
++          aria-labelledby={`${id}-developer-tab-examples`}
++        >
++          <div className="playground-usage-tabs" role="tablist" aria-label="使用方式">
++            {GUIDE_TABS.map((tab, index) => {
++              const Icon = tab.icon;
++              const selected = tab.id === activeTab;
++              return (
++                <button
++                  key={tab.id}
++                  ref={element => {
++                    tabRefs.current[index] = element;
++                  }}
++                  id={`${id}-tab-${tab.id}`}
++                  type="button"
++                  role="tab"
++                  aria-selected={selected}
++                  aria-controls={`${id}-panel-${tab.id}`}
++                  tabIndex={selected ? 0 : -1}
++                  onClick={() => selectTab(tab.id)}
++                  onKeyDown={event => navigateTabs(event, index)}
++                >
++                  <Icon size={16} aria-hidden="true" />
++                  <span>{tab.label}</span>
++                </button>
++              );
++            })}
++          </div>
++          <section
++            id={`${id}-panel-${selectedTab.id}`}
++            className="playground-code-panel"
++            role="tabpanel"
++            aria-labelledby={`${id}-tab-${selectedTab.id}`}
++            tabIndex={0}
++          >
++            <div className="playground-code-panel__toolbar">
++              <span>{selectedTab.label}</span>
++              <div className="playground-copy-control">
++                <span
++                  className="playground-copy-status"
++                  role="status"
++                  aria-label="代码复制状态"
++                  aria-live="polite"
++                >
++                  {copyState === 'copied' ? '已复制' : copyState === 'failed' ? '复制失败' : ''}
++                </span>
++                <button
++                  className="playground-icon-button playground-icon-button--code"
++                  type="button"
++                  aria-label={selectedTab.copyLabel}
++                  title={selectedTab.copyLabel}
++                  onClick={() => void copySelectedCode()}
++                >
++                  {copyState === 'copied' ? (
++                    <Check size={17} aria-hidden="true" />
++                  ) : (
++                    <Copy size={17} aria-hidden="true" />
++                  )}
++                </button>
++              </div>
++            </div>
++            <pre tabIndex={0} aria-label={`${selectedTab.label}代码`}>
++              <code>{selectedTab.code}</code>
++            </pre>
++          </section>
++        </section>
++      )}
++    </div>
++  );
++
++  if (variant === 'panel') {
++    return (
++      <aside id={id} className="playground-usage-sidebar" aria-labelledby={`${id}-title`}>
++        {content}
++      </aside>
++    );
++  }
++
++  return (
++    <dialog
++      id={id}
++      ref={dialogRef}
++      className="playground-usage-dialog"
++      aria-labelledby={`${id}-title`}
++      onCancel={event => {
++        event.preventDefault();
++        onClose();
++      }}
++      onClick={event => {
++        if (event.target === event.currentTarget) {
++          onClose();
++        }
++      }}
++    >
++      {content}
++    </dialog>
++  );
++}
+diff --git a/apps/playground/src/chartDocument.ts b/apps/playground/src/chartDocument.ts
+new file mode 100644
+index 0000000..ea25d83
+--- /dev/null
++++ b/apps/playground/src/chartDocument.ts
+@@ -0,0 +1,415 @@
++import {
++  validateSourceData,
++  validateViewSpec,
++  type FinancialChartAppearance,
++  type FinancialChartEditorLayout,
++  type FinancialChartEditorPanels,
++  type SourceData,
++  type ValidationErrorCode,
++  type ViewSpec,
++} from '@tellplot/editor';
++
++export const PLAYGROUND_CHART_DOCUMENT_VERSION = '1.0' as const;
++
++export interface PlaygroundChartDocument {
++  readonly documentVersion: typeof PLAYGROUND_CHART_DOCUMENT_VERSION;
++  readonly sourceData: SourceData;
++  readonly viewSpec: ViewSpec;
++  readonly chartAppearance: FinancialChartAppearance;
++  readonly panels: FinancialChartEditorPanels;
++  readonly layout: FinancialChartEditorLayout;
++}
++
++export interface PlaygroundChartDocumentError {
++  readonly code:
++    | 'INVALID_JSON'
++    | 'INVALID_DOCUMENT'
++    | 'UNKNOWN_FIELD'
++    | 'INVALID_TYPE'
++    | 'INVALID_VALUE'
++    | 'INVALID_SOURCE_DATA'
++    | 'INVALID_VIEW_SPEC'
++    | 'SOURCE_CONFLICT'
++    | ValidationErrorCode;
++  readonly path: string;
++}
++
++export type PlaygroundChartDocumentResult =
++  | { readonly ok: true; readonly value: PlaygroundChartDocument }
++  | { readonly ok: false; readonly error: PlaygroundChartDocumentError };
++
++type UnknownRecord = Record<string, unknown>;
++type PlaygroundChartDocumentFailure = Extract<
++  PlaygroundChartDocumentResult,
++  { readonly ok: false }
++>;
++
++const DOCUMENT_FIELDS = [
++  'documentVersion',
++  'sourceData',
++  'viewSpec',
++  'chartAppearance',
++  'panels',
++  'layout',
++] as const;
++const APPEARANCE_FIELDS = [
++  'title',
++  'palette',
++  'axis',
++  'valueLabels',
++  'tooltip',
++  'animation',
++  'groupRegion',
++  'numberFormat',
++] as const;
++const PALETTE_FIELDS = ['start', 'positive', 'negative', 'subtotal', 'group', 'end'] as const;
++const AXIS_FIELDS = ['x', 'y'] as const;
++const ANIMATION_FIELDS = ['enabled', 'duration'] as const;
++const GROUP_REGION_FIELDS = ['enabled', 'fillOpacity', 'label'] as const;
++const NUMBER_FORMAT_FIELDS = [
++  'minimumFractionDigits',
++  'maximumFractionDigits',
++  'currencyDisplay',
++] as const;
++const PANEL_FIELDS = ['outline', 'inspector', 'toolbar'] as const;
++const LAYOUT_FIELDS = ['outlinePlacement', 'inspectorMode'] as const;
++const HEX_COLOR_PATTERN = /^#(?:[0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/iu;
++
++function failure(
++  code: PlaygroundChartDocumentError['code'],
++  path: string,
++): PlaygroundChartDocumentFailure {
++  return { ok: false, error: { code, path } };
++}
++
++function isRecord(value: unknown): value is UnknownRecord {
++  return typeof value === 'object' && value !== null && !Array.isArray(value);
++}
++
++function firstUnknownField(
++  value: UnknownRecord,
++  fields: readonly string[],
++  path: string,
++): PlaygroundChartDocumentFailure | undefined {
++  const allowed = new Set(fields);
++  const unknown = Object.keys(value).find(key => !allowed.has(key));
++  return unknown === undefined ? undefined : failure('UNKNOWN_FIELD', `${path}/${unknown}`);
++}
++
++function recordAt(
++  value: unknown,
++  path: string,
++  fields: readonly string[],
++): { readonly ok: true; readonly value: UnknownRecord } | PlaygroundChartDocumentFailure {
++  if (!isRecord(value)) {
++    return failure('INVALID_TYPE', path);
++  }
++  const unknown = firstUnknownField(value, fields, path === '/' ? '' : path);
++  return unknown ?? { ok: true, value };
++}
++
++function optionalBoolean(
++  record: UnknownRecord,
++  key: string,
++  path: string,
++): PlaygroundChartDocumentFailure | undefined {
++  const value = record[key];
++  return value === undefined || typeof value === 'boolean'
++    ? undefined
++    : failure('INVALID_TYPE', `${path}/${key}`);
++}
++
++function optionalEnum(
++  record: UnknownRecord,
++  key: string,
++  values: readonly string[],
++  path: string,
++): PlaygroundChartDocumentFailure | undefined {
++  const value = record[key];
++  if (value === undefined) {
++    return undefined;
++  }
++  return typeof value === 'string' && values.includes(value)
++    ? undefined
++    : failure(typeof value === 'string' ? 'INVALID_VALUE' : 'INVALID_TYPE', `${path}/${key}`);
++}
++
++function optionalFiniteNumber(
++  record: UnknownRecord,
++  key: string,
++  path: string,
++  minimum: number,
++  maximum: number,
++  integer = false,
++): PlaygroundChartDocumentFailure | undefined {
++  const value = record[key];
++  if (value === undefined) {
++    return undefined;
++  }
++  if (typeof value !== 'number' || !Number.isFinite(value)) {
++    return failure('INVALID_TYPE', `${path}/${key}`);
++  }
++  return value < minimum || value > maximum || (integer && !Number.isInteger(value))
++    ? failure('INVALID_VALUE', `${path}/${key}`)
++    : undefined;
++}
++
++function validateAppearance(input: unknown): PlaygroundChartDocumentFailure | undefined {
++  const appearanceResult = recordAt(input, '/chartAppearance', APPEARANCE_FIELDS);
++  if (!appearanceResult.ok) {
++    return appearanceResult;
++  }
++  const appearance = appearanceResult.value;
++  const title = appearance['title'];
++  if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
++    return failure(
++      typeof title === 'string' ? 'INVALID_VALUE' : 'INVALID_TYPE',
++      '/chartAppearance/title',
++    );
++  }
++  const valueLabels = optionalEnum(
++    appearance,
++    'valueLabels',
++    ['auto', 'always', 'never'],
++    '/chartAppearance',
++  );
++  if (valueLabels !== undefined) {
++    return valueLabels;
++  }
++  const tooltip = optionalBoolean(appearance, 'tooltip', '/chartAppearance');
++  if (tooltip !== undefined) {
++    return tooltip;
++  }
++
++  const paletteInput = appearance['palette'];
++  if (paletteInput !== undefined) {
++    const paletteResult = recordAt(paletteInput, '/chartAppearance/palette', PALETTE_FIELDS);
++    if (!paletteResult.ok) {
++      return paletteResult;
++    }
++    for (const key of PALETTE_FIELDS) {
++      const color = paletteResult.value[key];
++      if (color !== undefined && (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color))) {
++        return failure(
++          typeof color === 'string' ? 'INVALID_VALUE' : 'INVALID_TYPE',
++          `/chartAppearance/palette/${key}`,
++        );
++      }
++    }
++  }
++
++  const axisInput = appearance['axis'];
++  if (axisInput !== undefined) {
++    const axisResult = recordAt(axisInput, '/chartAppearance/axis', AXIS_FIELDS);
++    if (!axisResult.ok) {
++      return axisResult;
++    }
++    for (const key of AXIS_FIELDS) {
++      const issue = optionalBoolean(axisResult.value, key, '/chartAppearance/axis');
++      if (issue !== undefined) {
++        return issue;
++      }
++    }
++  }
++
++  const animationInput = appearance['animation'];
++  if (animationInput !== undefined) {
++    const animationResult = recordAt(
++      animationInput,
++      '/chartAppearance/animation',
++      ANIMATION_FIELDS,
++    );
++    if (!animationResult.ok) {
++      return animationResult;
++    }
++    const enabled = optionalBoolean(animationResult.value, 'enabled', '/chartAppearance/animation');
++    if (enabled !== undefined) {
++      return enabled;
++    }
++    const duration = optionalFiniteNumber(
++      animationResult.value,
++      'duration',
++      '/chartAppearance/animation',
++      0,
++      1_000,
++      true,
++    );
++    if (duration !== undefined) {
++      return duration;
++    }
++  }
++
++  const groupRegionInput = appearance['groupRegion'];
++  if (groupRegionInput !== undefined) {
++    const groupRegionResult = recordAt(
++      groupRegionInput,
++      '/chartAppearance/groupRegion',
++      GROUP_REGION_FIELDS,
++    );
++    if (!groupRegionResult.ok) {
++      return groupRegionResult;
++    }
++    const enabled = optionalBoolean(
++      groupRegionResult.value,
++      'enabled',
++      '/chartAppearance/groupRegion',
++    );
++    if (enabled !== undefined) {
++      return enabled;
++    }
++    const opacity = optionalFiniteNumber(
++      groupRegionResult.value,
++      'fillOpacity',
++      '/chartAppearance/groupRegion',
++      0,
++      0.2,
++    );
++    if (opacity !== undefined) {
++      return opacity;
++    }
++    const label = optionalEnum(
++      groupRegionResult.value,
++      'label',
++      ['auto', 'never'],
++      '/chartAppearance/groupRegion',
++    );
++    if (label !== undefined) {
++      return label;
++    }
++  }
++
++  const numberFormatInput = appearance['numberFormat'];
++  if (numberFormatInput !== undefined) {
++    const numberFormatResult = recordAt(
++      numberFormatInput,
++      '/chartAppearance/numberFormat',
++      NUMBER_FORMAT_FIELDS,
++    );
++    if (!numberFormatResult.ok) {
++      return numberFormatResult;
++    }
++    for (const key of ['minimumFractionDigits', 'maximumFractionDigits'] as const) {
++      const issue = optionalFiniteNumber(
++        numberFormatResult.value,
++        key,
++        '/chartAppearance/numberFormat',
++        0,
++        6,
++        true,
++      );
++      if (issue !== undefined) {
++        return issue;
++      }
++    }
++    const currencyDisplay = optionalEnum(
++      numberFormatResult.value,
++      'currencyDisplay',
++      ['symbol', 'narrowSymbol', 'code', 'name'],
++      '/chartAppearance/numberFormat',
++    );
++    if (currencyDisplay !== undefined) {
++      return currencyDisplay;
++    }
++    const minimum = numberFormatResult.value['minimumFractionDigits'];
++    const maximum = numberFormatResult.value['maximumFractionDigits'];
++    if (typeof minimum === 'number' && typeof maximum === 'number' && maximum < minimum) {
++      return failure('INVALID_VALUE', '/chartAppearance/numberFormat/maximumFractionDigits');
++    }
++  }
++  return undefined;
++}
++
++function validatePanels(input: unknown): PlaygroundChartDocumentFailure | undefined {
++  const result = recordAt(input, '/panels', PANEL_FIELDS);
++  if (!result.ok) {
++    return result;
++  }
++  for (const key of PANEL_FIELDS) {
++    const issue = optionalBoolean(result.value, key, '/panels');
++    if (issue !== undefined) {
++      return issue;
++    }
++  }
++  return undefined;
++}
++
++function validateLayout(input: unknown): PlaygroundChartDocumentFailure | undefined {
++  const result = recordAt(input, '/layout', LAYOUT_FIELDS);
++  if (!result.ok) {
++    return result;
++  }
++  return (
++    optionalEnum(result.value, 'outlinePlacement', ['left', 'right'], '/layout') ??
++    optionalEnum(result.value, 'inspectorMode', ['static', 'tab'], '/layout')
++  );
++}
++
++function prefixPath(prefix: string, path: string): string {
++  return path === '/' ? prefix : `${prefix}${path}`;
++}
++
++/** Serializes the playground-only document without introducing a package persistence contract. */
++export function serializePlaygroundChartDocument(document: PlaygroundChartDocument): string {
++  return `${JSON.stringify(document, null, 2)}\n`;
++}
++
++/** Parses a safe JSON chart document and delegates source/view invariants to the public validators. */
++export function parsePlaygroundChartDocument(text: string): PlaygroundChartDocumentResult {
++  let parsed: unknown;
++  try {
++    parsed = JSON.parse(text) as unknown;
++  } catch {
++    return failure('INVALID_JSON', '/');
++  }
++
++  const documentResult = recordAt(parsed, '/', DOCUMENT_FIELDS);
++  if (!documentResult.ok) {
++    return documentResult;
++  }
++  const document = documentResult.value;
++  for (const field of DOCUMENT_FIELDS) {
++    if (!(field in document)) {
++      return failure('INVALID_DOCUMENT', `/${field}`);
++    }
++  }
++  if (document['documentVersion'] !== PLAYGROUND_CHART_DOCUMENT_VERSION) {
++    return failure(
++      typeof document['documentVersion'] === 'string' ? 'INVALID_VALUE' : 'INVALID_TYPE',
++      '/documentVersion',
++    );
++  }
++
++  const sourceResult = validateSourceData(document['sourceData']);
++  if (!sourceResult.ok) {
++    const issue = sourceResult.errors[0];
++    return failure(
++      issue?.code ?? 'INVALID_SOURCE_DATA',
++      prefixPath('/sourceData', issue?.path ?? '/'),
++    );
++  }
++  const viewResult = validateViewSpec(document['viewSpec'], sourceResult.value);
++  if (!viewResult.ok) {
++    const issue = viewResult.errors[0];
++    return failure(issue?.code ?? 'INVALID_VIEW_SPEC', prefixPath('/viewSpec', issue?.path ?? '/'));
++  }
++
++  const configIssue =
++    validateAppearance(document['chartAppearance']) ??
++    validatePanels(document['panels']) ??
++    validateLayout(document['layout']);
++  if (configIssue !== undefined) {
++    return configIssue;
++  }
++
++  return {
++    ok: true,
++    value: {
++      documentVersion: PLAYGROUND_CHART_DOCUMENT_VERSION,
++      sourceData: sourceResult.value,
++      viewSpec: viewResult.value,
++      chartAppearance: document['chartAppearance'] as FinancialChartAppearance,
++      panels: document['panels'] as FinancialChartEditorPanels,
++      layout: document['layout'] as FinancialChartEditorLayout,
++    },
++  };
++}
+diff --git a/apps/playground/src/clipboard.ts b/apps/playground/src/clipboard.ts
+new file mode 100644
+index 0000000..5c2298c
+--- /dev/null
++++ b/apps/playground/src/clipboard.ts
+@@ -0,0 +1,26 @@
++/** Writes user-selected code locally, with a compatibility fallback for restricted browsers. */
++export async function writeClipboard(value: string): Promise<void> {
++  if (navigator.clipboard !== undefined) {
++    try {
++      await navigator.clipboard.writeText(value);
++      return;
++    } catch {
++      // Fall back for browsers that expose Clipboard but deny direct writes.
++    }
++  }
++
++  const textarea = document.createElement('textarea');
++  textarea.value = value;
++  textarea.style.position = 'fixed';
++  textarea.style.opacity = '0';
++  document.body.append(textarea);
++  textarea.select();
++  try {
++    const copied = document.execCommand('copy');
++    if (!copied) {
++      throw new Error('COPY_FAILED');
++    }
++  } finally {
++    textarea.remove();
++  }
++}
+diff --git a/apps/playground/src/playground.css b/apps/playground/src/playground.css
+index 763c2c6..e8a3d99 100644
+--- a/apps/playground/src/playground.css
++++ b/apps/playground/src/playground.css
+@@ -67,7 +67,12 @@ body,
+ }
+ 
+ .playground-tool-button:focus-visible,
+-.playground-export-menu button:focus-visible {
++.playground-export-menu button:focus-visible,
++.playground-icon-button:focus-visible,
++.playground-developer-tabs button:focus-visible,
++.playground-usage-tabs button:focus-visible,
++.playground-code-panel:focus-visible,
++.playground-live-editor textarea:focus-visible {
+   outline: 2px solid #236b8e;
+   outline-offset: 2px;
+ }
+@@ -140,6 +145,370 @@ body,
+   overflow: hidden;
+ }
+ 
++.playground-workspace {
++  display: grid;
++  grid-template-columns: minmax(320px, clamp(340px, 28vw, 390px)) minmax(0, 1fr);
++  min-width: 0;
++  min-height: 0;
++  overflow: hidden;
++}
++
++.playground-workspace[data-usage-open='false'] {
++  grid-template-columns: minmax(0, 1fr);
++}
++
++.playground-usage-sidebar {
++  min-width: 0;
++  min-height: 0;
++  overflow: hidden;
++  border-right: 1px solid #cbd2ce;
++  background: #ffffff;
++}
++
++.playground-usage-dialog {
++  position: fixed;
++  inset: 0 0 0 auto;
++  width: min(620px, calc(100vw - 48px));
++  max-width: none;
++  height: 100dvh;
++  max-height: none;
++  padding: 0;
++  margin: 0;
++  border: 0;
++  border-left: 1px solid #cbd2ce;
++  border-radius: 0;
++  color: #18211d;
++  background: #ffffff;
++  box-shadow: -18px 0 46px rgb(24 33 29 / 18%);
++}
++
++.playground-usage-dialog::backdrop {
++  background: rgb(24 33 29 / 34%);
++}
++
++.playground-usage-content {
++  display: grid;
++  grid-template-rows: 64px 46px minmax(0, 1fr);
++  width: 100%;
++  height: 100%;
++  min-width: 0;
++  min-height: 0;
++}
++
++.playground-usage-header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 16px;
++  padding: 0 18px 0 20px;
++  border-bottom: 1px solid #d8ddda;
++}
++
++.playground-usage-header h2 {
++  margin: 0 0 4px;
++  font-size: 17px;
++  line-height: 1.2;
++  letter-spacing: 0;
++}
++
++.playground-usage-header code {
++  color: #5f6b65;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 12px;
++}
++
++.playground-icon-button {
++  display: inline-flex;
++  flex: 0 0 auto;
++  align-items: center;
++  justify-content: center;
++  width: 32px;
++  height: 32px;
++  padding: 0;
++  border: 1px solid #cbd2ce;
++  border-radius: 5px;
++  color: #34453d;
++  background: #ffffff;
++  cursor: pointer;
++}
++
++.playground-icon-button:hover {
++  border-color: #8f9b95;
++  background: #f2f5f3;
++}
++
++.playground-developer-tabs,
++.playground-usage-tabs {
++  display: grid;
++  padding: 0 12px;
++  border-bottom: 1px solid #d8ddda;
++  background: #f7f9f8;
++}
++
++.playground-developer-tabs {
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++}
++
++.playground-usage-tabs {
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++}
++
++.playground-developer-tabs button,
++.playground-usage-tabs button {
++  position: relative;
++  display: inline-flex;
++  min-width: 0;
++  align-items: center;
++  justify-content: center;
++  gap: 7px;
++  padding: 0 12px;
++  border: 0;
++  color: #5f6b65;
++  background: transparent;
++  font: inherit;
++  font-size: 13px;
++  cursor: pointer;
++}
++
++.playground-developer-tabs button[aria-selected='true'],
++.playground-usage-tabs button[aria-selected='true'] {
++  color: #126e57;
++  font-weight: 650;
++}
++
++.playground-developer-tabs button[aria-selected='true']::after,
++.playground-usage-tabs button[aria-selected='true']::after {
++  position: absolute;
++  right: 12px;
++  bottom: -1px;
++  left: 12px;
++  height: 2px;
++  background: #126e57;
++  content: '';
++}
++
++.playground-code-panel {
++  display: grid;
++  grid-template-rows: 42px minmax(0, 1fr);
++  min-width: 0;
++  min-height: 0;
++  margin: 12px;
++  overflow: hidden;
++  border: 1px solid #cbd2ce;
++  border-radius: 6px;
++  background: #ffffff;
++}
++
++.playground-code-panel__toolbar {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 12px;
++  padding: 0 8px 0 13px;
++  border-bottom: 1px solid #d8ddda;
++  color: #34453d;
++  background: #f7f9f8;
++  font-size: 12px;
++}
++
++.playground-copy-control {
++  display: flex;
++  min-width: 96px;
++  align-items: center;
++  justify-content: flex-end;
++  gap: 6px;
++}
++
++.playground-copy-status {
++  color: #66736c;
++  font-size: 11px;
++}
++
++.playground-icon-button--code {
++  width: 30px;
++  height: 30px;
++  border-color: transparent;
++  color: #34453d;
++  background: transparent;
++}
++
++.playground-icon-button--code:hover {
++  border-color: #cbd2ce;
++  background: #edf1ef;
++}
++
++.playground-code-panel pre {
++  min-width: 0;
++  min-height: 0;
++  padding: 18px 20px 24px;
++  margin: 0;
++  overflow: auto;
++  color: #203029;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 12.5px;
++  line-height: 1.65;
++  tab-size: 2;
++}
++
++.playground-code-panel code {
++  font: inherit;
++}
++
++.playground-usage-examples {
++  display: grid;
++  grid-template-rows: 49px minmax(0, 1fr);
++  min-width: 0;
++  min-height: 0;
++}
++
++.playground-live-editor {
++  display: grid;
++  grid-template-rows: 44px minmax(0, 1fr);
++  min-width: 0;
++  min-height: 0;
++  margin: 12px;
++  overflow: hidden;
++  border: 1px solid #cbd2ce;
++  border-radius: 6px;
++  background: #ffffff;
++}
++
++.playground-live-editor__toolbar {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 8px;
++  min-width: 0;
++  padding: 0 6px 0 13px;
++  border-bottom: 1px solid #d8ddda;
++  background: #f7f9f8;
++}
++
++.playground-live-editor__toolbar > code {
++  min-width: 0;
++  overflow: hidden;
++  color: #34453d;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 11.5px;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.playground-live-editor__actions {
++  display: flex;
++  flex: 0 0 auto;
++  align-items: center;
++  gap: 4px;
++}
++
++.playground-live-editor__actions .playground-icon-button {
++  width: 30px;
++  height: 30px;
++}
++
++.playground-icon-button--apply {
++  border-color: #126e57;
++  color: #ffffff;
++  background: #126e57;
++}
++
++.playground-icon-button--apply:hover {
++  border-color: #0d5946;
++  background: #0d5946;
++}
++
++.playground-icon-button:disabled {
++  cursor: not-allowed;
++  opacity: 0.5;
++}
++
++.playground-live-editor__status {
++  display: flex;
++  max-width: 132px;
++  min-width: 0;
++  align-items: center;
++  gap: 5px;
++  color: #66736c;
++  font-size: 10.5px;
++  line-height: 1;
++}
++
++.playground-live-editor__status strong,
++.playground-live-editor__status span {
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.playground-live-editor__status[data-tone='success'] strong {
++  color: #126e57;
++}
++
++.playground-live-editor__status[data-tone='error'] strong {
++  color: #b13f39;
++}
++
++.playground-live-editor__input {
++  display: grid;
++  grid-template-columns: 42px minmax(0, 1fr);
++  min-width: 0;
++  min-height: 0;
++  overflow: hidden;
++  background: #ffffff;
++}
++
++.playground-live-editor__input[data-disabled='true'] {
++  background: #f3f5f4;
++}
++
++.playground-live-editor__gutter,
++.playground-live-editor textarea {
++  min-width: 0;
++  min-height: 0;
++  padding-top: 14px;
++  padding-bottom: 20px;
++  margin: 0;
++  overflow: auto;
++  border: 0;
++  border-radius: 0;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 12px;
++  line-height: 1.6;
++  tab-size: 2;
++}
++
++.playground-live-editor__gutter {
++  padding-right: 9px;
++  color: #66736c;
++  background: #f7f9f8;
++  text-align: right;
++  scrollbar-width: none;
++  user-select: none;
++}
++
++.playground-live-editor textarea {
++  width: 100%;
++  height: 100%;
++  padding-right: 14px;
++  padding-left: 14px;
++  box-sizing: border-box;
++  resize: none;
++  outline: 0;
++  color: #1d2a24;
++  background: #ffffff;
++  caret-color: #126e57;
++  white-space: pre;
++}
++
++.playground-live-editor textarea:focus-visible {
++  outline-offset: -2px;
++}
++
++.playground-live-editor textarea:disabled {
++  color: #7b8781;
++  background: #f3f5f4;
++}
++
+ .playground-visually-hidden {
+   position: absolute;
+   width: 1px;
+@@ -184,6 +553,47 @@ body,
+   .playground-file-status {
+     gap: 0;
+   }
++
++  .playground-usage-dialog {
++    width: 100vw;
++    border-left: 0;
++    box-shadow: none;
++  }
++
++  .playground-usage-header {
++    padding-right: 12px;
++    padding-left: 14px;
++  }
++
++  .playground-usage-tabs {
++    padding: 0 4px;
++  }
++
++  .playground-developer-tabs {
++    padding: 0 4px;
++  }
++
++  .playground-developer-tabs button,
++  .playground-usage-tabs button {
++    padding: 0 6px;
++  }
++
++  .playground-code-panel {
++    margin: 10px;
++  }
++
++  .playground-live-editor {
++    margin: 10px;
++  }
++
++  .playground-live-editor__status span {
++    display: none;
++  }
++
++  .playground-code-panel pre {
++    padding: 16px;
++    font-size: 12px;
++  }
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+diff --git a/apps/playground/tests/chartDocument.test.ts b/apps/playground/tests/chartDocument.test.ts
+new file mode 100644
+index 0000000..9d0741b
+--- /dev/null
++++ b/apps/playground/tests/chartDocument.test.ts
+@@ -0,0 +1,130 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  parsePlaygroundChartDocument,
++  serializePlaygroundChartDocument,
++  type PlaygroundChartDocument,
++} from '../src/chartDocument';
++
++const documentFixture = {
++  documentVersion: '1.0',
++  sourceData: {
++    schemaVersion: '1.0.0',
++    datasetId: 'live-editor-test',
++    currency: 'CNY',
++    items: [
++      { id: 'opening', label: '期初', amount: 100, kind: 'start' },
++      { id: 'growth', label: '增长', amount: 20, kind: 'contribution' },
++      { id: 'ending', label: '期末', amount: 120, kind: 'end' },
++    ],
++  },
++  viewSpec: {
++    schemaVersion: '1.0.0',
++    chartType: 'waterfall',
++    datasetId: 'live-editor-test',
++    revision: 0,
++    rootOrder: ['growth'],
++    groups: {},
++    collapsedGroupIds: [],
++    pinnedItemIds: [],
++    annotations: {},
++    emphasis: {},
++  },
++  chartAppearance: {
++    title: '实时图表',
++    palette: { positive: '#168363', negative: '#D5524A' },
++    axis: { x: true, y: true },
++    valueLabels: 'auto',
++    tooltip: true,
++    animation: { enabled: true, duration: 160 },
++    groupRegion: { enabled: true, fillOpacity: 0.06, label: 'auto' },
++    numberFormat: {
++      minimumFractionDigits: 0,
++      maximumFractionDigits: 0,
++      currencyDisplay: 'narrowSymbol',
++    },
++  },
++  panels: { outline: true, inspector: true, toolbar: true },
++  layout: { outlinePlacement: 'right', inspectorMode: 'tab' },
++} as const satisfies PlaygroundChartDocument;
++
++describe('playground chart document', () => {
++  it('round-trips the complete chart state with deterministic two-space JSON', () => {
++    const text = serializePlaygroundChartDocument(documentFixture);
++    const result = parsePlaygroundChartDocument(text);
++
++    expect(text).toBe(`${JSON.stringify(documentFixture, null, 2)}\n`);
++    expect(result).toEqual({ ok: true, value: documentFixture });
++  });
++
++  it('prefixes source and view validation paths', () => {
++    const invalidSource = JSON.stringify({
++      ...documentFixture,
++      sourceData: { ...documentFixture.sourceData, datasetId: '' },
++    });
++    const sourceResult = parsePlaygroundChartDocument(invalidSource);
++    expect(sourceResult).toMatchObject({
++      ok: false,
++      error: { code: 'INVALID_SOURCE_DATA', path: '/sourceData/datasetId' },
++    });
++
++    const invalidView = JSON.stringify({
++      ...documentFixture,
++      viewSpec: { ...documentFixture.viewSpec, rootOrder: ['missing'] },
++    });
++    const viewResult = parsePlaygroundChartDocument(invalidView);
++    expect(viewResult).toMatchObject({
++      ok: false,
++      error: { code: 'SOURCE_CONFLICT', path: '/viewSpec/rootOrder/0' },
++    });
++  });
++
++  it('rejects malformed JSON, unknown fields and unsafe appearance values', () => {
++    expect(parsePlaygroundChartDocument('{')).toMatchObject({
++      ok: false,
++      error: { code: 'INVALID_JSON', path: '/' },
++    });
++    expect(
++      parsePlaygroundChartDocument(JSON.stringify({ ...documentFixture, execute: 'alert(1)' })),
++    ).toMatchObject({
++      ok: false,
++      error: { code: 'UNKNOWN_FIELD', path: '/execute' },
++    });
++    expect(
++      parsePlaygroundChartDocument(
++        JSON.stringify({
++          ...documentFixture,
++          chartAppearance: {
++            ...documentFixture.chartAppearance,
++            animation: { enabled: true, duration: 'fast' },
++          },
++        }),
++      ),
++    ).toMatchObject({
++      ok: false,
++      error: { code: 'INVALID_TYPE', path: '/chartAppearance/animation/duration' },
++    });
++  });
++
++  it('requires closed panel and layout values', () => {
++    expect(
++      parsePlaygroundChartDocument(
++        JSON.stringify({ ...documentFixture, panels: { outline: 'yes' } }),
++      ),
++    ).toMatchObject({
++      ok: false,
++      error: { code: 'INVALID_TYPE', path: '/panels/outline' },
++    });
++    expect(
++      parsePlaygroundChartDocument(
++        JSON.stringify({
++          ...documentFixture,
++          layout: { outlinePlacement: 'center', inspectorMode: 'tab' },
++        }),
++      ),
++    ).toMatchObject({
++      ok: false,
++      error: { code: 'INVALID_VALUE', path: '/layout/outlinePlacement' },
++    });
++  });
++});
+diff --git a/docs/api.md b/docs/api.md
+index 77a4653..c5976f1 100644
+--- a/docs/api.md
++++ b/docs/api.md
+@@ -24,21 +24,22 @@
+ 
+ 主要 props：
+ 
+-| Prop                | 类型                         | 说明                                   |
+-| ------------------- | ---------------------------- | -------------------------------------- |
+-| `sourceData`        | `SourceData`                 | 必填、只读的事实数据                   |
+-| `viewSpec`          | `ViewSpec`                   | 受控视图                               |
+-| `defaultViewSpec`   | `ViewSpec`                   | 非受控初始视图                         |
+-| `historyLimit`      | `number`                     | 非负安全整数，默认 100                 |
+-| `locale`            | `'zh-CN' \| 'en-US'`         | 界面与数字区域设置                     |
+-| `readOnly`          | `boolean`                    | 禁用编辑命令                           |
+-| `height`            | `number \| string`           | 编辑器高度                             |
+-| `panels`            | `FinancialChartEditorPanels` | 显示或隐藏 outline、inspector、toolbar |
+-| `chartAppearance`   | `FinancialChartAppearance`   | 有限、安全的呈现配置                   |
+-| `onViewSpecChange`  | callback                     | 接收成功命令产生的新视图和事件         |
+-| `onCommand`         | callback                     | 接收成功命令事件                       |
+-| `onCommandRejected` | callback                     | 接收结构化 `CommandError`              |
+-| `onSelectionChange` | callback                     | 接收稳定 node/source IDs               |
++| Prop                | 类型                         | 说明                                         |
++| ------------------- | ---------------------------- | -------------------------------------------- |
++| `sourceData`        | `SourceData`                 | 必填、只读的事实数据                         |
++| `viewSpec`          | `ViewSpec`                   | 受控视图                                     |
++| `defaultViewSpec`   | `ViewSpec`                   | 非受控初始视图                               |
++| `historyLimit`      | `number`                     | 非负安全整数，默认 100                       |
++| `locale`            | `'zh-CN' \| 'en-US'`         | 界面与数字区域设置                           |
++| `readOnly`          | `boolean`                    | 禁用编辑命令                                 |
++| `height`            | `number \| string`           | 编辑器高度                                   |
++| `panels`            | `FinancialChartEditorPanels` | 分别显示或隐藏 outline、inspector、toolbar   |
++| `layout`            | `FinancialChartEditorLayout` | 可选的大纲位置与检查器呈现模式；默认布局不变 |
++| `chartAppearance`   | `FinancialChartAppearance`   | 有限、安全的呈现配置                         |
++| `onViewSpecChange`  | callback                     | 接收成功命令产生的新视图和事件               |
++| `onCommand`         | callback                     | 接收成功命令事件                             |
++| `onCommandRejected` | callback                     | 接收结构化 `CommandError`                    |
++| `onSelectionChange` | callback                     | 接收稳定 node/source IDs                     |
+ 
+ 组件 ref 为 `FinancialChartEditorHandle`：
+ 
+@@ -46,6 +47,28 @@
+ - `getViewSpec()`：读取当前有效视图。
+ - `exportImage(options)`：导出 SVG 或 PNG。
+ 
++`panels` 适合只嵌入图表或按宿主需要裁剪编辑器 chrome：
++
++```tsx
++<FinancialChartEditor
++  sourceData={sourceData}
++  panels={{ outline: false, inspector: false, toolbar: true }}
++/>
++```
++
++`layout` 不控制显隐。默认值为 `{ outlinePlacement: 'left', inspectorMode: 'static' }`；需要把大纲和检查器
++合并到右侧标签栏时使用：
++
++```tsx
++<FinancialChartEditor
++  sourceData={sourceData}
++  layout={{ outlinePlacement: 'right', inspectorMode: 'tab' }}
++/>
++```
++
++`outlinePlacement` 支持 `left | right`，`inspectorMode` 支持 `static | tab`。`tab` 模式只有一个面板启用时不显示
++多余标签栏；窄屏继续使用工具栏入口打开对应面板。
++
+ ## 数据与视图
+ 
+ `SourceData` 是严格 discriminated union：
+diff --git a/e2e/accessibility.spec.ts b/e2e/accessibility.spec.ts
+index 63874be..860d0f2 100644
+--- a/e2e/accessibility.spec.ts
++++ b/e2e/accessibility.spec.ts
+@@ -1,6 +1,8 @@
+ import AxeBuilder from '@axe-core/playwright';
+ import { expect, test, type Page } from '@playwright/test';
+ 
++import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
++
+ const EDITOR = '[data-tellplot="editor"]';
+ const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+@@ -47,8 +49,10 @@ async function createGroup(page: Page): Promise<void> {
+   await page
+     .getByRole('treeitem', { name: /价格提升/ })
+     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+   await page.getByRole('button', { name: '创建分组' }).click();
++  await activateOutlinePanel(page);
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+ }
+ 
+@@ -91,6 +95,87 @@ test('export menu supports roving keyboard focus and returns focus on Escape', a
+   await expect(trigger).toBeFocused();
+ });
+ 
++test('desktop usage code and right panel rail are visible by default', async ({ page }) => {
++  await page.addInitScript(() => {
++    Object.defineProperty(navigator, 'clipboard', {
++      configurable: true,
++      value: {
++        writeText: async (value: string) => {
++          document.documentElement.dataset['copiedText'] = value;
++        },
++      },
++    });
++  });
++  await openEditor(page);
++
++  const trigger = page.getByRole('button', { name: '隐藏使用代码' });
++  const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
++  const chart = page.getByTestId('tellplot-chart-stage');
++  const editorRail = page.getByRole('complementary', { name: '结构大纲 / 检查器' });
++  await expect(guide).toBeVisible();
++  await expect(guide.getByRole('textbox', { name: 'TellPlot 图表文档' })).toBeVisible();
++  await guide.getByRole('tab', { name: '接入示例' }).click();
++  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText(
++    'pnpm add @tellplot/editor @antv/g2 react react-dom',
++  );
++
++  const guideBox = await guide.boundingBox();
++  const chartBox = await chart.boundingBox();
++  const railBox = await editorRail.boundingBox();
++  expect((guideBox?.x ?? 0) + (guideBox?.width ?? 0)).toBeLessThanOrEqual(chartBox?.x ?? 0);
++  expect(railBox?.x ?? 0).toBeGreaterThanOrEqual((chartBox?.x ?? 0) + (chartBox?.width ?? 0) - 1);
++
++  await guide.getByRole('tab', { name: 'React' }).click();
++  await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
++    'import { FinancialChartEditor',
++  );
++  await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
++    "import '@tellplot/editor/styles.css'",
++  );
++
++  await guide.getByRole('tab', { name: '配置', exact: true }).click();
++  const configPanel = guide.getByRole('tabpanel', { name: '配置', exact: true });
++  await expect(configPanel).toContainText('chartAppearance');
++  await expect(configPanel).toContainText('groupRegion');
++  await expect(configPanel).toContainText('outline: false');
++  await configPanel.getByRole('button', { name: '复制配置代码' }).click();
++  await expect(guide.getByRole('status', { name: '代码复制状态' })).toHaveText('已复制');
++  await expect(page.locator('html')).toHaveAttribute('data-copied-text', /chartAppearance/);
++  const inspectorTab = editorRail.getByRole('tab', { name: '检查器' });
++  await inspectorTab.focus();
++  await page.keyboard.press('ArrowLeft');
++  await expect(editorRail.getByRole('tab', { name: '结构大纲' })).toBeFocused();
++  await expectNoSeriousOrCritical(page, 'desktop developer layout');
++
++  await trigger.click();
++  await expect(guide).toBeHidden();
++  await expect(page.getByRole('button', { name: '显示使用代码' })).toBeFocused();
++});
++
++test('usage guide stays inside the mobile viewport', async ({ page }) => {
++  await openEditor(page, true);
++  const trigger = page.getByRole('button', { name: '显示使用代码' });
++  const triggerBox = await trigger.boundingBox();
++  expect(triggerBox?.width ?? 0).toBeGreaterThanOrEqual(32);
++  expect(triggerBox?.height ?? 0).toBeGreaterThanOrEqual(32);
++
++  await trigger.click();
++  const dialog = page.getByRole('dialog', { name: '在项目中使用 TellPlot' });
++  const dialogBox = await dialog.boundingBox();
++  expect(dialogBox).not.toBeNull();
++  expect(dialogBox?.x ?? -1).toBeGreaterThanOrEqual(0);
++  expect(dialogBox?.y ?? -1).toBeGreaterThanOrEqual(0);
++  expect((dialogBox?.x ?? 0) + (dialogBox?.width ?? 0)).toBeLessThanOrEqual(390);
++  expect((dialogBox?.y ?? 0) + (dialogBox?.height ?? 0)).toBeLessThanOrEqual(844);
++  await expect(dialog.getByRole('textbox', { name: 'TellPlot 图表文档' })).toBeVisible();
++  await dialog.getByRole('tab', { name: '接入示例' }).click();
++  await expect(dialog.getByRole('tab', { name: '配置', exact: true })).toBeVisible();
++  await expectNoSeriousOrCritical(page, 'mobile usage guide');
++  await page.keyboard.press('Escape');
++  await expect(dialog).toBeHidden();
++  await expect(trigger).toBeFocused();
++});
++
+ test('active drag target keeps one accessible row and a polite live status', async ({ page }) => {
+   await openEditor(page);
+   await startOutlineDrag(page);
+diff --git a/e2e/categorical-editor.spec.ts b/e2e/categorical-editor.spec.ts
+index d3d617b..a619142 100644
+--- a/e2e/categorical-editor.spec.ts
++++ b/e2e/categorical-editor.spec.ts
+@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
+ 
+ import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
+ 
++import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
++
+ const EDITOR = '[data-tellplot="editor"]';
+ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+   process.platform === 'darwin' ? 'Meta' : 'Control';
+@@ -236,8 +238,10 @@ async function createAndCollapseGroup(page: Page): Promise<void> {
+   await page
+     .getByRole('treeitem', { name: /个人订阅/ })
+     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('订阅业务');
+   await page.getByRole('button', { name: '创建分组' }).click();
++  await activateOutlinePanel(page);
+   await page.getByRole('button', { name: '折叠 订阅业务' }).click();
+   await expect(page.getByRole('treeitem', { name: /订阅业务/ })).toContainText('2,140');
+ }
+@@ -415,7 +419,9 @@ test('categorical group, pin, and history share one editor session', async ({
+   }
+   await page.getByRole('button', { name: '展开 订阅业务' }).click();
+   await groupRow.click();
++  await activateInspectorPanel(page);
+   await page.getByRole('button', { name: '取消分组' }).click();
++  await activateOutlinePanel(page);
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '4');
+   expect(await rootOrder(page)).toEqual(INITIAL_ORDER);
+   await page.getByRole('button', { name: '撤销' }).click();
+diff --git a/e2e/editorPanels.ts b/e2e/editorPanels.ts
+new file mode 100644
+index 0000000..16777e5
+--- /dev/null
++++ b/e2e/editorPanels.ts
+@@ -0,0 +1,19 @@
++import { expect, type Page } from '@playwright/test';
++
++export async function activateInspectorPanel(page: Page): Promise<void> {
++  const tab = page.getByRole('tab', { name: '检查器' });
++  if ((await tab.count()) === 0) {
++    return;
++  }
++  await tab.click();
++  await expect(tab).toHaveAttribute('aria-selected', 'true');
++}
++
++export async function activateOutlinePanel(page: Page): Promise<void> {
++  const tab = page.getByRole('tab', { name: '结构大纲' });
++  if ((await tab.count()) === 0) {
++    return;
++  }
++  await tab.click();
++  await expect(tab).toHaveAttribute('aria-selected', 'true');
++}
+diff --git a/e2e/export.spec.ts b/e2e/export.spec.ts
+index df783ed..275413f 100644
+--- a/e2e/export.spec.ts
++++ b/e2e/export.spec.ts
+@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
+ 
+ import { expect, test, type Download, type Page } from '@playwright/test';
+ 
++import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
++
+ const EDITOR = '[data-tellplot="editor"]';
+ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+   process.platform === 'darwin' ? 'Meta' : 'Control';
+@@ -38,6 +40,7 @@ test('ViewSpec JSON export and import preserve the current controlled view', asy
+   await page.keyboard.press('Alt+ArrowDown');
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+   await sales.click();
++  await activateInspectorPanel(page);
+   const annotationText = '董事会口径：剔除一次性项目';
+   await page.getByRole('textbox', { name: '注释' }).fill(annotationText);
+   await page.getByRole('button', { name: '保存注释' }).click();
+@@ -74,6 +77,7 @@ test('ViewSpec JSON export and import preserve the current controlled view', asy
+     .evaluateAll(rows => rows.map(row => row.getAttribute('data-node-id')));
+   expect(order.slice(1, 3)).toEqual(['price-impact', 'sales-volume']);
+   await page.getByRole('treeitem', { name: /销量增长/ }).click();
++  await activateInspectorPanel(page);
+   await expect(page.getByRole('textbox', { name: '注释' })).toHaveValue(annotationText);
+ });
+ 
+@@ -93,6 +97,7 @@ test('saving an annotation repaints the visible G2 canvas before image export',
+   const before = await canvasImage();
+ 
+   await page.getByRole('treeitem', { name: /销量增长/ }).click();
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '注释' }).fill('董事会复核');
+   await page.getByRole('button', { name: '保存注释' }).click();
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+@@ -251,6 +256,7 @@ test('PNG export snapshots the latest revision without reading a stale visible c
+   await page.keyboard.press('Alt+ArrowDown');
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+   await sales.click();
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '注释' }).fill('立即导出的最新口径');
+   await page.getByRole('button', { name: '保存注释' }).click();
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+@@ -343,8 +349,10 @@ test('SVG export reflects collapsed state and contains no executable or source m
+   await page
+     .getByRole('treeitem', { name: /价格提升/ })
+     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+   await page.getByRole('button', { name: '创建分组' }).click();
++  await activateOutlinePanel(page);
+   await page.getByRole('button', { name: '折叠 增长驱动' }).click();
+ 
+   const download = await chooseExport(page, 'SVG 图像');
+@@ -372,11 +380,15 @@ test('nested JSON preserves the recursive view and SVG exports only its visible
+   await page
+     .getByRole('treeitem', { name: /价格提升/ })
+     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+   await page.getByRole('button', { name: '创建分组' }).click();
++  await activateOutlinePanel(page);
+   await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
+   await page.getByRole('button', { name: '创建分组' }).click();
++  await activateOutlinePanel(page);
+   await page.getByRole('button', { name: '折叠 经营桥' }).click();
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '3');
+ 
+diff --git a/e2e/interaction-cancel.spec.ts b/e2e/interaction-cancel.spec.ts
+index 5f9c38f..6da3f32 100644
+--- a/e2e/interaction-cancel.spec.ts
++++ b/e2e/interaction-cancel.spec.ts
+@@ -1,5 +1,7 @@
+ import { expect, test, type Locator, type Page } from '@playwright/test';
+ 
++import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
++
+ const EDITOR = '[data-tellplot="editor"]';
+ const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const EXPECTED_CHART_BAR_COUNT = 12;
+@@ -392,8 +394,10 @@ test('moving a child out of a two-item group atomically dissolves the group', as
+   await page
+     .getByRole('treeitem', { name: /价格提升/ })
+     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+   await page.getByRole('button', { name: '创建分组' }).click();
++  await activateOutlinePanel(page);
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+   const priceRow = page.getByRole('treeitem', { name: /价格提升/ });
+   await priceRow.focus();
+diff --git a/e2e/live-code-editor.spec.ts b/e2e/live-code-editor.spec.ts
+new file mode 100644
+index 0000000..1bf43be
+--- /dev/null
++++ b/e2e/live-code-editor.spec.ts
+@@ -0,0 +1,106 @@
++import { expect, test, type Page } from '@playwright/test';
++
++const EDITOR = '[data-tellplot="editor"]';
++const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
++  process.platform === 'darwin' ? 'Meta' : 'Control';
++
++async function openEditor(page: Page): Promise<void> {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto('/');
++  await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
++}
++
++async function replaceDocument(
++  page: Page,
++  update: (document: Record<string, unknown>) => void,
++): Promise<void> {
++  const input = page.getByRole('textbox', { name: 'TellPlot 图表文档' });
++  const document = JSON.parse(await input.inputValue()) as Record<string, unknown>;
++  update(document);
++  await input.fill(JSON.stringify(document, null, 2));
++  await expect(page.getByRole('status', { name: '图表文档状态' })).toContainText('已同步');
++}
++
++test('valid live document edits update the chart without executing JavaScript', async ({
++  page,
++}) => {
++  await openEditor(page);
++  const input = page.getByRole('textbox', { name: 'TellPlot 图表文档' });
++  await expect(input).toBeVisible();
++  await expect(input).toHaveCSS('background-color', 'rgb(255, 255, 255)');
++
++  await replaceDocument(page, document => {
++    const appearance = document['chartAppearance'] as Record<string, unknown>;
++    appearance['title'] = '代码驱动的经营图';
++    const source = document['sourceData'] as { items: Record<string, unknown>[] };
++    const sales = source.items.find(item => item['id'] === 'sales-volume');
++    if (sales !== undefined) {
++      sales['label'] = '渠道销量增长';
++    }
++  });
++
++  await expect(page.getByRole('heading', { name: '代码驱动的经营图' })).toBeVisible();
++  await expect(page.getByRole('treeitem', { name: /渠道销量增长/ })).toBeVisible();
++  await expect(input).toBeFocused();
++});
++
++test('invalid drafts stay editable and preserve the last valid chart', async ({ page }) => {
++  await openEditor(page);
++  const input = page.getByRole('textbox', { name: 'TellPlot 图表文档' });
++  const revisionBefore = await page.locator(EDITOR).getAttribute('data-view-revision');
++  await input.fill('{');
++
++  await expect(page.getByRole('status', { name: '图表文档状态' })).toContainText('INVALID_JSON');
++  await expect(input).toHaveValue('{');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', revisionBefore ?? '0');
++  await expect(page.getByRole('heading', { name: '经营变动瀑布图' })).toBeVisible();
++});
++
++test('right-side commands write the resulting ViewSpec back to the live document', async ({
++  page,
++}) => {
++  await openEditor(page);
++  await page.getByRole('treeitem', { name: /销量增长/ }).click();
++  await page
++    .getByRole('treeitem', { name: /价格提升/ })
++    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await page.getByRole('tab', { name: '检查器' }).click();
++  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
++  await page.getByRole('button', { name: '创建分组' }).click();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++
++  const input = page.getByRole('textbox', { name: 'TellPlot 图表文档' });
++  await expect
++    .poll(async () => {
++      const document = JSON.parse(await input.inputValue()) as {
++        viewSpec: {
++          revision: number;
++          groups: Record<string, { label: string; childIds: string[] }>;
++        };
++      };
++      return {
++        revision: document.viewSpec.revision,
++        groups: Object.values(document.viewSpec.groups).map(group => ({
++          label: group.label,
++          childIds: group.childIds,
++        })),
++      };
++    })
++    .toEqual({
++      revision: 1,
++      groups: [{ label: '增长驱动', childIds: ['sales-volume', 'price-impact'] }],
++    });
++});
++
++test('integration examples remain available beside the live document', async ({ page }) => {
++  await openEditor(page);
++  const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
++  await guide.getByRole('tab', { name: '接入示例' }).click();
++  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText(
++    'pnpm add @tellplot/editor @antv/g2 react react-dom',
++  );
++  await guide.getByRole('tab', { name: 'React' }).click();
++  await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
++    "import '@tellplot/editor/styles.css'",
++  );
++});
+diff --git a/e2e/quickstart.spec.ts b/e2e/quickstart.spec.ts
+index 703bf05..c3f7023 100644
+--- a/e2e/quickstart.spec.ts
++++ b/e2e/quickstart.spec.ts
+@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
+ 
+ import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
+ 
++import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
++
+ const EDITOR = '[data-tellplot="editor"]';
+ const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const EXPECTED_CHART_BAR_COUNT = 12;
+@@ -336,8 +338,8 @@ async function expectLockedAnchorDoesNotStartSession(
+   await page.mouse.move(anchor.x + 6, anchor.y, { steps: 3 });
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
+   await expect(page.getByTestId('chart-drag-overlay')).toHaveCount(0);
+-  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ITEM_LOCKED');
+   await page.mouse.up();
++  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ITEM_LOCKED');
+ 
+   await expect(page.locator(EDITOR)).toHaveAttribute(
+     'data-view-revision',
+@@ -404,11 +406,13 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '5');
+   await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toBeVisible();
+   await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('经营成本桥');
+   const createOuterGroup = page.getByRole('button', { name: '创建分组' });
+   await expect(createOuterGroup).toBeEnabled();
+   await createOuterGroup.click();
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '6');
++  await activateOutlinePanel(page);
+ 
+   const outer = page.getByRole('treeitem', { name: /经营成本桥/ });
+   const outerId = await outer.getAttribute('data-node-id');
+@@ -438,6 +442,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
+     'true',
+   );
+   await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toBeVisible();
++  await page.waitForTimeout(180); // Let the default 160ms G2 transition finish before canvas hit testing.
+   const finalRootOrder = [
+     'opening-profit',
+     'sales-volume',
+@@ -477,6 +482,7 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '9');
+   const annotationText = '成本口径已复核';
+   await costPressure.click();
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '注释' }).fill(annotationText);
+   await page.getByRole('button', { name: '保存注释' }).click();
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '10');
+@@ -540,7 +546,9 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
+     'false',
+   );
+   await page.getByRole('treeitem', { name: /成本压力/ }).click();
++  await activateInspectorPanel(page);
+   await expect(page.getByRole('textbox', { name: '注释' })).toHaveValue(annotationText);
++  await activateOutlinePanel(page);
+ 
+   const tax = page.getByRole('treeitem', { name: /所得税影响/ });
+   await tax.focus();
+diff --git a/e2e/rendering.spec.ts b/e2e/rendering.spec.ts
+index 0d144e1..567a663 100644
+--- a/e2e/rendering.spec.ts
++++ b/e2e/rendering.spec.ts
+@@ -1,5 +1,7 @@
+ import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
+ 
++import { activateInspectorPanel } from './editorPanels';
++
+ interface Viewport {
+   readonly width: number;
+   readonly height: number;
+@@ -155,23 +157,23 @@ test('renders a real nonblank G2 canvas in the desktop analytical plane', async
+   expect(canvasBox?.width ?? 0).toBeGreaterThan(400);
+   expect(canvasBox?.height ?? 0).toBeGreaterThan(360);
+ 
+-  const outlineBox = await page.getByRole('tree', { name: '结构大纲' }).boundingBox();
++  const usageBox = await page
++    .getByRole('complementary', { name: '在项目中使用 TellPlot' })
++    .boundingBox();
+   const chartBox = await page.getByTestId('tellplot-chart-stage').boundingBox();
+-  const inspectorBox = await page.getByRole('complementary', { name: '检查器' }).boundingBox();
+-  expect(outlineBox).not.toBeNull();
++  const railBox = await page
++    .getByRole('complementary', { name: '结构大纲 / 检查器' })
++    .boundingBox();
++  expect(usageBox).not.toBeNull();
+   expect(chartBox).not.toBeNull();
+-  expect(inspectorBox).not.toBeNull();
+-  expect((outlineBox?.x ?? 0) + (outlineBox?.width ?? 0)).toBeLessThanOrEqual(
+-    (chartBox?.x ?? 0) + 1,
+-  );
+-  expect((chartBox?.x ?? 0) + (chartBox?.width ?? 0)).toBeLessThanOrEqual(
+-    (inspectorBox?.x ?? 0) + 1,
+-  );
++  expect(railBox).not.toBeNull();
++  expect((usageBox?.x ?? 0) + (usageBox?.width ?? 0)).toBeLessThanOrEqual((chartBox?.x ?? 0) + 1);
++  expect((chartBox?.x ?? 0) + (chartBox?.width ?? 0)).toBeLessThanOrEqual((railBox?.x ?? 0) + 1);
+   await expectNoHorizontalOverflow(page);
+   await attachChromiumScreenshot(page, browserName, testInfo, 'desktop-final.png');
+ });
+ 
+-test('keeps the chart visible and exposes the inspector drawer at 1024px', async ({
++test('keeps the chart visible and exposes the inspector tab at 1024px', async ({
+   browserName,
+   page,
+ }, testInfo) => {
+@@ -189,18 +191,16 @@ test('keeps the chart visible and exposes the inspector drawer at 1024px', async
+   expect(canvasBox?.width ?? 0).toBeGreaterThan(500);
+   expect(canvasBox?.height ?? 0).toBeGreaterThan(430);
+   await expect(page.getByRole('tree', { name: '结构大纲' })).toBeVisible();
+-  await expect(page.getByRole('complementary', { name: '检查器' })).toBeHidden();
++  await expect(page.getByRole('tab', { name: '检查器' })).toHaveAttribute('aria-selected', 'false');
+ 
+   await page.getByRole('treeitem', { name: /销量增长/ }).click();
+-  await page.getByRole('button', { name: '打开检查器' }).click();
+-  const drawer = page.getByRole('dialog', { name: '检查器' });
+-  await expect(drawer).toBeVisible();
+-  await expect(page.locator('[data-tellplot="editor"]')).toHaveAttribute(
++  await activateInspectorPanel(page);
++  const inspector = page.getByRole('tabpanel', { name: '检查器' });
++  await expect(inspector.getByRole('textbox', { name: '注释' })).toBeVisible();
++  await expect(page.locator('[data-tellplot="editor"]')).not.toHaveAttribute(
+     'data-overlay-open',
+     'true',
+   );
+-  await expect(drawer.getByRole('textbox', { name: '注释' })).toBeVisible();
+-  await expect(page.getByRole('button', { name: '关闭检查器' })).toBeVisible();
+   const fileImport = page.getByRole('button', { name: '导入 ViewSpec', exact: true });
+   expect(
+     await fileImport.evaluate(element => {
+@@ -211,7 +211,7 @@ test('keeps the chart visible and exposes the inspector drawer at 1024px', async
+       );
+       return hit !== null && element.contains(hit);
+     }),
+-  ).toBe(false);
++  ).toBe(true);
+   await expectNoHorizontalOverflow(page);
+   await attachChromiumScreenshot(page, browserName, testInfo, 'compact-final.png');
+ });
+diff --git a/e2e/waterfall-editor.spec.ts b/e2e/waterfall-editor.spec.ts
+index ae9bf06..f80de95 100644
+--- a/e2e/waterfall-editor.spec.ts
++++ b/e2e/waterfall-editor.spec.ts
+@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
+ 
+ import { expect, test, type Locator, type Page } from '@playwright/test';
+ 
++import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
++
+ const EDITOR = '[data-tellplot="editor"]';
+ const COMMAND_FEEDBACK = '.tp-command-feedback';
+ const EXPECTED_CHART_BAR_COUNT = 12;
+@@ -348,8 +350,10 @@ test('creates, collapses, expands, and ungroups a conserved group from the real
+   await page
+     .getByRole('treeitem', { name: /价格提升/ })
+     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+   await page.getByRole('button', { name: '创建分组' }).click();
++  await activateOutlinePanel(page);
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
+   await expectCanvasRetained(canvas, 'group-flow');
+ 
+@@ -370,7 +374,9 @@ test('creates, collapses, expands, and ungroups a conserved group from the real
+   await expectCanvasRetained(canvas, 'group-flow');
+   await expect(page.getByRole('treeitem', { name: /销量增长/ })).toBeVisible();
+   await groupRow.click();
++  await activateInspectorPanel(page);
+   await page.getByRole('button', { name: '取消分组' }).click();
++  await activateOutlinePanel(page);
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '4');
+   await expectCanvasRetained(canvas, 'group-flow');
+   await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveCount(0);
+@@ -386,13 +392,17 @@ test('creates a nested group from contiguous sibling nodes and preserves recursi
+   await page
+     .getByRole('treeitem', { name: /价格提升/ })
+     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
+   await page.getByRole('button', { name: '创建分组' }).click();
+ 
++  await activateOutlinePanel(page);
+   await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
++  await activateInspectorPanel(page);
+   await page.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
+   await page.getByRole('button', { name: '创建分组' }).click();
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
++  await activateOutlinePanel(page);
+ 
+   const outer = page.getByRole('treeitem', { name: /经营桥/ });
+   const inner = page.getByRole('treeitem', { name: /增长驱动/ });
+diff --git a/packages/editor/src/components/EditorToolbar.tsx b/packages/editor/src/components/EditorToolbar.tsx
+index 781b0ca..b61f0a3 100644
+--- a/packages/editor/src/components/EditorToolbar.tsx
++++ b/packages/editor/src/components/EditorToolbar.tsx
+@@ -86,6 +86,10 @@ export function EditorToolbar({
+   onUndo,
+   onRedo,
+ }: EditorToolbarProps): React.JSX.Element {
++  if (!showToolbar) {
++    return <></>;
++  }
++
+   const statusLabel = valid ? messages.validated : messages.invalidData;
+ 
+   return (
+@@ -138,27 +142,23 @@ export function EditorToolbar({
+             <PanelRight size={17} aria-hidden="true" />
+           </button>
+         ) : null}
+-        {showToolbar ? (
+-          <>
+-            <span className="tp-action-divider" aria-hidden="true" />
+-            <HistoryTool
+-              enabled={canUndo}
+-              label={messages.undo}
+-              reason={readOnly ? messages.readOnlyReason : messages.undoUnavailable}
+-              onClick={onUndo}
+-            >
+-              <Undo2 size={17} aria-hidden="true" />
+-            </HistoryTool>
+-            <HistoryTool
+-              enabled={canRedo}
+-              label={messages.redo}
+-              reason={readOnly ? messages.readOnlyReason : messages.redoUnavailable}
+-              onClick={onRedo}
+-            >
+-              <Redo2 size={17} aria-hidden="true" />
+-            </HistoryTool>
+-          </>
+-        ) : null}
++        <span className="tp-action-divider" aria-hidden="true" />
++        <HistoryTool
++          enabled={canUndo}
++          label={messages.undo}
++          reason={readOnly ? messages.readOnlyReason : messages.undoUnavailable}
++          onClick={onUndo}
++        >
++          <Undo2 size={17} aria-hidden="true" />
++        </HistoryTool>
++        <HistoryTool
++          enabled={canRedo}
++          label={messages.redo}
++          reason={readOnly ? messages.readOnlyReason : messages.redoUnavailable}
++          onClick={onRedo}
++        >
++          <Redo2 size={17} aria-hidden="true" />
++        </HistoryTool>
+       </div>
+     </header>
+   );
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+index aa45999..0fa082e 100644
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -37,6 +37,7 @@ import { editorMessages, type EditorMessages } from './editorMessages';
+ import { InspectorPanel } from './InspectorPanel';
+ import { OutlinePanel, type OutlineInteractionPreview } from './OutlinePanel';
+ import { PanelOverlay } from './PanelOverlay';
++import { PanelRail } from './PanelRail';
+ import { WaterfallCanvas, type ChartInteractionPreview } from './WaterfallCanvas';
+ 
+ interface VisibleIssue {
+@@ -239,6 +240,8 @@ export const FinancialChartEditor = forwardRef<
+     inspector: props.panels?.inspector ?? true,
+     toolbar: props.panels?.toolbar ?? true,
+   };
++  const outlinePlacement = props.layout?.outlinePlacement ?? 'left';
++  const inspectorMode = props.layout?.inspectorMode ?? 'static';
+   const [outlineOpen, setOutlineOpen] = useState(false);
+   const [inspectorOpen, setInspectorOpen] = useState(false);
+   const [feedback, setFeedback] = useState<CommandFeedbackState>({
+@@ -919,6 +922,121 @@ export const FinancialChartEditor = forwardRef<
+         onUngroup={handleUngroup}
+       />
+     ) : null;
++  const currentView = controller.viewSpec;
++  const chart =
++    currentView === null ? null : displayChart?.family === 'categorical' ? (
++      <CategoricalCanvas
++        chartType={displayChart.chartType}
++        projection={displayChart.projection}
++        viewSpec={currentView}
++        readOnly={props.readOnly === true}
++        locale={locale}
++        currency={props.sourceData.currency}
++        empty={empty}
++        title={activeTitle}
++        appearance={props.chartAppearance}
++        externalPreview={currentOutlineInteraction}
++        onMove={handleMove}
++        onMarqueeSelection={handleMarqueeSelection}
++        onSelectNode={handleChartSelect}
++        onToggleGroup={handleChartToggleGroup}
++        onUngroup={handleChartUngroup}
++        onInteractionChange={handleChartInteractionChange}
++        onCancel={handleCancel}
++      />
++    ) : (
++      <WaterfallCanvas
++        projection={
++          displayChart?.family === 'waterfall' ? displayChart.projection : EMPTY_PROJECTION
++        }
++        viewSpec={currentView}
++        readOnly={props.readOnly === true}
++        locale={locale}
++        currency={props.sourceData.currency}
++        empty={empty}
++        title={activeTitle}
++        appearance={props.chartAppearance}
++        externalPreview={currentOutlineInteraction}
++        onMove={handleMove}
++        onMarqueeSelection={handleMarqueeSelection}
++        onSelectNode={handleChartSelect}
++        onToggleGroup={handleChartToggleGroup}
++        onUngroup={handleChartUngroup}
++        onInteractionChange={handleChartInteractionChange}
++        onCancel={handleCancel}
++      />
++    );
++
++  const staticOutline = panels.outline ? (
++    <aside className="tp-static-panel tp-outline-static">{outline}</aside>
++  ) : null;
++  const staticInspector = panels.inspector ? (
++    <aside
++      className="tp-static-panel tp-inspector-static"
++      role="complementary"
++      aria-label={messages.inspector}
++    >
++      {inspector}
++    </aside>
++  ) : null;
++  const tabbedRail =
++    inspectorMode === 'tab' ? (
++      <PanelRail
++        outline={panels.outline ? outline : null}
++        inspector={panels.inspector ? inspector : null}
++        outlineLabel={messages.outline}
++        inspectorLabel={messages.inspector}
++        side={outlinePlacement}
++      />
++    ) : null;
++  const tabbedRailKind =
++    panels.outline && panels.inspector
++      ? 'tabs'
++      : panels.outline
++        ? 'outline'
++        : panels.inspector
++          ? 'inspector'
++          : 'none';
++  const leftPanel =
++    inspectorMode === 'tab'
++      ? outlinePlacement === 'left'
++        ? tabbedRail
++        : null
++      : outlinePlacement === 'left'
++        ? staticOutline
++        : staticInspector;
++  const rightPanel =
++    inspectorMode === 'tab'
++      ? outlinePlacement === 'right'
++        ? tabbedRail
++        : null
++      : outlinePlacement === 'right'
++        ? staticOutline
++        : staticInspector;
++  const leftPanelKind =
++    inspectorMode === 'tab'
++      ? outlinePlacement === 'left'
++        ? tabbedRailKind
++        : 'none'
++      : outlinePlacement === 'left'
++        ? panels.outline
++          ? 'outline'
++          : 'none'
++        : panels.inspector
++          ? 'inspector'
++          : 'none';
++  const rightPanelKind =
++    inspectorMode === 'tab'
++      ? outlinePlacement === 'right'
++        ? tabbedRailKind
++        : 'none'
++      : outlinePlacement === 'right'
++        ? panels.outline
++          ? 'outline'
++          : 'none'
++        : panels.inspector
++          ? 'inspector'
++          : 'none';
+ 
+   return (
+     <div
+@@ -931,6 +1049,9 @@ export const FinancialChartEditor = forwardRef<
+         activeInteraction.preview.state === 'dragging' ? activeInteraction.source : undefined
+       }
+       data-read-only={props.readOnly === true ? 'true' : 'false'}
++      data-outline-placement={outlinePlacement}
++      data-inspector-mode={inspectorMode}
++      data-toolbar-visible={panels.toolbar ? 'true' : 'false'}
+       data-overlay-open={modalOpen ? 'true' : undefined}
+       data-view-revision={controller.viewSpec?.revision ?? -1}
+       ref={rootRef}
+@@ -974,61 +1095,16 @@ export const FinancialChartEditor = forwardRef<
+           <InvalidStage issues={visibleIssues} title={messages.invalidData} />
+         </main>
+       ) : (
+-        <main className="tp-workbench">
+-          {panels.outline ? (
+-            <aside className="tp-static-panel tp-outline-static">{outline}</aside>
+-          ) : null}
+-          {displayChart?.family === 'categorical' ? (
+-            <CategoricalCanvas
+-              chartType={displayChart.chartType}
+-              projection={displayChart.projection}
+-              viewSpec={controller.viewSpec}
+-              readOnly={props.readOnly === true}
+-              locale={locale}
+-              currency={props.sourceData.currency}
+-              empty={empty}
+-              title={activeTitle}
+-              appearance={props.chartAppearance}
+-              externalPreview={currentOutlineInteraction}
+-              onMove={handleMove}
+-              onMarqueeSelection={handleMarqueeSelection}
+-              onSelectNode={handleChartSelect}
+-              onToggleGroup={handleChartToggleGroup}
+-              onUngroup={handleChartUngroup}
+-              onInteractionChange={handleChartInteractionChange}
+-              onCancel={handleCancel}
+-            />
+-          ) : (
+-            <WaterfallCanvas
+-              projection={
+-                displayChart?.family === 'waterfall' ? displayChart.projection : EMPTY_PROJECTION
+-              }
+-              viewSpec={controller.viewSpec}
+-              readOnly={props.readOnly === true}
+-              locale={locale}
+-              currency={props.sourceData.currency}
+-              empty={empty}
+-              title={activeTitle}
+-              appearance={props.chartAppearance}
+-              externalPreview={currentOutlineInteraction}
+-              onMove={handleMove}
+-              onMarqueeSelection={handleMarqueeSelection}
+-              onSelectNode={handleChartSelect}
+-              onToggleGroup={handleChartToggleGroup}
+-              onUngroup={handleChartUngroup}
+-              onInteractionChange={handleChartInteractionChange}
+-              onCancel={handleCancel}
+-            />
+-          )}
+-          {panels.inspector ? (
+-            <aside
+-              className="tp-static-panel tp-inspector-static"
+-              role="complementary"
+-              aria-label={messages.inspector}
+-            >
+-              {inspector}
+-            </aside>
+-          ) : null}
++        <main
++          className="tp-workbench"
++          data-outline-placement={outlinePlacement}
++          data-inspector-mode={inspectorMode}
++          data-left-panel={leftPanelKind}
++          data-right-panel={rightPanelKind}
++        >
++          {leftPanel}
++          {chart}
++          {rightPanel}
+         </main>
+       )}
+ 
+diff --git a/packages/editor/src/components/PanelRail.tsx b/packages/editor/src/components/PanelRail.tsx
+new file mode 100644
+index 0000000..0a0c0e2
+--- /dev/null
++++ b/packages/editor/src/components/PanelRail.tsx
+@@ -0,0 +1,121 @@
++import { useId, useRef, useState } from 'react';
++
++type PanelRailTab = 'outline' | 'inspector';
++
++interface PanelRailProps {
++  readonly outline: React.ReactNode;
++  readonly inspector: React.ReactNode;
++  readonly outlineLabel: string;
++  readonly inspectorLabel: string;
++  readonly side: 'left' | 'right';
++}
++
++export function PanelRail({
++  outline,
++  inspector,
++  outlineLabel,
++  inspectorLabel,
++  side,
++}: PanelRailProps): React.JSX.Element | null {
++  const railId = useId();
++  const tabs = [
++    ...(outline === null ? [] : (['outline'] as const)),
++    ...(inspector === null ? [] : (['inspector'] as const)),
++  ];
++  const [activeTab, setActiveTab] = useState<PanelRailTab>(tabs[0] ?? 'outline');
++  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
++
++  if (tabs.length === 0) {
++    return null;
++  }
++
++  const selectedTab = tabs.includes(activeTab) ? activeTab : tabs[0];
++
++  if (tabs.length === 1) {
++    const tab = tabs[0];
++    const label = tab === 'outline' ? outlineLabel : inspectorLabel;
++    return (
++      <aside className="tp-static-panel tp-panel-rail-static" data-side={side} aria-label={label}>
++        {tab === 'outline' ? outline : inspector}
++      </aside>
++    );
++  }
++
++  const selectTab = (tab: PanelRailTab, index: number): void => {
++    setActiveTab(tab);
++    tabRefs.current[index]?.focus();
++  };
++
++  const navigateTabs = (event: React.KeyboardEvent<HTMLButtonElement>, index: number): void => {
++    let target: number | undefined;
++    if (event.key === 'ArrowRight') {
++      target = (index + 1) % tabs.length;
++    } else if (event.key === 'ArrowLeft') {
++      target = (index - 1 + tabs.length) % tabs.length;
++    } else if (event.key === 'Home') {
++      target = 0;
++    } else if (event.key === 'End') {
++      target = tabs.length - 1;
++    }
++    if (target === undefined) {
++      return;
++    }
++    event.preventDefault();
++    const tab = tabs[target];
++    if (tab !== undefined) {
++      selectTab(tab, target);
++    }
++  };
++
++  return (
++    <aside
++      className="tp-static-panel tp-panel-rail-static tp-panel-rail-static--tabbed"
++      data-side={side}
++      aria-label={`${outlineLabel} / ${inspectorLabel}`}
++    >
++      <div
++        className="tp-panel-tabs"
++        role="tablist"
++        aria-label={`${outlineLabel} / ${inspectorLabel}`}
++      >
++        {tabs.map((tab, index) => {
++          const label = tab === 'outline' ? outlineLabel : inspectorLabel;
++          const selected = tab === selectedTab;
++          return (
++            <button
++              key={tab}
++              ref={element => {
++                tabRefs.current[index] = element;
++              }}
++              id={`${railId}-${tab}-tab`}
++              type="button"
++              role="tab"
++              aria-selected={selected}
++              aria-controls={`${railId}-${tab}-panel`}
++              tabIndex={selected ? 0 : -1}
++              onClick={() => selectTab(tab, index)}
++              onKeyDown={event => navigateTabs(event, index)}
++            >
++              {label}
++            </button>
++          );
++        })}
++      </div>
++      {tabs.map(tab => {
++        const selected = tab === selectedTab;
++        return (
++          <div
++            key={tab}
++            id={`${railId}-${tab}-panel`}
++            className="tp-panel-tab-content"
++            role="tabpanel"
++            aria-labelledby={`${railId}-${tab}-tab`}
++            hidden={!selected}
++          >
++            {tab === 'outline' ? outline : inspector}
++          </div>
++        );
++      })}
++    </aside>
++  );
++}
+diff --git a/packages/editor/src/index.ts b/packages/editor/src/index.ts
+index 0c0ba1a..60e20a4 100644
+--- a/packages/editor/src/index.ts
++++ b/packages/editor/src/index.ts
+@@ -72,6 +72,7 @@ export type {
+ } from './export/exportTypes';
+ export type {
+   FinancialChartEditorHandle,
++  FinancialChartEditorLayout,
+   FinancialChartEditorPanels,
+   FinancialChartEditorProps,
+   SelectionState,
+diff --git a/packages/editor/src/react/editorTypes.ts b/packages/editor/src/react/editorTypes.ts
+index 39e301b..cb0cc1c 100644
+--- a/packages/editor/src/react/editorTypes.ts
++++ b/packages/editor/src/react/editorTypes.ts
+@@ -17,6 +17,11 @@ export interface FinancialChartEditorPanels {
+   readonly toolbar?: boolean;
+ }
+ 
++export interface FinancialChartEditorLayout {
++  readonly outlinePlacement?: 'left' | 'right';
++  readonly inspectorMode?: 'static' | 'tab';
++}
++
+ export interface FinancialChartEditorHandle {
+   focus(): void;
+   exportImage(options: ExportOptions): Promise<ExportResult>;
+@@ -32,6 +37,7 @@ export interface FinancialChartEditorProps {
+   readonly readOnly?: boolean;
+   readonly height?: number | string;
+   readonly panels?: FinancialChartEditorPanels;
++  readonly layout?: FinancialChartEditorLayout;
+   readonly chartAppearance?: FinancialChartAppearance;
+   readonly onViewSpecChange?: (next: ViewSpec, event: CommandEvent) => void;
+   readonly onCommand?: (event: CommandEvent) => void;
+diff --git a/packages/editor/src/styles/editor.css b/packages/editor/src/styles/editor.css
+index 3187531..3f12bd8 100644
+--- a/packages/editor/src/styles/editor.css
++++ b/packages/editor/src/styles/editor.css
+@@ -44,6 +44,10 @@
+   overflow: visible;
+ }
+ 
++.tp-editor[data-toolbar-visible='false'] {
++  grid-template-rows: 32px minmax(0, 1fr);
++}
++
+ .tp-editor button,
+ .tp-editor input,
+ .tp-editor textarea {
+@@ -215,14 +219,40 @@
+ }
+ 
+ .tp-workbench {
++  --tp-left-panel-width: 280px;
++  --tp-right-panel-width: 300px;
++
+   position: relative;
+   display: grid;
+-  grid-template-columns: 280px minmax(0, 1fr) 300px;
++  grid-template-columns: minmax(0, 1fr);
+   min-width: 0;
+   min-height: 0;
+   overflow: hidden;
+ }
+ 
++.tp-workbench[data-left-panel='inspector'],
++.tp-workbench[data-left-panel='tabs'] {
++  --tp-left-panel-width: 300px;
++}
++
++.tp-workbench[data-right-panel='outline'] {
++  --tp-right-panel-width: 280px;
++}
++
++.tp-workbench:not([data-left-panel='none']):not([data-right-panel='none']) {
++  grid-template-columns:
++    var(--tp-left-panel-width) minmax(0, 1fr)
++    var(--tp-right-panel-width);
++}
++
++.tp-workbench:not([data-left-panel='none'])[data-right-panel='none'] {
++  grid-template-columns: var(--tp-left-panel-width) minmax(0, 1fr);
++}
++
++.tp-workbench[data-left-panel='none']:not([data-right-panel='none']) {
++  grid-template-columns: minmax(0, 1fr) var(--tp-right-panel-width);
++}
++
+ .tp-static-panel {
+   min-width: 0;
+   min-height: 0;
+@@ -234,10 +264,87 @@
+   border-right: 1px solid var(--tp-border);
+ }
+ 
++.tp-workbench[data-right-panel='outline'] .tp-outline-static {
++  border-right: 0;
++  border-left: 1px solid var(--tp-border);
++}
++
+ .tp-inspector-static {
+   border-left: 1px solid var(--tp-border);
+ }
+ 
++.tp-workbench[data-left-panel='inspector'] .tp-inspector-static {
++  border-right: 1px solid var(--tp-border);
++  border-left: 0;
++}
++
++.tp-panel-rail-static {
++  display: grid;
++  grid-template-rows: minmax(0, 1fr);
++}
++
++.tp-panel-rail-static[data-side='left'] {
++  border-right: 1px solid var(--tp-border);
++}
++
++.tp-panel-rail-static[data-side='right'] {
++  border-left: 1px solid var(--tp-border);
++}
++
++.tp-panel-rail-static--tabbed {
++  grid-template-rows: 40px minmax(0, 1fr);
++}
++
++.tp-panel-tabs {
++  display: grid;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++  border-bottom: 1px solid var(--tp-border);
++  background: var(--tp-surface-subtle);
++}
++
++.tp-panel-tabs button {
++  position: relative;
++  min-width: 0;
++  padding: 0 10px;
++  border: 0;
++  color: var(--tp-text-muted);
++  background: transparent;
++  font: inherit;
++  font-size: 12px;
++  cursor: pointer;
++}
++
++.tp-panel-tabs button[aria-selected='true'] {
++  color: var(--tp-accent);
++  font-weight: 650;
++}
++
++.tp-panel-tabs button[aria-selected='true']::after {
++  position: absolute;
++  right: 12px;
++  bottom: -1px;
++  left: 12px;
++  height: 2px;
++  background: var(--tp-accent);
++  content: '';
++}
++
++.tp-panel-tabs button:focus-visible {
++  z-index: 1;
++  outline: 2px solid var(--tp-focus);
++  outline-offset: -3px;
++}
++
++.tp-panel-tab-content {
++  min-width: 0;
++  min-height: 0;
++  overflow: hidden;
++}
++
++.tp-panel-tab-content[hidden] {
++  display: none;
++}
++
+ .tp-panel-body {
+   display: grid;
+   grid-template-rows: 45px minmax(0, 1fr);
+@@ -1033,10 +1140,18 @@
+ }
+ 
+ @media (max-width: 1179px) {
+-  .tp-workbench {
++  .tp-workbench[data-inspector-mode='static'] {
++    grid-template-columns: minmax(0, 1fr);
++  }
++
++  .tp-workbench[data-inspector-mode='static'][data-left-panel='outline'] {
+     grid-template-columns: 248px minmax(0, 1fr);
+   }
+ 
++  .tp-workbench[data-inspector-mode='static'][data-right-panel='outline'] {
++    grid-template-columns: minmax(0, 1fr) 248px;
++  }
++
+   .tp-inspector-static {
+     display: none;
+   }
+@@ -1044,6 +1159,10 @@
+   .tp-inspector-trigger {
+     display: inline-flex;
+   }
++
++  .tp-editor[data-inspector-mode='tab'] .tp-inspector-trigger {
++    display: none;
++  }
+ }
+ 
+ @media (max-width: 759px) {
+@@ -1077,13 +1196,19 @@
+   }
+ 
+   .tp-workbench {
+-    grid-template-columns: minmax(0, 1fr);
++    grid-template-columns: minmax(0, 1fr) !important;
+   }
+ 
+-  .tp-outline-static {
++  .tp-outline-static,
++  .tp-inspector-static,
++  .tp-panel-rail-static {
+     display: none;
+   }
+ 
++  .tp-editor[data-inspector-mode='tab'] .tp-inspector-trigger {
++    display: inline-flex;
++  }
++
+   .tp-chart-stage {
+     padding: 16px 10px 10px;
+   }
+diff --git a/packages/editor/tests/components/categorical-editor.test.tsx b/packages/editor/tests/components/categorical-editor.test.tsx
+index e6b478e..fbaa193 100644
+--- a/packages/editor/tests/components/categorical-editor.test.tsx
++++ b/packages/editor/tests/components/categorical-editor.test.tsx
+@@ -99,8 +99,10 @@ describe('FinancialChartEditor categorical dispatch', () => {
+       expect.objectContaining({
+         children: [
+           expect.objectContaining({
++            type: 'interval',
+             encode: expect.objectContaining({ x: 'nodeId', y: 'amount', key: 'nodeId' }),
+           }),
++          expect.objectContaining({ type: 'text', zIndex: 5 }),
+         ],
+       }),
+     );
+@@ -124,7 +126,17 @@ describe('FinancialChartEditor categorical dispatch', () => {
+     expect(screen.getByText('分类条形图')).toBeTruthy();
+     expect(g2Mock.Chart.instances[0]?.options).toHaveBeenCalledWith(
+       expect.objectContaining({
+-        children: [expect.objectContaining({ coordinate: { transform: [{ type: 'transpose' }] } })],
++        children: [
++          expect.objectContaining({
++            type: 'interval',
++            coordinate: { transform: [{ type: 'transpose' }] },
++          }),
++          expect.objectContaining({
++            type: 'text',
++            zIndex: 5,
++            coordinate: { transform: [{ type: 'transpose' }] },
++          }),
++        ],
+       }),
+     );
+ 
+diff --git a/packages/editor/tests/components/states.test.tsx b/packages/editor/tests/components/states.test.tsx
+index 6b8707b..738ae5e 100644
+--- a/packages/editor/tests/components/states.test.tsx
++++ b/packages/editor/tests/components/states.test.tsx
+@@ -261,6 +261,76 @@ describe('FinancialChartEditor states', () => {
+     );
+   });
+ 
++  it('keeps the default split layout and allows every chrome panel to be hidden', async () => {
++    const { rerender } = render(<FinancialChartEditor sourceData={financialSourceData} />);
++
++    await waitFor(() => expect(editorState()).toBe('ready'));
++    const editor = document.querySelector<HTMLElement>('[data-tellplot="editor"]');
++    const workbench = document.querySelector<HTMLElement>('.tp-workbench');
++    expect(editor?.dataset['outlinePlacement']).toBe('left');
++    expect(editor?.dataset['inspectorMode']).toBe('static');
++    expect(workbench?.dataset['leftPanel']).toBe('outline');
++    expect(workbench?.dataset['rightPanel']).toBe('inspector');
++
++    rerender(
++      <FinancialChartEditor
++        sourceData={financialSourceData}
++        panels={{ outline: false, inspector: false, toolbar: false }}
++      />,
++    );
++
++    expect(screen.queryByRole('tree', { name: '结构大纲' })).toBeNull();
++    expect(screen.queryByRole('complementary', { name: '检查器' })).toBeNull();
++    expect(screen.queryByRole('toolbar', { name: '编辑器工具栏' })).toBeNull();
++    expect(editor?.dataset['toolbarVisible']).toBe('false');
++    expect(workbench?.dataset['leftPanel']).toBe('none');
++    expect(workbench?.dataset['rightPanel']).toBe('none');
++    expect(screen.getByTestId('tellplot-chart-stage')).toBeTruthy();
++  });
++
++  it('renders outline and inspector as an accessible right-side tab rail', async () => {
++    render(
++      <FinancialChartEditor
++        sourceData={financialSourceData}
++        layout={{ outlinePlacement: 'right', inspectorMode: 'tab' }}
++      />,
++    );
++
++    await waitFor(() => expect(editorState()).toBe('ready'));
++    const workbench = document.querySelector<HTMLElement>('.tp-workbench');
++    expect(workbench?.dataset['leftPanel']).toBe('none');
++    expect(workbench?.dataset['rightPanel']).toBe('tabs');
++    const tabs = screen.getByRole('tablist', { name: '结构大纲 / 检查器' });
++    const outlineTab = within(tabs).getByRole('tab', { name: '结构大纲' });
++    const inspectorTab = within(tabs).getByRole('tab', { name: '检查器' });
++    expect(outlineTab.getAttribute('aria-selected')).toBe('true');
++    expect(screen.getByRole('tree', { name: '结构大纲' })).toBeTruthy();
++    expect(screen.queryByRole('complementary', { name: '检查器' })).toBeNull();
++
++    fireEvent.click(inspectorTab);
++    expect(inspectorTab.getAttribute('aria-selected')).toBe('true');
++    expect(screen.queryByRole('tree', { name: '结构大纲' })).toBeNull();
++    expect(screen.getByRole('tabpanel', { name: '检查器' })).toBeTruthy();
++  });
++
++  it('avoids an empty tab strip when only one right-rail panel is enabled', async () => {
++    render(
++      <FinancialChartEditor
++        sourceData={financialSourceData}
++        panels={{ outline: false, inspector: true }}
++        layout={{ outlinePlacement: 'right', inspectorMode: 'tab' }}
++      />,
++    );
++
++    await waitFor(() => expect(editorState()).toBe('ready'));
++    expect(screen.queryByRole('tablist', { name: '结构大纲 / 检查器' })).toBeNull();
++    expect(screen.queryByRole('tree', { name: '结构大纲' })).toBeNull();
++    expect(screen.getByRole('complementary', { name: '检查器' })).toBeTruthy();
++    expect(document.querySelector<HTMLElement>('.tp-workbench')?.dataset['rightPanel']).toBe(
++      'inspector',
++    );
++  });
++
+   it('keeps both anchors visible in the compact empty state', async () => {
+     render(<FinancialChartEditor sourceData={anchorsOnlySourceData} />);
+ 
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index 5048572..ab0f448 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -17,6 +17,7 @@ import {
+   type ExportOptions,
+   type ExportResult,
+   type FinancialChartEditorHandle,
++  type FinancialChartEditorLayout,
+   type FinancialChartEditorProps,
+   type FinancialChartAppearance,
+   type FinancialChartPalette,
+@@ -89,6 +90,8 @@ export const editorProps: FinancialChartEditorProps = {
+   viewSpec: view,
+   locale: 'zh-CN',
+   height: 680,
++  panels: { outline: false, inspector: false, toolbar: true },
++  layout: { outlinePlacement: 'right', inspectorMode: 'tab' },
+   chartAppearance: {
+     title: 'Operating bridge',
+     palette: { positive: '#00875A', negative: '#D14343' },
+@@ -109,6 +112,8 @@ export const editorProps: FinancialChartEditorProps = {
+   },
+ };
+ 
++export const editorLayout: FinancialChartEditorLayout = editorProps.layout ?? {};
++
+ export const palette: FinancialChartPalette = {
+   start: '#5F6B65',
+   positive: '#168363',
+diff --git a/vitest.config.ts b/vitest.config.ts
+index cdc5054..b4613f2 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -31,6 +31,14 @@ export default defineConfig({
+           passWithNoTests: true,
+         },
+       },
++      {
++        test: {
++          name: 'playground-unit',
++          testTimeout: 15_000,
++          include: ['apps/playground/tests/**/*.test.ts'],
++          environment: 'node',
++        },
++      },
+     ],
+     coverage: {
+       provider: 'v8',

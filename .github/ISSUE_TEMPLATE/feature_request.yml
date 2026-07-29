@@ -1,0 +1,25 @@
+name: Feature request
+description: 提议明确图表或编辑需求
+title: '[Feature] '
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: 谁在什么场景遇到什么问题
+    validations:
+      required: true
+  - type: textarea
+    id: chart
+    attributes:
+      label: Chart and data contract
+      description: 图表类型、数据形状、交互与导出预期
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: 已尝试的 G2 或 TellPlot 现有能力

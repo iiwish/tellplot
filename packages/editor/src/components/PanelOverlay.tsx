@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 interface PanelOverlayProps {
   readonly label: string;
@@ -29,11 +29,23 @@ export function PanelOverlay({
 }: PanelOverlayProps): React.JSX.Element {
   const dialogRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const initializedRef = useRef(false);
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (
+      initializedRef.current &&
+      dialog !== null &&
+      !dialog.contains(dialog.ownerDocument.activeElement)
+    ) {
+      closeRef.current?.focus();
+    }
+  });
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -45,6 +57,7 @@ export function PanelOverlay({
       ownerDocument.activeElement instanceof HTMLElement ? ownerDocument.activeElement : null;
 
     closeRef.current?.focus();
+    initializedRef.current = true;
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -85,6 +98,7 @@ export function PanelOverlay({
     ownerDocument.addEventListener('keydown', handleKeyDown);
     ownerDocument.addEventListener('focusin', handleFocusIn);
     return () => {
+      initializedRef.current = false;
       ownerDocument.removeEventListener('keydown', handleKeyDown);
       ownerDocument.removeEventListener('focusin', handleFocusIn);
       if (returnFocus?.isConnected === true) {

@@ -1,0 +1,173 @@
+schema_version: 1
+packet_id: EP-G002-R3-T122-A001
+task_id: T122
+feature_id: 009-public-configuration-api
+mode: execute_goal
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  goal_spec: .ai-platform/specs/009-public-configuration-api/spec.md
+  goal_plan: .ai-platform/specs/009-public-configuration-api/plan.md
+  goal_graph: .ai-platform/specs/009-public-configuration-api/tasks.md
+  requirements_checklist: .ai-platform/specs/009-public-configuration-api/checklists/requirements.md
+  analysis: .ai-platform/specs/009-public-configuration-api/analysis.md
+  execution_authorization: >-
+    Granted. The user explicitly approved completing G002-R3 from the public configuration review on 2026-07-23,
+    including the beta-before-public breaking API. Dependency, schema, remote Git, publish, release and deployment
+    changes remain unauthorized.
+
+work_unit:
+  title: 公共配置 API v1
+  goal: >-
+    Deliver a declarative ChartEditor + ChartConfig public contract, strict JavaScript validation and a playground
+    that edits the real public config separately from ViewSpec, without changing domain or G2 runtime behavior.
+  depends_on:
+    - G002 T117 implementation and evidence complete
+    - G002-R1 T118 implementation and evidence complete
+    - G002-R2 T119 implementation and evidence complete
+  requirements:
+    - CONFIG-FR-001
+    - CONFIG-FR-002
+    - CONFIG-FR-003
+    - CONFIG-FR-004
+    - CONFIG-FR-005
+    - CONFIG-FR-006
+    - CONFIG-FR-007
+    - CONFIG-FR-008
+    - CONFIG-FR-009
+    - CONFIG-NFR-001
+    - CONFIG-NFR-002
+    - CONFIG-NFR-003
+    - CONFIG-NFR-004
+    - CONFIG-NFR-005
+    - CONFIG-NFR-006
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  accepted_baseline:
+    branch: codex/t112-categorical-data-contract
+    state: T112-T119 and governance corrections are intentionally uncommitted in the current worktree
+    constraints:
+      - Preserve all existing user and accepted changes.
+      - Do not reset, stash, stage or commit.
+      - Generate T122 implementation evidence against the recorded snapshot.
+  relevant_files:
+    - packages/editor/src/index.ts
+    - packages/editor/src/config/chartAppearance.ts
+    - packages/editor/src/react/editorTypes.ts
+    - packages/editor/src/components/FinancialChartEditor.tsx
+    - packages/editor/src/react/useEditorController.ts
+    - apps/playground/src/ExampleWorkbench.tsx
+    - apps/playground/src/LiveChartEditor.tsx
+    - apps/playground/src/chartDocument.ts
+    - apps/playground/src/UsageGuide.tsx
+    - packages/editor/tests/package/public-api.test.ts
+    - packages/editor/tests/package/types-consumer.ts
+    - e2e/live-code-editor.spec.ts
+
+baseline:
+  snapshot: /tmp/tellplot-G002-R3-baseline.b4XnP2/worktree
+  note: Snapshot recorded after G002-R3 governance artifacts and before RED test or implementation edits.
+
+execution_constraints:
+  allowed_files:
+    - packages/editor/src/config/**
+    - packages/editor/src/components/ChartEditor.tsx
+    - packages/editor/src/index.ts
+    - packages/editor/src/react/editorTypes.ts
+    - packages/editor/src/domain/errors.ts
+    - packages/editor/tests/**
+    - apps/playground/src/**
+    - apps/playground/tests/**
+    - e2e/**
+    - README.md
+    - CHANGELOG.md
+    - packages/editor/README.md
+    - docs/**
+    - .ai-platform/**
+    - AGENTS.md
+  forbidden_changes:
+    - No domain schema, command behavior or financial invariant change.
+    - No chart projection, G2 runtime, pointer geometry or export implementation change.
+    - No dependency manifest or lockfile change.
+    - No raw G2Spec or chart instance public escape hatch.
+    - No remote Git, publish, release or deployment.
+    - No any, @ts-ignore or @ts-expect-error.
+
+tdd_plan:
+  red:
+    - Lock runtime exports to ChartEditor and validateChartConfig.
+    - Add type consumers for discriminated ChartConfig and renamed public types.
+    - Add runtime validator and invalid component cases.
+    - Add playground config/view parser and synchronization cases.
+  green:
+    - Implement closed public config types and validator.
+    - Implement ChartEditor facade over the existing internal component.
+    - Map semantic appearance/editor options without changing runtime ownership.
+    - Replace private playground document with public config and view files.
+  refactor:
+    - Update docs and examples to the same public contract.
+    - Remove stale public FinancialChart names from package entry and consumer surfaces.
+
+validation_commands:
+  - pnpm format:check
+  - pnpm lint
+  - pnpm typecheck
+  - pnpm test:unit
+  - pnpm test:coverage
+  - pnpm build
+  - pnpm test:package
+  - pnpm test:react-matrix
+  - pnpm test:e2e
+  - pnpm test:a11y
+  - pnpm test:performance
+  - pnpm test:browser-previous
+  - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 009-public-configuration-api --task-id T122 --strict
+  - git diff --check
+
+validation_loop:
+  focused_red:
+    - Run public export, type consumer, config validator, ChartEditor and playground parser tests before implementation.
+    - Record the expected missing export/type/module and behavioral failures.
+  focused_green:
+    - Run the same focused suites after the public facade, validator and playground rewrite.
+  regression:
+    - Run the complete release-candidate validation matrix without weakening existing thresholds.
+  failure_policy:
+    - Fix T122 failures only within allowed files.
+    - Stop if a fix requires schema, dependency, G2 runtime, projection, command behavior or remote action.
+
+evidence_contract:
+  directory: .ai-platform/evidence/T122
+  required:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+    - api-surface.md
+    - desktop/mobile screenshots
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: >-
+    G002-R3 may move to Needs_Review only when all success criteria and full gates pass with no unresolved Critical,
+    High or Medium finding. Only the user can mark the goal Accepted.
+
+stop_conditions:
+  - SourceData or ViewSpec schema changes are required.
+  - A runtime or dev dependency is required.
+  - Existing interaction, export or financial invariants regress.
+  - Existing dirty baseline cannot be preserved.
+  - A Critical or High review finding remains unresolved.
+  - A remote action or publish is requested without separate approval.
+
+handoff:
+  remote_actions_authorized: false
+  finish_state: Needs_Review

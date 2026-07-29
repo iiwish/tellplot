@@ -1,0 +1,1270 @@
+diff --git a/vitest.config.ts b/vitest.config.ts
+index 834127f..f47ae79 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -12,6 +12,7 @@ export default defineConfig({
+             'packages/editor/tests/package/**/*.test.ts',
+             'packages/editor/tests/domain/**/*.test.ts',
+             'packages/editor/tests/waterfall/**/*.test.ts',
++            'packages/editor/tests/categorical/**/*.test.ts',
+           ],
+           environment: 'node',
+         },
+@@ -48,6 +49,12 @@ export default defineConfig({
+           functions: 95,
+           lines: 95,
+         },
++        'packages/editor/src/categorical/**': {
++          statements: 95,
++          branches: 95,
++          functions: 95,
++          lines: 95,
++        },
+       },
+     },
+   },
+diff --git a/packages/editor/src/categorical/categoricalTypes.ts b/packages/editor/src/categorical/categoricalTypes.ts
+new file mode 100644
+index 0000000..0823377
+--- /dev/null
++++ b/packages/editor/src/categorical/categoricalTypes.ts
+@@ -0,0 +1,18 @@
++import type { ValidationResult } from '../domain/errors';
++import type { SourceItemId, ViewNodeId } from '../domain/ids';
++
++export type CategoricalDatumKind = 'positive' | 'negative' | 'group';
++
++/** One deterministic, renderer-ready categorical node. */
++export interface CategoricalDatum {
++  readonly nodeId: ViewNodeId;
++  readonly label: string;
++  readonly amount: number;
++  readonly kind: CategoricalDatumKind;
++  readonly sourceIds: readonly SourceItemId[];
++  readonly locked: boolean;
++  readonly order: number;
++}
++
++export type CategoricalProjection = readonly CategoricalDatum[];
++export type CategoricalProjectionResult = ValidationResult<CategoricalProjection>;
+diff --git a/packages/editor/src/categorical/projectCategorical.ts b/packages/editor/src/categorical/projectCategorical.ts
+new file mode 100644
+index 0000000..97f428b
+--- /dev/null
++++ b/packages/editor/src/categorical/projectCategorical.ts
+@@ -0,0 +1,159 @@
++import { validationFailure, validationIssue, validationSuccess } from '../domain/errors';
++import type { ViewNodeId } from '../domain/ids';
++import type {
++  CategoricalSourceData,
++  CategoricalSourceItem,
++  SourceData,
++  ViewGroup,
++  ViewSpec,
++} from '../domain/model';
++import { validateViewSpec } from '../domain/validation';
++import { collectLeafSourceIds } from '../domain/viewTree';
++import type { CategoricalDatum, CategoricalProjectionResult } from './categoricalTypes';
++
++interface CompensatedAccumulator {
++  sum: number;
++  correction: number;
++}
++
++interface IndexedCategoricalSource {
++  readonly itemsById: ReadonlyMap<string, CategoricalSourceItem>;
++  readonly sourceIndexById: ReadonlyMap<string, number>;
++}
++
++function createAccumulator(): CompensatedAccumulator {
++  return { sum: 0, correction: 0 };
++}
++
++function add(accumulator: CompensatedAccumulator, value: number): void {
++  const next = accumulator.sum + value;
++  accumulator.correction +=
++    Math.abs(accumulator.sum) >= Math.abs(value)
++      ? accumulator.sum - next + value
++      : value - next + accumulator.sum;
++  accumulator.sum = next;
++}
++
++function total(accumulator: CompensatedAccumulator): number {
++  return accumulator.sum + accumulator.correction;
++}
++
++function isSafe(accumulator: CompensatedAccumulator): boolean {
++  const value = total(accumulator);
++  return Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER;
++}
++
++function indexSource(sourceData: CategoricalSourceData): IndexedCategoricalSource {
++  const itemsById = new Map<string, CategoricalSourceItem>();
++  const sourceIndexById = new Map<string, number>();
++  sourceData.items.forEach((item, index) => {
++    itemsById.set(item.id, item);
++    sourceIndexById.set(item.id, index);
++  });
++  return { itemsById, sourceIndexById };
++}
++
++function getGroup(viewSpec: ViewSpec, nodeId: ViewNodeId): ViewGroup | undefined {
++  const descriptor = Object.getOwnPropertyDescriptor(viewSpec.groups, nodeId);
++  return descriptor !== undefined && 'value' in descriptor
++    ? (descriptor.value as ViewGroup)
++    : undefined;
++}
++
++function numericFailure(sourceIndex: number): CategoricalProjectionResult {
++  return validationFailure([
++    validationIssue('INVALID_SOURCE_DATA', 'UNSAFE_AMOUNT', `/items/${sourceIndex}/amount`, {
++      operation: 'groupAggregate',
++      sourceIndex,
++    }),
++  ]);
++}
++
++function projectValidated(
++  sourceData: CategoricalSourceData,
++  viewSpec: ViewSpec,
++): CategoricalProjectionResult {
++  const source = indexSource(sourceData);
++  const pinnedIds = new Set(viewSpec.pinnedItemIds);
++  const collapsedGroupIds = new Set(viewSpec.collapsedGroupIds);
++  const projection: CategoricalDatum[] = [];
++
++  const push = (datum: Omit<CategoricalDatum, 'order'>): void => {
++    projection.push({ ...datum, order: projection.length });
++  };
++
++  const projectNode = (nodeId: ViewNodeId): CategoricalProjectionResult | undefined => {
++    const group = getGroup(viewSpec, nodeId);
++    if (group !== undefined) {
++      if (collapsedGroupIds.has(group.id)) {
++        const sourceIds = collectLeafSourceIds(viewSpec, group.id);
++        const accumulator = createAccumulator();
++        for (const sourceId of sourceIds) {
++          const item = source.itemsById.get(sourceId) as CategoricalSourceItem;
++          const sourceIndex = source.sourceIndexById.get(sourceId) as number;
++          add(accumulator, item.amount);
++          if (!isSafe(accumulator)) {
++            return numericFailure(sourceIndex);
++          }
++        }
++        push({
++          nodeId: group.id,
++          label: group.label,
++          amount: total(accumulator),
++          kind: 'group',
++          sourceIds: [...sourceIds],
++          locked: sourceIds.some(sourceId => pinnedIds.has(sourceId)),
++        });
++        return undefined;
++      }
++      for (const childId of group.childIds) {
++        const failure = projectNode(childId);
++        if (failure !== undefined) {
++          return failure;
++        }
++      }
++      return undefined;
++    }
++
++    const item = source.itemsById.get(nodeId) as CategoricalSourceItem;
++    push({
++      nodeId: item.id,
++      label: item.label,
++      amount: item.amount,
++      kind: item.amount < 0 ? 'negative' : 'positive',
++      sourceIds: [item.id],
++      locked: pinnedIds.has(item.id),
++    });
++    return undefined;
++  };
++
++  for (const nodeId of viewSpec.rootOrder) {
++    const failure = projectNode(nodeId);
++    if (failure !== undefined) {
++      return failure;
++    }
++  }
++  return validationSuccess(projection);
++}
++
++/** Projects immutable categorical source and narrative state into one chart-neutral sequence. */
++export function projectCategorical(
++  sourceData: SourceData,
++  viewSpec: ViewSpec,
++): CategoricalProjectionResult {
++  const validation = validateViewSpec(viewSpec, sourceData);
++  if (!validation.ok) {
++    return validation;
++  }
++  if (sourceData.schemaVersion !== '2.0.0' || sourceData.dataKind !== 'categorical') {
++    return validationFailure([
++      validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'),
++    ]);
++  }
++
++  try {
++    return projectValidated(sourceData, validation.value);
++  } catch {
++    return validationFailure([validationIssue('INVALID_VIEW_SPEC', 'UNREADABLE_INPUT', '/')]);
++  }
++}
+diff --git a/packages/editor/src/categorical/categoricalChartSpec.ts b/packages/editor/src/categorical/categoricalChartSpec.ts
+new file mode 100644
+index 0000000..584c32f
+--- /dev/null
++++ b/packages/editor/src/categorical/categoricalChartSpec.ts
+@@ -0,0 +1,236 @@
++import type { G2Spec } from '@antv/g2';
++
++import {
++  DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
++  resolveFinancialChartAppearance,
++  type FinancialChartAppearance,
++  type ResolvedFinancialChartNumberFormat,
++} from '../config/chartAppearance';
++import type { ViewNodeId } from '../domain/ids';
++import type { Annotation, ChartType, Emphasis } from '../domain/model';
++import { formatAmount, type EditorLocale } from '../components/formatAmount';
++import type {
++  CategoricalDatum,
++  CategoricalDatumKind,
++  CategoricalProjection,
++} from './categoricalTypes';
++
++const DENSE_CANVAS_THRESHOLD = 80;
++const VALUE_LABEL_THRESHOLD = 40;
++const COLOR_DOMAIN: readonly CategoricalDatumKind[] = ['positive', 'negative', 'group'];
++
++export interface CategoricalChartSpecOptions {
++  readonly projection: CategoricalProjection;
++  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++  readonly title?: string;
++  readonly locale: EditorLocale;
++  readonly currency: string | undefined;
++  readonly reducedMotion: boolean;
++  readonly showValueLabels: boolean;
++  readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
++  readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
++  readonly appearance?: FinancialChartAppearance | undefined;
++}
++
++export function visibleCategoricalAnnotation(
++  annotations: Readonly<Record<ViewNodeId, Annotation>>,
++  nodeId: ViewNodeId,
++): string {
++  try {
++    const value = Object.getOwnPropertyDescriptor(annotations, nodeId)?.value as unknown;
++    return typeof value === 'string' ? value.trim() : '';
++  } catch {
++    return '';
++  }
++}
++
++export function shouldShowCategoricalValueLabels(projection: CategoricalProjection): boolean {
++  return projection.length <= VALUE_LABEL_THRESHOLD;
++}
++
++export function formatCategoricalDatumAmount(
++  datum: CategoricalDatum,
++  locale: EditorLocale,
++  currency?: string,
++  numberFormat: ResolvedFinancialChartNumberFormat = DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT,
++): string {
++  return formatAmount(datum.amount, locale, currency, numberFormat);
++}
++
++export function createCategoricalChartSpec({
++  projection,
++  chartType,
++  title,
++  locale,
++  currency,
++  reducedMotion,
++  showValueLabels,
++  annotations,
++  emphasis,
++  appearance,
++}: CategoricalChartSpecOptions): G2Spec {
++  const resolvedAppearance = resolveFinancialChartAppearance(appearance, title ?? '');
++  const labelById = new Map(projection.map(datum => [datum.nodeId, datum.label]));
++  const denseCanvas = projection.length > DENSE_CANVAS_THRESHOLD;
++  const barInset = denseCanvas ? 0.5 : 3;
++  const baseFillOpacity = denseCanvas ? 1 : 0.96;
++  const baseLineWidth = denseCanvas ? 0 : 1;
++  const baseStroke = denseCanvas ? 'transparent' : '#FFFFFF';
++  const hasVisibleAnnotations = projection.some(
++    datum => visibleCategoricalAnnotation(annotations, datum.nodeId) !== '',
++  );
++  const displayValueLabels =
++    resolvedAppearance.valueLabels === 'always' ||
++    (resolvedAppearance.valueLabels === 'auto' && showValueLabels);
++  const categoryAxis = {
++    title: false,
++    labelFill: '#5F6B65',
++    labelAutoHide: true,
++    labelAutoRotate: false,
++    labelFormatter: (value: unknown) => labelById.get(String(value)) ?? String(value),
++  };
++  const valueAxis = {
++    title: false,
++    labelFill: '#5F6B65',
++    labelFormatter: (value: unknown) =>
++      formatAmount(Number(value), locale, currency, resolvedAppearance.numberFormat),
++  };
++  const annotationLabel = {
++    text: (datum: CategoricalDatum) => visibleCategoricalAnnotation(annotations, datum.nodeId),
++    position: 'inside',
++    style: {
++      fill: '#FFFFFF',
++      fontSize: denseCanvas ? 9 : 10,
++      fontWeight: 600,
++      lineWidth: 3,
++      maxLines: 2,
++      pointerEvents: 'none',
++      stroke: 'rgba(24, 33, 29, 0.64)',
++      textOverflow: 'ellipsis',
++      wordWrap: true,
++      wordWrapWidth: denseCanvas ? 48 : 88,
++    },
++  };
++
++  return {
++    type: 'view',
++    ...(title === undefined
++      ? {}
++      : {
++          title: {
++            title: resolvedAppearance.title,
++            size: 40,
++            align: 'left',
++            titleFill: '#18211D',
++            titleFontSize: 18,
++            titleFontWeight: 650,
++          },
++        }),
++    labelTransform: [{ type: 'overlapHide' }],
++    children: [
++      {
++        type: 'interval',
++        data: [...projection],
++        ...(chartType === 'bar'
++          ? { coordinate: { transform: [{ type: 'transpose' as const }] } }
++          : {}),
++        encode: {
++          x: 'nodeId',
++          y: 'amount',
++          color: 'kind',
++          key: 'nodeId',
++        },
++        scale: {
++          x: {
++            type: 'band',
++            padding: 0.24,
++            ...(chartType === 'bar' ? { reverse: true } : {}),
++          },
++          y: { type: 'linear', nice: true, zero: true },
++          color: {
++            type: 'ordinal',
++            domain: [...COLOR_DOMAIN],
++            range: COLOR_DOMAIN.map(kind => resolvedAppearance.palette[kind]),
++          },
++        },
++        axis:
++          chartType === 'column'
++            ? {
++                x: resolvedAppearance.axis.x ? categoryAxis : false,
++                y: resolvedAppearance.axis.y ? valueAxis : false,
++              }
++            : {
++                x: resolvedAppearance.axis.y ? categoryAxis : false,
++                y: resolvedAppearance.axis.x ? valueAxis : false,
++              },
++        legend: { color: false },
++        labels: [
++          ...(displayValueLabels
++            ? [
++                {
++                  text: (datum: CategoricalDatum) =>
++                    formatCategoricalDatumAmount(
++                      datum,
++                      locale,
++                      currency,
++                      resolvedAppearance.numberFormat,
++                    ),
++                  position: (datum: CategoricalDatum) =>
++                    chartType === 'bar'
++                      ? datum.amount >= 0
++                        ? 'right'
++                        : 'left'
++                      : datum.amount >= 0
++                        ? 'top'
++                        : 'bottom',
++                  style: {
++                    fill: '#18211D',
++                    fontSize: 11,
++                    fontWeight: 600,
++                    lineWidth: 3,
++                    stroke: '#FFFFFF',
++                  },
++                },
++              ]
++            : []),
++          ...(hasVisibleAnnotations ? [annotationLabel] : []),
++        ],
++        style: {
++          fillOpacity: (datum: CategoricalDatum) =>
++            emphasis[datum.nodeId] === 'muted'
++              ? 0.28
++              : emphasis[datum.nodeId] === 'highlight'
++                ? 1
++                : baseFillOpacity,
++          insetLeft: barInset,
++          insetRight: barInset,
++          lineWidth: (datum: CategoricalDatum) =>
++            emphasis[datum.nodeId] === 'highlight' ? 3 : baseLineWidth,
++          stroke: (datum: CategoricalDatum) =>
++            emphasis[datum.nodeId] === 'highlight' ? '#18211D' : baseStroke,
++        },
++        tooltip: resolvedAppearance.tooltip,
++        animate:
++          reducedMotion || denseCanvas || !resolvedAppearance.animation.enabled
++            ? false
++            : {
++                enter: {
++                  type: chartType === 'bar' ? 'growInX' : 'growInY',
++                  duration: resolvedAppearance.animation.duration,
++                  easing: 'cubic-bezier(0.2, 0, 0, 1)',
++                },
++                update: {
++                  type: 'morphing',
++                  duration: resolvedAppearance.animation.duration,
++                  easing: 'cubic-bezier(0.2, 0, 0, 1)',
++                },
++                exit: {
++                  type: 'fadeOut',
++                  duration: resolvedAppearance.animation.duration,
++                  easing: 'cubic-bezier(0.2, 0, 0, 1)',
++                },
++              },
++      },
++    ],
++  };
++}
+diff --git a/packages/editor/tests/categorical/projectCategorical.test.ts b/packages/editor/tests/categorical/projectCategorical.test.ts
+new file mode 100644
+index 0000000..8b1d45b
+--- /dev/null
++++ b/packages/editor/tests/categorical/projectCategorical.test.ts
+@@ -0,0 +1,171 @@
++import { describe, expect, it } from 'vitest';
++
++import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
++import type {
++  CategoricalSourceData,
++  CurrentViewSpec,
++  SourceData,
++  ViewSpec,
++} from '../../src/domain/model';
++import { projectCategorical } from '../../src/categorical/projectCategorical';
++import { financialSourceData } from '../fixtures/financialSourceData';
++
++const categoricalSource = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'categorical-projection',
++  currency: 'CNY',
++  items: [
++    { id: 'alpha', label: 'Shared label', amount: 12 },
++    { id: 'beta', label: 'Shared label', amount: -4 },
++    { id: 'gamma', label: 'Zero', amount: 0 },
++  ],
++} as const satisfies CategoricalSourceData;
++
++function initialView(
++  source: CategoricalSourceData = categoricalSource,
++  chartType: 'bar' | 'column' = 'column',
++): CurrentViewSpec {
++  const result = createInitialViewSpec(source, { chartType });
++  if (!result.ok || result.value.schemaVersion !== '2.0.0') {
++    throw new Error('Expected a current categorical view');
++  }
++  return result.value;
++}
++
++describe('categorical projection basics', () => {
++  it('projects empty, positive, negative and zero categories in stable source order', () => {
++    const emptySource = {
++      schemaVersion: '2.0.0',
++      dataKind: 'categorical',
++      datasetId: 'empty-categorical',
++      items: [],
++    } as const satisfies CategoricalSourceData;
++    expect(projectCategorical(emptySource, initialView(emptySource))).toEqual({
++      ok: true,
++      value: [],
++      errors: [],
++    });
++
++    const result = projectCategorical(categoricalSource, initialView());
++    expect(result).toEqual({
++      ok: true,
++      value: [
++        {
++          nodeId: 'alpha',
++          label: 'Shared label',
++          amount: 12,
++          kind: 'positive',
++          sourceIds: ['alpha'],
++          locked: false,
++          order: 0,
++        },
++        {
++          nodeId: 'beta',
++          label: 'Shared label',
++          amount: -4,
++          kind: 'negative',
++          sourceIds: ['beta'],
++          locked: false,
++          order: 1,
++        },
++        {
++          nodeId: 'gamma',
++          label: 'Zero',
++          amount: 0,
++          kind: 'positive',
++          sourceIds: ['gamma'],
++          locked: false,
++          order: 2,
++        },
++      ],
++      errors: [],
++    });
++  });
++
++  it('uses one chart-neutral projection for bar and column without sharing output containers', () => {
++    const column = projectCategorical(categoricalSource, initialView());
++    const bar = projectCategorical(categoricalSource, initialView(categoricalSource, 'bar'));
++    expect(column).toEqual(bar);
++    if (!column.ok || !bar.ok) {
++      throw new Error('Expected valid categorical projections');
++    }
++    expect(column.value).not.toBe(bar.value);
++    expect(column.value[0]?.sourceIds).not.toBe(categoricalSource.items);
++    expect(JSON.parse(JSON.stringify(column.value))).toEqual(column.value);
++  });
++
++  it('projects one pinned category as a locked ordinary datum', () => {
++    const source = {
++      schemaVersion: '2.0.0',
++      dataKind: 'categorical',
++      datasetId: 'single-categorical',
++      items: [{ id: 'only', label: 'Only category', amount: 7 }],
++    } as const satisfies CategoricalSourceData;
++    const view = { ...initialView(source), pinnedItemIds: ['only'] };
++    expect(projectCategorical(source, view)).toEqual({
++      ok: true,
++      value: [
++        {
++          nodeId: 'only',
++          label: 'Only category',
++          amount: 7,
++          kind: 'positive',
++          sourceIds: ['only'],
++          locked: true,
++          order: 0,
++        },
++      ],
++      errors: [],
++    });
++  });
++
++  it('returns canonical compatibility failures for waterfall and invalid views', () => {
++    const waterfallView = createInitialViewSpec(financialSourceData);
++    if (!waterfallView.ok) {
++      throw new Error('Expected the waterfall fixture to be valid');
++    }
++    expect(projectCategorical(financialSourceData, waterfallView.value)).toEqual({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'SOURCE_CONFLICT',
++          reason: 'INCOMPATIBLE_CHART_TYPE',
++          path: '/chartType',
++        }),
++      ],
++    });
++
++    const invalidView = {
++      ...initialView(),
++      datasetId: 'other-dataset',
++    } as ViewSpec;
++    const invalid = projectCategorical(categoricalSource, invalidView);
++    expect(invalid.ok).toBe(false);
++    if (!invalid.ok) {
++      expect(invalid.errors).toEqual(
++        expect.arrayContaining([
++          expect.objectContaining({
++            code: 'SOURCE_CONFLICT',
++            reason: 'DATASET_ID_MISMATCH',
++            path: '/datasetId',
++          }),
++        ]),
++      );
++    }
++  });
++
++  it('does not throw or expose hostile input details', () => {
++    const hostile = new Proxy(
++      {},
++      {
++        getOwnPropertyDescriptor() {
++          throw new Error('private categorical value');
++        },
++      },
++    ) as SourceData;
++    const result = projectCategorical(hostile, initialView());
++    expect(result.ok).toBe(false);
++    expect(JSON.stringify(result)).not.toContain('private categorical value');
++  });
++});
+diff --git a/packages/editor/tests/categorical/categorical-invariants.test.ts b/packages/editor/tests/categorical/categorical-invariants.test.ts
+new file mode 100644
+index 0000000..c01b001
+--- /dev/null
++++ b/packages/editor/tests/categorical/categorical-invariants.test.ts
+@@ -0,0 +1,197 @@
++import { describe, expect, it } from 'vitest';
++
++import type { CategoricalSourceData, CurrentViewSpec } from '../../src/domain/model';
++import { projectCategorical } from '../../src/categorical/projectCategorical';
++
++const recursiveSource = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'recursive-categorical',
++  items: [
++    { id: 'alpha', label: 'Alpha', amount: 100 },
++    { id: 'beta', label: 'Beta', amount: -20 },
++    { id: 'gamma', label: 'Gamma', amount: 0 },
++    { id: 'delta', label: 'Delta', amount: 5 },
++  ],
++} as const satisfies CategoricalSourceData;
++
++function recursiveView(collapsedGroupIds: readonly ('inner' | 'outer')[]): CurrentViewSpec {
++  return {
++    schemaVersion: '2.0.0',
++    chartType: 'column',
++    datasetId: recursiveSource.datasetId,
++    revision: 0,
++    rootOrder: ['outer', 'delta'],
++    groups: {
++      inner: { id: 'inner', label: 'Inner group', childIds: ['alpha', 'beta'] },
++      outer: { id: 'outer', label: 'Outer group', childIds: ['inner', 'gamma'] },
++    },
++    collapsedGroupIds,
++    pinnedItemIds: ['beta'],
++    annotations: {},
++    emphasis: {},
++  };
++}
++
++describe('categorical recursive projection', () => {
++  it('emits a collapsed ancestor once with every descendant in logical leaf order', () => {
++    const result = projectCategorical(recursiveSource, recursiveView(['inner', 'outer']));
++    expect(result).toEqual({
++      ok: true,
++      value: [
++        {
++          nodeId: 'outer',
++          label: 'Outer group',
++          amount: 80,
++          kind: 'group',
++          sourceIds: ['alpha', 'beta', 'gamma'],
++          locked: true,
++          order: 0,
++        },
++        {
++          nodeId: 'delta',
++          label: 'Delta',
++          amount: 5,
++          kind: 'positive',
++          sourceIds: ['delta'],
++          locked: false,
++          order: 1,
++        },
++      ],
++      errors: [],
++    });
++  });
++
++  it('omits expanded group data while preserving descendant collapse state and order', () => {
++    const result = projectCategorical(recursiveSource, recursiveView(['inner']));
++    expect(result).toEqual({
++      ok: true,
++      value: [
++        {
++          nodeId: 'inner',
++          label: 'Inner group',
++          amount: 80,
++          kind: 'group',
++          sourceIds: ['alpha', 'beta'],
++          locked: true,
++          order: 0,
++        },
++        {
++          nodeId: 'gamma',
++          label: 'Gamma',
++          amount: 0,
++          kind: 'positive',
++          sourceIds: ['gamma'],
++          locked: false,
++          order: 1,
++        },
++        {
++          nodeId: 'delta',
++          label: 'Delta',
++          amount: 5,
++          kind: 'positive',
++          sourceIds: ['delta'],
++          locked: false,
++          order: 2,
++        },
++      ],
++      errors: [],
++    });
++  });
++});
++
++describe('categorical aggregation safety', () => {
++  it('uses compensated summation for mixed-sign collapsed groups', () => {
++    const source = {
++      schemaVersion: '2.0.0',
++      dataKind: 'categorical',
++      datasetId: 'compensated-categorical',
++      items: [
++        { id: 'large-positive', label: 'Large positive', amount: 1_000_000_000_000_000 },
++        { id: 'small-positive', label: 'Small positive', amount: 0.1 },
++        { id: 'large-negative', label: 'Large negative', amount: -1_000_000_000_000_000 },
++      ],
++    } as const satisfies CategoricalSourceData;
++    const view: CurrentViewSpec = {
++      schemaVersion: '2.0.0',
++      chartType: 'bar',
++      datasetId: source.datasetId,
++      revision: 0,
++      rootOrder: ['mixed'],
++      groups: {
++        mixed: {
++          id: 'mixed',
++          label: 'Mixed group',
++          childIds: ['large-positive', 'small-positive', 'large-negative'],
++        },
++      },
++      collapsedGroupIds: ['mixed'],
++      pinnedItemIds: [],
++      annotations: {},
++      emphasis: {},
++    };
++    const result = projectCategorical(source, view);
++    expect(result.ok).toBe(true);
++    if (result.ok) {
++      expect(result.value[0]?.amount).toBe(0.1);
++      expect(result.value[0]?.kind).toBe('group');
++    }
++  });
++
++  it('rejects an unsafe aggregate without returning a partial projection', () => {
++    const source = {
++      schemaVersion: '2.0.0',
++      dataKind: 'categorical',
++      datasetId: 'overflow-categorical',
++      items: [
++        { id: 'maximum', label: 'Maximum', amount: Number.MAX_SAFE_INTEGER },
++        { id: 'overflow', label: 'Overflow', amount: 1 },
++        { id: 'tail', label: 'Tail', amount: 0 },
++      ],
++    } as const satisfies CategoricalSourceData;
++    const view: CurrentViewSpec = {
++      schemaVersion: '2.0.0',
++      chartType: 'column',
++      datasetId: source.datasetId,
++      revision: 0,
++      rootOrder: ['unsafe-group', 'tail'],
++      groups: {
++        'unsafe-group': {
++          id: 'unsafe-group',
++          label: 'Unsafe group',
++          childIds: ['maximum', 'overflow'],
++        },
++      },
++      collapsedGroupIds: ['unsafe-group'],
++      pinnedItemIds: [],
++      annotations: {},
++      emphasis: {},
++    };
++    const expectedFailure = {
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'UNSAFE_AMOUNT',
++          path: '/items/1/amount',
++          details: { operation: 'groupAggregate', sourceIndex: 1 },
++        }),
++      ],
++    } as const;
++    expect(projectCategorical(source, view)).toEqual(expectedFailure);
++
++    const nestedView: CurrentViewSpec = {
++      ...view,
++      rootOrder: ['outer-group'],
++      groups: {
++        ...view.groups,
++        'outer-group': {
++          id: 'outer-group',
++          label: 'Outer group',
++          childIds: ['unsafe-group', 'tail'],
++        },
++      },
++    };
++    expect(projectCategorical(source, nestedView)).toEqual(expectedFailure);
++  });
++});
+diff --git a/packages/editor/tests/export/categorical-chart-spec.test.ts b/packages/editor/tests/export/categorical-chart-spec.test.ts
+new file mode 100644
+index 0000000..a17a8c1
+--- /dev/null
++++ b/packages/editor/tests/export/categorical-chart-spec.test.ts
+@@ -0,0 +1,428 @@
++import type { G2Spec } from '@antv/g2';
++import { describe, expect, it } from 'vitest';
++
++import {
++  createCategoricalChartSpec,
++  formatCategoricalDatumAmount,
++  shouldShowCategoricalValueLabels,
++  visibleCategoricalAnnotation,
++} from '../../src/categorical/categoricalChartSpec';
++import type {
++  CategoricalDatum,
++  CategoricalProjection,
++} from '../../src/categorical/categoricalTypes';
++import type { ViewNodeId } from '../../src/domain/ids';
++
++const projection = [
++  {
++    nodeId: 'positive',
++    label: 'Positive',
++    amount: 12,
++    kind: 'positive',
++    sourceIds: ['positive'],
++    locked: false,
++    order: 0,
++  },
++  {
++    nodeId: 'negative',
++    label: 'Negative',
++    amount: -4,
++    kind: 'negative',
++    sourceIds: ['negative'],
++    locked: false,
++    order: 1,
++  },
++  {
++    nodeId: 'group',
++    label: 'Group',
++    amount: 8,
++    kind: 'group',
++    sourceIds: ['positive', 'negative'],
++    locked: true,
++    order: 2,
++  },
++] as const satisfies CategoricalProjection;
++
++interface IntervalSpecView {
++  readonly type?: unknown;
++  readonly data?: readonly unknown[];
++  readonly coordinate?: unknown;
++  readonly encode?: Readonly<Record<string, unknown>>;
++  readonly scale?: {
++    readonly x?: Readonly<Record<string, unknown>>;
++    readonly y?: Readonly<Record<string, unknown>>;
++    readonly color?: Readonly<Record<string, unknown>>;
++  };
++  readonly axis?: {
++    readonly x?: false | Readonly<Record<string, unknown>>;
++    readonly y?: false | Readonly<Record<string, unknown>>;
++  };
++  readonly labels?: readonly Readonly<Record<string, unknown>>[];
++  readonly style?: Readonly<Record<string, unknown>>;
++  readonly tooltip?: unknown;
++  readonly animate?: unknown;
++}
++
++function interval(spec: G2Spec): IntervalSpecView {
++  return ((spec as { readonly children?: readonly unknown[] }).children?.[0] ??
++    {}) as IntervalSpecView;
++}
++
++function datumAccessor<TResult>(
++  value: unknown,
++  name: string,
++): (datum: CategoricalDatum) => TResult {
++  if (typeof value !== 'function') {
++    throw new Error(`Expected ${name} to be a datum accessor`);
++  }
++  return value as (datum: CategoricalDatum) => TResult;
++}
++
++describe('categorical G2 direction contract', () => {
++  it('uses one interval data/encode contract and changes only direction-sensitive fields', () => {
++    const column = interval(
++      createCategoricalChartSpec({
++        projection,
++        chartType: 'column',
++        locale: 'en-US',
++        currency: 'USD',
++        reducedMotion: false,
++        showValueLabels: true,
++        annotations: {},
++        emphasis: {},
++      }),
++    );
++    const bar = interval(
++      createCategoricalChartSpec({
++        projection,
++        chartType: 'bar',
++        locale: 'en-US',
++        currency: 'USD',
++        reducedMotion: false,
++        showValueLabels: true,
++        annotations: {},
++        emphasis: {},
++      }),
++    );
++
++    expect(column).toMatchObject({
++      type: 'interval',
++      data: projection,
++      encode: { x: 'nodeId', y: 'amount', color: 'kind', key: 'nodeId' },
++      scale: {
++        x: { type: 'band', padding: 0.24 },
++        y: { type: 'linear', nice: true, zero: true },
++      },
++    });
++    expect(bar.data).toEqual(column.data);
++    expect(bar.encode).toEqual(column.encode);
++    expect(column.coordinate).toBeUndefined();
++    expect(bar.coordinate).toEqual({ transform: [{ type: 'transpose' }] });
++    expect(column.scale?.x?.['reverse']).toBeUndefined();
++    expect(bar.scale?.x?.['reverse']).toBe(true);
++  });
++
++  it('maps public axis settings by actual visual axis after transpose', () => {
++    const appearance = { axis: { x: false, y: true } } as const;
++    const column = interval(
++      createCategoricalChartSpec({
++        projection,
++        chartType: 'column',
++        locale: 'zh-CN',
++        currency: undefined,
++        reducedMotion: true,
++        showValueLabels: false,
++        annotations: {},
++        emphasis: {},
++        appearance,
++      }),
++    );
++    const bar = interval(
++      createCategoricalChartSpec({
++        projection,
++        chartType: 'bar',
++        locale: 'zh-CN',
++        currency: undefined,
++        reducedMotion: true,
++        showValueLabels: false,
++        annotations: {},
++        emphasis: {},
++        appearance,
++      }),
++    );
++
++    expect(column.axis?.x).toBe(false);
++    expect(column.axis?.y).toEqual(expect.objectContaining({ labelFill: '#5F6B65' }));
++    expect(bar.axis?.x).toEqual(expect.objectContaining({ labelFill: '#5F6B65' }));
++    expect(bar.axis?.y).toBe(false);
++  });
++});
++
++describe('categorical G2 appearance and semantics', () => {
++  it('maps palette, labels, annotations, emphasis, Tooltip and native animation', () => {
++    const spec = createCategoricalChartSpec({
++      projection,
++      chartType: 'bar',
++      title: 'Fallback title',
++      locale: 'en-US',
++      currency: 'USD',
++      reducedMotion: false,
++      showValueLabels: true,
++      annotations: { positive: '  Renewal focus  ', negative: '   ', hidden: 'Hidden' },
++      emphasis: { positive: 'highlight', negative: 'muted' },
++      appearance: {
++        title: 'Configured categories',
++        palette: { positive: '#00A36C', negative: '#D23B3B', group: '#8A5A00' },
++        valueLabels: 'always',
++        tooltip: true,
++        animation: { enabled: true, duration: 240 },
++        numberFormat: {
++          minimumFractionDigits: 1,
++          maximumFractionDigits: 1,
++          currencyDisplay: 'code',
++        },
++      },
++    });
++    const typedSpec = spec as { readonly title?: { readonly title?: string } };
++    const child = interval(spec);
++
++    expect(typedSpec.title?.title).toBe('Configured categories');
++    expect(child.scale?.color).toEqual({
++      type: 'ordinal',
++      domain: ['positive', 'negative', 'group'],
++      range: ['#00A36C', '#D23B3B', '#8A5A00'],
++    });
++    expect(child.tooltip).toBe(true);
++    expect(child.animate).toEqual({
++      enter: {
++        type: 'growInX',
++        duration: 240,
++        easing: 'cubic-bezier(0.2, 0, 0, 1)',
++      },
++      update: {
++        type: 'morphing',
++        duration: 240,
++        easing: 'cubic-bezier(0.2, 0, 0, 1)',
++      },
++      exit: {
++        type: 'fadeOut',
++        duration: 240,
++        easing: 'cubic-bezier(0.2, 0, 0, 1)',
++      },
++    });
++
++    const labels = child.labels;
++    if (labels === undefined || labels.length !== 2) {
++      throw new Error('Expected amount and annotation labels');
++    }
++    const amountText = datumAccessor<string>(labels[0]?.['text'], 'amount label');
++    const amountPosition = datumAccessor<string>(labels[0]?.['position'], 'amount position');
++    const annotationText = datumAccessor<string>(labels[1]?.['text'], 'annotation label');
++    expect(amountText(projection[0])).toContain('USD');
++    expect(amountPosition(projection[0])).toBe('right');
++    expect(amountPosition(projection[1])).toBe('left');
++    expect(annotationText(projection[0])).toBe('Renewal focus');
++    expect(annotationText(projection[1])).toBe('');
++    expect(labels[1]).toMatchObject({ position: 'inside', style: { pointerEvents: 'none' } });
++
++    const style = child.style;
++    if (style === undefined) {
++      throw new Error('Expected semantic interval styles');
++    }
++    const fillOpacity = datumAccessor<number>(style['fillOpacity'], 'fillOpacity');
++    const lineWidth = datumAccessor<number>(style['lineWidth'], 'lineWidth');
++    const stroke = datumAccessor<string>(style['stroke'], 'stroke');
++    expect(fillOpacity(projection[0])).toBe(1);
++    expect(lineWidth(projection[0])).toBe(3);
++    expect(stroke(projection[0])).toBe('#18211D');
++    expect(fillOpacity(projection[1])).toBe(0.28);
++    expect(fillOpacity(projection[2])).toBe(0.96);
++    expect(lineWidth(projection[2])).toBe(1);
++    expect(stroke(projection[2])).toBe('#FFFFFF');
++  });
++
++  it('uses column label/animation direction and lets reduced motion override appearance', () => {
++    const animated = interval(
++      createCategoricalChartSpec({
++        projection,
++        chartType: 'column',
++        locale: 'zh-CN',
++        currency: undefined,
++        reducedMotion: false,
++        showValueLabels: true,
++        annotations: {},
++        emphasis: {},
++        appearance: { valueLabels: 'always' },
++      }),
++    );
++    const reduced = interval(
++      createCategoricalChartSpec({
++        projection,
++        chartType: 'column',
++        locale: 'zh-CN',
++        currency: undefined,
++        reducedMotion: true,
++        showValueLabels: true,
++        annotations: {},
++        emphasis: {},
++        appearance: { animation: { enabled: true, duration: 800 } },
++      }),
++    );
++    const position = datumAccessor<string>(animated.labels?.[0]?.['position'], 'column position');
++    expect(position(projection[0])).toBe('top');
++    expect(position(projection[1])).toBe('bottom');
++    expect(animated.animate).toEqual(
++      expect.objectContaining({ enter: expect.objectContaining({ type: 'growInY' }) }),
++    );
++    expect(reduced.animate).toBe(false);
++  });
++
++  it('keeps auto value labels bounded while preserving visible annotations', () => {
++    const denseProjection = Array.from({ length: 41 }, (_, order) => ({
++      nodeId: `node-${order}`,
++      label: `Node ${order}`,
++      amount: order,
++      kind: 'positive' as const,
++      sourceIds: [`node-${order}`],
++      locked: false,
++      order,
++    })) satisfies CategoricalProjection;
++    expect(shouldShowCategoricalValueLabels(projection)).toBe(true);
++    expect(shouldShowCategoricalValueLabels(denseProjection)).toBe(false);
++
++    const child = interval(
++      createCategoricalChartSpec({
++        projection: denseProjection,
++        chartType: 'column',
++        locale: 'en-US',
++        currency: undefined,
++        reducedMotion: false,
++        showValueLabels: false,
++        annotations: { 'node-0': 'Visible note' },
++        emphasis: {},
++      }),
++    );
++    expect(child.labels).toHaveLength(1);
++    expect(child.labels?.[0]).toMatchObject({ position: 'inside' });
++  });
++
++  it('covers defensive annotations, formatters, hidden axes and disabled animation', () => {
++    const inherited = Object.create({ positive: 'Inherited' }) as Readonly<
++      Record<ViewNodeId, string>
++    >;
++    const nonString = { positive: 42 } as unknown as Readonly<Record<ViewNodeId, string>>;
++    const hostile = new Proxy(
++      {},
++      {
++        getOwnPropertyDescriptor() {
++          throw new Error('private annotation proxy');
++        },
++      },
++    ) as Readonly<Record<ViewNodeId, string>>;
++    expect(visibleCategoricalAnnotation(inherited, 'positive')).toBe('');
++    expect(visibleCategoricalAnnotation(nonString, 'positive')).toBe('');
++    expect(visibleCategoricalAnnotation(hostile, 'positive')).toBe('');
++    expect(formatCategoricalDatumAmount(projection[0], 'en-US')).toBe('12');
++
++    const columnSpec = createCategoricalChartSpec({
++      projection,
++      chartType: 'column',
++      locale: 'en-US',
++      currency: undefined,
++      reducedMotion: false,
++      showValueLabels: true,
++      annotations: hostile,
++      emphasis: {},
++      appearance: {
++        axis: { x: true, y: false },
++        valueLabels: 'never',
++        animation: { enabled: false },
++      },
++    });
++    const column = interval(columnSpec);
++    expect((columnSpec as { readonly title?: unknown }).title).toBeUndefined();
++    expect(column.axis?.x).toEqual(expect.objectContaining({ labelFill: '#5F6B65' }));
++    expect(column.axis?.y).toBe(false);
++    expect(column.labels).toEqual([]);
++    expect(column.tooltip).toBe(false);
++    expect(column.animate).toBe(false);
++
++    const columnXAxis = column.axis?.x;
++    if (columnXAxis === false || columnXAxis === undefined) {
++      throw new Error('Expected visible column category-axis options');
++    }
++    const categoryFormatter = columnXAxis['labelFormatter'];
++    if (typeof categoryFormatter !== 'function') {
++      throw new Error('Expected a category-axis formatter');
++    }
++    expect(categoryFormatter('positive')).toBe('Positive');
++    expect(categoryFormatter('missing')).toBe('missing');
++
++    const bar = interval(
++      createCategoricalChartSpec({
++        projection,
++        chartType: 'bar',
++        locale: 'en-US',
++        currency: 'USD',
++        reducedMotion: false,
++        showValueLabels: false,
++        annotations: {},
++        emphasis: {},
++        appearance: { axis: { x: true, y: false }, valueLabels: 'never' },
++      }),
++    );
++    expect(bar.axis?.x).toBe(false);
++    expect(bar.axis?.y).toEqual(expect.objectContaining({ labelFill: '#5F6B65' }));
++    const barYAxis = bar.axis?.y;
++    if (barYAxis === false || barYAxis === undefined) {
++      throw new Error('Expected visible bar value-axis options');
++    }
++    const valueFormatter = barYAxis['labelFormatter'];
++    if (typeof valueFormatter !== 'function') {
++      throw new Error('Expected a value-axis formatter');
++    }
++    expect(valueFormatter(12)).toContain('$');
++  });
++
++  it('applies dense chart styles and disables non-essential animation', () => {
++    const denseProjection = Array.from({ length: 81 }, (_, order) => ({
++      nodeId: `dense-${order}`,
++      label: `Dense ${order}`,
++      amount: order,
++      kind: 'positive' as const,
++      sourceIds: [`dense-${order}`],
++      locked: false,
++      order,
++    })) satisfies CategoricalProjection;
++    const child = interval(
++      createCategoricalChartSpec({
++        projection: denseProjection,
++        chartType: 'column',
++        locale: 'en-US',
++        currency: undefined,
++        reducedMotion: false,
++        showValueLabels: true,
++        annotations: { 'dense-0': 'Dense annotation' },
++        emphasis: {},
++        appearance: { valueLabels: 'never', animation: { enabled: true } },
++      }),
++    );
++    expect(child.animate).toBe(false);
++    expect(child.labels).toHaveLength(1);
++    expect(child.labels?.[0]).toMatchObject({
++      style: { fontSize: 9, wordWrapWidth: 48 },
++    });
++    expect(child.style?.['insetLeft']).toBe(0.5);
++    expect(child.style?.['insetRight']).toBe(0.5);
++    const fillOpacity = datumAccessor<number>(child.style?.['fillOpacity'], 'dense fillOpacity');
++    const lineWidth = datumAccessor<number>(child.style?.['lineWidth'], 'dense lineWidth');
++    const stroke = datumAccessor<string>(child.style?.['stroke'], 'dense stroke');
++    const firstDatum = denseProjection[0];
++    if (firstDatum === undefined) {
++      throw new Error('Expected a dense projection fixture datum');
++    }
++    expect(fillOpacity(firstDatum)).toBe(1);
++    expect(lineWidth(firstDatum)).toBe(0);
++    expect(stroke(firstDatum)).toBe('transparent');
++  });
++});

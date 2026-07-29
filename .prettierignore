@@ -1,4 +1,6 @@
 .ai-platform/
+.copyright-application/
+tmp/
 AGENTS.md
 README.md
 LICENSE

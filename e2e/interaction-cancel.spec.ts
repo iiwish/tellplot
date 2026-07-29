@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
+
 const EDITOR = '[data-tellplot="editor"]';
 const COMMAND_FEEDBACK = '.tp-command-feedback';
 const EXPECTED_CHART_BAR_COUNT = 12;
@@ -8,7 +10,7 @@ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
 
 async function openEditor(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('/playground');
   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
 }
 
@@ -114,11 +116,10 @@ async function chartBarPoints(canvas: Locator): Promise<readonly { x: number; y:
       return [];
     }
     const palette = [
-      [95, 107, 101],
-      [22, 131, 99],
-      [213, 82, 74],
-      [49, 92, 140],
-      [164, 104, 18],
+      [47, 124, 246],
+      [18, 183, 106],
+      [240, 68, 100],
+      [20, 184, 166],
     ];
     const pixels = context.getImageData(0, 0, element.width, element.height).data;
     const ysByX: number[][] = Array.from({ length: element.width }, () => []);
@@ -342,7 +343,7 @@ test('fixed and cross-segment keyboard attempts reject privately without a commi
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
 
   const labor = page.getByRole('treeitem', { name: /人工成本/ });
-  await labor.focus();
+  await labor.click();
   await expect(labor).toBeFocused();
   await labor.press('Alt+ArrowDown');
   await expect(page.locator(COMMAND_FEEDBACK)).toContainText('INVALID_DROP_TARGET');
@@ -385,25 +386,28 @@ test('cross-segment outline pointer drop is rejected without a history entry', a
   expect(await rootOrder(page)).toEqual(baselineOrder);
 });
 
-test('moving a child out of a two-item group is rejected without weakening the group', async ({
-  page,
-}) => {
+test('moving a child out of a two-item group atomically dissolves the group', async ({ page }) => {
   await openEditor(page);
+  const baselineOrder = await rootOrder(page);
   await page.getByRole('treeitem', { name: /销量增长/ }).click();
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
-  const groupedOrder = await rootOrder(page);
-
   const priceRow = page.getByRole('treeitem', { name: /价格提升/ });
   await priceRow.focus();
   await page.keyboard.press('Alt+ArrowLeft');
-  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('INVALID_DROP_TARGET');
-  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
-  expect(await rootOrder(page)).toEqual(groupedOrder);
+  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('已移动，顺序已更新');
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
+  expect(await rootOrder(page)).toEqual(baselineOrder);
+  await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveCount(0);
+
+  await page.getByRole('button', { name: '撤销' }).click();
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '3');
   await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveAttribute(
     'data-source-count',
     '2',

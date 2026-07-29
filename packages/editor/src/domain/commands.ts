@@ -1,7 +1,7 @@
 import { commandError, type CommandError, type CommandErrorReason } from './errors';
 import type { GroupId, SourceItemId, ViewNodeId } from './ids';
 
-export type CommandSource = 'direct' | 'outline' | 'keyboard' | 'host' | 'ai';
+export type CommandSource = 'direct' | 'outline' | 'keyboard' | 'host';
 
 export interface CommandEnvelope<TType extends string, TPayload> {
   readonly schemaVersion: '1.0.0';
@@ -117,7 +117,6 @@ const COMMAND_SOURCES: ReadonlySet<CommandSource> = new Set([
   'outline',
   'keyboard',
   'host',
-  'ai',
 ]);
 
 const COMMAND_TYPES: ReadonlySet<EditorCommandType> = new Set([

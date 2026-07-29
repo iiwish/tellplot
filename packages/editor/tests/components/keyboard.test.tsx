@@ -2,13 +2,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  FinancialChartEditor,
   createEditorSession,
   createInitialViewSpec,
   executeCommand,
   type CommandEvent,
   type ViewSpec,
 } from '../../src';
+import { FinancialChartEditor } from '../../src/components/FinancialChartEditor';
 import {
   buildMoveItemCommand,
   resolveKeyboardMoveTarget,
@@ -331,11 +331,11 @@ describe('keyboard move operations', () => {
     );
   });
 
-  it('rejects pinned, cross-segment, and minimum-group keyboard moves without committing', async () => {
+  it('rejects pinned and cross-segment keyboard moves without committing', async () => {
     const cases: readonly {
       readonly viewSpec: ViewSpec;
       readonly rowName: RegExp;
-      readonly key: 'ArrowDown' | 'ArrowLeft';
+      readonly key: 'ArrowDown';
       readonly code: 'ITEM_LOCKED' | 'INVALID_DROP_TARGET';
     }[] = [
       {
@@ -348,12 +348,6 @@ describe('keyboard move operations', () => {
         viewSpec: initialView(),
         rowName: /Gamma confidential/,
         key: 'ArrowDown',
-        code: 'INVALID_DROP_TARGET',
-      },
-      {
-        viewSpec: groupedView(['a', 'b']),
-        rowName: /Beta confidential/,
-        key: 'ArrowLeft',
         code: 'INVALID_DROP_TARGET',
       },
     ];
@@ -385,6 +379,36 @@ describe('keyboard move operations', () => {
       );
       rendered.unmount();
     }
+  });
+
+  it('moves out of a two-member group and dissolves it as one keyboard command', async () => {
+    const onCommand = vi.fn();
+    const onViewSpecChange = vi.fn();
+    render(
+      <FinancialChartEditor
+        sourceData={commandSourceData}
+        defaultViewSpec={groupedView(['a', 'b'])}
+        onCommand={onCommand}
+        onViewSpecChange={onViewSpecChange}
+      />,
+    );
+
+    fireEvent.keyDown(await screen.findByRole('treeitem', { name: /Beta confidential/ }), {
+      key: 'ArrowLeft',
+      altKey: true,
+    });
+
+    await waitFor(() => expect(onCommand).toHaveBeenCalledOnce());
+    expect(onCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'moveItem', source: 'keyboard' }),
+    );
+    expect(onViewSpecChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rootOrder: ['a', 'b', 'c', 'd', 'e'],
+        groups: {},
+      }),
+      expect.objectContaining({ source: 'keyboard' }),
+    );
   });
 
   it('scopes delayed focus to the active editor when two instances share node ids', async () => {

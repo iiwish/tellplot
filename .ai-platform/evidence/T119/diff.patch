@@ -1,0 +1,5925 @@
+diff --git a/.ai-platform/docs/product-design.md b/.ai-platform/docs/product-design.md
+index 8b0049d..8371dd9 100644
+--- a/.ai-platform/docs/product-design.md
++++ b/.ai-platform/docs/product-design.md
+@@ -2,7 +2,7 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.7.0
++- Version: 0.8.0
+ - Status: Confirmed
+ - Last updated: 2026-07-20
+ - Approval: 用户于 2026-07-20 明确确认 TellPlot 是基于 G2 的轻量可编辑基础图表库，不建设 AI 产品或重型平台
+@@ -30,6 +30,8 @@ registry、通用 adapter 或公共扩展协议。
+ 
+ - 组件包拥有数据合同、图表投影、G2 spec、交互、历史、持久化、导出和公共类型。
+ - 参考编辑器只提供示例数据、功能演示和视觉验收，不复制领域状态或业务逻辑。
++- 开源官网在参考应用中提供品牌首页、真实图表示例目录、开发者文档入口和在线工作台；它只消费公共组件，
++  不进入核心包或图表运行时。
+ - 宿主应用负责数据获取、权限、页面导航和服务端存储。
+ - 核心包不发起网络请求，不连接模型、数据平台或第三方业务服务。
+ 
+@@ -161,6 +163,11 @@ G2 数据、编码、稳定 ID、事件注册或交互状态机。
+ `inside` 语义落点，并允许在不违反锁定、循环和瀑布 segment 约束的前提下跨分组移动节点。移动使来源
+ 分组只剩一个直接子节点时，系统在同一条可撤销命令中解散来源分组，不持久化单成员分组。
+ 
++### FR-015 开源官网与示例中心
++
++参考应用提供真实图表驱动的品牌首页、当前图表家族示例目录、开发者文档入口和双向在线工作台。示例目录
++属于 playground 内容，不导出为核心 registry；新增示例不得复制图表领域逻辑或改变 G2 ownership。
++
+ ## Non-Functional Requirements
+ 
+ ### NFR-001 正确性
+@@ -202,6 +209,7 @@ G2 数据、编码、稳定 ID、事件注册或交互状态机。
+ - 展开分组区域配置、上下文分组操作和跨层级语义拖拽。
+ - SVG、PNG 和 ViewSpec JSON 导出。
+ - React 组件包、薄参考编辑器和发布候选质量门禁。
++- 真实图表驱动的开源官网、示例中心、开发者文档入口和在线工作台。
+ 
+ ## Expansion Policy
+ 
+@@ -263,3 +271,8 @@ G2 数据、编码、稳定 ID、事件注册或交互状态机。
+ 
+ 后续开发以可独立验收的大目标为单位。内部任务用于执行和验证，不要求用户逐项验收；公共范围、
+ breaking API、schema、依赖、远程 Git 和发布仍是独立人工闸门。
++
++### CD-008 展示网站边界
++
++官网与示例中心是 `apps/playground` 的开发者体验层，只消费 `@tellplot/editor` 公共 API。网站内容目录不是
++核心图表 registry，不向公共包增加路由、文档、动画或在线执行依赖。
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 82e292c..dfaffe9 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -2,7 +2,7 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.9.0
++- Version: 0.11.0
+ - Status: Not_Released
+ - Last updated: 2026-07-23
+ - Working branch: `codex/t112-categorical-data-contract`
+@@ -17,6 +17,11 @@ TellPlot 是基于 G2 的轻量可编辑基础图表库。G001 多图表基础
+ 亮色实时图表文档、中间图表和右侧大纲/检查器标签栏，紧凑视口使用 dialog。左侧合法 JSON 修改经过
+ source/view 公共校验后更新图形，右侧确定性命令产生的 `ViewSpec` 反向回写；非法草稿不改变图形。
+ 
++本地网站提供真实图表驱动的 TellPlot 首页、当前三个图表家族的可搜索示例中心、开发者文档入口和连续
++在线工作台。首页采用高留白产品舞台，示例中心采用可扩展分类侧栏与等权真实图表网格；首页与示例预览
++直接消费 `FinancialChartEditor`。网站内容目录保持在 playground，未形成核心 chart registry。站点支持
++直接 URL、浏览器前进/后退、移动导航、分类筛选和准确页面元数据。
++
+ G2 继续独占图形渲染、场景边界、事件和动画。TellPlot 不包含 Dashboard、第二渲染引擎或通用图表
+ plugin registry。
+ 
+@@ -33,29 +38,37 @@ plugin registry。
+ - G002 / T117：Beta 公共 API、package README/LICENSE、developer docs、changelog、版本、tarball allowlist、
+   可配置 panel/布局、双向 playground 开发者编辑器及 release-candidate validation 已完成，等待一次目标级用户验收。
+ - G002-R1 / T118：分组上下文、跨层拖拽、自动解散和展开分组区域已完成，等待目标级用户验收。
++- G002-R2 / T119：真实图表首页、示例中心、开发者文档入口、连续工作台与响应式视觉体验已完成，
++  等待目标级用户验收。
+ 
+ ## Validation Evidence
+ 
+-- fresh unit/coverage：417/417；statements 86.08%、branches 80.81%、functions 88.57%、lines 86.24%，
++- fresh unit/coverage：426/426；statements 85.82%、branches 80.61%、functions 88.43%、lines 85.97%，
+   受约束的 domain、waterfall、categorical 和 G2 runtime 门禁保持 95% 以上。
+-- current Chromium/Firefox/WebKit：150/150。
+-- previous browser release：150/150；WebKit 18.4：50/50。
+-- accessibility：33/33；React 18/19、ESM/CJS/types/compile-checked quickstart/package checks 通过。
+-- 200-item fresh performance：waterfall p95 89.5ms；categorical p95 75.9ms；预算 150ms。
++- current Chromium/Firefox/WebKit：两次完整矩阵均为 176/177；同一既有 WebKit 导航用例在高负载下超时，
++  隔离复跑 1/1 通过；新增 showcase 用例 15/15 通过。
++- previous browser release：174/174；WebKit 18.4：58/58。
++- accessibility：45/45；React 18/19、ESM/CJS/types/compile-checked quickstart/package checks 通过。
++- 200-item fresh performance：waterfall p95 74.8ms；categorical p95 80.5ms；预算 150ms。
+ - tarball 为 `@tellplot/editor@0.1.0-beta.1`，仅包含 13 个 dist/metadata/README/LICENSE 文件。
+ - strict artifact validator、format、lint、typecheck、build 和 diff checks 通过。
+ 
+-详细 G002 结果与残余风险见 `.ai-platform/evidence/T117/`。
++详细 G002、G002-R1 与 G002-R2 结果和残余风险分别见 `.ai-platform/evidence/T117/`、
++`.ai-platform/evidence/T118/` 与 `.ai-platform/evidence/T119/`。
+ 
+ ## Known Limitations
+ 
+ - 当前已验收 T112-T116 工作仍位于未提交的 working branch；stage、commit、push、PR 和 merge 未获授权。
+ - `@tellplot/editor@0.1.0-beta.1` 只完成本地 release-candidate 验证，npm publish 和正式 release 未执行。
+ - playground build 存在既有 G2 chunk size warning；当前没有用户价值证据支持拆分或替换 G2。
++- 当前完整矩阵中的 WebKit `page.goto('/playground')` 在高负载串行执行时仍有一次 30 秒超时；隔离执行
++  稳定通过，属于非阻断低风险，但不得记为 177/177 全绿。
+ - 200-item performance 继续保留 150ms 阻断预算和真实浏览器监测，不弱化预算。
+ - GitHub 私有仓库计划无法强制 branch protection/rulesets；服务端 required checks 仍受外部计划限制。
++- 当前未包含生产网站部署；未来 history URL 托管需要配置 SPA fallback。
++- 网站文档是可扫描入口，版本化搜索与正式托管属于 G004 的独立目标。
+ 
+ ## Next Gate
+ 
+-用户对 G002 进行一次目标级验收。验收不授权 npm publish、远程 Git 或正式 release；这些动作仍需独立
+-明确批准。G003 基础图表扩展只在用户另行批准具体目标后进入执行。
++用户分别对 G002、G002-R1 与 G002-R2 进行目标级验收。验收不授权 npm publish、远程 Git、正式 release
++或网站部署；这些动作仍需独立明确批准。G003 基础图表扩展只在用户另行批准具体目标后进入执行。
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 5198aff..89732f6 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.25.0
++- Version: 0.27.0
+ - Status: Active
+ - Last updated: 2026-07-23
+-- Scope: T101-T116 已验收；G002 / T117 与 G002-R1 / T118 均等待目标级验收
++- Scope: T101-T116 已验收；G002 / T117、G002-R1 / T118 与 G002-R2 / T119 等待目标级验收
+ 
+ ## Goal-Level Delivery
+ 
+@@ -22,6 +22,7 @@
+ | G001 - 多图表基础能力 | Accepted | T101-T116；waterfall、bar、column 与共享 G2 runtime 完整验收 |
+ | G002 - 轻量图表库 Beta | Needs_Review | T117；公共 API、双向演示编辑器、发布包和 beta 质量闭环 |
+ | G002-R1 - 分组与跨层编辑体验 | Needs_Review | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
++| G002-R2 - 开源官网与示例中心 | Needs_Review | T119；真实图表首页、示例中心、文档入口和连续工作台 |
+ | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
+ | G004 - 开源项目成熟度 | Later | 贡献、版本、发布和长期维护体验 |
+ 
+@@ -171,3 +172,11 @@ G002 已由用户于 2026-07-20 明确批准，内部以 T117 作为单一目标
+ G002-R1 已由用户于 2026-07-20 明确批准，内部以 T118 作为单一目标级 governed task 连续完成。权威目标图
+ 位于 `.ai-platform/specs/006-group-cross-level-experience/tasks.md`。目标完成后统一进入 `Needs_Review`；新依赖、
+ schema、远程 Git、npm publish 和正式发布保持独立闸门。
++
++## G002-R2 Execution
++
++G002-R2 已由用户于 2026-07-23 明确批准并要求继续实现，内部以 T119 作为单一目标级 governed task 连续
++完成。真实图表首页、三个图表的示例中心、开发者文档入口、连续双向工作台以及桌面/移动视觉与发布候选
++验证均已交付，状态为 `Needs_Review`。权威目标图、设计合同与任务证据位于
++`.ai-platform/specs/007-open-source-showcase/` 和 `.ai-platform/evidence/T119/`。目标未修改核心包、公共
++API、schema 或 dependency。
+diff --git a/.ai-platform/docs/technology-decision-record.md b/.ai-platform/docs/technology-decision-record.md
+index 2eae1c1..4b45035 100644
+--- a/.ai-platform/docs/technology-decision-record.md
++++ b/.ai-platform/docs/technology-decision-record.md
+@@ -2,7 +2,7 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.8.0
++- Version: 0.9.0
+ - Status: Confirmed
+ - Last updated: 2026-07-19
+ - Approval: 用户于 2026-07-20 明确确认轻量基础图表库边界、G2 ownership 和目标级交付方式
+@@ -191,8 +191,21 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ - Evidence: 内部任务保留可复核的测试和 diff evidence，但用户默认只查看目标级结果、风险和验收材料。
+ - Rationale: 保留工程可追踪性，同时避免把用户拖入微任务和流程负担。
+ 
++## TDR-018 开源官网与示例目录
++
++- Status: Confirmed
++- Decision: `apps/playground` 使用现有 React/Vite 单页应用承载品牌首页、示例中心、文档入口和在线工作台。
++  路由使用本地 history API；真实预览直接消费 read-only `FinancialChartEditor`；示例内容目录保持 playground
++  私有和显式。
++- Visual ownership: G2 继续负责图形过渡；网站导航、hover 和进入反馈只使用 CSS。网站不引入远程字体、
++  图片、router、docs、编辑器或 animation dependency。
++- Runtime boundary: 工作台继续使用既有 SourceData/ViewSpec/Command 路径；网站不复制领域状态，不向
++  `@tellplot/editor` 导出示例 registry 或页面组件。
++- Rationale: 以真实产品为展示资产可以同时提升开源发现、示例浏览和手工验收体验，而不增加核心库重量。
++- Rejected alternatives: 独立重型文档站、静态图表截图、通用示例插件协议、第二图表渲染层。
++
+ ## Approval Gate
+ 
+-TDR-001 至 TDR-017 均已获得用户明确批准。后续实现以 approved goal 为执行单位；内部 task graph 和
++TDR-001 至 TDR-018 均已获得用户明确批准。后续实现以 approved goal 为执行单位；内部 task graph 和
+ execution packet 由执行方维护。任何依赖、schema、breaking public API、远程 Git 或发布变化必须重新进入
+ 审批，并运行兼容性、许可证和包边界检查。
+diff --git a/.ai-platform/specs/007-open-source-showcase/analysis.md b/.ai-platform/specs/007-open-source-showcase/analysis.md
+new file mode 100644
+index 0000000..b6af5e9
+--- /dev/null
++++ b/.ai-platform/specs/007-open-source-showcase/analysis.md
+@@ -0,0 +1,36 @@
++# G002-R2 Cross-Artifact Analysis
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Completed
++- Last updated: 2026-07-23
++
++## Findings
++
++- Critical: 0
++- High: 0
++- Medium: 0
++- Low: 2
++
++### L-001 路由部署回退
++
++当前目标不包含部署。Vite dev/preview 支持 SPA fallback；未来静态托管需在部署目标中确认 history fallback，
++否则采用静态重写规则。该风险不要求当前引入 router 或改变 URL 设计。
++
++### L-002 文档内容重复
++
++网站文档是可扫描接入入口，长期 canonical 细节仍位于 `docs/**` 和 package README。当前实现必须保持示例
++与公共类型测试一致，不建设 Markdown runtime；后续完整文档站属于独立目标。
++
++## Consistency Review
++
++- 产品边界：与轻量核心、G2 ownership 和薄参考应用一致。
++- 技术边界：现有 React/Vite/CSS 足够，不需要新依赖。
++- 数据边界：首页和示例只消费公共组件与本地 fixture，不复制领域命令。
++- 设计边界：真实图表是主资产，避免营销模板和装饰性重实现。
++- 交付边界：T119 是唯一 governed task，用户已批准目标，完成后停在 `Needs_Review`。
++
++## Conclusion
++
++Spec、design contract、plan、tasks、checklist 与 packet 可以进入执行，无阻断 finding。
+diff --git a/.ai-platform/specs/007-open-source-showcase/checklists/requirements.md b/.ai-platform/specs/007-open-source-showcase/checklists/requirements.md
+new file mode 100644
+index 0000000..9b8a777
+--- /dev/null
++++ b/.ai-platform/specs/007-open-source-showcase/checklists/requirements.md
+@@ -0,0 +1,34 @@
++# G002-R2 Requirements Checklist
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Completed
++- Last updated: 2026-07-23
++
++## Scope
++
++- [x] 目标只扩展 playground 网站，不改变核心包。
++- [x] 首页、示例、文档和工作台用户结果明确。
++- [x] 当前图表范围明确为 waterfall、column 和 bar。
++- [x] 后续扩展使用 playground 内容目录，不建立核心 registry。
++- [x] dependency、API、schema、remote、publish 和 deploy 边界明确。
++
++## UX And Design
++
++- [x] 第一屏真实产品信号、H1、主操作和下一段线索明确。
++- [x] 桌面、平板、移动和 reduced-motion 行为明确。
++- [x] 导航、菜单、选择器、链接、复制和错误状态明确。
++- [x] 视觉资产来自真实图表，不依赖远程图片或字体。
++- [x] 设计合同包含精确 token、结构、motion 和禁用模式。
++
++## Engineering And Quality
++
++- [x] 工作台 source/view 所有权和现有测试连续性明确。
++- [x] 路由与 docs 实现不要求新增依赖。
++- [x] TDD、全量回归、axe 和真实浏览器视觉验收明确。
++- [x] allowed files、stop conditions、evidence 与 finish state 明确。
++
++## Conclusion
++
++需求可执行，无 Critical 或 High 缺口。
+diff --git a/.ai-platform/specs/007-open-source-showcase/design-contract.md b/.ai-platform/specs/007-open-source-showcase/design-contract.md
+new file mode 100644
+index 0000000..9fc86ba
+--- /dev/null
++++ b/.ai-platform/specs/007-open-source-showcase/design-contract.md
+@@ -0,0 +1,101 @@
++# TellPlot 开源官网设计合同
++
++## Metadata
++
++- Goal: `G002-R2`
++- Version: 0.2.0
++- Status: Confirmed
++- Last updated: 2026-07-23
++
++## Product Brief
++
++- Pitch: 面向 React 开发者的轻量可编辑基础图表库官网，用真实图表证明安装、配置和结构编辑能力。
++- Audience: 首要用户是评估或接入 `@tellplot/editor` 的开发者；次要用户是查看交互效果的业务设计者。
++- Platform: 响应式 Web；桌面优先展示完整工作台，移动端保留清晰浏览和按需编辑路径。
++- Core workflows: 理解产品、切换图表家族、浏览示例、打开实时工作台、阅读接入文档。
++- Required states: 当前导航、移动菜单、图表切换、示例 hover/focus、复制反馈、非法配置和窄屏工作台。
++
++## Direction
++
++- Surface: 品牌展示、图表示例库、技术文档与互动工作台的复合型网站。
++- Intensity: Ambitious。
++- Primary pattern: Clean Visualization Product Stage。
++- Golden pattern: Cinematic Product Stage，以真实图表而不是图片或 3D 物体作为 hero object。
++- Secondary tension: Gallery utility。
++- Design thesis: 图表库官网应当像优质图表本身一样清晰、轻盈、立即可用，视觉主角始终是真实图形。
++- Hero spectacle: 首屏使用大面积留白与全宽真实 G2 图表舞台，品牌信息浮在同一画布上，图表家族选择即时
++  切换数据形态。
++- Signature move: `waterfall / column / bar` 模式轨道驱动同一个真实 TellPlot 组件切换，而不是播放静态截图。
++
++## Reference Digestion
++
++- ECharts intent: 高留白首页、明确产品名称与一句话定位、两项主操作、鲜明但克制的品牌色。
++- G2 intent: 稳定顶栏、可扩展左侧分类、密集而规整的真实图表网格、示例优先的信息架构。
++- Inherit: 三秒可读的产品定位、清晰导航、轻边框卡片、蓝色交互强调、示例浏览效率和充足图形面积。
++- Do not copy: 两个项目的 logo、品牌图形、具体颜色组合、插画、文案和完整导航结构。
++- Domain replacement: 使用 TellPlot 的真实可编辑图表、SourceData/ViewSpec 分离、财务语义色和在线工作台。
++- Upgrade: 首页与全部示例直接渲染 TellPlot 组件，示例卡片可筛选并进入双向编辑，而不是静态缩略图。
++
++## Style Contract
++
++- Palette:
++  - canvas `#F7F8FA`
++  - paper `#FFFFFF`
++  - ink `#1F2329`
++  - muted `#646A73`
++  - rule `#E5E6EB`
++  - primary `#0B5FCC`
++  - primary hover `#084CA6`
++  - cyan `#13A8A8`
++  - coral chart `#F05B58`
++  - blue chart `#3B82F6`
++  - amber `#D48806`
++- Typography: Inter/Noto Sans SC/system；display 56/64 desktop、40/48 mobile；body 15/26；metadata mono
++  11-12/18；letter-spacing 始终为 0。
++- Grid: 页面最大宽度 1280px；12 列；桌面水平边距 32px，移动端 18px；8px 基础间距。
++- Radius: 控件 6px，示例卡 8px，标签 4px，禁止大胶囊和嵌套卡片。
++- Visual anchors: 清晰蓝色焦点、真实图表色、白色图形画布、轻边框、稀疏阴影和稳定示例网格。
++- Component language: 轻量顶栏、实心/描边按钮、分段图表选择、分类侧栏、真实图表卡片、常规文档布局。
++- Motion: 首屏内容 y 位移进入 420ms `cubic-bezier(.16,1,.3,1)`；卡片 hover 最多
++  translateY(-2px)；导航与按钮 160-200ms；G2 继续负责图形过渡；reduced motion 关闭非必要位移。
++- Assets: 不使用远程图片。主视觉和示例资产均为真实 `FinancialChartEditor` + 本地 fixture；失效时显示
++  组件自身可访问错误状态。
++
++## Structure Contract
++
++- `/`: 60px 导航；高留白品牌首屏、真实图表舞台和家族选择；能力说明；精选示例；开发者接入带；页脚。
++- `/examples`: 页面标题、搜索、图表分类侧栏与等权真实示例网格；后续按同一内容合同增加。
++- `/docs`: 左侧章节索引、主文档、右侧 beta 元信息；移动端改为单列且索引可横向滚动。
++- `/playground`: 60px 网站导航下保留现有完整工作台，工作区占剩余 `100dvh`。
++- Mobile: 导航菜单为普通可访问展开区；首屏先品牌和操作、后图表；示例改为单列；无依赖 hover 的功能。
++
++## Crafted Interactions
++
++- 图表家族分段控件切换真实 G2 图形和对应说明。
++- 示例搜索与分类即时过滤真实卡片，并提供清晰空结果。
++- 示例项 hover/focus 提升 2px并显示蓝色边框，图表区域保持稳定尺寸，不推动相邻内容。
++- 当前导航使用底部轨道和 `aria-current`；移动菜单在导航后展开并可用 Escape 关闭。
++- 安装命令支持复制，状态通过 `aria-live` 反馈。
++
++## Mandatory Rules
++
++- 第一屏必须出现 TellPlot 名称、真实图表和明确主操作。
++- 所有图表预览都来自真实组件与本地数据，不使用占位缩略图。
++- 工作台不能复制领域状态或改变 source/view 不变量。
++- 页面在 1440x900 和 390x844 均露出下一内容线索。
++
++## Forbidden Moves
++
++- 渐变背景、装饰光球、bokeh、远程字体、库存图片和纯氛围插画。
++- 冷硬的技术档案皮肤、遍布页面的编号和 mono 标签、过度规则线或大面积暗色区块。
++- 将首页做成文本/媒体两个互不关联的卡片，或让营销文案压过真实图表。
++- 通用图表 registry、重型 docs/router/editor/animation 依赖。
++- 大圆角、卡片套卡片、滚动劫持和持续背景动画。
++
++## QA
++
++- Desktop: `1440x900` 首页、示例、文档、工作台。
++- Mobile: `390x844` 首页导航、图表切换、示例、文档和工作台使用面板。
++- Interaction: 内部导航、前进/后退、移动菜单、图表切换、示例入口、复制和实时配置。
++- Accessibility: landmarks、heading 顺序、aria-current、菜单、focus-visible、reduced motion、axe。
++- Visual review target: rubric average >= 1.7，无核心维度 0。
+diff --git a/.ai-platform/specs/007-open-source-showcase/packets/T119.yaml b/.ai-platform/specs/007-open-source-showcase/packets/T119.yaml
+new file mode 100644
+index 0000000..84feeb3
+--- /dev/null
++++ b/.ai-platform/specs/007-open-source-showcase/packets/T119.yaml
+@@ -0,0 +1,154 @@
++schema_version: 1
++packet_id: EP-G002-R2-A001
++task_id: T119
++feature_id: 007-open-source-showcase
++mode: execute_goal
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  goal_spec: .ai-platform/specs/007-open-source-showcase/spec.md
++  goal_plan: .ai-platform/specs/007-open-source-showcase/plan.md
++  goal_graph: .ai-platform/specs/007-open-source-showcase/tasks.md
++  design_contract: .ai-platform/specs/007-open-source-showcase/design-contract.md
++  requirements_checklist: .ai-platform/specs/007-open-source-showcase/checklists/requirements.md
++  analysis: .ai-platform/specs/007-open-source-showcase/analysis.md
++  execution_authorization: >-
++    Granted. The user explicitly approved G002-R2 and requested implementation on 2026-07-23. Internal workstreams
++    execute continuously and stop at goal-level Needs_Review. Dependency, public API, schema, remote Git, publish,
++    release and deployment changes are not authorized.
++
++work_unit:
++  title: 开源官网与示例中心
++  goal: >-
++    Deliver a responsive TellPlot website shell, real-chart hero, explicit example catalog, developer docs entry and
++    the existing bidirectional workbench without changing @tellplot/editor behavior.
++  depends_on:
++    - G002 T117 Needs_Review
++    - G002-R1 T118 Needs_Review
++  requirements:
++    - SHOWCASE-FR-001
++    - SHOWCASE-FR-002
++    - SHOWCASE-FR-003
++    - SHOWCASE-FR-004
++    - SHOWCASE-FR-005
++    - SHOWCASE-FR-006
++    - SHOWCASE-NFR-001
++    - SHOWCASE-NFR-002
++    - SHOWCASE-NFR-003
++    - SHOWCASE-NFR-004
++    - SHOWCASE-NFR-005
++    - SHOWCASE-NFR-006
++    - SHOWCASE-NFR-007
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  accepted_baseline:
++    branch: codex/t112-categorical-data-contract
++    state: T112-T118 changes are intentionally uncommitted in the current worktree
++    constraints:
++      - Preserve all existing accepted and Needs_Review changes.
++      - Do not reset, stash, stage or commit.
++      - Generate T119-only evidence against the recorded G002-R2 snapshot.
++  relevant_files:
++    - apps/playground/src/App.tsx
++    - apps/playground/src/UsageGuide.tsx
++    - apps/playground/src/LiveChartEditor.tsx
++    - apps/playground/src/fixtures.ts
++    - apps/playground/src/playground.css
++    - e2e/live-code-editor.spec.ts
++    - e2e/accessibility.spec.ts
++
++baseline:
++  snapshot: /tmp/tellplot-G002-R2-baseline.sMohDO/worktree
++  manifest: /tmp/tellplot-G002-R2-baseline.sMohDO/manifest.sha256
++  file_count: 338
++  manifest_sha256: 0440f851c6553fa2d0ffe916776c11639134a44e329b8904d8cf779fe31391e4
++
++execution_constraints:
++  allowed_files:
++    - .ai-platform/**
++    - AGENTS.md
++    - README.md
++    - docs/**
++    - apps/playground/**
++    - e2e/**
++    - vitest.config.ts
++  forbidden_changes:
++    - No dependency manifest or lockfile change.
++    - No packages/editor behavior, public API or style change.
++    - No SourceData, ViewSpec or command schema change.
++    - No new chart family, remote service, telemetry or login.
++    - No remote Git, publish, release or deployment.
++    - No any, @ts-ignore or @ts-expect-error.
++
++tdd_plan:
++  red:
++    - Require root website landmarks, real chart hero and chart-family selector.
++    - Require example catalog routes to correct playground fixtures.
++    - Require docs navigation and mobile menu behavior.
++    - Move existing editor E2E entrypoints to /playground and prove missing route support fails first.
++  green:
++    - Implement the minimum route shell, pages, catalog and extracted workbench.
++  refactor:
++    - Keep routing and content helpers playground-only and remove App monolith without changing editor state ownership.
++
++validation_commands:
++  - pnpm format:check
++  - pnpm lint
++  - pnpm typecheck
++  - pnpm test:unit
++  - pnpm test:coverage
++  - pnpm build
++  - pnpm test:package
++  - pnpm test:react-matrix
++  - pnpm test:e2e
++  - pnpm test:a11y
++  - pnpm test:performance
++  - mise exec node@22.20.0 -- pnpm test:browser-previous
++  - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 007-open-source-showcase --task-id T119 --strict
++  - git diff --check
++
++validation_loop:
++  focused_red:
++    - Run the new route/content unit tests and website browser spec before implementation and record expected failures.
++    - Run one migrated /playground browser slice before route support exists and record the expected failure.
++  focused_green:
++    - Run the same focused suites after the route shell, pages and workbench extraction.
++  regression:
++    - Run the complete validation matrix without weakening existing thresholds, fixtures or browser coverage.
++  failure_policy:
++    - Fix T119 failures only within allowed files.
++    - Stop if a fix requires dependencies, core package behavior, schema, breaking API or remote action.
++
++evidence_contract:
++  directory: .ai-platform/evidence/T119
++  required:
++    - summary.md
++    - test-results.md
++    - diff.patch
++    - review.md
++    - desktop/mobile screenshots
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++    - visual_rubric
++  acceptance_rule: >-
++    G002-R2 may move to Needs_Review only when all success criteria and full gates pass with no unresolved Critical,
++    High or Medium finding. Only the user can mark the goal Accepted.
++
++stop_conditions:
++  - A dependency, core package, schema, breaking API, remote action or deployment change is required.
++  - Existing dirty baseline cannot be preserved.
++  - A Critical or High artifact/review finding remains unresolved.
++  - Existing validation must be weakened.
++
++handoff:
++  remote_actions_authorized: false
++  finish_state: Needs_Review
+diff --git a/.ai-platform/specs/007-open-source-showcase/plan.md b/.ai-platform/specs/007-open-source-showcase/plan.md
+new file mode 100644
+index 0000000..aa52edf
+--- /dev/null
++++ b/.ai-platform/specs/007-open-source-showcase/plan.md
+@@ -0,0 +1,62 @@
++# G002-R2 开源官网与示例中心 Plan
++
++## Metadata
++
++- Version: 0.1.0
++- Status: Confirmed
++- Last updated: 2026-07-23
++
++## Technical Approach
++
++- 保留现有 React 19 + Vite 8 单页应用，使用极小的 `history.pushState` 路由层，不新增 router。
++- 将当前工作台从 `App.tsx` 提取为 `ExampleWorkbench`，不改变其 source/view/state 所有权。
++- 新增网站壳、首页、示例中心、文档页和 playground-only 示例目录。
++- 首页与示例预览直接使用 read-only `FinancialChartEditor`，图形动画仍由 G2 负责。
++- 视觉样式集中在 playground CSS token 和站点作用域中，不修改 `@tellplot/editor` 默认视觉。
++
++## Internal Workstreams
++
++1. T119-A001：目标 artifact、设计合同、基线与 RED 导航/示例 E2E。
++2. T119-A002：路由、网站壳、首页真实图表舞台和示例目录。
++3. T119-A003：文档页、工作台迁移、移动菜单与响应式收敛。
++4. T119-A004：视觉 QA、无障碍、全量回归、review 和 evidence。
++
++## Allowed Files
++
++- `.ai-platform/**`
++- `AGENTS.md`
++- `README.md`
++- `docs/**`
++- `apps/playground/**`
++- `e2e/**`
++- `vitest.config.ts`（仅在需要新增 playground 测试项目配置时）
++
++## Forbidden Changes
++
++- `packages/editor/**` 行为、公共 API 或样式。
++- `package.json`、lockfile 或 dependency 变化。
++- SourceData/ViewSpec schema 与 command wire 变化。
++- 新图表家族、远程服务、遥测、登录、部署和远程 Git。
++
++## Validation
++
++- Focused TDD: 新站点路由、内容目录和浏览器流程。
++- `pnpm format:check`
++- `pnpm lint`
++- `pnpm typecheck`
++- `pnpm test:unit`
++- `pnpm test:coverage`
++- `pnpm build`
++- `pnpm test:package`
++- `pnpm test:react-matrix`
++- `pnpm test:e2e`
++- `pnpm test:a11y`
++- `pnpm test:performance`
++- `mise exec node@22.20.0 -- pnpm test:browser-previous`
++- artifact validator strict
++- `git diff --check`
++
++## Definition Of Done
++
++全部成功标准、桌面/移动视觉合同和发布候选门禁通过；review 无 unresolved Critical/High/Medium finding；
++T119 与 G002-R2 进入 `Needs_Review`，不执行 stage、commit、push、publish 或部署。
+diff --git a/.ai-platform/specs/007-open-source-showcase/spec.md b/.ai-platform/specs/007-open-source-showcase/spec.md
+new file mode 100644
+index 0000000..1bece75
+--- /dev/null
++++ b/.ai-platform/specs/007-open-source-showcase/spec.md
+@@ -0,0 +1,89 @@
++# G002-R2 开源官网与示例中心 Spec
++
++## Metadata
++
++- Feature ID: `007-open-source-showcase`
++- Goal ID: `G002-R2`
++- Version: 0.1.0
++- Status: Confirmed
++- Last updated: 2026-07-23
++- Approval: 用户于 2026-07-23 明确批准并要求继续实现 G002-R2
++
++## Goal
++
++把薄参考编辑器扩展为可持续承载 TellPlot 品牌、真实图表示例、开发者文档入口和在线工作台的开源官网。
++网站继续直接消费 `@tellplot/editor`，不复制图表领域逻辑，不改变核心包、公共 API、schema 或 G2 ownership。
++
++## User Outcomes
++
++- 访问首页即可理解 TellPlot 是基于 G2 的轻量可编辑基础图表库，并看到真实可交互图表。
++- 开发者可以浏览当前已验证的 waterfall、column 和 bar 示例，并进入对应实时配置工作台。
++- 现有双向图表文档、结构编辑、导入和导出能力完整保留。
++- 开发者可以从网站进入快速开始、配置边界、编辑模型和导出说明。
++- 后续新增图表只需增加 playground 内容目录和示例页面，不进入核心 chart registry。
++
++## Requirements
++
++### SHOWCASE-FR-001 网站壳
++
++提供 TellPlot 品牌导航、首页、示例中心、文档入口和在线工作台。桌面导航常驻，移动端使用可访问菜单；
++内部导航支持浏览器前进/后退与直接 URL。
++
++### SHOWCASE-FR-002 真实产品首页
++
++首页 H1 为 `TellPlot`，首屏以真实 `FinancialChartEditor` 图表作为主视觉，不使用装饰性插画替代产品。
++用户可以在 waterfall、column 和 bar 间切换，图形过渡由 G2 负责。首屏保留明确的示例与文档入口，并在
++常见桌面和移动视口露出下一段内容线索。
++
++### SHOWCASE-FR-003 可扩展示例中心
++
++playground 维护显式、有限的示例内容目录，当前只包含已验证的三个图表类型。目录记录名称、说明、标签、
++数据 fixture 和工作台 URL；它不导出到 `@tellplot/editor`，也不形成公共或内部通用图表插件协议。
++
++### SHOWCASE-FR-004 工作台连续性
++
++现有亮色双向配置编辑器、中间 G2 图表、右侧 panel rail、导入、导出和错误草稿行为迁移到
++`/playground`。当前 E2E 覆盖的所有编辑、分组、导出、可访问性和性能行为保持一致。
++
++### SHOWCASE-FR-005 开发者文档入口
++
++网站提供安装、最小 React 接入、数据与视图分离、配置边界和导出能力的可扫描入口，并链接到在线工作台。
++代码示例继续使用当前 beta 公共 API；网站不建设独立 Markdown runtime、版本服务或搜索后端。
++
++### SHOWCASE-FR-006 响应式信息架构
++
++首页、示例中心和文档在 `390x844`、`768x1024`、`1440x900` 和宽屏视口均无重叠、截断或横向溢出。
++工作台窄屏继续使用现有按需代码对话面板。网站导航、图表家族选择、示例链接和文档锚点具有键盘路径和
++清晰焦点。
++
++## Non-Functional Requirements
++
++- SHOWCASE-NFR-001：不新增、删除或升级 runtime/dev dependency。
++- SHOWCASE-NFR-002：TypeScript strict；禁止 `any`、`@ts-ignore`、`@ts-expect-error`。
++- SHOWCASE-NFR-003：G2 独占图形动画；网站微交互只使用 CSS transform/opacity，并遵循 reduced motion。
++- SHOWCASE-NFR-004：网站使用现有 Vite/React/CSS/lucide 工具链；不引入 router、docs 或 animation 框架。
++- SHOWCASE-NFR-005：核心包不发起网络请求，网站不增加远程数据、分析、字体或图片请求。
++- SHOWCASE-NFR-006：现有 unit、package、React、current/previous browser、a11y 和 performance 门禁不得弱化。
++- SHOWCASE-NFR-007：站点页面具有准确 title、description、landmark、heading 和可访问名称。
++
++## Non-Goals
++
++- 新图表类型、多序列、Dashboard、AI、数据准备或服务端工作流。
++- 公共 ChartPlugin registry、示例目录公共化、原始 G2Spec 或 chart instance 暴露。
++- 新 router、文档站、动画、状态、图标或语法高亮依赖。
++- 登录、搜索服务、在线保存、遥测、远程内容或协作。
++- npm publish、GitHub Release、push、PR、merge、tag 或网站部署。
++
++## Success Criteria
++
++- SHOWCASE-SC-001：首页首屏在桌面和移动端明确显示 TellPlot、真实图表和主操作，图表家族切换可用。
++- SHOWCASE-SC-002：示例中心只显示当前三个已验证图表，所有入口打开正确 fixture 与 chart type。
++- SHOWCASE-SC-003：`/playground` 保留双向编辑、结构命令、导入导出、非法草稿和响应式面板行为。
++- SHOWCASE-SC-004：文档页覆盖安装、React 接入、source/view、配置和导出，并与 beta 公共 API 一致。
++- SHOWCASE-SC-005：桌面/移动视觉检查、导航 E2E、axe、全量 release-candidate gates 全部通过，无 unresolved
++  Critical、High 或 Medium finding。
++
++## Approval Gate
++
++用户已批准 G002-R2 的网站范围和连续执行方式。目标内内部任务不设置逐项用户验收；dependency、公共 API、
++schema、远程 Git、publish、release 和部署仍需独立明确授权。
+diff --git a/.ai-platform/specs/007-open-source-showcase/tasks.md b/.ai-platform/specs/007-open-source-showcase/tasks.md
+new file mode 100644
+index 0000000..18be003
+--- /dev/null
++++ b/.ai-platform/specs/007-open-source-showcase/tasks.md
+@@ -0,0 +1,42 @@
++# G002-R2 开源官网与示例中心 Tasks
++
++## Metadata
++
++- Version: 0.2.0
++- Status: Needs_Review
++- Last updated: 2026-07-23
++
++## Goal Task
++
++### T119 - 开源官网与示例中心
++
++- Status: Needs_Review
++- Priority: P0
++- Dependencies: G002 / T117 Needs_Review；G002-R1 / T118 Needs_Review
++- Blocks: G002-R2 目标级验收
++- Story / Requirement: SHOWCASE-FR-001 至 SHOWCASE-FR-006；SHOWCASE-NFR-001 至 SHOWCASE-NFR-007
++- Parallel: 否
++- Conflicts with: dependency、公共 API、schema、核心包行为、远程 Git、publish、release、deploy
++- Goal: 交付真实图表驱动的 TellPlot 官网、示例中心、文档入口和连续工作台。
++- Allowed files: `.ai-platform/**`、`AGENTS.md`、`README.md`、`docs/**`、`apps/playground/**`、`e2e/**`、
++  `vitest.config.ts`
++- Test targets: route/content unit、navigation/workbench E2E、a11y、desktop/mobile visual、完整 release candidate
++- Deliverables: 网站、示例目录、文档页、T119 evidence 和目标级 review
++- Acceptance criteria: SHOWCASE-SC-001 至 SHOWCASE-SC-005 全部满足。
++- Definition of Done: TDD、完整验证、视觉 rubric、review 和 evidence 完成，目标停在 `Needs_Review`。
++- Validation commands: `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test:unit`、
++  `pnpm test:coverage`、`pnpm build`、`pnpm test:package`、`pnpm test:react-matrix`、`pnpm test:e2e`、
++  `pnpm test:a11y`、`pnpm test:performance`、上一发布浏览器矩阵、artifact validator、`git diff --check`
++- TDD plan: RED 站点路由/内容/浏览器测试；GREEN 最小网站壳与页面；REFACTOR 提取工作台和内容目录。
++- Evidence required: RED receipt、changed files、完整命令结果、desktop/mobile screenshots、visual rubric、
++  task-only diff 和 residual risk。
++- Packet path: `.ai-platform/specs/007-open-source-showcase/packets/T119.yaml`
++
++## Internal Attempts
++
++| Attempt | Scope | Status |
++| --- | --- | --- |
++| T119-A001 | artifacts、设计合同、基线与 RED | Completed |
++| T119-A002 | 网站壳、首页、示例中心 | Completed |
++| T119-A003 | 文档、工作台迁移、响应式 | Completed |
++| T119-A004 | 视觉 QA、回归、review、evidence | Completed |
+diff --git a/AGENTS.md b/AGENTS.md
+index 9d9f3d3..fd20c79 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -2,7 +2,7 @@
+ 
+ ## 项目状态
+ 
+-- 当前阶段：T101-T116 已验收；G002 / T117 与 G002-R1 / T118 均等待目标级验收。
++- 当前阶段：T101-T116 已验收；G002 / T117、G002-R1 / T118 与 G002-R2 / T119 等待目标级验收。
+ - 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
+ - 产品 SSOT：`.ai-platform/docs/product-design.md`。
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+diff --git a/README.md b/README.md
+index cf42b8d..5431e46 100644
+--- a/README.md
++++ b/README.md
+@@ -4,8 +4,8 @@ TellPlot 是基于 AntV G2 的轻量可编辑基础图表库。它为 React 应
+ 
+ ## 当前状态
+ 
+-G001 多图表基础能力已验收；G002 已形成 `@tellplot/editor@0.1.0-beta.1` release candidate，完整质量门禁
+-通过并等待目标级验收。npm publish 与正式版本发布尚未执行。
++G001 多图表基础能力已验收。G002、G002-R1 与 G002-R2 均已完成实现和完整质量验证，等待目标级验收。
++当前 release candidate 为 `@tellplot/editor@0.1.0-beta.1`；npm publish、正式版本发布与网站部署均未执行。
+ 
+ ## 本地开发
+ 
+@@ -25,6 +25,13 @@ pnpm build
+ pnpm test:package
+ ```
+ 
++本地网站包含以下入口：
++
++- `/`：真实图表驱动的 TellPlot 首页。
++- `/examples`：瀑布图、分类柱状图和分类条形图示例中心。
++- `/docs`：安装、React 接入、数据/视图模型、配置和导出入口。
++- `/playground`：亮色双向图表文档编辑器与完整结构工作台。
++
+ ## 当前文档
+ 
+ - [文档入口](docs/README.md)
+@@ -59,3 +66,5 @@ pnpm test:package
+ - [安全图表配置](.ai-platform/specs/003-chart-configuration-foundation/spec.md)
+ - [分类图与多图表架构](.ai-platform/specs/004-categorical-chart-validation/spec.md)
+ - [轻量图表库 Beta](.ai-platform/specs/005-lightweight-chart-library-beta/spec.md)
++- [分组与跨层编辑体验](.ai-platform/specs/006-group-cross-level-experience/spec.md)
++- [开源官网与示例中心](.ai-platform/specs/007-open-source-showcase/spec.md)
+diff --git a/apps/playground/index.html b/apps/playground/index.html
+index 8af6e21..e681240 100644
+--- a/apps/playground/index.html
++++ b/apps/playground/index.html
+@@ -3,8 +3,9 @@
+   <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <meta name="theme-color" content="#f3f5f4" />
+-    <title>TellPlot | 经营利润桥接</title>
++    <meta name="theme-color" content="#f4f6f5" />
++    <meta name="description" content="TellPlot 是基于 AntV G2 的轻量、可嵌入、可编辑基础图表库。" />
++    <title>TellPlot | 可编辑基础图表</title>
+   </head>
+   <body>
+     <div id="root"></div>
+diff --git a/apps/playground/src/App.tsx b/apps/playground/src/App.tsx
+index 19fd077..70178cd 100644
+--- a/apps/playground/src/App.tsx
++++ b/apps/playground/src/App.tsx
+@@ -1,432 +1,61 @@
+-import {
+-  FinancialChartEditor,
+-  createInitialViewSpec,
+-  parseViewSpec,
+-  serializeViewSpec,
+-  type ExportError,
+-  type FinancialChartAppearance,
+-  type FinancialChartEditorHandle,
+-  type FinancialChartEditorLayout,
+-  type FinancialChartEditorPanels,
+-  type SourceData,
+-  type ViewSpec,
+-} from '@tellplot/editor';
+-import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
+-import { useEffect, useMemo, useRef, useState } from 'react';
+-
+-import { getPlaygroundChartType, getPlaygroundFixture } from './fixtures';
+-import { PLAYGROUND_CHART_DOCUMENT_VERSION, type PlaygroundChartDocument } from './chartDocument';
+-import { UsageGuide } from './UsageGuide';
+-
+-const COMPACT_USAGE_QUERY = '(max-width: 1179px)';
+-const DEFAULT_PANELS: FinancialChartEditorPanels = {
+-  outline: true,
+-  inspector: true,
+-  toolbar: true,
+-};
+-const DEFAULT_LAYOUT: FinancialChartEditorLayout = {
+-  outlinePlacement: 'right',
+-  inspectorMode: 'tab',
+-};
+-
+-function initialAppearance(
+-  sourceData: SourceData,
+-  viewSpec: ViewSpec | undefined,
+-): FinancialChartAppearance {
+-  const title =
+-    viewSpec?.chartType === 'bar'
+-      ? '分类条形图'
+-      : viewSpec?.chartType === 'column'
+-        ? '分类柱状图'
+-        : '经营变动瀑布图';
+-  return {
+-    title,
+-    palette: {
+-      start: '#5F6B65',
+-      positive: '#168363',
+-      negative: '#D5524A',
+-      subtotal: '#315C8C',
+-      group: '#A46812',
+-      end: '#315C8C',
+-    },
+-    axis: { x: true, y: true },
+-    valueLabels: 'auto',
+-    tooltip: true,
+-    animation: { enabled: true, duration: 160 },
+-    groupRegion: { enabled: true, fillOpacity: 0.06, label: 'auto' },
+-    numberFormat: {
+-      minimumFractionDigits: 0,
+-      maximumFractionDigits: sourceData.currency === undefined ? 2 : 0,
+-      currencyDisplay: 'narrowSymbol',
+-    },
+-  };
+-}
+-
+-function compactUsageViewport(): boolean {
+-  return window.matchMedia(COMPACT_USAGE_QUERY).matches;
+-}
+-
+-function useCompactUsageLayout(): boolean {
+-  const [compact, setCompact] = useState(compactUsageViewport);
+-
+-  useEffect(() => {
+-    const media = window.matchMedia(COMPACT_USAGE_QUERY);
+-    const update = (): void => setCompact(media.matches);
+-    media.addEventListener('change', update);
+-    return () => media.removeEventListener('change', update);
+-  }, []);
+-
+-  return compact;
++import { useEffect, useMemo, useState } from 'react';
++
++import { DocsPage } from './DocsPage';
++import { ExampleWorkbench } from './ExampleWorkbench';
++import { ExamplesPage } from './ExamplesPage';
++import { HomePage } from './HomePage';
++import { NotFoundPage } from './NotFoundPage';
++import { SiteHeader } from './SiteHeader';
++import { resolveSiteRoute, siteDescriptionForRoute, siteTitleForRoute } from './siteRouting';
++
++function currentLocationKey(): string {
++  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+ }
+ 
+ export function App(): React.JSX.Element {
+-  const fixtureSourceData = useMemo(() => getPlaygroundFixture(window.location.search), []);
+-  const [sourceData, setSourceData] = useState<SourceData>(fixtureSourceData);
+-  const initialChartType = useMemo(() => getPlaygroundChartType(window.location.search), []);
+-  const initialView = useMemo(
+-    () =>
+-      createInitialViewSpec(
+-        fixtureSourceData,
+-        initialChartType === undefined ? undefined : { chartType: initialChartType },
+-      ),
+-    [fixtureSourceData, initialChartType],
+-  );
+-  const [viewSpec, setViewSpec] = useState<ViewSpec | undefined>(() =>
+-    initialView.ok ? initialView.value : undefined,
+-  );
+-  const [chartAppearance, setChartAppearance] = useState<FinancialChartAppearance>(() =>
+-    initialAppearance(fixtureSourceData, initialView.ok ? initialView.value : undefined),
+-  );
+-  const [panels, setPanels] = useState<FinancialChartEditorPanels>(DEFAULT_PANELS);
+-  const [layout, setLayout] = useState<FinancialChartEditorLayout>(DEFAULT_LAYOUT);
+-  const compactUsage = useCompactUsageLayout();
+-  const [usageOpen, setUsageOpen] = useState(() => !compactUsageViewport());
+-  const [exportOpen, setExportOpen] = useState(false);
+-  const [busy, setBusy] = useState<'svg' | 'png' | 'json' | 'import' | null>(null);
+-  const [fileStatus, setFileStatus] = useState({
+-    code: 'FILE_READY',
+-    message: '文件操作已就绪',
+-    tone: 'neutral' as 'neutral' | 'success' | 'error',
+-  });
+-  const editorRef = useRef<FinancialChartEditorHandle>(null);
+-  const usageButtonRef = useRef<HTMLButtonElement>(null);
+-  const exportButtonRef = useRef<HTMLButtonElement>(null);
+-  const exportControlRef = useRef<HTMLDivElement>(null);
+-  const exportMenuRef = useRef<HTMLDivElement>(null);
+-  const importInputRef = useRef<HTMLInputElement>(null);
+-  const chartDocument = useMemo<PlaygroundChartDocument | null>(
+-    () =>
+-      viewSpec === undefined
+-        ? null
+-        : {
+-            documentVersion: PLAYGROUND_CHART_DOCUMENT_VERSION,
+-            sourceData,
+-            viewSpec,
+-            chartAppearance,
+-            panels,
+-            layout,
+-          },
+-    [chartAppearance, layout, panels, sourceData, viewSpec],
++  const [locationKey, setLocationKey] = useState(currentLocationKey);
++  const route = useMemo(
++    () => resolveSiteRoute(new URL(locationKey, window.location.origin)),
++    [locationKey],
+   );
+ 
+-  const closeUsageGuide = (): void => {
+-    setUsageOpen(false);
+-    window.requestAnimationFrame(() => usageButtonRef.current?.focus());
+-  };
++  useEffect(() => {
++    const updateLocation = (): void => setLocationKey(currentLocationKey());
++    window.addEventListener('popstate', updateLocation);
++    return () => window.removeEventListener('popstate', updateLocation);
++  }, []);
+ 
+   useEffect(() => {
+-    if (!exportOpen) {
+-      return undefined;
++    document.title = siteTitleForRoute(route);
++    document
++      .querySelector<HTMLMetaElement>('meta[name="description"]')
++      ?.setAttribute('content', siteDescriptionForRoute(route));
++  }, [route]);
++
++  const navigate = (href: string): void => {
++    const next = new URL(href, window.location.origin);
++    const nextKey = `${next.pathname}${next.search}${next.hash}`;
++    if (nextKey !== currentLocationKey()) {
++      window.history.pushState(null, '', nextKey);
++      setLocationKey(nextKey);
+     }
+-    const closeWithKeyboard = (event: KeyboardEvent): void => {
+-      if (event.key === 'Escape') {
+-        setExportOpen(false);
+-        exportButtonRef.current?.focus();
+-      }
+-    };
+-    const closeOutside = (event: PointerEvent): void => {
+-      if (event.target instanceof Node && !exportControlRef.current?.contains(event.target)) {
+-        setExportOpen(false);
+-      }
+-    };
+-    document.addEventListener('keydown', closeWithKeyboard);
+-    document.addEventListener('pointerdown', closeOutside);
+     window.requestAnimationFrame(() => {
+-      exportMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+-    });
+-    return () => {
+-      document.removeEventListener('keydown', closeWithKeyboard);
+-      document.removeEventListener('pointerdown', closeOutside);
+-    };
+-  }, [exportOpen]);
+-
+-  const navigateExportMenu = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+-    const items = [
+-      ...(exportMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []),
+-    ];
+-    if (items.length === 0) {
+-      return;
+-    }
+-    const current = items.indexOf(document.activeElement as HTMLButtonElement);
+-    let target: number;
+-    if (event.key === 'ArrowDown') {
+-      target = (current + 1) % items.length;
+-    } else if (event.key === 'ArrowUp') {
+-      target = (current - 1 + items.length) % items.length;
+-    } else if (event.key === 'Home') {
+-      target = 0;
+-    } else if (event.key === 'End') {
+-      target = items.length - 1;
+-    } else {
+-      return;
+-    }
+-    event.preventDefault();
+-    items[target]?.focus();
+-  };
+-
+-  const downloadBlob = (blob: Blob, filename: string): void => {
+-    const url = URL.createObjectURL(blob);
+-    const anchor = document.createElement('a');
+-    anchor.href = url;
+-    anchor.download = filename;
+-    anchor.style.display = 'none';
+-    document.body.append(anchor);
+-    anchor.click();
+-    anchor.remove();
+-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+-  };
+-
+-  const exportFailure = (error: unknown): void => {
+-    const structured = error as Partial<ExportError>;
+-    setFileStatus({
+-      code: typeof structured.code === 'string' ? structured.code : 'EXPORT_FAILED',
+-      message: typeof structured.path === 'string' ? structured.path : '/export',
+-      tone: 'error',
+-    });
+-  };
+-
+-  const exportImage = async (format: 'svg' | 'png'): Promise<void> => {
+-    setExportOpen(false);
+-    setBusy(format);
+-    setFileStatus({
+-      code: 'EXPORTING',
+-      message: `正在生成 ${format.toUpperCase()}`,
+-      tone: 'neutral',
+-    });
+-    try {
+-      const result = await editorRef.current?.exportImage({
+-        format,
+-        filename: sourceData.datasetId,
+-        ...(format === 'png' ? { pixelRatio: 2 } : {}),
+-      });
+-      if (result === undefined) {
+-        throw new Error('EXPORT_UNAVAILABLE');
+-      }
+-      downloadBlob(result.blob, result.suggestedFilename);
+-      setFileStatus({
+-        code: `${format.toUpperCase()}_EXPORTED`,
+-        message: `${result.width} x ${result.height}`,
+-        tone: 'success',
+-      });
+-    } catch (error) {
+-      exportFailure(error);
+-    } finally {
+-      setBusy(null);
+-    }
+-  };
+-
+-  const exportJson = (): void => {
+-    setExportOpen(false);
+-    if (viewSpec === undefined) {
+-      setFileStatus({ code: 'EXPORT_UNAVAILABLE', message: '/viewSpec', tone: 'error' });
+-      return;
+-    }
+-    setBusy('json');
+-    const blob = new Blob([serializeViewSpec(viewSpec)], { type: 'application/json' });
+-    downloadBlob(blob, `${sourceData.datasetId}-view.json`);
+-    setFileStatus({
+-      code: 'JSON_EXPORTED',
+-      message: `revision ${viewSpec.revision}`,
+-      tone: 'success',
+-    });
+-    setBusy(null);
+-  };
+-
+-  const importJson = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+-    const file = event.currentTarget.files?.[0];
+-    event.currentTarget.value = '';
+-    if (file === undefined) {
+-      return;
+-    }
+-    setBusy('import');
+-    setFileStatus({ code: 'IMPORTING', message: '正在校验 ViewSpec', tone: 'neutral' });
+-    try {
+-      const parsed = parseViewSpec(await file.text(), sourceData);
+-      if (!parsed.ok) {
+-        const issue = parsed.errors[0];
+-        setFileStatus({
+-          code: issue?.code ?? 'INVALID_VIEW_SPEC',
+-          message: issue?.path ?? '/',
+-          tone: 'error',
+-        });
+-        return;
++      if (next.hash.length > 1) {
++        document.querySelector(next.hash)?.scrollIntoView();
++      } else {
++        window.scrollTo({ top: 0, behavior: 'auto' });
+       }
+-      setViewSpec(parsed.value);
+-      setFileStatus({
+-        code: 'VIEW_IMPORTED',
+-        message: `revision ${parsed.value.revision}`,
+-        tone: 'success',
+-      });
+-    } catch {
+-      setFileStatus({ code: 'INVALID_VIEW_SPEC', message: '/', tone: 'error' });
+-    } finally {
+-      setBusy(null);
+-    }
+-  };
+-
+-  const applyChartDocument = (next: PlaygroundChartDocument): void => {
+-    setSourceData(next.sourceData);
+-    setViewSpec(next.viewSpec);
+-    setChartAppearance(next.chartAppearance);
+-    setPanels(next.panels);
+-    setLayout(next.layout);
+-    setFileStatus({
+-      code: 'DOCUMENT_APPLIED',
+-      message: `revision ${next.viewSpec.revision}`,
+-      tone: 'success',
+     });
+   };
+ 
+   return (
+-    <main className="playground" aria-label="TellPlot 参考编辑器">
+-      <header className="playground-filebar" aria-label="使用、文件与导出">
+-        <div className="playground-filebar__actions">
+-          <button
+-            ref={usageButtonRef}
+-            className="playground-tool-button"
+-            type="button"
+-            aria-label={usageOpen ? '隐藏使用代码' : '显示使用代码'}
+-            aria-controls="playground-usage-guide"
+-            aria-expanded={usageOpen}
+-            title={usageOpen ? '隐藏使用代码' : '显示使用代码'}
+-            onClick={() => {
+-              setExportOpen(false);
+-              if (usageOpen) {
+-                closeUsageGuide();
+-              } else {
+-                setUsageOpen(true);
+-              }
+-            }}
+-          >
+-            <Code2 size={17} aria-hidden="true" />
+-            <span>使用</span>
+-          </button>
+-          <button
+-            className="playground-tool-button"
+-            type="button"
+-            aria-label="导入 ViewSpec"
+-            title="导入 ViewSpec"
+-            disabled={busy !== null}
+-            onClick={() => importInputRef.current?.click()}
+-          >
+-            <FileUp size={17} aria-hidden="true" />
+-            <span>导入</span>
+-          </button>
+-          <input
+-            ref={importInputRef}
+-            className="playground-visually-hidden"
+-            type="file"
+-            accept="application/json,.json"
+-            aria-label="导入 ViewSpec 文件"
+-            onChange={event => void importJson(event)}
+-          />
+-          <div className="playground-export-control" ref={exportControlRef}>
+-            <button
+-              ref={exportButtonRef}
+-              className="playground-tool-button playground-tool-button--primary"
+-              type="button"
+-              aria-label="导出"
+-              aria-haspopup="menu"
+-              aria-expanded={exportOpen}
+-              disabled={busy !== null || viewSpec === undefined}
+-              onClick={() => setExportOpen(open => !open)}
+-            >
+-              {busy === null ? (
+-                <Download size={17} aria-hidden="true" />
+-              ) : (
+-                <LoaderCircle className="playground-spin" size={17} aria-hidden="true" />
+-              )}
+-              <span>导出</span>
+-            </button>
+-            {exportOpen ? (
+-              <div
+-                className="playground-export-menu"
+-                ref={exportMenuRef}
+-                role="menu"
+-                aria-label="导出格式"
+-                onKeyDown={navigateExportMenu}
+-              >
+-                <button type="button" role="menuitem" onClick={() => void exportImage('svg')}>
+-                  <Image size={16} aria-hidden="true" />
+-                  <span>SVG 图像</span>
+-                </button>
+-                <button type="button" role="menuitem" onClick={() => void exportImage('png')}>
+-                  <Image size={16} aria-hidden="true" />
+-                  <span>PNG 图像</span>
+-                </button>
+-                <button type="button" role="menuitem" onClick={exportJson}>
+-                  <FileDown size={16} aria-hidden="true" />
+-                  <span>ViewSpec JSON</span>
+-                </button>
+-              </div>
+-            ) : null}
+-          </div>
+-        </div>
+-        <div
+-          className="playground-file-status"
+-          data-tone={fileStatus.tone}
+-          role="status"
+-          aria-label="文件状态"
+-          aria-live="polite"
+-          aria-atomic="true"
+-        >
+-          <strong>{fileStatus.code}</strong>
+-          <span>{fileStatus.message}</span>
+-        </div>
+-      </header>
+-      <div className="playground-workspace" data-usage-open={usageOpen && !compactUsage}>
+-        {usageOpen && !compactUsage ? (
+-          <UsageGuide
+-            id="playground-usage-guide"
+-            variant="panel"
+-            document={chartDocument}
+-            onApplyDocument={applyChartDocument}
+-            onClose={closeUsageGuide}
+-          />
+-        ) : null}
+-        <div className="playground-editor-surface">
+-          <FinancialChartEditor
+-            ref={editorRef}
+-            sourceData={sourceData}
+-            {...(viewSpec === undefined ? {} : { viewSpec })}
+-            height="100%"
+-            locale="zh-CN"
+-            chartAppearance={chartAppearance}
+-            panels={panels}
+-            layout={layout}
+-            onViewSpecChange={setViewSpec}
+-          />
+-        </div>
+-      </div>
+-      {usageOpen && compactUsage ? (
+-        <UsageGuide
+-          id="playground-usage-guide"
+-          variant="dialog"
+-          document={chartDocument}
+-          onApplyDocument={applyChartDocument}
+-          onClose={closeUsageGuide}
+-        />
+-      ) : null}
+-    </main>
++    <div className="site-app" data-route={route.page}>
++      <SiteHeader key={route.page} page={route.page} onNavigate={navigate} />
++      {route.page === 'home' ? <HomePage onNavigate={navigate} /> : null}
++      {route.page === 'examples' ? <ExamplesPage onNavigate={navigate} /> : null}
++      {route.page === 'docs' ? <DocsPage onNavigate={navigate} /> : null}
++      {route.page === 'playground' ? <ExampleWorkbench key={locationKey} /> : null}
++      {route.page === 'not-found' ? <NotFoundPage onNavigate={navigate} /> : null}
++    </div>
+   );
+ }
+diff --git a/apps/playground/src/DocsPage.tsx b/apps/playground/src/DocsPage.tsx
+new file mode 100644
+index 0000000..8184501
+--- /dev/null
++++ b/apps/playground/src/DocsPage.tsx
+@@ -0,0 +1,159 @@
++import { ArrowRight, Braces, Database, Download, Palette } from 'lucide-react';
++
++import { SiteFooter } from './SiteFooter';
++import { SiteLink } from './SiteLink';
++
++const MINIMAL_REACT_EXAMPLE = `import { FinancialChartEditor } from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
++
++export function ProfitBridge() {
++  return (
++    <FinancialChartEditor
++      sourceData={sourceData}
++      height={680}
++      locale="zh-CN"
++      onViewSpecChange={saveView}
++    />
++  );
++}`;
++
++const DOC_SECTIONS = [
++  { href: '#installation', label: '安装' },
++  { href: '#react', label: 'React 接入' },
++  { href: '#model', label: 'SourceData 与 ViewSpec' },
++  { href: '#appearance', label: '安全配置边界' },
++  { href: '#export', label: '导出' },
++] as const;
++
++export function DocsPage({
++  onNavigate,
++}: {
++  readonly onNavigate: (href: string) => void;
++}): React.JSX.Element {
++  return (
++    <>
++      <main className="site-main site-docs" aria-label="TellPlot 开发者文档">
++        <header className="site-page-intro site-page-intro--docs">
++          <p className="site-kicker">DEVELOPER GUIDE · BETA.1</p>
++          <h1>开发者文档</h1>
++          <p>
++            用类型化数据和有限语义配置接入真实业务图表。TellPlot 管理编辑状态与 G2
++            生命周期，宿主继续拥有数据、权限和保存策略。
++          </p>
++        </header>
++
++        <div className="site-docs-layout">
++          <nav className="site-docs-nav" aria-label="文档目录">
++            <span>本页目录</span>
++            {DOC_SECTIONS.map(section => (
++              <a key={section.href} href={section.href}>
++                {section.label}
++              </a>
++            ))}
++          </nav>
++
++          <article className="site-docs-content">
++            <section id="installation">
++              <header>
++                <Braces size={20} aria-hidden="true" />
++                <span>01</span>
++                <h2>安装</h2>
++              </header>
++              <p>
++                <code>@tellplot/editor</code> 是 React 组件包，G2
++                已作为明确依赖边界包含在发布包合同中。
++              </p>
++              <pre>
++                <code>pnpm add @tellplot/editor</code>
++              </pre>
++            </section>
++
++            <section id="react">
++              <header>
++                <Braces size={20} aria-hidden="true" />
++                <span>02</span>
++                <h2>React 接入</h2>
++              </header>
++              <p>
++                引入组件与样式即可渲染。未传入 <code>viewSpec</code> 时，组件创建确定的初始视图。
++              </p>
++              <pre>
++                <code>{MINIMAL_REACT_EXAMPLE}</code>
++              </pre>
++              <SiteLink className="site-text-link" href="/playground" onNavigate={onNavigate}>
++                在实时工作台查看完整文档 <ArrowRight size={16} aria-hidden="true" />
++              </SiteLink>
++            </section>
++
++            <section id="model">
++              <header>
++                <Database size={20} aria-hidden="true" />
++                <span>03</span>
++                <h2>SourceData 与 ViewSpec</h2>
++              </header>
++              <div className="site-docs-comparison">
++                <div>
++                  <strong>SourceData</strong>
++                  <p>宿主持有的金额、标签、稳定 ID 和来源关系。图表编辑动作不会直接修改它。</p>
++                </div>
++                <div>
++                  <strong>ViewSpec</strong>
++                  <p>顺序、分组、折叠、注释和强调。它可校验、持久化、撤销并确定性恢复。</p>
++                </div>
++              </div>
++            </section>
++
++            <section id="appearance">
++              <header>
++                <Palette size={20} aria-hidden="true" />
++                <span>04</span>
++                <h2>安全配置边界</h2>
++              </header>
++              <p>
++                <code>chartAppearance</code>{' '}
++                允许标题、财务语义色、坐标轴、标签、Tooltip、数字格式、动画与展开分组区域。数据、encode、
++                稳定 key、事件和 G2 instance 始终由内部 adapter 管理。
++              </p>
++              <div className="site-docs-callout">
++                <strong>为什么不透传 G2Spec？</strong>
++                <span>任意 merge 会破坏稳定命中、导出一致性和公共 API 的可演进性。</span>
++              </div>
++            </section>
++
++            <section id="export">
++              <header>
++                <Download size={20} aria-hidden="true" />
++                <span>05</span>
++                <h2>导出</h2>
++              </header>
++              <p>
++                通过组件 ref 导出 SVG 或 PNG，通过 <code>serializeViewSpec</code> 保存视图
++                JSON。屏幕与图像导出共享同一投影、顺序、分组区域和值标签语义。
++              </p>
++            </section>
++          </article>
++
++          <aside className="site-docs-meta" aria-label="当前版本信息">
++            <span>CURRENT CHANNEL</span>
++            <strong>0.1.0-beta.1</strong>
++            <dl>
++              <div>
++                <dt>React</dt>
++                <dd>18 / 19</dd>
++              </div>
++              <div>
++                <dt>Schema</dt>
++                <dd>1.0 / 2.0</dd>
++              </div>
++              <div>
++                <dt>Renderer</dt>
++                <dd>G2 5</dd>
++              </div>
++            </dl>
++          </aside>
++        </div>
++      </main>
++      <SiteFooter onNavigate={onNavigate} />
++    </>
++  );
++}
+diff --git a/apps/playground/src/ExampleWorkbench.tsx b/apps/playground/src/ExampleWorkbench.tsx
+new file mode 100644
+index 0000000..83a47f8
+--- /dev/null
++++ b/apps/playground/src/ExampleWorkbench.tsx
+@@ -0,0 +1,432 @@
++import {
++  FinancialChartEditor,
++  createInitialViewSpec,
++  parseViewSpec,
++  serializeViewSpec,
++  type ExportError,
++  type FinancialChartAppearance,
++  type FinancialChartEditorHandle,
++  type FinancialChartEditorLayout,
++  type FinancialChartEditorPanels,
++  type SourceData,
++  type ViewSpec,
++} from '@tellplot/editor';
++import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
++import { useEffect, useMemo, useRef, useState } from 'react';
++
++import { getPlaygroundChartType, getPlaygroundFixture } from './fixtures';
++import { PLAYGROUND_CHART_DOCUMENT_VERSION, type PlaygroundChartDocument } from './chartDocument';
++import { UsageGuide } from './UsageGuide';
++
++const COMPACT_USAGE_QUERY = '(max-width: 1179px)';
++const DEFAULT_PANELS: FinancialChartEditorPanels = {
++  outline: true,
++  inspector: true,
++  toolbar: true,
++};
++const DEFAULT_LAYOUT: FinancialChartEditorLayout = {
++  outlinePlacement: 'right',
++  inspectorMode: 'tab',
++};
++
++function initialAppearance(
++  sourceData: SourceData,
++  viewSpec: ViewSpec | undefined,
++): FinancialChartAppearance {
++  const title =
++    viewSpec?.chartType === 'bar'
++      ? '分类条形图'
++      : viewSpec?.chartType === 'column'
++        ? '分类柱状图'
++        : '经营变动瀑布图';
++  return {
++    title,
++    palette: {
++      start: '#5F6B65',
++      positive: '#168363',
++      negative: '#D5524A',
++      subtotal: '#315C8C',
++      group: '#A46812',
++      end: '#315C8C',
++    },
++    axis: { x: true, y: true },
++    valueLabels: 'auto',
++    tooltip: true,
++    animation: { enabled: true, duration: 160 },
++    groupRegion: { enabled: true, fillOpacity: 0.06, label: 'auto' },
++    numberFormat: {
++      minimumFractionDigits: 0,
++      maximumFractionDigits: sourceData.currency === undefined ? 2 : 0,
++      currencyDisplay: 'narrowSymbol',
++    },
++  };
++}
++
++function compactUsageViewport(): boolean {
++  return window.matchMedia(COMPACT_USAGE_QUERY).matches;
++}
++
++function useCompactUsageLayout(): boolean {
++  const [compact, setCompact] = useState(compactUsageViewport);
++
++  useEffect(() => {
++    const media = window.matchMedia(COMPACT_USAGE_QUERY);
++    const update = (): void => setCompact(media.matches);
++    media.addEventListener('change', update);
++    return () => media.removeEventListener('change', update);
++  }, []);
++
++  return compact;
++}
++
++export function ExampleWorkbench(): React.JSX.Element {
++  const fixtureSourceData = useMemo(() => getPlaygroundFixture(window.location.search), []);
++  const [sourceData, setSourceData] = useState<SourceData>(fixtureSourceData);
++  const initialChartType = useMemo(() => getPlaygroundChartType(window.location.search), []);
++  const initialView = useMemo(
++    () =>
++      createInitialViewSpec(
++        fixtureSourceData,
++        initialChartType === undefined ? undefined : { chartType: initialChartType },
++      ),
++    [fixtureSourceData, initialChartType],
++  );
++  const [viewSpec, setViewSpec] = useState<ViewSpec | undefined>(() =>
++    initialView.ok ? initialView.value : undefined,
++  );
++  const [chartAppearance, setChartAppearance] = useState<FinancialChartAppearance>(() =>
++    initialAppearance(fixtureSourceData, initialView.ok ? initialView.value : undefined),
++  );
++  const [panels, setPanels] = useState<FinancialChartEditorPanels>(DEFAULT_PANELS);
++  const [layout, setLayout] = useState<FinancialChartEditorLayout>(DEFAULT_LAYOUT);
++  const compactUsage = useCompactUsageLayout();
++  const [usageOpen, setUsageOpen] = useState(() => !compactUsageViewport());
++  const [exportOpen, setExportOpen] = useState(false);
++  const [busy, setBusy] = useState<'svg' | 'png' | 'json' | 'import' | null>(null);
++  const [fileStatus, setFileStatus] = useState({
++    code: 'FILE_READY',
++    message: '文件操作已就绪',
++    tone: 'neutral' as 'neutral' | 'success' | 'error',
++  });
++  const editorRef = useRef<FinancialChartEditorHandle>(null);
++  const usageButtonRef = useRef<HTMLButtonElement>(null);
++  const exportButtonRef = useRef<HTMLButtonElement>(null);
++  const exportControlRef = useRef<HTMLDivElement>(null);
++  const exportMenuRef = useRef<HTMLDivElement>(null);
++  const importInputRef = useRef<HTMLInputElement>(null);
++  const chartDocument = useMemo<PlaygroundChartDocument | null>(
++    () =>
++      viewSpec === undefined
++        ? null
++        : {
++            documentVersion: PLAYGROUND_CHART_DOCUMENT_VERSION,
++            sourceData,
++            viewSpec,
++            chartAppearance,
++            panels,
++            layout,
++          },
++    [chartAppearance, layout, panels, sourceData, viewSpec],
++  );
++
++  const closeUsageGuide = (): void => {
++    setUsageOpen(false);
++    window.requestAnimationFrame(() => usageButtonRef.current?.focus());
++  };
++
++  useEffect(() => {
++    if (!exportOpen) {
++      return undefined;
++    }
++    const closeWithKeyboard = (event: KeyboardEvent): void => {
++      if (event.key === 'Escape') {
++        setExportOpen(false);
++        exportButtonRef.current?.focus();
++      }
++    };
++    const closeOutside = (event: PointerEvent): void => {
++      if (event.target instanceof Node && !exportControlRef.current?.contains(event.target)) {
++        setExportOpen(false);
++      }
++    };
++    document.addEventListener('keydown', closeWithKeyboard);
++    document.addEventListener('pointerdown', closeOutside);
++    window.requestAnimationFrame(() => {
++      exportMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
++    });
++    return () => {
++      document.removeEventListener('keydown', closeWithKeyboard);
++      document.removeEventListener('pointerdown', closeOutside);
++    };
++  }, [exportOpen]);
++
++  const navigateExportMenu = (event: React.KeyboardEvent<HTMLDivElement>): void => {
++    const items = [
++      ...(exportMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []),
++    ];
++    if (items.length === 0) {
++      return;
++    }
++    const current = items.indexOf(document.activeElement as HTMLButtonElement);
++    let target: number;
++    if (event.key === 'ArrowDown') {
++      target = (current + 1) % items.length;
++    } else if (event.key === 'ArrowUp') {
++      target = (current - 1 + items.length) % items.length;
++    } else if (event.key === 'Home') {
++      target = 0;
++    } else if (event.key === 'End') {
++      target = items.length - 1;
++    } else {
++      return;
++    }
++    event.preventDefault();
++    items[target]?.focus();
++  };
++
++  const downloadBlob = (blob: Blob, filename: string): void => {
++    const url = URL.createObjectURL(blob);
++    const anchor = document.createElement('a');
++    anchor.href = url;
++    anchor.download = filename;
++    anchor.style.display = 'none';
++    document.body.append(anchor);
++    anchor.click();
++    anchor.remove();
++    window.setTimeout(() => URL.revokeObjectURL(url), 0);
++  };
++
++  const exportFailure = (error: unknown): void => {
++    const structured = error as Partial<ExportError>;
++    setFileStatus({
++      code: typeof structured.code === 'string' ? structured.code : 'EXPORT_FAILED',
++      message: typeof structured.path === 'string' ? structured.path : '/export',
++      tone: 'error',
++    });
++  };
++
++  const exportImage = async (format: 'svg' | 'png'): Promise<void> => {
++    setExportOpen(false);
++    setBusy(format);
++    setFileStatus({
++      code: 'EXPORTING',
++      message: `正在生成 ${format.toUpperCase()}`,
++      tone: 'neutral',
++    });
++    try {
++      const result = await editorRef.current?.exportImage({
++        format,
++        filename: sourceData.datasetId,
++        ...(format === 'png' ? { pixelRatio: 2 } : {}),
++      });
++      if (result === undefined) {
++        throw new Error('EXPORT_UNAVAILABLE');
++      }
++      downloadBlob(result.blob, result.suggestedFilename);
++      setFileStatus({
++        code: `${format.toUpperCase()}_EXPORTED`,
++        message: `${result.width} x ${result.height}`,
++        tone: 'success',
++      });
++    } catch (error) {
++      exportFailure(error);
++    } finally {
++      setBusy(null);
++    }
++  };
++
++  const exportJson = (): void => {
++    setExportOpen(false);
++    if (viewSpec === undefined) {
++      setFileStatus({ code: 'EXPORT_UNAVAILABLE', message: '/viewSpec', tone: 'error' });
++      return;
++    }
++    setBusy('json');
++    const blob = new Blob([serializeViewSpec(viewSpec)], { type: 'application/json' });
++    downloadBlob(blob, `${sourceData.datasetId}-view.json`);
++    setFileStatus({
++      code: 'JSON_EXPORTED',
++      message: `revision ${viewSpec.revision}`,
++      tone: 'success',
++    });
++    setBusy(null);
++  };
++
++  const importJson = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
++    const file = event.currentTarget.files?.[0];
++    event.currentTarget.value = '';
++    if (file === undefined) {
++      return;
++    }
++    setBusy('import');
++    setFileStatus({ code: 'IMPORTING', message: '正在校验 ViewSpec', tone: 'neutral' });
++    try {
++      const parsed = parseViewSpec(await file.text(), sourceData);
++      if (!parsed.ok) {
++        const issue = parsed.errors[0];
++        setFileStatus({
++          code: issue?.code ?? 'INVALID_VIEW_SPEC',
++          message: issue?.path ?? '/',
++          tone: 'error',
++        });
++        return;
++      }
++      setViewSpec(parsed.value);
++      setFileStatus({
++        code: 'VIEW_IMPORTED',
++        message: `revision ${parsed.value.revision}`,
++        tone: 'success',
++      });
++    } catch {
++      setFileStatus({ code: 'INVALID_VIEW_SPEC', message: '/', tone: 'error' });
++    } finally {
++      setBusy(null);
++    }
++  };
++
++  const applyChartDocument = (next: PlaygroundChartDocument): void => {
++    setSourceData(next.sourceData);
++    setViewSpec(next.viewSpec);
++    setChartAppearance(next.chartAppearance);
++    setPanels(next.panels);
++    setLayout(next.layout);
++    setFileStatus({
++      code: 'DOCUMENT_APPLIED',
++      message: `revision ${next.viewSpec.revision}`,
++      tone: 'success',
++    });
++  };
++
++  return (
++    <main className="playground" aria-label="TellPlot 参考编辑器">
++      <header className="playground-filebar" aria-label="使用、文件与导出">
++        <div className="playground-filebar__actions">
++          <button
++            ref={usageButtonRef}
++            className="playground-tool-button"
++            type="button"
++            aria-label={usageOpen ? '隐藏使用代码' : '显示使用代码'}
++            aria-controls="playground-usage-guide"
++            aria-expanded={usageOpen}
++            title={usageOpen ? '隐藏使用代码' : '显示使用代码'}
++            onClick={() => {
++              setExportOpen(false);
++              if (usageOpen) {
++                closeUsageGuide();
++              } else {
++                setUsageOpen(true);
++              }
++            }}
++          >
++            <Code2 size={17} aria-hidden="true" />
++            <span>使用</span>
++          </button>
++          <button
++            className="playground-tool-button"
++            type="button"
++            aria-label="导入 ViewSpec"
++            title="导入 ViewSpec"
++            disabled={busy !== null}
++            onClick={() => importInputRef.current?.click()}
++          >
++            <FileUp size={17} aria-hidden="true" />
++            <span>导入</span>
++          </button>
++          <input
++            ref={importInputRef}
++            className="playground-visually-hidden"
++            type="file"
++            accept="application/json,.json"
++            aria-label="导入 ViewSpec 文件"
++            onChange={event => void importJson(event)}
++          />
++          <div className="playground-export-control" ref={exportControlRef}>
++            <button
++              ref={exportButtonRef}
++              className="playground-tool-button playground-tool-button--primary"
++              type="button"
++              aria-label="导出"
++              aria-haspopup="menu"
++              aria-expanded={exportOpen}
++              disabled={busy !== null || viewSpec === undefined}
++              onClick={() => setExportOpen(open => !open)}
++            >
++              {busy === null ? (
++                <Download size={17} aria-hidden="true" />
++              ) : (
++                <LoaderCircle className="playground-spin" size={17} aria-hidden="true" />
++              )}
++              <span>导出</span>
++            </button>
++            {exportOpen ? (
++              <div
++                className="playground-export-menu"
++                ref={exportMenuRef}
++                role="menu"
++                aria-label="导出格式"
++                onKeyDown={navigateExportMenu}
++              >
++                <button type="button" role="menuitem" onClick={() => void exportImage('svg')}>
++                  <Image size={16} aria-hidden="true" />
++                  <span>SVG 图像</span>
++                </button>
++                <button type="button" role="menuitem" onClick={() => void exportImage('png')}>
++                  <Image size={16} aria-hidden="true" />
++                  <span>PNG 图像</span>
++                </button>
++                <button type="button" role="menuitem" onClick={exportJson}>
++                  <FileDown size={16} aria-hidden="true" />
++                  <span>ViewSpec JSON</span>
++                </button>
++              </div>
++            ) : null}
++          </div>
++        </div>
++        <div
++          className="playground-file-status"
++          data-tone={fileStatus.tone}
++          role="status"
++          aria-label="文件状态"
++          aria-live="polite"
++          aria-atomic="true"
++        >
++          <strong>{fileStatus.code}</strong>
++          <span>{fileStatus.message}</span>
++        </div>
++      </header>
++      <div className="playground-workspace" data-usage-open={usageOpen && !compactUsage}>
++        {usageOpen && !compactUsage ? (
++          <UsageGuide
++            id="playground-usage-guide"
++            variant="panel"
++            document={chartDocument}
++            onApplyDocument={applyChartDocument}
++            onClose={closeUsageGuide}
++          />
++        ) : null}
++        <div className="playground-editor-surface">
++          <FinancialChartEditor
++            ref={editorRef}
++            sourceData={sourceData}
++            {...(viewSpec === undefined ? {} : { viewSpec })}
++            height="100%"
++            locale="zh-CN"
++            chartAppearance={chartAppearance}
++            panels={panels}
++            layout={layout}
++            onViewSpecChange={setViewSpec}
++          />
++        </div>
++      </div>
++      {usageOpen && compactUsage ? (
++        <UsageGuide
++          id="playground-usage-guide"
++          variant="dialog"
++          document={chartDocument}
++          onApplyDocument={applyChartDocument}
++          onClose={closeUsageGuide}
++        />
++      ) : null}
++    </main>
++  );
++}
+diff --git a/apps/playground/src/ExamplesPage.tsx b/apps/playground/src/ExamplesPage.tsx
+new file mode 100644
+index 0000000..0d7dd23
+--- /dev/null
++++ b/apps/playground/src/ExamplesPage.tsx
+@@ -0,0 +1,183 @@
++import { ArrowRight, Search, X } from 'lucide-react';
++import { useState } from 'react';
++
++import {
++  EXAMPLE_CATALOG,
++  type ShowcaseExample,
++  type ShowcaseExampleCategory,
++} from './exampleCatalog';
++import { ShowcaseChart } from './ShowcaseChart';
++import { SiteFooter } from './SiteFooter';
++import { SiteLink } from './SiteLink';
++
++type ExampleFilter = 'all' | ShowcaseExampleCategory;
++
++const EXAMPLE_FILTERS: readonly {
++  readonly id: ExampleFilter;
++  readonly label: string;
++  readonly description: string;
++}[] = [
++  { id: 'all', label: '全部图表', description: '当前已验证的全部图表' },
++  { id: 'financial', label: '财务图表', description: '起点、贡献、小计与终点' },
++  { id: 'categorical', label: '分类比较', description: '纵向或横向比较分类值' },
++] as const;
++
++function matchesSearch(example: ShowcaseExample, query: string): boolean {
++  const normalizedQuery = query.trim().toLocaleLowerCase('zh-CN');
++  if (normalizedQuery.length === 0) {
++    return true;
++  }
++  return [example.title, example.shortTitle, example.eyebrow, ...example.tags].some(value =>
++    value.toLocaleLowerCase('zh-CN').includes(normalizedQuery),
++  );
++}
++
++export function ExamplesPage({
++  onNavigate,
++}: {
++  readonly onNavigate: (href: string) => void;
++}): React.JSX.Element {
++  const [filter, setFilter] = useState<ExampleFilter>('all');
++  const [query, setQuery] = useState('');
++  const visibleExamples = EXAMPLE_CATALOG.filter(
++    example => (filter === 'all' || example.category === filter) && matchesSearch(example, query),
++  );
++  const activeFilter = EXAMPLE_FILTERS.find(candidate => candidate.id === filter);
++
++  return (
++    <>
++      <main className="site-main site-examples" aria-label="TellPlot 图表示例">
++        <header className="site-example-library-header">
++          <div>
++            <span className="site-kicker">Examples</span>
++            <h1>图表示例</h1>
++            <p>浏览真实运行的 TellPlot 图表，选择示例即可进入在线编辑。</p>
++          </div>
++          <label className="site-example-search">
++            <Search size={18} aria-hidden="true" />
++            <span className="sr-only">搜索图表示例</span>
++            <input
++              type="search"
++              placeholder="搜索图表"
++              value={query}
++              onChange={event => setQuery(event.currentTarget.value)}
++            />
++            {query.length > 0 ? (
++              <button type="button" aria-label="清空搜索" onClick={() => setQuery('')}>
++                <X size={16} aria-hidden="true" />
++              </button>
++            ) : null}
++          </label>
++        </header>
++
++        <div className="site-example-browser">
++          <aside className="site-example-sidebar">
++            <strong>图表类型</strong>
++            <nav aria-label="筛选图表示例">
++              {EXAMPLE_FILTERS.map(option => {
++                const count =
++                  option.id === 'all'
++                    ? EXAMPLE_CATALOG.length
++                    : EXAMPLE_CATALOG.filter(example => example.category === option.id).length;
++                return (
++                  <button
++                    key={option.id}
++                    type="button"
++                    aria-pressed={filter === option.id}
++                    title={option.description}
++                    onClick={() => setFilter(option.id)}
++                  >
++                    <span>{option.label}</span>
++                    <small>{count}</small>
++                  </button>
++                );
++              })}
++            </nav>
++            <div className="site-example-sidebar__note">
++              <strong>基于 G2</strong>
++              <p>示例直接运行真实组件，不使用静态缩略图。</p>
++            </div>
++          </aside>
++
++          <section className="site-example-results" aria-label="已验证图表示例">
++            <header className="site-example-results__header">
++              <div>
++                <h2>{activeFilter?.label ?? '图表示例'}</h2>
++                <p>{activeFilter?.description}</p>
++              </div>
++              <span aria-live="polite">{visibleExamples.length} 个示例</span>
++            </header>
++
++            {visibleExamples.length > 0 ? (
++              <div className="site-example-grid">
++                {visibleExamples.map(example => (
++                  <article
++                    key={example.id}
++                    className="site-example-card"
++                    data-accent={example.accent}
++                  >
++                    <div className="site-example-card__preview">
++                      <ShowcaseChart exampleId={example.id} compact />
++                      <SiteLink
++                        className="site-example-card__open"
++                        href={example.workbenchHref}
++                        ariaLabel={`打开${example.title}工作台`}
++                        onNavigate={onNavigate}
++                      >
++                        打开工作台 <ArrowRight size={15} aria-hidden="true" />
++                      </SiteLink>
++                    </div>
++                    <div className="site-example-card__body">
++                      <div>
++                        <small>{example.eyebrow}</small>
++                        <h3>{example.title}</h3>
++                      </div>
++                      <p>{example.description}</p>
++                      <div
++                        className="site-example-card__tags"
++                        aria-label={`${example.title}能力标签`}
++                      >
++                        {example.tags.map(tag => (
++                          <span key={tag}>{tag}</span>
++                        ))}
++                      </div>
++                    </div>
++                  </article>
++                ))}
++              </div>
++            ) : (
++              <div className="site-example-empty" role="status">
++                <Search size={24} aria-hidden="true" />
++                <h3>没有匹配的图表</h3>
++                <p>尝试搜索“瀑布图”“柱状图”或清空当前筛选。</p>
++                <button
++                  type="button"
++                  onClick={() => {
++                    setFilter('all');
++                    setQuery('');
++                  }}
++                >
++                  查看全部图表
++                </button>
++              </div>
++            )}
++          </section>
++        </div>
++
++        <section className="site-example-next" aria-labelledby="example-next-title">
++          <div>
++            <span>持续扩展</span>
++            <h2 id="example-next-title">从真实需求增加下一组图表</h2>
++          </div>
++          <p>
++            每个新增图表都会一起完成数据合同、交互、导出和浏览器验证，而不是只增加一张静态演示图。
++          </p>
++          <SiteLink className="site-button site-button--quiet" href="/docs" onNavigate={onNavigate}>
++            了解设计边界 <ArrowRight size={16} aria-hidden="true" />
++          </SiteLink>
++        </section>
++      </main>
++      <SiteFooter onNavigate={onNavigate} />
++    </>
++  );
++}
+diff --git a/apps/playground/src/HomePage.tsx b/apps/playground/src/HomePage.tsx
+new file mode 100644
+index 0000000..1209c22
+--- /dev/null
++++ b/apps/playground/src/HomePage.tsx
+@@ -0,0 +1,170 @@
++import { ArrowRight, Check, Clipboard, Code2 } from 'lucide-react';
++import { useEffect, useState } from 'react';
++
++import { EXAMPLE_CATALOG, exampleById, type ShowcaseExampleId } from './exampleCatalog';
++import { writeClipboard } from './clipboard';
++import { ShowcaseChart } from './ShowcaseChart';
++import { SiteFooter } from './SiteFooter';
++import { SiteLink } from './SiteLink';
++
++const INSTALL_COMMAND = 'pnpm add @tellplot/editor';
++
++export function HomePage({
++  onNavigate,
++}: {
++  readonly onNavigate: (href: string) => void;
++}): React.JSX.Element {
++  const [selectedId, setSelectedId] = useState<ShowcaseExampleId>('waterfall');
++  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
++  const selected = exampleById(selectedId);
++
++  useEffect(() => {
++    if (copyState !== 'copied') {
++      return undefined;
++    }
++    const timeout = window.setTimeout(() => setCopyState('idle'), 1600);
++    return () => window.clearTimeout(timeout);
++  }, [copyState]);
++
++  const copyInstall = async (): Promise<void> => {
++    await writeClipboard(INSTALL_COMMAND);
++    setCopyState('copied');
++  };
++
++  return (
++    <>
++      <main className="site-main site-home" aria-label="TellPlot 首页">
++        <section className="site-hero" aria-labelledby="site-hero-title">
++          <div className="site-hero__intro">
++            <p className="site-kicker">Powered by AntV G2</p>
++            <h1 id="site-hero-title">TellPlot</h1>
++            <p className="site-hero__summary">
++              面向 React 的轻量可编辑基础图表库。
++              <span>
++                用稳定的数据合同完成排序、分组、导出与视图保存，不需要直接管理 G2 生命周期。
++              </span>
++            </p>
++            <div className="site-hero__actions">
++              <SiteLink
++                className="site-button site-button--primary"
++                href="/docs"
++                onNavigate={onNavigate}
++              >
++                快速开始 <ArrowRight size={17} aria-hidden="true" />
++              </SiteLink>
++              <SiteLink
++                className="site-button site-button--quiet"
++                href="/examples"
++                onNavigate={onNavigate}
++              >
++                <Code2 size={17} aria-hidden="true" />
++                查看示例
++              </SiteLink>
++            </div>
++          </div>
++
++          <div className="site-hero__selector" role="group" aria-label="选择图表家族">
++            {EXAMPLE_CATALOG.map(example => (
++              <button
++                key={example.id}
++                type="button"
++                aria-pressed={selectedId === example.id}
++                onClick={() => setSelectedId(example.id)}
++              >
++                <span>{example.ordinal}</span>
++                {example.title}
++              </button>
++            ))}
++          </div>
++
++          <div className="site-hero__chart-plane">
++            <div className="site-hero__chart-meta" aria-live="polite">
++              <span>{selected.eyebrow}</span>
++              <strong>{selected.description}</strong>
++            </div>
++            <ShowcaseChart key={selected.id} exampleId={selected.id} testId="showcase-chart" />
++          </div>
++        </section>
++
++        <section className="site-capabilities" aria-labelledby="capabilities-title">
++          <header className="site-section-heading">
++            <span>核心能力</span>
++            <h2 id="capabilities-title">图表负责表达，视图负责编辑</h2>
++            <p>
++              直接操作、结构大纲、键盘与宿主调用进入同一套命令，保持业务数据和呈现状态清晰分离。
++            </p>
++          </header>
++          <div className="site-capability-index">
++            <article>
++              <h3>SourceData 不可变</h3>
++              <p>金额、标签与来源关系由宿主持有，图表编辑动作不直接改写原始数据。</p>
++            </article>
++            <article>
++              <h3>ViewSpec 可重放</h3>
++              <p>顺序、层级、折叠与强调独立保存，可以撤销、恢复并确定性导出。</p>
++            </article>
++            <article>
++              <h3>G2 负责图形</h3>
++              <p>比例尺、场景边界、渲染和动画交给 G2，TellPlot 专注业务语义与编辑契约。</p>
++            </article>
++          </div>
++        </section>
++
++        <section className="site-example-ledger" aria-labelledby="example-ledger-title">
++          <header className="site-section-heading">
++            <span>图表示例</span>
++            <h2 id="example-ledger-title">从真实业务图形开始</h2>
++            <p>每个示例都运行真实组件，并通过交互、导出、无障碍与浏览器矩阵验证。</p>
++          </header>
++          <div className="site-example-ledger__rows">
++            {EXAMPLE_CATALOG.map(example => (
++              <SiteLink
++                key={example.id}
++                href={example.workbenchHref}
++                onNavigate={onNavigate}
++                ariaLabel={`打开${example.title}工作台`}
++              >
++                <span className="site-example-ledger__ordinal">{example.ordinal}</span>
++                <span>
++                  <small>{example.eyebrow}</small>
++                  <strong>{example.title}</strong>
++                </span>
++                <span>{example.detail}</span>
++                <ArrowRight size={20} aria-hidden="true" />
++              </SiteLink>
++            ))}
++          </div>
++        </section>
++
++        <section className="site-install-band" aria-labelledby="install-title">
++          <div>
++            <span>开始使用</span>
++            <h2 id="install-title">一分钟接入 TellPlot</h2>
++          </div>
++          <div className="site-install-command">
++            <code>{INSTALL_COMMAND}</code>
++            <button
++              type="button"
++              aria-label="复制安装命令"
++              title="复制安装命令"
++              onClick={() => void copyInstall()}
++            >
++              {copyState === 'copied' ? (
++                <Check size={18} aria-hidden="true" />
++              ) : (
++                <Clipboard size={18} aria-hidden="true" />
++              )}
++            </button>
++            <span role="status" aria-live="polite">
++              {copyState === 'copied' ? '已复制' : ''}
++            </span>
++          </div>
++          <SiteLink className="site-text-link" href="/docs" onNavigate={onNavigate}>
++            阅读接入文档 <ArrowRight size={16} aria-hidden="true" />
++          </SiteLink>
++        </section>
++      </main>
++      <SiteFooter onNavigate={onNavigate} />
++    </>
++  );
++}
+diff --git a/apps/playground/src/NotFoundPage.tsx b/apps/playground/src/NotFoundPage.tsx
+new file mode 100644
+index 0000000..e1fac66
+--- /dev/null
++++ b/apps/playground/src/NotFoundPage.tsx
+@@ -0,0 +1,21 @@
++import { ArrowLeft } from 'lucide-react';
++
++import { SiteLink } from './SiteLink';
++
++export function NotFoundPage({
++  onNavigate,
++}: {
++  readonly onNavigate: (href: string) => void;
++}): React.JSX.Element {
++  return (
++    <main className="site-not-found" aria-labelledby="not-found-title">
++      <span>404 / ROUTE_NOT_FOUND</span>
++      <h1 id="not-found-title">页面不存在</h1>
++      <p>这个地址不在当前 TellPlot 网站结构中。</p>
++      <SiteLink className="site-button site-button--primary" href="/" onNavigate={onNavigate}>
++        <ArrowLeft size={17} aria-hidden="true" />
++        返回首页
++      </SiteLink>
++    </main>
++  );
++}
+diff --git a/apps/playground/src/ShowcaseChart.tsx b/apps/playground/src/ShowcaseChart.tsx
+new file mode 100644
+index 0000000..04c9907
+--- /dev/null
++++ b/apps/playground/src/ShowcaseChart.tsx
+@@ -0,0 +1,73 @@
++import {
++  FinancialChartEditor,
++  createInitialViewSpec,
++  type FinancialChartAppearance,
++} from '@tellplot/editor';
++
++import { EXAMPLE_CATALOG, type ShowcaseExampleId } from './exampleCatalog';
++import { getPlaygroundFixture } from './fixtures';
++
++const SHOWCASE_PALETTE = {
++  start: '#5F6B65',
++  positive: '#168363',
++  negative: '#D5524A',
++  subtotal: '#315C8C',
++  group: '#A46812',
++  end: '#315C8C',
++} as const;
++
++export interface ShowcaseChartProps {
++  readonly exampleId: ShowcaseExampleId;
++  readonly compact?: boolean;
++  readonly testId?: string;
++}
++
++export function ShowcaseChart({
++  exampleId,
++  compact = false,
++  testId,
++}: ShowcaseChartProps): React.JSX.Element {
++  const example = EXAMPLE_CATALOG.find(candidate => candidate.id === exampleId);
++  if (example === undefined) {
++    return <p role="alert">示例不存在</p>;
++  }
++
++  const sourceData = getPlaygroundFixture(example.fixtureSearch);
++  const result = createInitialViewSpec(
++    sourceData,
++    example.chartType === 'bar' ? { chartType: 'bar' } : undefined,
++  );
++  if (!result.ok) {
++    return <p role="alert">示例数据无法渲染</p>;
++  }
++
++  const appearance: FinancialChartAppearance = {
++    title: example.title,
++    palette: SHOWCASE_PALETTE,
++    axis: compact ? { x: false, y: true } : { x: true, y: true },
++    valueLabels: compact ? 'never' : 'auto',
++    tooltip: true,
++    animation: { enabled: true, duration: 220 },
++    groupRegion: { enabled: !compact, fillOpacity: 0.05, label: 'auto' },
++    numberFormat: {
++      minimumFractionDigits: 0,
++      maximumFractionDigits: sourceData.currency === undefined ? 2 : 0,
++      currencyDisplay: 'narrowSymbol',
++    },
++  };
++
++  return (
++    <div className="showcase-chart" data-example-id={example.id} data-testid={testId} inert>
++      <FinancialChartEditor
++        key={example.id}
++        sourceData={sourceData}
++        viewSpec={result.value}
++        height="100%"
++        locale="zh-CN"
++        readOnly
++        chartAppearance={appearance}
++        panels={{ outline: false, inspector: false, toolbar: false }}
++      />
++    </div>
++  );
++}
+diff --git a/apps/playground/src/SiteFooter.tsx b/apps/playground/src/SiteFooter.tsx
+new file mode 100644
+index 0000000..a7ac9e0
+--- /dev/null
++++ b/apps/playground/src/SiteFooter.tsx
+@@ -0,0 +1,30 @@
++import { ArrowUpRight } from 'lucide-react';
++
++import { SiteLink } from './SiteLink';
++
++export function SiteFooter({
++  onNavigate,
++}: {
++  readonly onNavigate: (href: string) => void;
++}): React.JSX.Element {
++  return (
++    <footer className="site-footer">
++      <div className="site-footer__brand">
++        <strong>TellPlot</strong>
++        <span>基于 AntV G2 的轻量可编辑基础图表库</span>
++      </div>
++      <nav aria-label="页脚导航">
++        <SiteLink href="/examples" onNavigate={onNavigate}>
++          示例
++        </SiteLink>
++        <SiteLink href="/docs" onNavigate={onNavigate}>
++          文档
++        </SiteLink>
++        <SiteLink href="/playground" onNavigate={onNavigate}>
++          在线编辑 <ArrowUpRight size={14} aria-hidden="true" />
++        </SiteLink>
++      </nav>
++      <span className="site-footer__meta">React 18/19 · G2 5 · TypeScript</span>
++    </footer>
++  );
++}
+diff --git a/apps/playground/src/SiteHeader.tsx b/apps/playground/src/SiteHeader.tsx
+new file mode 100644
+index 0000000..04cd9a8
+--- /dev/null
++++ b/apps/playground/src/SiteHeader.tsx
+@@ -0,0 +1,112 @@
++import { ArrowUpRight, Menu, SquareTerminal, X } from 'lucide-react';
++import { useEffect, useRef, useState } from 'react';
++
++import type { SitePage } from './siteRouting';
++import { SiteLink } from './SiteLink';
++
++const NAV_ITEMS = [
++  { page: 'home', href: '/', label: '首页' },
++  { page: 'examples', href: '/examples', label: '示例' },
++  { page: 'docs', href: '/docs', label: '文档' },
++  { page: 'playground', href: '/playground', label: '在线编辑' },
++] as const;
++
++export interface SiteHeaderProps {
++  readonly page: SitePage;
++  readonly onNavigate: (href: string) => void;
++}
++
++export function SiteHeader({ page, onNavigate }: SiteHeaderProps): React.JSX.Element {
++  const [mobileOpen, setMobileOpen] = useState(false);
++  const menuButtonRef = useRef<HTMLButtonElement>(null);
++
++  useEffect(() => {
++    if (!mobileOpen) {
++      return undefined;
++    }
++    const closeMenu = (event: KeyboardEvent): void => {
++      if (event.key === 'Escape') {
++        setMobileOpen(false);
++        window.requestAnimationFrame(() => menuButtonRef.current?.focus());
++      }
++    };
++    document.addEventListener('keydown', closeMenu);
++    return () => document.removeEventListener('keydown', closeMenu);
++  }, [mobileOpen]);
++
++  const navigateAndClose = (href: string): void => {
++    setMobileOpen(false);
++    onNavigate(href);
++  };
++
++  return (
++    <header className="site-header">
++      <div className="site-header__inner">
++        <SiteLink className="site-brand" href="/" onNavigate={onNavigate} ariaLabel="TellPlot 首页">
++          <span className="site-brand__mark" aria-hidden="true">
++            <span />
++            <span />
++            <span />
++          </span>
++          <strong>TellPlot</strong>
++          <span className="site-brand__version">BETA</span>
++        </SiteLink>
++
++        <nav className="site-desktop-nav" aria-label="主导航">
++          {NAV_ITEMS.map(item => (
++            <SiteLink
++              key={item.page}
++              href={item.href}
++              current={page === item.page}
++              onNavigate={onNavigate}
++            >
++              {item.label}
++            </SiteLink>
++          ))}
++        </nav>
++
++        <SiteLink
++          className="site-header__workbench"
++          href="/playground"
++          current={page === 'playground'}
++          onNavigate={onNavigate}
++        >
++          <SquareTerminal size={16} aria-hidden="true" />
++          <span>打开工作台</span>
++        </SiteLink>
++
++        <button
++          ref={menuButtonRef}
++          className="site-mobile-menu-button"
++          type="button"
++          aria-label={mobileOpen ? '关闭导航菜单' : '打开导航菜单'}
++          aria-controls="site-mobile-navigation"
++          aria-expanded={mobileOpen}
++          title={mobileOpen ? '关闭导航菜单' : '打开导航菜单'}
++          onClick={() => setMobileOpen(open => !open)}
++        >
++          {mobileOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
++        </button>
++      </div>
++
++      <nav
++        className="site-mobile-nav"
++        id="site-mobile-navigation"
++        aria-label="移动导航"
++        hidden={!mobileOpen}
++      >
++        {NAV_ITEMS.map(item => (
++          <SiteLink
++            key={item.page}
++            href={item.href}
++            current={page === item.page}
++            onNavigate={navigateAndClose}
++          >
++            <span>{item.label}</span>
++            <ArrowUpRight size={15} aria-hidden="true" />
++          </SiteLink>
++        ))}
++      </nav>
++    </header>
++  );
++}
+diff --git a/apps/playground/src/SiteLink.tsx b/apps/playground/src/SiteLink.tsx
+new file mode 100644
+index 0000000..a946435
+--- /dev/null
++++ b/apps/playground/src/SiteLink.tsx
+@@ -0,0 +1,39 @@
++import type { MouseEvent, ReactNode } from 'react';
++
++export interface SiteLinkProps {
++  readonly href: string;
++  readonly className?: string;
++  readonly ariaLabel?: string;
++  readonly current?: boolean;
++  readonly onNavigate: (href: string) => void;
++  readonly children: ReactNode;
++}
++
++export function SiteLink({
++  href,
++  className,
++  ariaLabel,
++  current = false,
++  onNavigate,
++  children,
++}: SiteLinkProps): React.JSX.Element {
++  const navigate = (event: MouseEvent<HTMLAnchorElement>): void => {
++    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
++      return;
++    }
++    event.preventDefault();
++    onNavigate(href);
++  };
++
++  return (
++    <a
++      className={className}
++      href={href}
++      aria-label={ariaLabel}
++      aria-current={current ? 'page' : undefined}
++      onClick={navigate}
++    >
++      {children}
++    </a>
++  );
++}
+diff --git a/apps/playground/src/exampleCatalog.ts b/apps/playground/src/exampleCatalog.ts
+new file mode 100644
+index 0000000..a642e60
+--- /dev/null
++++ b/apps/playground/src/exampleCatalog.ts
+@@ -0,0 +1,75 @@
++export type ShowcaseExampleId = 'waterfall' | 'column' | 'bar';
++export type ShowcaseExampleCategory = 'financial' | 'categorical';
++
++export interface ShowcaseExample {
++  readonly id: ShowcaseExampleId;
++  readonly ordinal: string;
++  readonly chartType: ShowcaseExampleId;
++  readonly category: ShowcaseExampleCategory;
++  readonly title: string;
++  readonly shortTitle: string;
++  readonly eyebrow: string;
++  readonly description: string;
++  readonly detail: string;
++  readonly tags: readonly string[];
++  readonly fixtureSearch: string;
++  readonly workbenchHref: string;
++  readonly accent: 'emerald' | 'blue' | 'coral';
++}
++
++/** Website-only content catalog. It is intentionally not a chart runtime registry. */
++export const EXAMPLE_CATALOG: readonly ShowcaseExample[] = [
++  {
++    id: 'waterfall',
++    ordinal: '01',
++    chartType: 'waterfall',
++    category: 'financial',
++    title: '经营变动瀑布图',
++    shortTitle: '瀑布图',
++    eyebrow: 'Waterfall',
++    description: '解释起点、正负贡献、小计与终点之间的经营变化。',
++    detail: '支持财务锚点、递归分组、跨层排序和确定性合计。',
++    tags: ['财务桥接', '分组', '小计'],
++    fixtureSearch: '',
++    workbenchHref: '/playground',
++    accent: 'emerald',
++  },
++  {
++    id: 'column',
++    ordinal: '02',
++    chartType: 'column',
++    category: 'categorical',
++    title: '分类柱状图',
++    shortTitle: '柱状图',
++    eyebrow: 'Column',
++    description: '在同一分类语义中比较业务项目的正负规模。',
++    detail: '共享排序、固定、分组和 ViewSpec，不复制命令内核。',
++    tags: ['分类比较', '纵向', '正负值'],
++    fixtureSearch: '?fixture=categorical-column',
++    workbenchHref: '/playground?fixture=categorical-column',
++    accent: 'blue',
++  },
++  {
++    id: 'bar',
++    ordinal: '03',
++    chartType: 'bar',
++    category: 'categorical',
++    title: '分类条形图',
++    shortTitle: '条形图',
++    eyebrow: 'Bar',
++    description: '横向比较长标签与正负值，保持逻辑顺序稳定。',
++    detail: '由 G2 transpose 负责方向转换，交互读取真实分类轴边界。',
++    tags: ['分类比较', '横向', '长标签'],
++    fixtureSearch: '?fixture=categorical-bar',
++    workbenchHref: '/playground?fixture=categorical-bar',
++    accent: 'coral',
++  },
++] as const;
++
++export function exampleById(id: ShowcaseExampleId): ShowcaseExample {
++  const example = EXAMPLE_CATALOG.find(candidate => candidate.id === id);
++  if (example === undefined) {
++    throw new Error(`Unknown showcase example: ${id}`);
++  }
++  return example;
++}
+diff --git a/apps/playground/src/playground.css b/apps/playground/src/playground.css
+index e8a3d99..472e3fa 100644
+--- a/apps/playground/src/playground.css
++++ b/apps/playground/src/playground.css
+@@ -1,21 +1,2804 @@
+ :root {
+   color: #18211d;
+-  background: #f3f5f4;
++  background: #f4f6f5;
+   font-family: Inter, 'Noto Sans SC', 'PingFang SC', system-ui, sans-serif;
+ }
+ 
+ html,
+ body,
+-#root,
+-.playground {
++#root {
+   width: 100%;
+   height: 100%;
+   margin: 0;
+ }
+ 
+-.playground {
++body {
++  overflow-x: hidden;
++}
++
++button,
++a {
++  -webkit-tap-highlight-color: transparent;
++}
++
++.site-app {
++  --site-canvas: #f4f6f5;
++  --site-paper: #ffffff;
++  --site-ink: #17221d;
++  --site-muted: #5d6b64;
++  --site-rule: #d8deda;
++  --site-rule-strong: #adb8b2;
++  --site-emerald: #126e57;
++  --site-coral: #a33a34;
++  --site-blue: #315c8c;
++  --site-amber: #a46812;
++  min-height: 100%;
++  color: var(--site-ink);
++  background: var(--site-canvas);
++}
++
++.site-app,
++.site-app * {
++  box-sizing: border-box;
++}
++
++.site-app[data-route='playground'] {
+   display: grid;
+-  grid-template-rows: 46px minmax(0, 1fr);
++  grid-template-rows: 64px minmax(0, 1fr);
++  height: 100%;
++  overflow: hidden;
++}
++
++.site-header {
++  position: sticky;
++  top: 0;
++  z-index: 100;
++  height: 64px;
++  border-bottom: 1px solid var(--site-rule);
++  background: rgb(255 255 255 / 96%);
++}
++
++.site-header__inner {
++  display: grid;
++  grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
++  width: min(100%, 1440px);
++  height: 100%;
++  align-items: center;
++  padding: 0 40px;
++  margin: 0 auto;
++}
++
++.site-brand,
++.site-desktop-nav,
++.site-header__workbench,
++.site-mobile-nav a,
++.site-footer nav,
++.site-footer nav a,
++.site-button,
++.site-text-link {
++  display: inline-flex;
++  align-items: center;
++}
++
++.site-brand {
++  justify-self: start;
++  gap: 10px;
++  color: var(--site-ink);
++  text-decoration: none;
++}
++
++.site-brand__mark {
++  display: flex;
++  width: 24px;
++  height: 24px;
++  align-items: flex-end;
++  justify-content: center;
++  gap: 2px;
++  padding: 5px;
++  border: 1px solid var(--site-ink);
++}
++
++.site-brand__mark span {
++  width: 3px;
++  background: var(--site-ink);
++}
++
++.site-brand__mark span:nth-child(1) {
++  height: 6px;
++}
++
++.site-brand__mark span:nth-child(2) {
++  height: 12px;
++  background: var(--site-emerald);
++}
++
++.site-brand__mark span:nth-child(3) {
++  height: 9px;
++}
++
++.site-brand strong {
++  font-size: 17px;
++  line-height: 1;
++}
++
++.site-brand__version {
++  padding-left: 9px;
++  border-left: 1px solid var(--site-rule);
++  color: var(--site-muted);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 9px;
++}
++
++.site-desktop-nav {
++  align-self: stretch;
++  justify-content: center;
++  gap: 30px;
++}
++
++.site-desktop-nav a {
++  position: relative;
++  display: inline-flex;
++  align-items: center;
++  color: #435149;
++  font-size: 13px;
++  font-weight: 560;
++  text-decoration: none;
++}
++
++.site-desktop-nav a::after {
++  position: absolute;
++  right: 0;
++  bottom: -1px;
++  left: 0;
++  height: 2px;
++  background: var(--site-emerald);
++  content: '';
++  opacity: 0;
++  transform: scaleX(0.4);
++  transition:
++    opacity 180ms ease,
++    transform 180ms ease;
++}
++
++.site-desktop-nav a:hover,
++.site-desktop-nav a[aria-current='page'] {
++  color: var(--site-ink);
++}
++
++.site-desktop-nav a[aria-current='page']::after {
++  opacity: 1;
++  transform: scaleX(1);
++}
++
++.site-header__workbench {
++  justify-self: end;
++  gap: 7px;
++  min-height: 34px;
++  padding: 0 11px;
++  border: 1px solid var(--site-rule-strong);
++  border-radius: 5px;
++  color: var(--site-ink);
++  background: var(--site-paper);
++  font-size: 12px;
++  font-weight: 620;
++  text-decoration: none;
++  transition:
++    border-color 160ms ease,
++    color 160ms ease,
++    background 160ms ease;
++}
++
++.site-header__workbench:hover,
++.site-header__workbench[aria-current='page'] {
++  border-color: var(--site-emerald);
++  color: #ffffff;
++  background: var(--site-emerald);
++}
++
++.site-mobile-menu-button,
++.site-mobile-nav {
++  display: none;
++}
++
++.site-main {
++  width: 100%;
++}
++
++.site-kicker,
++.site-section-heading > span,
++.site-install-band > div:first-child > span,
++.site-example-next > span,
++.site-docs-meta > span,
++.site-not-found > span {
++  margin: 0;
++  color: var(--site-emerald);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 11px;
++  font-weight: 700;
++  line-height: 1.5;
++}
++
++.site-hero {
++  position: relative;
++  width: min(100%, 1440px);
++  min-height: min(720px, calc(100dvh - 164px));
++  padding: 48px 40px 24px;
++  margin: 0 auto;
++  overflow: hidden;
++  border-bottom: 1px solid var(--site-rule);
++  background: var(--site-paper);
++}
++
++.site-hero::before {
++  position: absolute;
++  top: 0;
++  bottom: 0;
++  left: 40px;
++  width: 1px;
++  background: var(--site-rule);
++  content: '';
++  opacity: 0.7;
++}
++
++.site-hero__intro {
++  position: relative;
++  z-index: 3;
++  max-width: 620px;
++  padding-left: 24px;
++  animation: site-intro-enter 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
++}
++
++.site-hero h1 {
++  margin: 12px 0 10px;
++  color: var(--site-ink);
++  font-size: 64px;
++  font-weight: 730;
++  line-height: 68px;
++  letter-spacing: 0;
++}
++
++.site-hero__summary {
++  max-width: 590px;
++  margin: 0;
++  color: #2c3932;
++  font-size: 18px;
++  font-weight: 590;
++  line-height: 29px;
++}
++
++.site-hero__summary span {
++  display: block;
++  color: var(--site-muted);
++  font-size: 15px;
++  font-weight: 430;
++}
++
++.site-hero__actions {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 8px;
++  margin-top: 20px;
++}
++
++.site-button {
++  justify-content: center;
++  gap: 8px;
++  min-height: 40px;
++  padding: 0 15px;
++  border: 1px solid var(--site-rule-strong);
++  border-radius: 5px;
++  color: var(--site-ink);
++  background: var(--site-paper);
++  font-size: 13px;
++  font-weight: 650;
++  text-decoration: none;
++  transition:
++    transform 180ms ease,
++    border-color 180ms ease,
++    background 180ms ease;
++}
++
++.site-button:hover {
++  transform: translateY(-2px);
++}
++
++.site-button--primary {
++  border-color: var(--site-emerald);
++  color: #ffffff;
++  background: var(--site-emerald);
++}
++
++.site-button--primary:hover {
++  background: #0d5a47;
++}
++
++.site-button--quiet:hover {
++  border-color: var(--site-ink);
++  background: #f8faf9;
++}
++
++.site-hero__selector {
++  position: absolute;
++  top: 54px;
++  right: 40px;
++  z-index: 4;
++  display: flex;
++  padding: 3px;
++  border: 1px solid var(--site-rule);
++  border-radius: 6px;
++  background: var(--site-canvas);
++}
++
++.site-hero__selector button {
++  display: inline-flex;
++  min-height: 34px;
++  align-items: center;
++  gap: 7px;
++  padding: 0 10px;
++  border: 0;
++  border-radius: 4px;
++  color: var(--site-muted);
++  background: transparent;
++  font: inherit;
++  font-size: 12px;
++  cursor: pointer;
++  transition:
++    color 160ms ease,
++    background 160ms ease;
++}
++
++.site-hero__selector button span {
++  color: #7b8881;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 9px;
++}
++
++.site-hero__selector button:hover {
++  color: var(--site-ink);
++}
++
++.site-hero__selector button[aria-pressed='true'] {
++  color: var(--site-ink);
++  background: var(--site-paper);
++  box-shadow: 0 1px 4px rgb(23 34 29 / 10%);
++}
++
++.site-hero__chart-plane {
++  position: absolute;
++  inset: 245px 40px 24px 64px;
++  z-index: 1;
++  min-height: 0;
++  animation: site-chart-enter 620ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
++}
++
++.site-hero__chart-plane::after {
++  position: absolute;
++  right: 0;
++  bottom: 0;
++  left: 0;
++  height: 1px;
++  background: var(--site-rule);
++  content: '';
++}
++
++.site-hero__chart-meta {
++  position: absolute;
++  top: -33px;
++  right: 0;
++  left: 0;
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 24px;
++  color: var(--site-muted);
++  font-size: 12px;
++}
++
++.site-hero__chart-meta span {
++  color: var(--site-blue);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 10px;
++  text-transform: uppercase;
++}
++
++.site-hero__chart-meta strong {
++  font-weight: 520;
++}
++
++.showcase-chart {
++  width: 100%;
++  height: 100%;
++  min-height: 0;
++}
++
++.showcase-chart .tp-editor,
++.showcase-chart .tp-chart-stage {
++  min-height: 0;
++  border: 0;
++  border-radius: 0;
++  background: transparent;
++}
++
++.showcase-chart .tp-editor[data-toolbar-visible='false'] {
++  grid-template-rows: minmax(0, 1fr);
++}
++
++.showcase-chart .tp-command-feedback {
++  display: none;
++}
++
++.showcase-chart .tp-chart-stage {
++  padding: 8px 14px 8px;
++}
++
++.showcase-chart .tp-chart-stage__plot-shell {
++  min-height: 0;
++}
++
++.showcase-chart .tp-chart-stage__header {
++  padding: 0 4px;
++}
++
++.site-capabilities,
++.site-example-ledger,
++.site-install-band,
++.site-page-intro,
++.site-example-grid,
++.site-example-next,
++.site-docs-layout {
++  width: min(100%, 1440px);
++  margin-right: auto;
++  margin-left: auto;
++}
++
++.site-capabilities,
++.site-example-ledger {
++  padding: 104px 40px;
++}
++
++.site-capabilities {
++  padding-top: 48px;
++  background: var(--site-canvas);
++}
++
++.site-section-heading {
++  display: grid;
++  grid-template-columns: 180px minmax(280px, 0.9fr) minmax(300px, 1.1fr);
++  align-items: start;
++  gap: 32px;
++  padding-bottom: 38px;
++  border-bottom: 1px solid var(--site-rule-strong);
++}
++
++.site-section-heading h2 {
++  margin: 0;
++  color: var(--site-ink);
++  font-size: 30px;
++  font-weight: 680;
++  line-height: 40px;
++  letter-spacing: 0;
++}
++
++.site-section-heading p {
++  max-width: 620px;
++  margin: 3px 0 0;
++  color: var(--site-muted);
++  font-size: 15px;
++  line-height: 26px;
++}
++
++.site-capability-index {
++  display: grid;
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++}
++
++.site-capability-index article {
++  min-height: 205px;
++  padding: 30px 32px 24px 0;
++  border-bottom: 1px solid var(--site-rule);
++}
++
++.site-capability-index article + article {
++  padding-left: 32px;
++  border-left: 1px solid var(--site-rule);
++}
++
++.site-capability-index article > span {
++  color: var(--site-coral);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 11px;
++}
++
++.site-capability-index h3 {
++  margin: 42px 0 8px;
++  font-size: 18px;
++  line-height: 25px;
++}
++
++.site-capability-index p {
++  max-width: 330px;
++  margin: 0;
++  color: var(--site-muted);
++  font-size: 13px;
++  line-height: 22px;
++}
++
++.site-example-ledger {
++  background: var(--site-paper);
++}
++
++.site-example-ledger__rows {
++  border-bottom: 1px solid var(--site-rule);
++}
++
++.site-example-ledger__rows > a {
++  display: grid;
++  grid-template-columns: 72px minmax(180px, 0.7fr) minmax(260px, 1.3fr) 24px;
++  align-items: center;
++  gap: 24px;
++  min-height: 96px;
++  border-top: 1px solid var(--site-rule);
++  color: var(--site-ink);
++  text-decoration: none;
++  transition:
++    color 180ms ease,
++    transform 180ms ease,
++    background 180ms ease;
++}
++
++.site-example-ledger__rows > a:hover {
++  color: var(--site-emerald);
++  background: #f8faf9;
++  transform: translateX(3px);
++}
++
++.site-example-ledger__ordinal {
++  color: var(--site-coral);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 12px;
++}
++
++.site-example-ledger__rows small,
++.site-example-ledger__rows strong {
++  display: block;
++}
++
++.site-example-ledger__rows small {
++  margin-bottom: 4px;
++  color: var(--site-muted);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 10px;
++}
++
++.site-example-ledger__rows strong {
++  font-size: 16px;
++}
++
++.site-example-ledger__rows > a > span:nth-child(3) {
++  color: var(--site-muted);
++  font-size: 13px;
++  line-height: 21px;
++}
++
++.site-install-band {
++  display: grid;
++  grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr) auto;
++  align-items: center;
++  gap: 40px;
++  padding: 62px 40px;
++  color: #ffffff;
++  background: var(--site-ink);
++}
++
++.site-install-band h2 {
++  margin: 8px 0 0;
++  font-size: 25px;
++  line-height: 34px;
++}
++
++.site-install-band > div:first-child > span {
++  color: #72c7ac;
++}
++
++.site-install-command {
++  position: relative;
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) 42px;
++  min-height: 48px;
++  align-items: center;
++  border: 1px solid #53625b;
++  background: #202d27;
++}
++
++.site-install-command code {
++  min-width: 0;
++  padding: 0 18px;
++  overflow: hidden;
++  color: #f7faf8;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 13px;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.site-install-command button {
++  display: inline-flex;
++  height: 46px;
++  align-items: center;
++  justify-content: center;
++  padding: 0;
++  border: 0;
++  border-left: 1px solid #53625b;
++  color: #d8e4de;
++  background: transparent;
++  cursor: pointer;
++}
++
++.site-install-command button:hover {
++  color: #ffffff;
++  background: #2c3b34;
++}
++
++.site-install-command > span {
++  position: absolute;
++  right: 0;
++  bottom: -24px;
++  color: #a9bbb2;
++  font-size: 10px;
++}
++
++.site-install-band .site-text-link {
++  color: #ffffff;
++}
++
++.site-text-link {
++  gap: 7px;
++  color: var(--site-emerald);
++  font-size: 13px;
++  font-weight: 650;
++  text-decoration: none;
++}
++
++.site-text-link svg {
++  transition: transform 180ms ease;
++}
++
++.site-text-link:hover svg {
++  transform: translateX(3px);
++}
++
++.site-footer {
++  display: grid;
++  grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr);
++  width: min(100%, 1440px);
++  min-height: 150px;
++  align-items: center;
++  gap: 28px;
++  padding: 28px 40px;
++  margin: 0 auto;
++  border-top: 1px solid var(--site-rule);
++  background: var(--site-paper);
++}
++
++.site-footer__brand strong,
++.site-footer__brand span {
++  display: block;
++}
++
++.site-footer__brand strong {
++  margin-bottom: 5px;
++  font-size: 17px;
++}
++
++.site-footer__brand span,
++.site-footer__meta {
++  color: var(--site-muted);
++  font-size: 11px;
++}
++
++.site-footer nav {
++  justify-content: center;
++  gap: 22px;
++}
++
++.site-footer nav a {
++  gap: 4px;
++  color: var(--site-ink);
++  font-size: 12px;
++  text-decoration: none;
++}
++
++.site-footer nav a:hover {
++  color: var(--site-emerald);
++}
++
++.site-footer__meta {
++  justify-self: end;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++}
++
++.site-page-intro {
++  min-height: 315px;
++  padding: 72px 40px 54px;
++  border-bottom: 1px solid var(--site-rule);
++  background: var(--site-paper);
++}
++
++.site-page-intro h1 {
++  max-width: 820px;
++  margin: 15px 0 14px;
++  font-size: 48px;
++  font-weight: 720;
++  line-height: 56px;
++  letter-spacing: 0;
++}
++
++.site-page-intro > p:last-child {
++  max-width: 740px;
++  margin: 0;
++  color: var(--site-muted);
++  font-size: 16px;
++  line-height: 28px;
++}
++
++.site-page-intro code,
++.site-docs-content p code {
++  color: var(--site-ink);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 0.9em;
++}
++
++.site-example-grid {
++  display: grid;
++  grid-template-columns: minmax(0, 7fr) minmax(360px, 5fr);
++  gap: 16px;
++  padding: 24px 40px 100px;
++}
++
++.site-example-card {
++  display: grid;
++  grid-template-rows: auto minmax(300px, 1fr) auto;
++  min-width: 0;
++  overflow: hidden;
++  border: 1px solid var(--site-rule);
++  border-radius: 8px;
++  background: var(--site-paper);
++  transition:
++    border-color 180ms ease,
++    transform 180ms ease,
++    box-shadow 180ms ease;
++}
++
++.site-example-card:first-child {
++  grid-row: span 2;
++}
++
++.site-example-card:hover,
++.site-example-card:focus-within {
++  border-color: var(--site-rule-strong);
++  box-shadow: 0 14px 34px rgb(23 34 29 / 8%);
++  transform: translateY(-3px);
++}
++
++.site-example-card > header {
++  min-height: 164px;
++  padding: 24px 26px 20px;
++  border-bottom: 1px solid var(--site-rule);
++}
++
++.site-example-card > header > div {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++}
++
++.site-example-card > header span,
++.site-example-card > header small {
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 10px;
++}
++
++.site-example-card > header span {
++  color: var(--site-coral);
++}
++
++.site-example-card > header small {
++  color: var(--site-muted);
++}
++
++.site-example-card h2 {
++  margin: 28px 0 7px;
++  font-size: 22px;
++  line-height: 29px;
++}
++
++.site-example-card > header p {
++  max-width: 520px;
++  margin: 0;
++  color: var(--site-muted);
++  font-size: 13px;
++  line-height: 22px;
++}
++
++.site-example-card__preview {
++  min-height: 320px;
++  background: #f8faf9;
++}
++
++.site-example-card:first-child .site-example-card__preview {
++  min-height: 650px;
++}
++
++.site-example-card > footer {
++  display: flex;
++  min-height: 64px;
++  align-items: center;
++  justify-content: space-between;
++  gap: 20px;
++  padding: 12px 18px 12px 24px;
++  border-top: 1px solid var(--site-rule);
++}
++
++.site-example-card > footer > div {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 6px;
++}
++
++.site-example-card > footer > div span {
++  padding: 3px 7px;
++  border: 1px solid var(--site-rule);
++  border-radius: 4px;
++  color: var(--site-muted);
++  font-size: 10px;
++}
++
++.site-example-card[data-accent='blue'] > header span {
++  color: var(--site-blue);
++}
++
++.site-example-card[data-accent='coral'] > header span {
++  color: var(--site-coral);
++}
++
++.site-example-next {
++  display: grid;
++  grid-template-columns: 180px minmax(300px, 0.8fr) minmax(300px, 1fr) auto;
++  align-items: start;
++  gap: 32px;
++  padding: 68px 40px;
++  border-top: 1px solid var(--site-rule);
++  background: var(--site-paper);
++}
++
++.site-example-next h2,
++.site-example-next p {
++  margin: 0;
++}
++
++.site-example-next h2 {
++  font-size: 24px;
++  line-height: 33px;
++}
++
++.site-example-next p {
++  color: var(--site-muted);
++  font-size: 13px;
++  line-height: 22px;
++}
++
++.site-docs {
++  background: var(--site-paper);
++}
++
++.site-page-intro--docs {
++  background: var(--site-canvas);
++}
++
++.site-docs-layout {
++  display: grid;
++  grid-template-columns: 210px minmax(0, 760px) minmax(210px, 1fr);
++  align-items: start;
++  gap: 48px;
++  padding: 48px 40px 110px;
++}
++
++.site-docs-nav {
++  position: sticky;
++  top: 92px;
++  display: grid;
++  gap: 4px;
++}
++
++.site-docs-nav > span {
++  padding-bottom: 12px;
++  color: var(--site-muted);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 10px;
++}
++
++.site-docs-nav a {
++  padding: 7px 0;
++  color: #4c5a53;
++  font-size: 12px;
++  text-decoration: none;
++}
++
++.site-docs-nav a:hover {
++  color: var(--site-emerald);
++}
++
++.site-docs-content {
++  min-width: 0;
++}
++
++.site-docs-content > section {
++  scroll-margin-top: 92px;
++  padding: 0 0 64px;
++}
++
++.site-docs-content > section + section {
++  padding-top: 52px;
++  border-top: 1px solid var(--site-rule);
++}
++
++.site-docs-content section > header {
++  display: grid;
++  grid-template-columns: 28px 38px minmax(0, 1fr);
++  align-items: center;
++  margin-bottom: 20px;
++}
++
++.site-docs-content section > header svg {
++  color: var(--site-emerald);
++}
++
++.site-docs-content section > header span {
++  color: var(--site-coral);
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 10px;
++}
++
++.site-docs-content h2 {
++  margin: 0;
++  font-size: 25px;
++  line-height: 34px;
++}
++
++.site-docs-content p {
++  max-width: 690px;
++  margin: 0 0 20px;
++  color: #4b5952;
++  font-size: 14px;
++  line-height: 25px;
++}
++
++.site-docs-content pre {
++  max-width: 100%;
++  padding: 20px 22px;
++  margin: 0 0 20px;
++  overflow: auto;
++  border: 1px solid var(--site-rule);
++  border-radius: 6px;
++  color: #23322a;
++  background: #f6f8f7;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 12px;
++  line-height: 1.7;
++}
++
++.site-docs-content code {
++  font: inherit;
++}
++
++.site-docs-comparison {
++  display: grid;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++  border-top: 1px solid var(--site-rule);
++  border-bottom: 1px solid var(--site-rule);
++}
++
++.site-docs-comparison > div {
++  min-height: 150px;
++  padding: 24px 24px 12px 0;
++}
++
++.site-docs-comparison > div + div {
++  padding-left: 24px;
++  border-left: 1px solid var(--site-rule);
++}
++
++.site-docs-comparison strong {
++  display: block;
++  margin-bottom: 12px;
++  font-size: 15px;
++}
++
++.site-docs-callout {
++  display: grid;
++  gap: 6px;
++  padding: 18px 20px;
++  border-left: 3px solid var(--site-amber);
++  background: #fbf8f2;
++}
++
++.site-docs-callout strong {
++  font-size: 13px;
++}
++
++.site-docs-callout span {
++  color: var(--site-muted);
++  font-size: 12px;
++  line-height: 20px;
++}
++
++.site-docs-meta {
++  position: sticky;
++  top: 92px;
++  padding-left: 24px;
++  border-left: 1px solid var(--site-rule);
++}
++
++.site-docs-meta strong {
++  display: block;
++  margin: 9px 0 26px;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++  font-size: 18px;
++}
++
++.site-docs-meta dl {
++  margin: 0;
++}
++
++.site-docs-meta dl > div {
++  display: flex;
++  justify-content: space-between;
++  gap: 18px;
++  padding: 10px 0;
++  border-top: 1px solid var(--site-rule);
++  font-size: 11px;
++}
++
++.site-docs-meta dt {
++  color: var(--site-muted);
++}
++
++.site-docs-meta dd {
++  margin: 0;
++  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
++}
++
++.site-not-found {
++  display: flex;
++  min-height: calc(100dvh - 64px);
++  align-items: flex-start;
++  justify-content: center;
++  flex-direction: column;
++  padding: 80px max(40px, calc((100vw - 1360px) / 2));
++  background: var(--site-paper);
++}
++
++.site-not-found h1 {
++  margin: 18px 0 8px;
++  font-size: 48px;
++  line-height: 56px;
++}
++
++.site-not-found p {
++  margin: 0 0 28px;
++  color: var(--site-muted);
++}
++
++.site-app :is(a, button):focus-visible {
++  outline: 2px solid #0d66d0;
++  outline-offset: 3px;
++}
++
++@keyframes site-intro-enter {
++  from {
++    transform: translateY(18px);
++  }
++
++  to {
++    transform: translateY(0);
++  }
++}
++
++@keyframes site-chart-enter {
++  from {
++    transform: translateY(16px);
++  }
++
++  to {
++    transform: translateY(0);
++  }
++}
++
++@media (max-width: 1120px) {
++  .site-header__inner {
++    grid-template-columns: 170px minmax(0, 1fr) 160px;
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-desktop-nav {
++    gap: 20px;
++  }
++
++  .site-hero {
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-hero::before {
++    left: 24px;
++  }
++
++  .site-hero__intro {
++    max-width: 540px;
++  }
++
++  .site-hero__selector {
++    right: 24px;
++  }
++
++  .site-hero__chart-plane {
++    right: 24px;
++    left: 48px;
++  }
++
++  .site-capabilities,
++  .site-example-ledger {
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-section-heading {
++    grid-template-columns: 130px minmax(250px, 0.9fr) minmax(260px, 1.1fr);
++    gap: 24px;
++  }
++
++  .site-example-grid {
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-example-next {
++    grid-template-columns: 130px minmax(240px, 0.8fr) minmax(260px, 1fr);
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-example-next .site-button {
++    grid-column: 2;
++    justify-self: start;
++  }
++
++  .site-docs-layout {
++    grid-template-columns: 170px minmax(0, 1fr);
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-docs-meta {
++    display: none;
++  }
++
++  .site-install-band {
++    grid-template-columns: minmax(250px, 0.8fr) minmax(330px, 1.2fr);
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-install-band .site-text-link {
++    grid-column: 2;
++    justify-self: start;
++  }
++}
++
++@media (max-width: 820px) {
++  .site-app[data-route='playground'] {
++    grid-template-rows: 60px minmax(0, 1fr);
++  }
++
++  .site-header {
++    height: 60px;
++  }
++
++  .site-header__inner {
++    grid-template-columns: minmax(0, 1fr) 36px;
++    padding: 0 18px;
++  }
++
++  .site-desktop-nav,
++  .site-header__workbench {
++    display: none;
++  }
++
++  .site-mobile-menu-button {
++    display: inline-flex;
++    width: 36px;
++    height: 36px;
++    align-items: center;
++    justify-content: center;
++    padding: 0;
++    border: 1px solid var(--site-rule);
++    border-radius: 5px;
++    color: var(--site-ink);
++    background: var(--site-paper);
++    cursor: pointer;
++  }
++
++  .site-mobile-nav:not([hidden]) {
++    position: absolute;
++    top: 60px;
++    right: 0;
++    left: 0;
++    display: grid;
++    padding: 8px 18px 14px;
++    border-bottom: 1px solid var(--site-rule);
++    background: var(--site-paper);
++    box-shadow: 0 18px 34px rgb(23 34 29 / 12%);
++  }
++
++  .site-mobile-nav a {
++    justify-content: space-between;
++    min-height: 46px;
++    border-bottom: 1px solid var(--site-rule);
++    color: var(--site-ink);
++    font-size: 14px;
++    text-decoration: none;
++  }
++
++  .site-mobile-nav a[aria-current='page'] {
++    color: var(--site-emerald);
++  }
++
++  .site-hero {
++    min-height: min(720px, calc(100dvh - 100px));
++    padding: 30px 18px 24px;
++    overflow: hidden;
++  }
++
++  .site-hero::before {
++    left: 18px;
++  }
++
++  .site-hero__intro {
++    max-width: none;
++    padding-left: 14px;
++  }
++
++  .site-hero h1 {
++    margin-top: 8px;
++    font-size: 42px;
++    line-height: 48px;
++  }
++
++  .site-hero__summary {
++    font-size: 16px;
++    line-height: 25px;
++  }
++
++  .site-hero__summary span {
++    margin-top: 3px;
++    font-size: 13px;
++    line-height: 22px;
++  }
++
++  .site-hero__actions {
++    margin-top: 15px;
++  }
++
++  .site-hero__selector {
++    position: static;
++    width: 100%;
++    margin-top: 20px;
++    overflow-x: auto;
++    scrollbar-width: none;
++  }
++
++  .site-hero__selector button {
++    flex: 0 0 auto;
++  }
++
++  .site-hero__chart-plane {
++    position: relative;
++    inset: auto;
++    height: 350px;
++    margin: 50px 0 0 14px;
++  }
++
++  .site-hero__chart-meta {
++    align-items: flex-start;
++    flex-direction: column;
++    gap: 2px;
++  }
++
++  .showcase-chart .tp-chart-stage {
++    padding-right: 0;
++    padding-left: 0;
++  }
++
++  .showcase-chart .tp-chart-stage__count {
++    display: none;
++  }
++
++  .site-capabilities,
++  .site-example-ledger {
++    padding: 72px 18px;
++  }
++
++  .site-capabilities {
++    padding-top: 20px;
++  }
++
++  .site-section-heading {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 12px;
++    padding-bottom: 28px;
++  }
++
++  .site-section-heading h2 {
++    font-size: 25px;
++    line-height: 34px;
++  }
++
++  .site-capability-index {
++    grid-template-columns: minmax(0, 1fr);
++  }
++
++  .site-capability-index article {
++    min-height: 170px;
++    padding: 24px 0;
++  }
++
++  .site-capability-index article + article {
++    padding-left: 0;
++    border-left: 0;
++  }
++
++  .site-capability-index h3 {
++    margin-top: 28px;
++  }
++
++  .site-example-ledger__rows > a {
++    grid-template-columns: 42px minmax(0, 1fr) 22px;
++    gap: 12px;
++    min-height: 82px;
++  }
++
++  .site-example-ledger__rows > a > span:nth-child(3) {
++    display: none;
++  }
++
++  .site-install-band {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 26px;
++    padding: 46px 18px 54px;
++  }
++
++  .site-install-band .site-text-link {
++    grid-column: auto;
++  }
++
++  .site-footer {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 24px;
++    padding: 34px 18px;
++  }
++
++  .site-footer nav {
++    justify-content: flex-start;
++  }
++
++  .site-footer__meta {
++    justify-self: start;
++  }
++
++  .site-page-intro {
++    min-height: 275px;
++    padding: 48px 18px 42px;
++  }
++
++  .site-page-intro h1 {
++    font-size: 38px;
++    line-height: 46px;
++  }
++
++  .site-page-intro > p:last-child {
++    font-size: 14px;
++    line-height: 24px;
++  }
++
++  .site-example-grid {
++    grid-template-columns: minmax(0, 1fr);
++    padding: 18px 18px 72px;
++  }
++
++  .site-example-card:first-child {
++    grid-row: auto;
++  }
++
++  .site-example-card:first-child .site-example-card__preview,
++  .site-example-card__preview {
++    min-height: 390px;
++  }
++
++  .site-example-next {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 14px;
++    padding: 50px 18px;
++  }
++
++  .site-example-next .site-button {
++    grid-column: auto;
++    margin-top: 12px;
++  }
++
++  .site-docs-layout {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 38px;
++    padding: 28px 18px 80px;
++  }
++
++  .site-docs-nav {
++    position: static;
++    display: flex;
++    gap: 18px;
++    overflow-x: auto;
++    border-bottom: 1px solid var(--site-rule);
++    scrollbar-width: none;
++  }
++
++  .site-docs-nav > span {
++    display: none;
++  }
++
++  .site-docs-nav a {
++    flex: 0 0 auto;
++    padding: 6px 0 12px;
++  }
++
++  .site-docs-content > section {
++    scroll-margin-top: 76px;
++  }
++
++  .site-docs-content pre {
++    padding: 16px;
++    font-size: 11px;
++  }
++
++  .site-docs-comparison {
++    grid-template-columns: minmax(0, 1fr);
++  }
++
++  .site-docs-comparison > div {
++    min-height: 0;
++    padding: 22px 0;
++  }
++
++  .site-docs-comparison > div + div {
++    padding-left: 0;
++    border-top: 1px solid var(--site-rule);
++    border-left: 0;
++  }
++
++  .site-not-found {
++    min-height: calc(100dvh - 60px);
++    padding: 56px 18px;
++  }
++
++  .site-not-found h1 {
++    font-size: 38px;
++    line-height: 46px;
++  }
++}
++
++/* Website visual system: clean product stage and scalable chart gallery. */
++.site-app {
++  --site-canvas: #f7f8fa;
++  --site-paper: #ffffff;
++  --site-ink: #1f2329;
++  --site-muted: #646a73;
++  --site-rule: #e5e6eb;
++  --site-rule-strong: #c9cdd4;
++  --site-primary: #0b5fcc;
++  --site-primary-hover: #084ca6;
++  --site-cyan: #13a8a8;
++  --site-coral: #d94743;
++  --site-blue: #3b82f6;
++  --site-amber: #d48806;
++  color: var(--site-ink);
++  background: var(--site-canvas);
++}
++
++.site-app[data-route='playground'] {
++  grid-template-rows: 60px minmax(0, 1fr);
++}
++
++.sr-only {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  padding: 0;
++  margin: -1px;
++  overflow: hidden;
++  clip: rect(0, 0, 0, 0);
++  border: 0;
++  white-space: nowrap;
++}
++
++.site-header {
++  height: 60px;
++  border-bottom: 1px solid var(--site-rule);
++  background: rgb(255 255 255 / 98%);
++  box-shadow: 0 3px 14px rgb(31 35 41 / 5%);
++}
++
++.site-header__inner {
++  grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr);
++  width: min(100%, 1280px);
++  padding: 0 32px;
++}
++
++.site-brand {
++  gap: 9px;
++}
++
++.site-brand__mark {
++  width: 27px;
++  height: 27px;
++  gap: 2px;
++  padding: 6px 5px;
++  border: 0;
++  border-radius: 6px;
++  background: var(--site-primary);
++}
++
++.site-brand__mark span {
++  width: 3px;
++  border-radius: 1px 1px 0 0;
++  background: #ffffff;
++}
++
++.site-brand__mark span:nth-child(1),
++.site-brand__mark span:nth-child(2),
++.site-brand__mark span:nth-child(3) {
++  background: #ffffff;
++}
++
++.site-brand strong {
++  font-size: 18px;
++  font-weight: 700;
++}
++
++.site-brand__version {
++  padding: 2px 5px;
++  border: 0;
++  border-radius: 3px;
++  color: #5b5f66;
++  background: #f2f3f5;
++  font-family: inherit;
++  font-size: 9px;
++  font-weight: 650;
++}
++
++.site-desktop-nav {
++  gap: 34px;
++}
++
++.site-desktop-nav a {
++  color: #4e5969;
++  font-size: 14px;
++  font-weight: 500;
++}
++
++.site-desktop-nav a::after {
++  height: 2px;
++  background: var(--site-primary);
++}
++
++.site-desktop-nav a:hover,
++.site-desktop-nav a[aria-current='page'] {
++  color: var(--site-primary);
++}
++
++.site-header__workbench {
++  min-height: 36px;
++  gap: 7px;
++  padding: 0 13px;
++  border-color: #b8d6ff;
++  color: var(--site-primary);
++  background: #f4f8ff;
++  font-size: 13px;
++}
++
++.site-header__workbench:hover,
++.site-header__workbench[aria-current='page'] {
++  border-color: var(--site-primary);
++  color: #ffffff;
++  background: var(--site-primary);
++}
++
++.site-kicker,
++.site-section-heading > span,
++.site-install-band > div:first-child > span,
++.site-example-next span,
++.site-docs-meta > span,
++.site-not-found > span {
++  color: var(--site-primary);
++  font-family: inherit;
++  font-size: 12px;
++  font-weight: 650;
++  line-height: 20px;
++  text-transform: none;
++}
++
++.site-hero {
++  width: min(100%, 1280px);
++  min-height: min(760px, calc(100dvh - 104px));
++  padding: 72px 32px 24px;
++  border-bottom: 0;
++  background: var(--site-paper);
++}
++
++.site-hero::before,
++.site-hero__chart-plane::after {
++  display: none;
++}
++
++.site-hero__intro {
++  max-width: 720px;
++  padding-left: 0;
++  animation-duration: 420ms;
++}
++
++.site-hero h1 {
++  margin: 10px 0 12px;
++  color: #14213d;
++  font-size: 56px;
++  font-weight: 740;
++  line-height: 64px;
++}
++
++.site-hero__summary {
++  max-width: 650px;
++  color: #1f2a44;
++  font-size: 21px;
++  font-weight: 560;
++  line-height: 32px;
++}
++
++.site-hero__summary span {
++  max-width: 630px;
++  margin-top: 5px;
++  color: var(--site-muted);
++  font-size: 15px;
++  font-weight: 400;
++  line-height: 25px;
++}
++
++.site-hero__actions {
++  gap: 10px;
++  margin-top: 22px;
++}
++
++.site-button {
++  min-height: 42px;
++  gap: 8px;
++  padding: 0 18px;
++  border-color: var(--site-rule-strong);
++  border-radius: 6px;
++  font-size: 14px;
++  font-weight: 600;
++  transition:
++    transform 160ms ease,
++    border-color 160ms ease,
++    color 160ms ease,
++    background 160ms ease,
++    box-shadow 160ms ease;
++}
++
++.site-button:hover {
++  transform: translateY(-1px);
++}
++
++.site-button--primary {
++  border-color: var(--site-primary);
++  color: #ffffff;
++  background: var(--site-primary);
++  box-shadow: 0 6px 18px rgb(22 119 255 / 18%);
++}
++
++.site-button--primary:hover {
++  border-color: var(--site-primary-hover);
++  background: var(--site-primary-hover);
++}
++
++.site-button--quiet {
++  color: #344054;
++}
++
++.site-button--quiet:hover {
++  border-color: #8dbdff;
++  color: var(--site-primary);
++  background: #f4f8ff;
++}
++
++.site-hero__selector {
++  top: 76px;
++  right: 32px;
++  padding: 4px;
++  border-color: #d9e6f7;
++  border-radius: 7px;
++  background: #f4f7fb;
++}
++
++.site-hero__selector button {
++  min-height: 36px;
++  gap: 6px;
++  padding: 0 12px;
++  border-radius: 5px;
++  color: #667085;
++  font-size: 12px;
++}
++
++.site-hero__selector button span {
++  color: #646a73;
++  font-size: 9px;
++}
++
++.site-hero__selector button:hover {
++  color: var(--site-primary);
++}
++
++.site-hero__selector button[aria-pressed='true'] {
++  color: var(--site-primary);
++  background: #ffffff;
++  box-shadow: 0 2px 8px rgb(31 35 41 / 8%);
++}
++
++.site-hero__chart-plane {
++  inset: 350px 32px 24px;
++  padding-top: 35px;
++  border-top: 1px solid var(--site-rule);
++  animation-duration: 500ms;
++}
++
++.site-hero__chart-meta {
++  top: 8px;
++  color: var(--site-muted);
++  font-size: 12px;
++}
++
++.site-hero__chart-meta span {
++  color: var(--site-primary);
++  font-family: inherit;
++  font-size: 11px;
++  font-weight: 650;
++  text-transform: none;
++}
++
++.site-hero__chart-meta strong {
++  font-weight: 450;
++}
++
++.showcase-chart .tp-chart-stage {
++  padding: 8px 10px;
++}
++
++.site-capabilities,
++.site-example-ledger,
++.site-install-band,
++.site-page-intro,
++.site-example-next,
++.site-docs-layout {
++  width: min(100%, 1280px);
++}
++
++.site-capabilities,
++.site-example-ledger {
++  padding: 76px 32px;
++}
++
++.site-capabilities {
++  padding-top: 34px;
++  background: var(--site-canvas);
++}
++
++.site-section-heading {
++  grid-template-columns: minmax(300px, 0.9fr) minmax(340px, 1.1fr);
++  gap: 48px;
++  padding-bottom: 30px;
++  border-bottom: 0;
++}
++
++.site-section-heading > span {
++  grid-column: 1 / -1;
++  margin-bottom: -34px;
++}
++
++.site-section-heading h2 {
++  color: #14213d;
++  font-size: 32px;
++  font-weight: 680;
++  line-height: 42px;
++}
++
++.site-section-heading p {
++  color: var(--site-muted);
++  font-size: 15px;
++  line-height: 26px;
++}
++
++.site-capability-index {
++  gap: 16px;
++}
++
++.site-capability-index article {
++  min-height: 178px;
++  padding: 28px;
++  border: 1px solid var(--site-rule);
++  border-radius: 8px;
++  background: var(--site-paper);
++  box-shadow: 0 4px 16px rgb(31 35 41 / 3%);
++}
++
++.site-capability-index article + article {
++  padding-left: 28px;
++  border-left: 1px solid var(--site-rule);
++}
++
++.site-capability-index h3 {
++  margin: 0 0 10px;
++  color: #14213d;
++  font-size: 18px;
++}
++
++.site-capability-index p {
++  color: var(--site-muted);
++  font-size: 13px;
++  line-height: 22px;
++}
++
++.site-example-ledger {
++  background: var(--site-paper);
++}
++
++.site-example-ledger__rows {
++  display: grid;
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  gap: 16px;
++  border-bottom: 0;
++}
++
++.site-example-ledger__rows > a {
++  grid-template-columns: minmax(0, 1fr) 20px;
++  grid-template-rows: auto auto;
++  gap: 18px 12px;
++  min-height: 132px;
++  padding: 24px;
++  border: 1px solid var(--site-rule);
++  border-radius: 8px;
++  background: #ffffff;
++}
++
++.site-example-ledger__rows > a:hover {
++  border-color: #91caff;
++  color: var(--site-primary);
++  background: #f7fbff;
++  transform: translateY(-2px);
++}
++
++.site-example-ledger__ordinal {
++  display: none;
++}
++
++.site-example-ledger__rows > a > span:nth-child(2) {
++  align-self: start;
++}
++
++.site-example-ledger__rows > a > span:nth-child(3) {
++  grid-column: 1 / -1;
++  color: var(--site-muted);
++  font-size: 13px;
++  line-height: 21px;
++}
++
++.site-example-ledger__rows > a > svg {
++  grid-column: 2;
++  grid-row: 1;
++  align-self: center;
++}
++
++.site-example-ledger__rows small {
++  color: var(--site-primary);
++  font-family: inherit;
++  font-size: 11px;
++  font-weight: 600;
++}
++
++.site-example-ledger__rows strong {
++  color: #25324a;
++  font-size: 17px;
++}
++
++.site-install-band {
++  grid-template-columns: minmax(250px, 0.8fr) minmax(360px, 1.2fr) auto;
++  gap: 36px;
++  padding: 54px 32px;
++  color: var(--site-ink);
++  border: 1px solid #d6e8ff;
++  background: #eef6ff;
++}
++
++.site-install-band h2 {
++  margin-top: 6px;
++  color: #14213d;
++  font-size: 25px;
++}
++
++.site-install-band > div:first-child > span {
++  color: var(--site-primary);
++}
++
++.site-install-command {
++  min-height: 48px;
++  border-color: #b8d6ff;
++  border-radius: 6px;
++  background: #ffffff;
++  box-shadow: 0 4px 14px rgb(22 119 255 / 7%);
++}
++
++.site-install-command code {
++  color: #14213d;
++}
++
++.site-install-command button {
++  border-left-color: #d6e8ff;
++  color: var(--site-primary);
++}
++
++.site-install-command button:hover {
++  color: var(--site-primary-hover);
++  background: #f4f8ff;
++}
++
++.site-install-command > span {
++  color: var(--site-muted);
++}
++
++.site-install-band .site-text-link,
++.site-text-link {
++  color: var(--site-primary);
++}
++
++.site-footer {
++  grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr);
++  width: min(100%, 1280px);
++  min-height: 132px;
++  padding: 24px 32px;
++  border-top-color: var(--site-rule);
++}
++
++.site-footer__brand strong {
++  color: #14213d;
++}
++
++.site-footer__brand span,
++.site-footer__meta {
++  color: #646a73;
++}
++
++.site-footer nav a:hover {
++  color: var(--site-primary);
++}
++
++.site-page-intro {
++  min-height: 270px;
++  padding: 58px 32px 46px;
++  border-bottom-color: var(--site-rule);
++}
++
++.site-page-intro h1 {
++  margin: 10px 0 12px;
++  color: #14213d;
++  font-size: 42px;
++  line-height: 52px;
++}
++
++.site-page-intro > p:last-child {
++  color: var(--site-muted);
++  font-size: 15px;
++  line-height: 26px;
++}
++
++.site-page-intro--docs {
++  background: #f4f8ff;
++}
++
++.site-example-library-header {
++  display: flex;
++  width: min(100%, 1280px);
++  min-height: 210px;
++  align-items: flex-end;
++  justify-content: space-between;
++  gap: 48px;
++  padding: 54px 32px 38px;
++  margin: 0 auto;
++  border-bottom: 1px solid var(--site-rule);
++  background: var(--site-paper);
++}
++
++.site-example-library-header h1 {
++  margin: 8px 0 8px;
++  color: #14213d;
++  font-size: 42px;
++  line-height: 50px;
++}
++
++.site-example-library-header p {
++  margin: 0;
++  color: var(--site-muted);
++  font-size: 15px;
++  line-height: 25px;
++}
++
++.site-example-search {
++  display: grid;
++  grid-template-columns: 20px minmax(0, 1fr) 32px;
++  width: 320px;
++  min-height: 44px;
++  align-items: center;
++  gap: 7px;
++  padding: 0 5px 0 13px;
++  border: 1px solid var(--site-rule-strong);
++  border-radius: 7px;
++  color: #646a73;
++  background: #ffffff;
++  transition:
++    border-color 160ms ease,
++    box-shadow 160ms ease;
++}
++
++.site-example-search:focus-within {
++  border-color: var(--site-primary);
++  box-shadow: 0 0 0 3px rgb(22 119 255 / 12%);
++}
++
++.site-example-search input {
++  width: 100%;
++  min-width: 0;
++  padding: 0;
++  border: 0;
++  outline: 0;
++  color: var(--site-ink);
++  background: transparent;
++  font: inherit;
++  font-size: 14px;
++}
++
++.site-example-search input::placeholder {
++  color: #646a73;
++}
++
++.site-example-search button {
++  display: inline-flex;
++  width: 30px;
++  height: 30px;
++  align-items: center;
++  justify-content: center;
++  padding: 0;
++  border: 0;
++  border-radius: 5px;
++  color: #646a73;
++  background: transparent;
++  cursor: pointer;
++}
++
++.site-example-search button:hover {
++  color: var(--site-primary);
++  background: #f2f3f5;
++}
++
++.site-example-browser {
++  display: grid;
++  grid-template-columns: 210px minmax(0, 1fr);
++  width: min(100%, 1280px);
++  align-items: start;
++  gap: 32px;
++  padding: 32px 32px 76px;
++  margin: 0 auto;
++}
++
++.site-example-sidebar {
++  position: sticky;
++  top: 92px;
++  min-width: 0;
++  padding-right: 24px;
++  border-right: 1px solid var(--site-rule);
++}
++
++.site-example-sidebar > strong {
++  display: block;
++  margin-bottom: 14px;
++  color: #344054;
++  font-size: 13px;
++}
++
++.site-example-sidebar nav {
++  display: grid;
++  gap: 4px;
++}
++
++.site-example-sidebar nav button {
++  display: flex;
++  min-height: 42px;
++  align-items: center;
++  justify-content: space-between;
++  gap: 12px;
++  padding: 0 12px;
++  border: 0;
++  border-radius: 6px;
++  color: #4e5969;
++  background: transparent;
++  font: inherit;
++  font-size: 14px;
++  text-align: left;
++  cursor: pointer;
++}
++
++.site-example-sidebar nav button:hover {
++  color: var(--site-primary);
++  background: #f2f7ff;
++}
++
++.site-example-sidebar nav button[aria-pressed='true'] {
++  color: var(--site-primary);
++  background: #eaf3ff;
++  font-weight: 600;
++}
++
++.site-example-sidebar nav small {
++  min-width: 22px;
++  color: #646a73;
++  font-size: 11px;
++  text-align: right;
++}
++
++.site-example-sidebar__note {
++  padding: 20px 12px 0;
++  margin-top: 22px;
++  border-top: 1px solid var(--site-rule);
++}
++
++.site-example-sidebar__note strong {
++  color: var(--site-primary);
++  font-size: 12px;
++}
++
++.site-example-sidebar__note p {
++  margin: 6px 0 0;
++  color: #646a73;
++  font-size: 11px;
++  line-height: 18px;
++}
++
++.site-example-results {
++  min-width: 0;
++}
++
++.site-example-results__header {
++  display: flex;
++  min-height: 56px;
++  align-items: flex-start;
++  justify-content: space-between;
++  gap: 24px;
++  margin-bottom: 18px;
++}
++
++.site-example-results__header h2 {
++  margin: 0 0 4px;
++  color: #14213d;
++  font-size: 24px;
++  line-height: 32px;
++}
++
++.site-example-results__header p,
++.site-example-results__header > span {
++  margin: 0;
++  color: #646a73;
++  font-size: 12px;
++  line-height: 20px;
++}
++
++.site-example-results__header > span {
++  padding-top: 6px;
++}
++
++.site-example-grid {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
++  gap: 18px;
++  width: auto;
++  padding: 0;
++  margin: 0;
++}
++
++.site-example-card {
++  display: grid;
++  grid-template-rows: 290px auto;
++  min-width: 0;
++  overflow: hidden;
++  border: 1px solid var(--site-rule);
++  border-radius: 8px;
++  background: var(--site-paper);
++  box-shadow: 0 3px 12px rgb(31 35 41 / 3%);
++  transition:
++    border-color 180ms ease,
++    transform 180ms ease,
++    box-shadow 180ms ease;
++}
++
++.site-example-card:first-child {
++  grid-row: auto;
++}
++
++.site-example-card:hover,
++.site-example-card:focus-within {
++  border-color: #91caff;
++  box-shadow: 0 10px 24px rgb(31 35 41 / 8%);
++  transform: translateY(-2px);
++}
++
++.site-example-card__preview,
++.site-example-card:first-child .site-example-card__preview {
++  position: relative;
++  min-height: 0;
++  background: #ffffff;
++}
++
++.site-example-card__preview .tp-chart-stage__header {
++  display: none;
++}
++
++.site-example-card__preview .tp-chart-stage {
++  padding: 12px 8px 6px;
++}
++
++.site-example-card__open {
++  position: absolute;
++  right: 14px;
++  bottom: 14px;
++  z-index: 5;
++  display: inline-flex;
++  min-height: 34px;
++  align-items: center;
++  gap: 6px;
++  padding: 0 11px;
++  border: 1px solid #b8d6ff;
++  border-radius: 6px;
++  color: var(--site-primary);
++  background: rgb(255 255 255 / 96%);
++  box-shadow: 0 5px 14px rgb(31 35 41 / 10%);
++  font-size: 12px;
++  font-weight: 600;
++  text-decoration: none;
++  opacity: 0;
++  transform: translateY(4px);
++  transition:
++    opacity 160ms ease,
++    transform 160ms ease,
++    background 160ms ease;
++}
++
++.site-example-card:hover .site-example-card__open,
++.site-example-card:focus-within .site-example-card__open {
++  opacity: 1;
++  transform: translateY(0);
++}
++
++.site-example-card__open:hover {
++  color: #ffffff;
++  background: var(--site-primary);
++}
++
++.site-example-card__body {
++  display: grid;
++  gap: 12px;
++  min-height: 170px;
++  padding: 18px 20px 20px;
++  border-top: 1px solid var(--site-rule);
++}
++
++.site-example-card__body > div:first-child {
++  display: flex;
++  align-items: baseline;
++  justify-content: space-between;
++  gap: 12px;
++}
++
++.site-example-card__body small {
++  order: 2;
++  color: var(--site-primary);
++  font-size: 11px;
++  font-weight: 600;
++}
++
++.site-example-card__body h3 {
++  margin: 0;
++  color: #25324a;
++  font-size: 17px;
++  line-height: 25px;
++}
++
++.site-example-card__body p {
++  margin: 0;
++  color: var(--site-muted);
++  font-size: 12px;
++  line-height: 20px;
++}
++
++.site-example-card__tags {
++  display: flex;
++  align-items: flex-end;
++  flex-wrap: wrap;
++  gap: 6px;
++}
++
++.site-example-card__tags span {
++  padding: 3px 7px;
++  border-radius: 4px;
++  color: #566071;
++  background: #f2f3f5;
++  font-size: 10px;
++}
++
++.site-example-empty {
++  display: flex;
++  min-height: 420px;
++  align-items: center;
++  justify-content: center;
++  flex-direction: column;
++  padding: 48px 24px;
++  border: 1px dashed var(--site-rule-strong);
++  border-radius: 8px;
++  color: #646a73;
++  background: #ffffff;
++  text-align: center;
++}
++
++.site-example-empty h3 {
++  margin: 14px 0 6px;
++  color: #344054;
++  font-size: 18px;
++}
++
++.site-example-empty p {
++  margin: 0 0 18px;
++  font-size: 13px;
++}
++
++.site-example-empty button {
++  min-height: 36px;
++  padding: 0 13px;
++  border: 1px solid #b8d6ff;
++  border-radius: 6px;
++  color: var(--site-primary);
++  background: #ffffff;
++  font: inherit;
++  font-size: 13px;
++  cursor: pointer;
++}
++
++.site-example-next {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 36px;
++  padding: 48px 32px;
++  border-top: 1px solid var(--site-rule);
++  background: var(--site-paper);
++}
++
++.site-example-next > div {
++  min-width: 280px;
++}
++
++.site-example-next h2 {
++  margin: 5px 0 0;
++  color: #14213d;
++  font-size: 24px;
++  line-height: 32px;
++}
++
++.site-example-next p {
++  max-width: 520px;
++  color: var(--site-muted);
++  font-size: 13px;
++  line-height: 22px;
++}
++
++.site-docs {
++  background: var(--site-paper);
++}
++
++.site-docs-layout {
++  grid-template-columns: 190px minmax(0, 760px) minmax(190px, 1fr);
++  gap: 44px;
++  padding: 48px 32px 100px;
++}
++
++.site-docs-nav {
++  top: 88px;
++}
++
++.site-docs-nav a {
++  padding: 8px 10px;
++  border-radius: 5px;
++  color: #4e5969;
++  font-size: 13px;
++}
++
++.site-docs-nav a:hover {
++  color: var(--site-primary);
++  background: #f2f7ff;
++}
++
++.site-docs-content > section + section {
++  border-top-color: var(--site-rule);
++}
++
++.site-docs-content section > header svg {
++  color: var(--site-primary);
++}
++
++.site-docs-content section > header span {
++  color: #646a73;
++}
++
++.site-docs-content h2 {
++  color: #14213d;
++}
++
++.site-docs-content p {
++  color: var(--site-muted);
++}
++
++.site-docs-content pre {
++  border-color: #dce6f3;
++  color: #25324a;
++  background: #f6f8fb;
++}
++
++.site-docs-callout {
++  border-left-color: var(--site-primary);
++  background: #f2f7ff;
++}
++
++.site-docs-meta {
++  top: 88px;
++}
++
++.site-not-found {
++  background: var(--site-paper);
++}
++
++.site-app :is(a, button, input):focus-visible {
++  outline: 2px solid var(--site-primary);
++  outline-offset: 3px;
++}
++
++@media (max-width: 1120px) {
++  .site-header__inner {
++    grid-template-columns: 180px minmax(0, 1fr) 170px;
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-hero__selector {
++    right: 24px;
++  }
++
++  .site-hero,
++  .site-example-library-header {
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-hero__chart-plane {
++    right: 24px;
++    left: 24px;
++  }
++
++  .site-capabilities,
++  .site-example-ledger,
++  .site-install-band,
++  .site-example-browser,
++  .site-example-next,
++  .site-docs-layout {
++    padding-right: 24px;
++    padding-left: 24px;
++  }
++
++  .site-example-browser {
++    grid-template-columns: 180px minmax(0, 1fr);
++    gap: 24px;
++  }
++
++  .site-example-grid {
++    grid-template-columns: repeat(2, minmax(260px, 1fr));
++  }
++
++  .site-docs-layout {
++    grid-template-columns: 170px minmax(0, 1fr);
++  }
++
++  .site-docs-meta {
++    display: none;
++  }
++
++  .site-install-band {
++    grid-template-columns: minmax(250px, 0.8fr) minmax(330px, 1.2fr);
++  }
++}
++
++@media (max-width: 820px) {
++  .site-app[data-route='playground'] {
++    grid-template-rows: 60px minmax(0, 1fr);
++  }
++
++  .site-header__inner {
++    grid-template-columns: minmax(0, 1fr) 38px;
++    padding: 0 18px;
++  }
++
++  .site-mobile-menu-button {
++    display: inline-flex;
++    width: 38px;
++    height: 38px;
++    border-color: var(--site-rule);
++    border-radius: 6px;
++  }
++
++  .site-mobile-nav:not([hidden]) {
++    padding: 8px 18px 14px;
++    border-bottom-color: var(--site-rule);
++    box-shadow: 0 14px 30px rgb(31 35 41 / 10%);
++  }
++
++  .site-mobile-nav a[aria-current='page'] {
++    color: var(--site-primary);
++  }
++
++  .site-hero {
++    min-height: 0;
++    padding: 48px 18px 22px;
++  }
++
++  .site-hero__intro {
++    padding-left: 0;
++  }
++
++  .site-hero h1 {
++    margin-top: 7px;
++    font-size: 42px;
++    line-height: 49px;
++  }
++
++  .site-hero__summary {
++    font-size: 18px;
++    line-height: 28px;
++  }
++
++  .site-hero__summary span {
++    font-size: 13px;
++    line-height: 22px;
++  }
++
++  .site-hero__selector {
++    position: static;
++    width: 100%;
++    margin-top: 22px;
++  }
++
++  .site-hero__selector button {
++    flex: 1 0 auto;
++    justify-content: center;
++  }
++
++  .site-hero__chart-plane {
++    position: relative;
++    inset: auto;
++    height: 315px;
++    padding-top: 30px;
++    margin: 24px 0 0;
++  }
++
++  .site-hero__chart-meta {
++    top: 6px;
++    align-items: center;
++    flex-direction: row;
++    gap: 10px;
++  }
++
++  .site-hero__chart-meta strong {
++    max-width: 72%;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
++  }
++
++  .site-capabilities,
++  .site-example-ledger {
++    padding: 60px 18px;
++  }
++
++  .site-capabilities {
++    padding-top: 28px;
++  }
++
++  .site-section-heading {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 10px;
++    padding-bottom: 24px;
++  }
++
++  .site-section-heading > span {
++    grid-column: auto;
++    margin-bottom: 0;
++  }
++
++  .site-section-heading h2 {
++    font-size: 27px;
++    line-height: 36px;
++  }
++
++  .site-capability-index,
++  .site-example-ledger__rows {
++    grid-template-columns: minmax(0, 1fr);
++  }
++
++  .site-capability-index article,
++  .site-capability-index article + article {
++    min-height: 0;
++    padding: 24px;
++    border-left: 1px solid var(--site-rule);
++  }
++
++  .site-example-ledger__rows > a {
++    min-height: 120px;
++  }
++
++  .site-install-band {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 24px;
++    padding: 42px 18px 48px;
++    border-right: 0;
++    border-left: 0;
++  }
++
++  .site-install-band .site-text-link {
++    grid-column: auto;
++  }
++
++  .site-footer {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 22px;
++    padding: 32px 18px;
++  }
++
++  .site-example-library-header {
++    align-items: stretch;
++    flex-direction: column;
++    gap: 24px;
++    min-height: 0;
++    padding: 42px 18px 30px;
++  }
++
++  .site-example-library-header h1 {
++    font-size: 36px;
++    line-height: 44px;
++  }
++
++  .site-example-search {
++    width: 100%;
++  }
++
++  .site-example-browser {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 28px;
++    padding: 24px 18px 60px;
++  }
++
++  .site-example-sidebar {
++    position: static;
++    padding-right: 0;
++    border-right: 0;
++  }
++
++  .site-example-sidebar > strong {
++    display: none;
++  }
++
++  .site-example-sidebar nav {
++    display: flex;
++    gap: 8px;
++    overflow-x: auto;
++    padding-bottom: 2px;
++    scrollbar-width: none;
++  }
++
++  .site-example-sidebar nav button {
++    flex: 0 0 auto;
++    min-height: 38px;
++    gap: 8px;
++    border: 1px solid var(--site-rule);
++    background: #ffffff;
++  }
++
++  .site-example-sidebar nav button[aria-pressed='true'] {
++    border-color: #b8d6ff;
++  }
++
++  .site-example-sidebar__note {
++    display: none;
++  }
++
++  .site-example-grid {
++    grid-template-columns: minmax(0, 1fr);
++  }
++
++  .site-example-card {
++    grid-template-rows: 300px auto;
++  }
++
++  .site-example-card__open {
++    opacity: 1;
++    transform: none;
++  }
++
++  .site-example-next {
++    align-items: flex-start;
++    flex-direction: column;
++    gap: 18px;
++    padding: 42px 18px;
++  }
++
++  .site-example-next > div {
++    min-width: 0;
++  }
++
++  .site-example-next p {
++    margin: 0;
++  }
++
++  .site-docs-layout {
++    grid-template-columns: minmax(0, 1fr);
++    padding: 28px 18px 76px;
++  }
++
++  .site-docs-nav a:hover {
++    background: transparent;
++  }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .site-example-card,
++  .site-example-card__open,
++  .site-example-ledger__rows > a,
++  .site-button {
++    transition-duration: 0.01ms;
++    transform: none;
++  }
++}
++
++.playground {
++  display: grid;
++  grid-template-rows: 46px minmax(0, 1fr);
++  width: 100%;
++  height: 100%;
+   min-width: 0;
+   min-height: 0;
+   overflow: hidden;
+diff --git a/apps/playground/src/siteRouting.ts b/apps/playground/src/siteRouting.ts
+new file mode 100644
+index 0000000..678b6ac
+--- /dev/null
++++ b/apps/playground/src/siteRouting.ts
+@@ -0,0 +1,60 @@
++export type SitePage = 'home' | 'examples' | 'docs' | 'playground' | 'not-found';
++
++export interface SiteRoute {
++  readonly page: SitePage;
++}
++
++function normalizePath(pathname: string): string {
++  if (pathname === '/') {
++    return pathname;
++  }
++  return pathname.replace(/\/+$/, '');
++}
++
++/** Resolves the small static website surface without introducing a router dependency. */
++export function resolveSiteRoute(url: URL): SiteRoute {
++  const pathname = normalizePath(url.pathname);
++  if (pathname === '/') {
++    return { page: 'home' };
++  }
++  if (pathname === '/examples') {
++    return { page: 'examples' };
++  }
++  if (pathname === '/docs') {
++    return { page: 'docs' };
++  }
++  if (pathname === '/playground') {
++    return { page: 'playground' };
++  }
++  return { page: 'not-found' };
++}
++
++export function siteTitleForRoute(route: SiteRoute): string {
++  switch (route.page) {
++    case 'home':
++      return 'TellPlot | 可编辑基础图表';
++    case 'examples':
++      return '图表示例 | TellPlot';
++    case 'docs':
++      return '开发者文档 | TellPlot';
++    case 'playground':
++      return '在线编辑 | TellPlot';
++    case 'not-found':
++      return '页面不存在 | TellPlot';
++  }
++}
++
++export function siteDescriptionForRoute(route: SiteRoute): string {
++  switch (route.page) {
++    case 'home':
++      return 'TellPlot 是基于 AntV G2 的轻量、可嵌入、可编辑基础图表库。';
++    case 'examples':
++      return '浏览 TellPlot 已验证的瀑布图、分类柱状图和分类条形图示例。';
++    case 'docs':
++      return '了解 @tellplot/editor 的安装、数据合同、安全配置和导出能力。';
++    case 'playground':
++      return '实时编辑 TellPlot 图表文档，并同步查看结构和图形变化。';
++    case 'not-found':
++      return '当前 TellPlot 页面不存在。';
++  }
++}
+diff --git a/apps/playground/tests/siteContent.test.ts b/apps/playground/tests/siteContent.test.ts
+new file mode 100644
+index 0000000..2ff62cb
+--- /dev/null
++++ b/apps/playground/tests/siteContent.test.ts
+@@ -0,0 +1,50 @@
++import { describe, expect, it } from 'vitest';
++
++import { EXAMPLE_CATALOG, exampleById } from '../src/exampleCatalog';
++import { resolveSiteRoute, siteTitleForRoute } from '../src/siteRouting';
++
++describe('playground website content', () => {
++  it('keeps the example catalog explicit, unique, and limited to validated chart types', () => {
++    expect(EXAMPLE_CATALOG.map(example => example.id)).toEqual(['waterfall', 'column', 'bar']);
++    expect(new Set(EXAMPLE_CATALOG.map(example => example.id)).size).toBe(EXAMPLE_CATALOG.length);
++    expect(EXAMPLE_CATALOG.map(example => example.chartType)).toEqual([
++      'waterfall',
++      'column',
++      'bar',
++    ]);
++  });
++
++  it('maps examples to deterministic workbench fixtures', () => {
++    expect(exampleById('waterfall')?.workbenchHref).toBe('/playground');
++    expect(exampleById('column')?.workbenchHref).toBe('/playground?fixture=categorical-column');
++    expect(exampleById('bar')?.workbenchHref).toBe('/playground?fixture=categorical-bar');
++  });
++
++  it('keeps gallery categories explicit without becoming a runtime registry', () => {
++    expect(EXAMPLE_CATALOG.map(example => example.category)).toEqual([
++      'financial',
++      'categorical',
++      'categorical',
++    ]);
++  });
++});
++
++describe('playground website routes', () => {
++  it.each([
++    ['https://tellplot.dev/', 'home'],
++    ['https://tellplot.dev/examples', 'examples'],
++    ['https://tellplot.dev/docs', 'docs'],
++    ['https://tellplot.dev/playground?fixture=categorical-bar', 'playground'],
++    ['https://tellplot.dev/not-found', 'not-found'],
++  ] as const)('resolves %s as %s', (href, expected) => {
++    expect(resolveSiteRoute(new URL(href)).page).toBe(expected);
++  });
++
++  it('returns a useful document title for every top-level route', () => {
++    expect(siteTitleForRoute({ page: 'home' })).toBe('TellPlot | 可编辑基础图表');
++    expect(siteTitleForRoute({ page: 'examples' })).toContain('示例');
++    expect(siteTitleForRoute({ page: 'docs' })).toContain('文档');
++    expect(siteTitleForRoute({ page: 'playground' })).toContain('在线编辑');
++    expect(siteTitleForRoute({ page: 'not-found' })).toContain('页面不存在');
++  });
++});
+diff --git a/docs/README.md b/docs/README.md
+index f39b511..8335bf4 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -21,6 +21,16 @@
+ - [迁移与兼容](migration.md)
+ - [变更记录](../CHANGELOG.md)
+ 
++## 本地网站
++
++- `/`：产品首页与真实图表家族切换。
++- `/examples`：当前三个已验证图表的示例中心。
++- `/docs`：面向接入方的可扫描文档入口。
++- `/playground`：双向图表文档编辑器、结构大纲、检查器与导入导出工作台。
++
++网站页面直接消费 `@tellplot/editor` 和本地 fixture；`docs/**` 与 package README 仍是长期 canonical
++文档。网站不提供远程内容、版本服务、搜索后端或公共图表 registry。
++
+ ## 文档规则
+ 
+ - 产品定位、范围和成功指标只在产品设计 SSOT 中定义。
+diff --git a/docs/roadmap.md b/docs/roadmap.md
+index 0a76a7e..fc6b0bd 100644
+--- a/docs/roadmap.md
++++ b/docs/roadmap.md
+@@ -35,6 +35,21 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ - Excluded: 新图表类型、通用插件系统、Dashboard 和服务端能力。
+ - Final gate: 用户只验收 G002 整体；npm publish 仍需单独授权。
+ 
++## G002-R1 分组与跨层编辑体验
++
++- Status: Needs_Review
++- Goal: 让分组选择、跨层拖拽和展开区域在结构大纲与图表中具有一致、可理解的编辑反馈。
++- Outcome: 已完成上下文选择、跨层移动、最小分组自动解散和可配置展开分组背景区域。
++- Boundary: 所有动作继续进入共享确定性命令，原始数据与 G2 runtime ownership 保持不变。
++
++## G002-R2 开源官网与示例中心
++
++- Status: Needs_Review
++- Goal: 用真实图表首页、示例中心、开发者文档入口和连续工作台承载 TellPlot 的开源使用体验。
++- Outcome: `/`、`/examples`、`/docs` 和 `/playground` 已覆盖当前三个图表家族及 beta 接入路径。
++- Extension model: 新图表示例进入 playground 内容目录，不形成核心或公共 plugin registry。
++- Boundary: 当前目标不包含新图表、远程内容、登录、搜索服务、npm publish 或网站部署。
++
+ ## G003 基础图表扩展
+ 
+ - Status: Candidate
+@@ -49,8 +64,8 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ 
+ - Status: Later
+ - Goal: 在 beta API 和使用方式稳定后，完善贡献、版本、发布和长期维护体验。
+-- Included outcomes: contribution guide、security policy、issue/PR templates、changelog、release automation、
+-  文档站和兼容性策略。
++- Included outcomes: contribution guide、security policy、issue/PR templates、release automation、版本化可搜索
++  文档、正式托管和兼容性策略。
+ - Boundary: 开源基础设施不进入图表 runtime，也不成为扩展产品范围的理由。
+ 
+ ## Decision Gates
+diff --git a/e2e/accessibility.spec.ts b/e2e/accessibility.spec.ts
+index 860d0f2..b74a535 100644
+--- a/e2e/accessibility.spec.ts
++++ b/e2e/accessibility.spec.ts
+@@ -10,7 +10,7 @@ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+ 
+ async function openEditor(page: Page, mobile = false): Promise<void> {
+   await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+-  await page.goto('/');
++  await page.goto('/playground');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+ }
+ 
+@@ -311,7 +311,7 @@ for (const layout of ['column', 'bar'] as const) {
+   }) => {
+     await page.emulateMedia({ reducedMotion: 'reduce' });
+     await page.setViewportSize({ width: 1440, height: 900 });
+-    await page.goto(`/?fixture=categorical-${layout}`);
++    await page.goto(`/playground?fixture=categorical-${layout}`);
+     await expect(
+       page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="${layout}"]`),
+     ).toBeVisible();
+@@ -343,3 +343,24 @@ for (const layout of ['column', 'bar'] as const) {
+     await expectNoSeriousOrCritical(page, `categorical ${layout} reordered`);
+   });
+ }
++
++for (const websitePage of [
++  { path: '/', heading: 'TellPlot', state: 'showcase home' },
++  { path: '/examples', heading: '图表示例', state: 'showcase examples' },
++  { path: '/docs', heading: '开发者文档', state: 'showcase docs' },
++] as const) {
++  test(`${websitePage.state} has no serious or critical violations`, async ({ page }) => {
++    await page.setViewportSize({ width: 1440, height: 900 });
++    await page.goto(websitePage.path);
++    await expect(page.getByRole('heading', { level: 1, name: websitePage.heading })).toBeVisible();
++    await expectNoSeriousOrCritical(page, websitePage.state);
++  });
++}
++
++test('showcase mobile navigation remains accessible when expanded', async ({ page }) => {
++  await page.setViewportSize({ width: 390, height: 844 });
++  await page.goto('/');
++  await page.getByRole('button', { name: '打开导航菜单' }).click();
++  await expect(page.getByRole('navigation', { name: '移动导航' })).toBeVisible();
++  await expectNoSeriousOrCritical(page, 'showcase mobile navigation');
++});
+diff --git a/e2e/categorical-editor.spec.ts b/e2e/categorical-editor.spec.ts
+index a619142..686c697 100644
+--- a/e2e/categorical-editor.spec.ts
++++ b/e2e/categorical-editor.spec.ts
+@@ -30,7 +30,7 @@ interface MarkBand {
+ 
+ async function openCategorical(page: Page, layout: CategoricalLayout): Promise<void> {
+   await page.setViewportSize({ width: 1440, height: 900 });
+-  await page.goto(`/?fixture=categorical-${layout}`);
++  await page.goto(`/playground?fixture=categorical-${layout}`);
+   await expect(
+     page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="${layout}"]`),
+   ).toBeVisible();
+@@ -434,7 +434,7 @@ test('categorical empty and invalid fixtures expose stable non-leaking states',
+   browserName,
+   page,
+ }, testInfo) => {
+-  await page.goto('/?fixture=categorical-empty');
++  await page.goto('/playground?fixture=categorical-empty');
+   await expect(page.locator(`${EDITOR}[data-editor-state="empty"]`)).toBeVisible();
+   await expect(page.getByText('暂无分类项')).toBeVisible();
+   await expect(page.getByRole('region', { name: '图表摘要' })).toContainText('0 个可见节点');
+@@ -445,7 +445,7 @@ test('categorical empty and invalid fixtures expose stable non-leaking states',
+     });
+   }
+ 
+-  await page.goto('/?fixture=categorical-invalid');
++  await page.goto('/playground?fixture=categorical-invalid');
+   await expect(page.locator(`${EDITOR}[data-editor-state="invalid"]`)).toBeVisible();
+   const issues = page.getByRole('alert');
+   await expect(issues).toContainText('INVALID_SOURCE_DATA');
+diff --git a/e2e/export.spec.ts b/e2e/export.spec.ts
+index 275413f..0772649 100644
+--- a/e2e/export.spec.ts
++++ b/e2e/export.spec.ts
+@@ -10,7 +10,7 @@ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+ 
+ async function openEditor(page: Page, mobile = false): Promise<void> {
+   await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+-  await page.goto('/');
++  await page.goto('/playground');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+   await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
+ }
+diff --git a/e2e/interaction-cancel.spec.ts b/e2e/interaction-cancel.spec.ts
+index 6da3f32..ee8b4a4 100644
+--- a/e2e/interaction-cancel.spec.ts
++++ b/e2e/interaction-cancel.spec.ts
+@@ -10,7 +10,7 @@ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+ 
+ async function openEditor(page: Page): Promise<void> {
+   await page.setViewportSize({ width: 1440, height: 900 });
+-  await page.goto('/');
++  await page.goto('/playground');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+ }
+ 
+@@ -344,7 +344,7 @@ test('fixed and cross-segment keyboard attempts reject privately without a commi
+   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
+ 
+   const labor = page.getByRole('treeitem', { name: /人工成本/ });
+-  await labor.focus();
++  await labor.click();
+   await expect(labor).toBeFocused();
+   await labor.press('Alt+ArrowDown');
+   await expect(page.locator(COMMAND_FEEDBACK)).toContainText('INVALID_DROP_TARGET');
+diff --git a/e2e/live-code-editor.spec.ts b/e2e/live-code-editor.spec.ts
+index 1bf43be..efb672a 100644
+--- a/e2e/live-code-editor.spec.ts
++++ b/e2e/live-code-editor.spec.ts
+@@ -6,7 +6,7 @@ const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
+ 
+ async function openEditor(page: Page): Promise<void> {
+   await page.setViewportSize({ width: 1440, height: 900 });
+-  await page.goto('/');
++  await page.goto('/playground');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+ }
+ 
+diff --git a/e2e/performance.spec.ts b/e2e/performance.spec.ts
+index 9088626..20cb63f 100644
+--- a/e2e/performance.spec.ts
++++ b/e2e/performance.spec.ts
+@@ -374,7 +374,7 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
+   test.setTimeout(90_000);
+   await installReactCommitProbe(page);
+   await page.setViewportSize({ width: 1440, height: 900 });
+-  await page.goto('/?fixture=performance');
++  await page.goto('/playground?fixture=performance');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+ 
+   const handles = page.locator('[data-node-kind="contribution"] button[aria-label^="拖动 "]');
+@@ -520,7 +520,7 @@ test('200-item categorical G2 chart keeps direct feedback outside React and meet
+   test.setTimeout(90_000);
+   await installReactCommitProbe(page);
+   await page.setViewportSize({ width: 1440, height: 900 });
+-  await page.goto('/?fixture=categorical-performance');
++  await page.goto('/playground?fixture=categorical-performance');
+   await expect(
+     page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="column"]`),
+   ).toBeVisible();
+diff --git a/e2e/quickstart.spec.ts b/e2e/quickstart.spec.ts
+index c3f7023..6bc4b9c 100644
+--- a/e2e/quickstart.spec.ts
++++ b/e2e/quickstart.spec.ts
+@@ -19,7 +19,7 @@ interface BarPoint {
+ 
+ async function openEditor(page: Page): Promise<void> {
+   await page.setViewportSize({ width: 1440, height: 900 });
+-  await page.goto('/');
++  await page.goto('/playground');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+   await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
+ }
+diff --git a/e2e/rendering.spec.ts b/e2e/rendering.spec.ts
+index 567a663..53ec564 100644
+--- a/e2e/rendering.spec.ts
++++ b/e2e/rendering.spec.ts
+@@ -20,7 +20,7 @@ const MOBILE = { width: 390, height: 844 } satisfies Viewport;
+ 
+ async function openReadyEditor(page: Page, viewport: Viewport): Promise<void> {
+   await page.setViewportSize(viewport);
+-  await page.goto('/');
++  await page.goto('/playground');
+   await expect(page.locator('[data-tellplot][data-editor-state="ready"]')).toBeVisible();
+   await expect(page.getByTestId('tellplot-chart-stage')).toBeVisible();
+ }
+diff --git a/e2e/showcase.spec.ts b/e2e/showcase.spec.ts
+new file mode 100644
+index 0000000..90acb90
+--- /dev/null
++++ b/e2e/showcase.spec.ts
+@@ -0,0 +1,83 @@
++import { expect, test } from '@playwright/test';
++
++test.describe('TellPlot 开源官网', () => {
++  test('首页以真实图表呈现产品并切换图表家族', async ({ page }) => {
++    await page.goto('/');
++
++    await expect(page.getByRole('heading', { level: 1, name: 'TellPlot' })).toBeVisible();
++    await expect(
++      page.getByTestId('showcase-chart').locator('[data-tellplot="editor"]'),
++    ).toHaveAttribute('data-chart-type', 'waterfall');
++
++    await page.getByRole('button', { name: '分类条形图' }).click();
++    await expect(
++      page.getByTestId('showcase-chart').locator('[data-tellplot="editor"]'),
++    ).toHaveAttribute('data-chart-type', 'bar');
++    await expect(page.getByText('横向比较长标签与正负值')).toBeVisible();
++  });
++
++  test('示例中心将每个真实示例带入对应工作台', async ({ page }) => {
++    await page.goto('/examples');
++
++    await expect(page.getByRole('heading', { level: 1, name: '图表示例' })).toBeVisible();
++    await expect(page.getByRole('article')).toHaveCount(3);
++
++    await page.getByRole('link', { name: '打开分类柱状图工作台' }).click();
++    await expect(page).toHaveURL(/\/playground\?fixture=categorical-column$/);
++    await expect(page.locator('[data-tellplot="editor"]')).toHaveAttribute(
++      'data-chart-type',
++      'column',
++    );
++    await expect(page.getByRole('main', { name: 'TellPlot 参考编辑器' })).toBeVisible();
++
++    await page.goBack();
++    await expect(page).toHaveURL(/\/examples$/);
++    await expect(page.getByRole('heading', { level: 1, name: '图表示例' })).toBeVisible();
++  });
++
++  test('示例中心可以按分类与关键词筛选真实图表', async ({ page }) => {
++    await page.goto('/examples');
++
++    await page.getByRole('button', { name: '分类比较 2' }).click();
++    await expect(page.getByRole('article')).toHaveCount(2);
++    await expect(page.getByRole('heading', { name: '经营变动瀑布图' })).toBeHidden();
++
++    await page.getByRole('searchbox', { name: '搜索图表示例' }).fill('条形');
++    await expect(page.getByRole('article')).toHaveCount(1);
++    await expect(page.getByRole('heading', { name: '分类条形图' })).toBeVisible();
++
++    await page.getByRole('button', { name: '清空搜索' }).click();
++    await expect(page.getByRole('article')).toHaveCount(2);
++  });
++
++  test('文档页提供安装、模型与配置入口', async ({ page }) => {
++    await page.goto('/docs');
++
++    await expect(page.getByRole('heading', { level: 1, name: '开发者文档' })).toBeVisible();
++    await expect(page.getByRole('heading', { name: '安装' })).toBeVisible();
++    await expect(page.getByText('pnpm add @tellplot/editor')).toBeVisible();
++    await expect(page.getByRole('heading', { name: 'SourceData 与 ViewSpec' })).toBeVisible();
++    await expect(page.getByRole('heading', { name: '安全配置边界' })).toBeVisible();
++  });
++
++  test('移动导航可以展开、导航并用 Escape 关闭', async ({ page }) => {
++    await page.setViewportSize({ width: 390, height: 844 });
++    await page.goto('/');
++
++    const menuButton = page.getByRole('button', { name: '打开导航菜单' });
++    await menuButton.click();
++    await expect(page.getByRole('navigation', { name: '移动导航' })).toBeVisible();
++
++    await page.keyboard.press('Escape');
++    await expect(page.getByRole('navigation', { name: '移动导航' })).toBeHidden();
++    await expect(menuButton).toBeFocused();
++
++    await menuButton.click();
++    await page
++      .getByRole('navigation', { name: '移动导航' })
++      .getByRole('link', { name: '文档' })
++      .click();
++    await expect(page).toHaveURL(/\/docs$/);
++    await expect(page.getByRole('heading', { level: 1, name: '开发者文档' })).toBeVisible();
++  });
++});
+diff --git a/e2e/waterfall-editor.spec.ts b/e2e/waterfall-editor.spec.ts
+index f80de95..69ca596 100644
+--- a/e2e/waterfall-editor.spec.ts
++++ b/e2e/waterfall-editor.spec.ts
+@@ -21,7 +21,7 @@ interface BarPoint {
+ 
+ async function openEditor(page: Page): Promise<void> {
+   await page.setViewportSize({ width: 1440, height: 900 });
+-  await page.goto('/');
++  await page.goto('/playground');
+   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
+   await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
+ }

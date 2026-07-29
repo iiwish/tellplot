@@ -2,10 +2,31 @@
 
 ## Metadata
 
-- Version: 0.7.0
+- Version: 0.32.0
 - Status: Active
-- Last updated: 2026-07-19
-- Scope: T101-T110 已验收；下一阶段进入分类条形图与柱状图验证切片
+- Last updated: 2026-07-29
+- Scope: T101-T116、G002 系列与 G004 均已验收；1.0.0 本地稳定候选等待独立远程发布授权
+
+## Goal-Level Delivery
+
+- 用户审批和验收单位是可独立交付的大目标，不是每个内部任务。
+- 每个目标在执行前固定范围、不可变边界、质量门禁和最终成果。
+- 内部任务、TDD 循环和缺陷修复由执行方连续完成并整合为目标级 evidence。
+- 目标完成后统一进入 `Needs_Review`；breaking API、schema、依赖、远程 Git、publish 和 release
+  保留独立人工闸门。
+
+## Goal Portfolio
+
+| Goal | Status | Outcome |
+| --- | --- | --- |
+| G001 - 多图表基础能力 | Accepted | T101-T116；waterfall、bar、column 与共享 G2 runtime 完整验收 |
+| G002 - 轻量图表库 Beta | Accepted | T117；发布包、文档、兼容性和 beta 质量闭环 |
+| G002-R1 - 分组与跨层编辑体验 | Accepted | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
+| G002-R2 - 开源官网与示例中心 | Accepted | T119；真实图表首页、示例中心、文档入口和连续工作台 |
+| G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
+| G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
+| G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
+| G005 - 公开稳定版发布 | Blocked | 等待独立远程授权与发布身份/托管条件 |
 
 ## T001 - 确认产品设计与项目章程
 
@@ -16,13 +37,13 @@
 - Story / Requirement: `product-design.md` 全部需求与 `constitution.md` 全部原则
 - Parallel: 否
 - Conflicts with: 在产品范围确认前创建源码、依赖或实现任务
-- Goal: 确认产品定位、第一阶段图表范围、交付形态、导出边界和 AI 数据边界。
+- Goal: 确认产品定位、第一阶段图表范围、交付形态、导出边界和网络边界。
 - Allowed files: `.ai-platform/docs/product-design.md`、`.ai-platform/memory/constitution.md`、`.ai-platform/docs/technology-decision-record.md`、`.ai-platform/docs/tasks.md`、`README.md`、`AGENTS.md`
 - Test targets: 文档一致性、范围完整性、阻断问题闭环、artifact validator
 - Deliverables: 经用户批准的产品设计 SSOT 与项目章程；明确的 `OQ-001` 至 `OQ-004` 结论
 - Acceptance criteria: 用户明确批准产品定位、Phase 1A/1B 边界及项目原则；所有阻断问题有确定答案。
 - Definition of Done: 产品设计与项目章程状态为 `Confirmed`，技术决策进入审批。
-- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root .`；`git diff --check`
+- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root .`；`git diff --check`
 - TDD plan: 不适用；当前任务不实现运行时代码。
 - Packet path: 不适用；产品审批任务不生成实现执行包。
 - Evidence required: 用户明确审批记录、artifact validator 通过、`git diff --check` 通过。
@@ -42,7 +63,7 @@
 - Deliverables: `001-waterfall-editor-foundation` 下的 spec、plan、tasks、design contract、data model、contracts、research 与 analysis
 - Acceptance criteria: 用户明确批准技术决策和 feature task graph；analysis 不含 Critical 或 High finding。
 - Definition of Done: feature artifacts 状态为 `Confirmed`，首个实现任务转为 `Ready` 并生成执行包。
-- Validation commands: `python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation`；`git diff --check`
+- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation`；`git diff --check`
 - TDD plan: 不适用；当前任务生成和审核技术 artifact，不实现运行时代码。
 - Packet path: 不适用；审批任务不生成实现执行包。
 - Evidence required: 用户审批记录、validator 通过、analysis 结论、文档 diff summary。
@@ -106,4 +127,72 @@
 
 ## Next Gate
 
-分类条形图与柱状图验证切片进入 feature 设计。旧仓库归档、npm publish 和正式版本发布保持独立授权闸门。
+## T111 - 审批分类图需求与技术合同
+
+- Status: Accepted
+- Priority: P0
+- Dependencies: T110 Accepted
+- Blocks: T112-T116
+- Story / Requirement: US-003、FR-005、TDR-013、TDR-014
+- Parallel: 否
+- Conflicts with: 未经审批修改 schema、公共 API、图表范围或开始实现
+- Goal: 确认分类图范围、schema v2、legacy 兼容矩阵、公共 API、G2/交互边界、任务图和质量门禁。
+- Allowed files: `.ai-platform/specs/004-categorical-chart-validation/**`、`.ai-platform/docs/technology-decision-record.md`、`.ai-platform/docs/tasks.md`、`AGENTS.md`
+- Test targets: requirements checklist、cross-artifact analysis、artifact validator
+- Deliverables: Confirmed feature artifacts、Completed checklist/analysis、T112 execution packet
+- Acceptance criteria: 用户明确批准全部 004 artifacts；analysis 无 Critical/High finding；T112 packet 自包含。
+- Definition of Done: 用户于 2026-07-19 明确批准；T111 Accepted；T112 Ready。
+- Validation commands: `python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 004-categorical-chart-validation`；`git diff --check`
+- TDD plan: 不适用；本任务只审批技术 artifact。
+- Packet path: 不适用；审批任务不生成实现 packet。
+- Evidence required: 用户审批记录、validator、analysis、文档 diff。
+
+## Feature 004 Execution
+
+权威实现任务图位于 `.ai-platform/specs/004-categorical-chart-validation/tasks.md`。
+
+| Task | Status | Gate |
+| --- | --- | --- |
+| T111 - 审批分类图需求与技术合同 | Accepted | 用户于 2026-07-19 明确批准 |
+| T112 - 扩展数据合同与共享命令策略 | Accepted | 用户于 2026-07-19 明确验收；实现、evidence 与质量门禁完整 |
+| T113 - 分类投影与 G2 Spec | Accepted | clean review 后用户条件验收成立 |
+| T114 - 方向感知分类轴交互 | Accepted | 用户条件验收成立；fresh review 与全部门禁通过 |
+| T115 - 分类图编辑、导出与可访问性 | Accepted | 用户于 2026-07-20 明确验收实现、evidence 与已披露执行偏差 |
+| T116 - 多图表内部架构收敛 | Accepted | 用户于 2026-07-20 明确验收；G001 完成 |
+
+## G002 Execution
+
+G002 已由用户批准并以 T117 连续完成。发布包、文档、兼容性、可配置 panel、布局和双向工作台 evidence
+完整；用户于 2026-07-29 完成统一验收。权威目标图位于
+`.ai-platform/specs/005-lightweight-chart-library-beta/tasks.md`。旧仓库处置、npm publish 和正式发布保持
+独立闸门。
+
+## G002-R1 Execution
+
+G002-R1 已由用户批准并以 T118 连续完成。上下文选择、区域边界退出、click/drag 动作区分、跨层移动、
+原子解散和展开分组区域 evidence 完整；用户于 2026-07-29 完成统一验收。权威目标图位于
+`.ai-platform/specs/006-group-cross-level-experience/tasks.md`。
+
+## G002-R2 Execution
+
+G002-R2 已由用户批准并以 T119 连续完成。真实图表首页、示例中心、开发者文档入口、连续工作台以及
+桌面/移动验证均已交付；用户于 2026-07-29 完成统一验收。权威目标图、设计合同与任务证据位于
+`.ai-platform/specs/007-open-source-showcase/` 和 `.ai-platform/evidence/T119/`。
+
+## G002-R3 Execution
+
+G002-R3 已由用户于 2026-07-23 批准 breaking public API 和连续执行，内部以 T122 完成交付
+`ChartEditor`、判别式 `ChartConfig`、`validateChartConfig`、config/view 双文件工作台、迁移说明和完整
+发布候选门禁；用户于 2026-07-29 完成统一验收，状态为 `Accepted`。权威目标图位于
+`.ai-platform/specs/009-public-configuration-api/tasks.md`。
+
+## G004 Execution
+
+G004 已由用户于 2026-07-23 批准，内部以 T123 连续完成 `@tellplot/editor@1.0.0` 本地稳定候选、
+兼容政策、开源资料、完整发布门禁、隔离源码复演和当前/旧版浏览器矩阵。2026-07-24 发布复核关闭了
+WebKit 长队列资源耗尽、不完整聚合门禁、npm registry 漂移和内部交付记录个人路径泄漏。用户于
+2026-07-29 完成统一验收，状态为 `Accepted`。权威目标图与交付证据位于 `.ai-platform/specs/010-stable-v1-release/` 和
+`.ai-platform/evidence/T123/`。
+
+原 G004 Beta 草案与 T120/T121 不再是当前执行入口。公开 Git、仓库可见性、生产网站、DNS、tag、
+GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到取得独立远程授权并具备发布身份与托管条件。

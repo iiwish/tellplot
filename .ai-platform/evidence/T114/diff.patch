@@ -1,0 +1,1147 @@
+diff --git a/packages/editor/src/interactions/chartPointer.ts b/packages/editor/src/interactions/chartPointer.ts
+index 2eb32a5..0e26042 100644
+--- a/packages/editor/src/interactions/chartPointer.ts
++++ b/packages/editor/src/interactions/chartPointer.ts
+@@ -1,4 +1,12 @@
+ import type { ViewNodeId } from '../domain/ids';
++import {
++  categoryCoordinate,
++  projectChartCategoryBounds,
++  resolveChartCategoryDropTarget,
++  resolveChartCategoryMinimumTargetHit,
++  type CategoryAxis,
++  type ChartSceneRectangle,
++} from './categoryAxis';
+ import type { MoveTargetEdge } from './moveTargets';
+ 
+ export interface ChartPointerPoint {
+@@ -15,6 +23,29 @@ export interface ChartElementPointer extends ChartPointerPoint {
+   readonly targetX: number;
+ }
+ 
++export interface ChartCategoryElementPointer extends ChartPointerPoint {
++  readonly axis: CategoryAxis;
++  readonly nodeId: ViewNodeId;
++  readonly edge: MoveTargetEdge;
++  readonly min: number;
++  readonly max: number;
++  readonly target: number;
++}
++
++export type ChartCategoryPointerResult =
++  | { readonly ok: true; readonly value: ChartCategoryElementPointer }
++  | {
++      readonly ok: false;
++      readonly reason: 'INVALID_INPUT' | 'SOURCE_NOT_FOUND' | 'INVALID_BOUNDS';
++    };
++
++export type ChartCategoryTargetReadResult =
++  | { readonly ok: true; readonly value: number }
++  | {
++      readonly ok: false;
++      readonly reason: 'INVALID_INPUT' | 'SOURCE_NOT_FOUND' | 'INVALID_BOUNDS';
++    };
++
+ export interface ChartHorizontalBounds {
+   readonly nodeId: ViewNodeId;
+   readonly minX: number;
+@@ -64,23 +95,7 @@ function coordinatePair(value: unknown): readonly [number, number] | undefined {
+   return x === undefined || y === undefined ? undefined : [x, y];
+ }
+ 
+-interface HorizontalBounds {
+-  readonly minX: number;
+-  readonly centerX: number;
+-  readonly maxX: number;
+-}
+-
+-export interface ChartSceneElementBounds {
+-  readonly nodeId: ViewNodeId;
+-  readonly minX: number;
+-  readonly minY: number;
+-  readonly maxX: number;
+-  readonly maxY: number;
+-}
+-
+-function distanceToRange(value: number, min: number, max: number): number {
+-  return value < min ? min - value : value > max ? value - max : 0;
+-}
++export type ChartSceneElementBounds = ChartSceneRectangle;
+ 
+ /** Resolves a renderer-owned mark through a minimum square pointer target. */
+ export function resolveChartMinimumTargetHit(
+@@ -88,80 +103,26 @@ export function resolveChartMinimumTargetHit(
+   bounds: readonly ChartSceneElementBounds[],
+   minimumTargetSize: number,
+ ): ChartElementPointer | undefined {
+-  if (!Number.isFinite(minimumTargetSize) || minimumTargetSize <= 0) {
+-    return undefined;
+-  }
+-  let best:
+-    | {
+-        readonly bounds: ChartSceneElementBounds;
+-        readonly distance: number;
+-        readonly centerDistance: number;
+-      }
+-    | undefined;
+-  for (const candidate of bounds) {
+-    const values = [candidate.minX, candidate.minY, candidate.maxX, candidate.maxY];
+-    if (
+-      values.some(value => !Number.isFinite(value)) ||
+-      candidate.minX > candidate.maxX ||
+-      candidate.minY > candidate.maxY
+-    ) {
+-      continue;
+-    }
+-    const paddingX = Math.max(0, (minimumTargetSize - (candidate.maxX - candidate.minX)) / 2);
+-    const paddingY = Math.max(0, (minimumTargetSize - (candidate.maxY - candidate.minY)) / 2);
+-    if (
+-      point.x < candidate.minX - paddingX ||
+-      point.x > candidate.maxX + paddingX ||
+-      point.y < candidate.minY - paddingY ||
+-      point.y > candidate.maxY + paddingY
+-    ) {
+-      continue;
+-    }
+-    const dx = distanceToRange(point.x, candidate.minX, candidate.maxX);
+-    const dy = distanceToRange(point.y, candidate.minY, candidate.maxY);
+-    const distance = dx * dx + dy * dy;
+-    const centerX = (candidate.minX + candidate.maxX) / 2;
+-    const centerY = (candidate.minY + candidate.maxY) / 2;
+-    const centerDistance = (point.x - centerX) ** 2 + (point.y - centerY) ** 2;
+-    if (
+-      best === undefined ||
+-      distance < best.distance ||
+-      (distance === best.distance && centerDistance < best.centerDistance)
+-    ) {
+-      best = { bounds: candidate, distance, centerDistance };
+-    }
+-  }
+-  if (best === undefined) {
++  const result = resolveChartCategoryMinimumTargetHit(point, bounds, minimumTargetSize, 'x');
++  if (!result.ok) {
+     return undefined;
+   }
+-  const centerX = (best.bounds.minX + best.bounds.maxX) / 2;
+-  const edge: MoveTargetEdge = point.x < centerX ? 'before' : 'after';
+   return {
+     ...point,
+-    nodeId: best.bounds.nodeId,
+-    edge,
+-    minX: best.bounds.minX,
+-    maxX: best.bounds.maxX,
+-    targetX: edge === 'before' ? best.bounds.minX : best.bounds.maxX,
++    nodeId: result.hit.nodeId,
++    edge: result.hit.edge,
++    minX: result.hit.min,
++    maxX: result.hit.max,
++    targetX: result.hit.target,
+   };
+ }
+ 
+-function rectangularBounds(value: unknown): Omit<ChartSceneElementBounds, 'nodeId'> | undefined {
+-  const bounds = asRecord(value);
+-  const min = coordinatePair(read(bounds, 'min'));
+-  const max = coordinatePair(read(bounds, 'max'));
+-  if (min === undefined || max === undefined) {
+-    return undefined;
+-  }
+-  return { minX: min[0], minY: min[1], maxX: max[0], maxY: max[1] };
+-}
+-
+-function horizontalBounds(value: unknown): HorizontalBounds | undefined {
++function sceneRectangle(value: unknown, nodeId: ViewNodeId): ChartSceneElementBounds | undefined {
+   const bounds = asRecord(value);
+   const min = coordinatePair(read(bounds, 'min'));
+   const max = coordinatePair(read(bounds, 'max'));
+   if (min !== undefined && max !== undefined) {
+-    return { minX: min[0], centerX: (min[0] + max[0]) / 2, maxX: max[0] };
++    return { nodeId, minX: min[0], minY: min[1], maxX: max[0], maxY: max[1] };
+   }
+ 
+   const center = coordinatePair(read(bounds, 'center'));
+@@ -169,9 +130,11 @@ function horizontalBounds(value: unknown): HorizontalBounds | undefined {
+   return center === undefined || halfExtents === undefined
+     ? undefined
+     : {
++        nodeId,
+         minX: center[0] - halfExtents[0],
+-        centerX: center[0],
++        minY: center[1] - halfExtents[1],
+         maxX: center[0] + halfExtents[0],
++        maxY: center[1] + halfExtents[1],
+       };
+ }
+ 
+@@ -191,10 +154,13 @@ export function readChartPointerPoint(event: unknown): ChartPointerPoint | undef
+  * Adapts the locked G2 5.4 event boundary: datum at data.data, scene bounds on
+  * target.getBounds(), and pointer coordinates at canvas.x/y.
+  */
+-export function readChartElementPointer(event: unknown): ChartElementPointer | undefined {
++export function readChartCategoryElementPointer(
++  event: unknown,
++  axis: CategoryAxis,
++): ChartCategoryPointerResult {
+   const point = readChartPointerPoint(event);
+-  if (point === undefined) {
+-    return undefined;
++  if (point === undefined || categoryCoordinate(point, axis) === undefined) {
++    return { ok: false, reason: 'INVALID_INPUT' };
+   }
+ 
+   const record = asRecord(event);
+@@ -202,46 +168,62 @@ export function readChartElementPointer(event: unknown): ChartElementPointer | u
+   const datum = asRecord(read(data, 'data'));
+   const nodeId = read(datum, 'nodeId');
+   if (typeof nodeId !== 'string' || nodeId.length === 0) {
+-    return undefined;
++    return { ok: false, reason: 'SOURCE_NOT_FOUND' };
+   }
+ 
+   const target = asRecord(read(record, 'target'));
+   const getBounds = read(target, 'getBounds');
+   if (target === undefined || typeof getBounds !== 'function') {
+-    return undefined;
++    return { ok: false, reason: 'INVALID_BOUNDS' };
+   }
+ 
+-  let bounds: HorizontalBounds | undefined;
++  let rectangle: ChartSceneElementBounds | undefined;
+   try {
+-    bounds = horizontalBounds(Reflect.apply(getBounds, target, []));
++    rectangle = sceneRectangle(Reflect.apply(getBounds, target, []), nodeId);
+   } catch {
+-    bounds = undefined;
++    rectangle = undefined;
+   }
+-  if (bounds === undefined) {
+-    return undefined;
++  if (rectangle === undefined) {
++    return { ok: false, reason: 'INVALID_BOUNDS' };
+   }
+ 
+-  const edge: MoveTargetEdge = point.x < bounds.centerX ? 'before' : 'after';
++  const bounds = projectChartCategoryBounds(rectangle, axis);
++  const coordinate = categoryCoordinate(point, axis);
++  if (bounds === undefined || coordinate === undefined) {
++    return { ok: false, reason: 'INVALID_BOUNDS' };
++  }
++  const edge: MoveTargetEdge = coordinate < bounds.center ? 'before' : 'after';
+ 
+   return {
+-    ...point,
+-    nodeId,
+-    edge,
+-    minX: bounds.minX,
+-    maxX: bounds.maxX,
+-    targetX: edge === 'before' ? bounds.minX : bounds.maxX,
++    ok: true,
++    value: {
++      ...point,
++      axis,
++      nodeId,
++      edge,
++      min: bounds.min,
++      max: bounds.max,
++      target: edge === 'before' ? bounds.min : bounds.max,
++    },
+   };
+ }
+ 
+-function validHorizontalBounds(
+-  bounds: ChartHorizontalBounds | undefined,
+-): bounds is ChartHorizontalBounds {
+-  return (
+-    bounds !== undefined &&
+-    Number.isFinite(bounds.minX) &&
+-    Number.isFinite(bounds.maxX) &&
+-    bounds.minX <= bounds.maxX
+-  );
++/** Preserves the accepted waterfall/column X-axis event adapter shape. */
++export function readChartElementPointer(event: unknown): ChartElementPointer | undefined {
++  const result = readChartCategoryElementPointer(event, 'x');
++  if (!result.ok) {
++    return undefined;
++  }
++  return {
++    pointerId: result.value.pointerId,
++    x: result.value.x,
++    y: result.value.y,
++    nodeId: result.value.nodeId,
++    edge: result.value.edge,
++    minX: result.value.min,
++    maxX: result.value.max,
++    targetX: result.value.target,
++  };
+ }
+ 
+ /** Resolves reorder collision from the translated bar rectangle and X coordinate only. */
+@@ -251,78 +233,59 @@ export function resolveChartHorizontalDropTarget({
+   pointerX,
+   orderedBounds,
+ }: ChartHorizontalDropInput): ChartHorizontalDropTarget | null {
+-  if (!Number.isFinite(startPointerX) || !Number.isFinite(pointerX)) {
+-    return null;
+-  }
+-  const sourceIndex = orderedBounds.findIndex(bounds => bounds.nodeId === itemId);
+-  const source = orderedBounds[sourceIndex];
+-  const deltaX = pointerX - startPointerX;
+-  if (!validHorizontalBounds(source) || deltaX === 0) {
+-    return null;
+-  }
+-
+-  if (deltaX > 0) {
+-    const draggedRight = source.maxX + deltaX;
+-    let target: ChartHorizontalBounds | undefined;
+-    for (let index = sourceIndex + 1; index < orderedBounds.length; index += 1) {
+-      const candidate = orderedBounds[index];
+-      if (!validHorizontalBounds(candidate)) {
+-        continue;
++  const result = resolveChartCategoryDropTarget({
++    axis: 'x',
++    itemId,
++    startPointer: { x: startPointerX, y: 0 },
++    pointer: { x: pointerX, y: 0 },
++    orderedBounds: orderedBounds.map(bounds => ({
++      nodeId: bounds.nodeId,
++      min: bounds.minX,
++      center: (bounds.minX + bounds.maxX) / 2,
++      max: bounds.maxX,
++    })),
++    boundsRevision: 0,
++    currentRevision: 0,
++    minimumDragDistance: 0,
++  });
++  return result.ok
++    ? {
++        nodeId: result.target.nodeId,
++        edge: result.target.edge,
++        targetX: result.target.target,
+       }
+-      if (draggedRight >= candidate.minX) {
+-        target = candidate;
+-      } else {
+-        break;
+-      }
+-    }
+-    return target === undefined
+-      ? null
+-      : { nodeId: target.nodeId, edge: 'after', targetX: target.maxX };
+-  }
+-
+-  const draggedLeft = source.minX + deltaX;
+-  let target: ChartHorizontalBounds | undefined;
+-  for (let index = sourceIndex - 1; index >= 0; index -= 1) {
+-    const candidate = orderedBounds[index];
+-    if (!validHorizontalBounds(candidate)) {
+-      continue;
+-    }
+-    if (draggedLeft <= candidate.maxX) {
+-      target = candidate;
+-    } else {
+-      break;
+-    }
+-  }
+-  return target === undefined
+-    ? null
+-    : { nodeId: target.nodeId, edge: 'before', targetX: target.minX };
++    : null;
+ }
+ 
+-/** Resolves a semantic chart target to its rendered G2 scene edge. */
+-export function readChartTargetX(
++/** Resolves a semantic chart target to its renderer-owned category-axis scene edge. */
++export function readChartTargetCoordinate(
+   context: unknown,
+   nodeId: ViewNodeId,
+   edge: MoveTargetEdge,
+-): number | undefined {
++  axis: CategoryAxis,
++): ChartCategoryTargetReadResult {
++  if (categoryCoordinate({ x: 0, y: 0 }, axis) === undefined) {
++    return { ok: false, reason: 'INVALID_INPUT' };
++  }
+   const contextRecord = asRecord(context);
+   const canvas = asRecord(read(contextRecord, 'canvas'));
+   const sceneDocument = asRecord(read(canvas, 'document'));
+   const getElementsByClassName = read(sceneDocument, 'getElementsByClassName');
+   if (sceneDocument === undefined || typeof getElementsByClassName !== 'function') {
+-    return undefined;
++    return { ok: false, reason: 'INVALID_INPUT' };
+   }
+ 
+   let elements: unknown;
+   try {
+     elements = Reflect.apply(getElementsByClassName, sceneDocument, ['element']);
+   } catch {
+-    return undefined;
++    return { ok: false, reason: 'INVALID_INPUT' };
+   }
+ 
+   const collection = asRecord(elements);
+   const length = finiteNumber(read(collection, 'length'));
+   if (collection === undefined || length === undefined || !Number.isInteger(length) || length < 0) {
+-    return undefined;
++    return { ok: false, reason: 'INVALID_INPUT' };
+   }
+ 
+   for (let index = 0; index < length; index += 1) {
+@@ -334,17 +297,31 @@ export function readChartTargetX(
+     }
+     const getBounds = read(element, 'getBounds');
+     if (element === undefined || typeof getBounds !== 'function') {
+-      return undefined;
++      return { ok: false, reason: 'INVALID_BOUNDS' };
+     }
+     try {
+-      const bounds = horizontalBounds(Reflect.apply(getBounds, element, []));
+-      return bounds === undefined ? undefined : edge === 'before' ? bounds.minX : bounds.maxX;
++      const rectangle = sceneRectangle(Reflect.apply(getBounds, element, []), nodeId);
++      const bounds =
++        rectangle === undefined ? undefined : projectChartCategoryBounds(rectangle, axis);
++      return bounds === undefined
++        ? { ok: false, reason: 'INVALID_BOUNDS' }
++        : { ok: true, value: edge === 'before' ? bounds.min : bounds.max };
+     } catch {
+-      return undefined;
++      return { ok: false, reason: 'INVALID_BOUNDS' };
+     }
+   }
+ 
+-  return undefined;
++  return { ok: false, reason: 'SOURCE_NOT_FOUND' };
++}
++
++/** Preserves the accepted waterfall/column X-axis scene-edge lookup shape. */
++export function readChartTargetX(
++  context: unknown,
++  nodeId: ViewNodeId,
++  edge: MoveTargetEdge,
++): number | undefined {
++  const result = readChartTargetCoordinate(context, nodeId, edge, 'x');
++  return result.ok ? result.value : undefined;
+ }
+ 
+ /** Reads renderer-owned element bounds for hit testing and DOM overlay placement. */
+@@ -378,9 +355,9 @@ export function readChartElementBounds(context: unknown): readonly ChartSceneEle
+       continue;
+     }
+     try {
+-      const bounds = rectangularBounds(Reflect.apply(getBounds, element, []));
+-      if (bounds !== undefined) {
+-        result.push({ nodeId, ...bounds });
++      const bounds = sceneRectangle(Reflect.apply(getBounds, element, []), nodeId);
++      if (bounds !== undefined && projectChartCategoryBounds(bounds, 'x') !== undefined) {
++        result.push(bounds);
+       }
+     } catch {
+       continue;
+diff --git a/packages/editor/tests/components/chartPointer.test.ts b/packages/editor/tests/components/chartPointer.test.ts
+index 6412d93..1a314e7 100644
+--- a/packages/editor/tests/components/chartPointer.test.ts
++++ b/packages/editor/tests/components/chartPointer.test.ts
+@@ -1,6 +1,11 @@
+ import { describe, expect, it } from 'vitest';
+ 
+ import {
++  readChartCategoryElementPointer,
++  readChartElementBounds,
++  readChartElementPointer,
++  readChartTargetCoordinate,
++  readChartTargetX,
+   resolveChartHorizontalDropTarget,
+   resolveChartMinimumTargetHit,
+ } from '../../src/interactions/chartPointer';
+@@ -146,3 +151,143 @@ describe('chart minimum pointer target', () => {
+     ).toBe('right');
+   });
+ });
++
++describe('chart category-axis G2 boundary', () => {
++  const event = {
++    pointerId: 9,
++    canvas: { x: 110, y: 150 },
++    data: { data: { nodeId: 'node' } },
++    target: {
++      getBounds: () => ({ min: [100, 140], max: [120, 180] }),
++    },
++  };
++
++  it('reads the same renderer event on X or Y and preserves the legacy X wrapper', () => {
++    expect(readChartCategoryElementPointer(event, 'x')).toEqual({
++      ok: true,
++      value: {
++        pointerId: 9,
++        x: 110,
++        y: 150,
++        axis: 'x',
++        nodeId: 'node',
++        edge: 'after',
++        min: 100,
++        max: 120,
++        target: 120,
++      },
++    });
++    expect(readChartCategoryElementPointer(event, 'y')).toEqual({
++      ok: true,
++      value: {
++        pointerId: 9,
++        x: 110,
++        y: 150,
++        axis: 'y',
++        nodeId: 'node',
++        edge: 'before',
++        min: 140,
++        max: 180,
++        target: 140,
++      },
++    });
++    expect(readChartElementPointer(event)).toEqual({
++      pointerId: 9,
++      x: 110,
++      y: 150,
++      nodeId: 'node',
++      edge: 'after',
++      minX: 100,
++      maxX: 120,
++      targetX: 120,
++    });
++  });
++
++  it('supports center/halfExtents bounds and returns structured hostile failures', () => {
++    const centered = {
++      ...event,
++      target: {
++        getBounds: () => ({ center: [110, 160], halfExtents: [10, 20] }),
++      },
++    };
++    expect(readChartCategoryElementPointer(centered, 'y')).toEqual({
++      ok: true,
++      value: expect.objectContaining({ min: 140, max: 180, target: 140 }),
++    });
++    expect(readChartCategoryElementPointer({}, 'x')).toEqual({
++      ok: false,
++      reason: 'INVALID_INPUT',
++    });
++    expect(readChartCategoryElementPointer({ ...event, data: {} }, 'x')).toEqual({
++      ok: false,
++      reason: 'SOURCE_NOT_FOUND',
++    });
++    expect(
++      readChartCategoryElementPointer(
++        {
++          ...event,
++          target: {
++            getBounds() {
++              throw new Error('private renderer failure');
++            },
++          },
++        },
++        'x',
++      ),
++    ).toEqual({ ok: false, reason: 'INVALID_BOUNDS' });
++  });
++});
++
++describe('chart category-axis scene lookup', () => {
++  const element = {
++    __data__: { data: { nodeId: 'node' } },
++    getBounds: () => ({ min: [100, 140], max: [120, 180] }),
++  };
++  const context = {
++    canvas: {
++      document: {
++        getElementsByClassName: () => [element],
++      },
++    },
++  };
++
++  it('reads target edges and complete scene bounds for both axes', () => {
++    expect(readChartTargetCoordinate(context, 'node', 'before', 'x')).toEqual({
++      ok: true,
++      value: 100,
++    });
++    expect(readChartTargetCoordinate(context, 'node', 'after', 'y')).toEqual({
++      ok: true,
++      value: 180,
++    });
++    expect(readChartTargetX(context, 'node', 'after')).toBe(120);
++    expect(readChartElementBounds(context)).toEqual([
++      { nodeId: 'node', minX: 100, minY: 140, maxX: 120, maxY: 180 },
++    ]);
++  });
++
++  it('returns structured failures for invalid contexts, missing nodes and bounds', () => {
++    expect(readChartTargetCoordinate({}, 'node', 'before', 'x')).toEqual({
++      ok: false,
++      reason: 'INVALID_INPUT',
++    });
++    expect(readChartTargetCoordinate(context, 'missing', 'before', 'x')).toEqual({
++      ok: false,
++      reason: 'SOURCE_NOT_FOUND',
++    });
++    const invalidBounds = {
++      canvas: {
++        document: {
++          getElementsByClassName: () => [
++            { ...element, getBounds: () => ({ min: [10, 10], max: [5, 20] }) },
++          ],
++        },
++      },
++    };
++    expect(readChartTargetCoordinate(invalidBounds, 'node', 'before', 'x')).toEqual({
++      ok: false,
++      reason: 'INVALID_BOUNDS',
++    });
++    expect(readChartElementBounds(invalidBounds)).toEqual([]);
++  });
++});
+diff --git a/packages/editor/src/interactions/categoryAxis.ts b/packages/editor/src/interactions/categoryAxis.ts
+new file mode 100644
+index 0000000..c545908
+--- /dev/null
++++ b/packages/editor/src/interactions/categoryAxis.ts
+@@ -0,0 +1,282 @@
++import type { ViewNodeId } from '../domain/ids';
++import type { MoveTargetEdge } from './moveTargets';
++
++export type CategoryAxis = 'x' | 'y';
++
++export interface ChartAxisPoint {
++  readonly x: number;
++  readonly y: number;
++}
++
++export interface ChartSceneRectangle {
++  readonly nodeId: ViewNodeId;
++  readonly minX: number;
++  readonly minY: number;
++  readonly maxX: number;
++  readonly maxY: number;
++}
++
++export interface ChartCategoryBounds {
++  readonly nodeId: ViewNodeId;
++  readonly min: number;
++  readonly center: number;
++  readonly max: number;
++}
++
++export interface ChartCategoryDropTarget {
++  readonly nodeId: ViewNodeId;
++  readonly edge: MoveTargetEdge;
++  readonly target: number;
++}
++
++export interface ChartCategoryDropInput {
++  readonly axis: CategoryAxis;
++  readonly itemId: ViewNodeId;
++  readonly startPointer: ChartAxisPoint;
++  readonly pointer: ChartAxisPoint;
++  readonly orderedBounds: readonly ChartCategoryBounds[];
++  readonly boundsRevision: number;
++  readonly currentRevision: number;
++  readonly minimumDragDistance: number;
++}
++
++export type ChartCategoryFailureReason =
++  | 'INVALID_INPUT'
++  | 'INVALID_BOUNDS'
++  | 'STALE_BOUNDS'
++  | 'BELOW_THRESHOLD'
++  | 'SOURCE_NOT_FOUND'
++  | 'NO_TARGET';
++
++export type ChartCategoryDropResult =
++  | { readonly ok: true; readonly target: ChartCategoryDropTarget }
++  | { readonly ok: false; readonly reason: ChartCategoryFailureReason };
++
++export interface ChartCategoryMinimumTargetHit {
++  readonly nodeId: ViewNodeId;
++  readonly edge: MoveTargetEdge;
++  readonly min: number;
++  readonly max: number;
++  readonly target: number;
++}
++
++export type ChartCategoryHitResult =
++  | { readonly ok: true; readonly hit: ChartCategoryMinimumTargetHit }
++  | { readonly ok: false; readonly reason: 'INVALID_INPUT' | 'NO_TARGET' };
++
++function validAxis(axis: CategoryAxis): boolean {
++  return axis === 'x' || axis === 'y';
++}
++
++function validPoint(point: ChartAxisPoint): boolean {
++  return Number.isFinite(point.x) && Number.isFinite(point.y);
++}
++
++function validSceneRectangle(bounds: ChartSceneRectangle): boolean {
++  return (
++    [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY].every(Number.isFinite) &&
++    bounds.minX <= bounds.maxX &&
++    bounds.minY <= bounds.maxY
++  );
++}
++
++function validCategoryBounds(
++  bounds: ChartCategoryBounds | undefined,
++): bounds is ChartCategoryBounds {
++  return (
++    bounds !== undefined &&
++    Number.isFinite(bounds.min) &&
++    Number.isFinite(bounds.center) &&
++    Number.isFinite(bounds.max) &&
++    bounds.min <= bounds.center &&
++    bounds.center <= bounds.max
++  );
++}
++
++function validRevision(value: number): boolean {
++  return Number.isSafeInteger(value) && value >= 0;
++}
++
++export function categoryCoordinate(point: ChartAxisPoint, axis: CategoryAxis): number | undefined {
++  if (!validAxis(axis) || !validPoint(point)) {
++    return undefined;
++  }
++  return axis === 'x' ? point.x : point.y;
++}
++
++/** Projects one complete renderer-owned rectangle onto the selected category axis. */
++export function projectChartCategoryBounds(
++  bounds: ChartSceneRectangle,
++  axis: CategoryAxis,
++): ChartCategoryBounds | undefined {
++  if (!validAxis(axis) || !validSceneRectangle(bounds)) {
++    return undefined;
++  }
++  const min = axis === 'x' ? bounds.minX : bounds.minY;
++  const max = axis === 'x' ? bounds.maxX : bounds.maxY;
++  return { nodeId: bounds.nodeId, min, center: (min + max) / 2, max };
++}
++
++/** Resolves deterministic reorder collision using only the selected category-axis coordinate. */
++export function resolveChartCategoryDropTarget({
++  axis,
++  itemId,
++  startPointer,
++  pointer,
++  orderedBounds,
++  boundsRevision,
++  currentRevision,
++  minimumDragDistance,
++}: ChartCategoryDropInput): ChartCategoryDropResult {
++  const start = categoryCoordinate(startPointer, axis);
++  const current = categoryCoordinate(pointer, axis);
++  if (
++    start === undefined ||
++    current === undefined ||
++    !Number.isFinite(minimumDragDistance) ||
++    minimumDragDistance < 0 ||
++    !validRevision(boundsRevision) ||
++    !validRevision(currentRevision)
++  ) {
++    return { ok: false, reason: 'INVALID_INPUT' };
++  }
++  if (boundsRevision !== currentRevision) {
++    return { ok: false, reason: 'STALE_BOUNDS' };
++  }
++
++  const sourceIndex = orderedBounds.findIndex(bounds => bounds.nodeId === itemId);
++  if (sourceIndex < 0) {
++    return { ok: false, reason: 'SOURCE_NOT_FOUND' };
++  }
++  const source = orderedBounds[sourceIndex];
++  if (!validCategoryBounds(source)) {
++    return { ok: false, reason: 'INVALID_BOUNDS' };
++  }
++
++  const delta = current - start;
++  if (Math.abs(delta) < minimumDragDistance) {
++    return { ok: false, reason: 'BELOW_THRESHOLD' };
++  }
++  if (delta === 0) {
++    return { ok: false, reason: 'NO_TARGET' };
++  }
++
++  if (delta > 0) {
++    const draggedMax = source.max + delta;
++    let target: ChartCategoryBounds | undefined;
++    for (let index = sourceIndex + 1; index < orderedBounds.length; index += 1) {
++      const candidate = orderedBounds[index];
++      if (!validCategoryBounds(candidate)) {
++        continue;
++      }
++      if (draggedMax >= candidate.min) {
++        target = candidate;
++      } else {
++        break;
++      }
++    }
++    return target === undefined
++      ? { ok: false, reason: 'NO_TARGET' }
++      : {
++          ok: true,
++          target: { nodeId: target.nodeId, edge: 'after', target: target.max },
++        };
++  }
++
++  const draggedMin = source.min + delta;
++  let target: ChartCategoryBounds | undefined;
++  for (let index = sourceIndex - 1; index >= 0; index -= 1) {
++    const candidate = orderedBounds[index];
++    if (!validCategoryBounds(candidate)) {
++      continue;
++    }
++    if (draggedMin <= candidate.max) {
++      target = candidate;
++    } else {
++      break;
++    }
++  }
++  return target === undefined
++    ? { ok: false, reason: 'NO_TARGET' }
++    : {
++        ok: true,
++        target: { nodeId: target.nodeId, edge: 'before', target: target.min },
++      };
++}
++
++function distanceToRange(value: number, min: number, max: number): number {
++  return value < min ? min - value : value > max ? value - max : 0;
++}
++
++/** Resolves a minimum two-dimensional pointer target while deriving its edge from one category axis. */
++export function resolveChartCategoryMinimumTargetHit(
++  point: ChartAxisPoint,
++  bounds: readonly ChartSceneRectangle[],
++  minimumTargetSize: number,
++  axis: CategoryAxis,
++): ChartCategoryHitResult {
++  if (
++    !validAxis(axis) ||
++    !validPoint(point) ||
++    !Number.isFinite(minimumTargetSize) ||
++    minimumTargetSize <= 0
++  ) {
++    return { ok: false, reason: 'INVALID_INPUT' };
++  }
++
++  let best:
++    | {
++        readonly bounds: ChartSceneRectangle;
++        readonly distance: number;
++        readonly centerDistance: number;
++      }
++    | undefined;
++  for (const candidate of bounds) {
++    if (!validSceneRectangle(candidate)) {
++      continue;
++    }
++    const paddingX = Math.max(0, (minimumTargetSize - (candidate.maxX - candidate.minX)) / 2);
++    const paddingY = Math.max(0, (minimumTargetSize - (candidate.maxY - candidate.minY)) / 2);
++    if (
++      point.x < candidate.minX - paddingX ||
++      point.x > candidate.maxX + paddingX ||
++      point.y < candidate.minY - paddingY ||
++      point.y > candidate.maxY + paddingY
++    ) {
++      continue;
++    }
++    const dx = distanceToRange(point.x, candidate.minX, candidate.maxX);
++    const dy = distanceToRange(point.y, candidate.minY, candidate.maxY);
++    const distance = dx * dx + dy * dy;
++    const centerX = (candidate.minX + candidate.maxX) / 2;
++    const centerY = (candidate.minY + candidate.maxY) / 2;
++    const centerDistance = (point.x - centerX) ** 2 + (point.y - centerY) ** 2;
++    if (
++      best === undefined ||
++      distance < best.distance ||
++      (distance === best.distance && centerDistance < best.centerDistance)
++    ) {
++      best = { bounds: candidate, distance, centerDistance };
++    }
++  }
++  if (best === undefined) {
++    return { ok: false, reason: 'NO_TARGET' };
++  }
++
++  const categoryBounds = projectChartCategoryBounds(best.bounds, axis);
++  const coordinate = categoryCoordinate(point, axis);
++  if (categoryBounds === undefined || coordinate === undefined) {
++    return { ok: false, reason: 'NO_TARGET' };
++  }
++  const edge: MoveTargetEdge = coordinate < categoryBounds.center ? 'before' : 'after';
++  return {
++    ok: true,
++    hit: {
++      nodeId: categoryBounds.nodeId,
++      edge,
++      min: categoryBounds.min,
++      max: categoryBounds.max,
++      target: edge === 'before' ? categoryBounds.min : categoryBounds.max,
++    },
++  };
++}
+diff --git a/packages/editor/tests/components/categoryAxis.test.ts b/packages/editor/tests/components/categoryAxis.test.ts
+new file mode 100644
+index 0000000..c828034
+--- /dev/null
++++ b/packages/editor/tests/components/categoryAxis.test.ts
+@@ -0,0 +1,255 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  categoryCoordinate,
++  projectChartCategoryBounds,
++  resolveChartCategoryDropTarget,
++  resolveChartCategoryMinimumTargetHit,
++  type CategoryAxis,
++  type ChartCategoryBounds,
++  type ChartCategoryDropInput,
++  type ChartSceneRectangle,
++} from '../../src/interactions/categoryAxis';
++
++const horizontalSceneBounds = [
++  { nodeId: 'left', minX: 20, minY: 10, maxX: 60, maxY: 90 },
++  { nodeId: 'middle', minX: 100, minY: 20, maxX: 140, maxY: 80 },
++  { nodeId: 'right', minX: 180, minY: 30, maxX: 220, maxY: 70 },
++] as const satisfies readonly ChartSceneRectangle[];
++
++const verticalSceneBounds = [
++  { nodeId: 'left', minX: 10, minY: 20, maxX: 90, maxY: 60 },
++  { nodeId: 'middle', minX: 20, minY: 100, maxX: 80, maxY: 140 },
++  { nodeId: 'right', minX: 30, minY: 180, maxX: 70, maxY: 220 },
++] as const satisfies readonly ChartSceneRectangle[];
++
++function categoryBounds(
++  sceneBounds: readonly ChartSceneRectangle[],
++  axis: CategoryAxis,
++): readonly ChartCategoryBounds[] {
++  return sceneBounds.map(bounds => {
++    const projected = projectChartCategoryBounds(bounds, axis);
++    if (projected === undefined) {
++      throw new Error('Expected valid category bounds');
++    }
++    return projected;
++  });
++}
++
++function dropInput(
++  axis: CategoryAxis,
++  orderedBounds: readonly ChartCategoryBounds[],
++  start: { readonly x: number; readonly y: number },
++  current: { readonly x: number; readonly y: number },
++  overrides: Partial<ChartCategoryDropInput> = {},
++): ChartCategoryDropInput {
++  return {
++    axis,
++    itemId: 'middle',
++    startPointer: start,
++    pointer: current,
++    orderedBounds,
++    boundsRevision: 7,
++    currentRevision: 7,
++    minimumDragDistance: 4,
++    ...overrides,
++  };
++}
++
++describe('category-axis projection', () => {
++  it('projects renderer-owned rectangles onto X or Y min/center/max', () => {
++    const bounds = {
++      nodeId: 'node',
++      minX: 10,
++      minY: 30,
++      maxX: 50,
++      maxY: 90,
++    } as const;
++    expect(projectChartCategoryBounds(bounds, 'x')).toEqual({
++      nodeId: 'node',
++      min: 10,
++      center: 30,
++      max: 50,
++    });
++    expect(projectChartCategoryBounds(bounds, 'y')).toEqual({
++      nodeId: 'node',
++      min: 30,
++      center: 60,
++      max: 90,
++    });
++    expect(categoryCoordinate({ x: 12, y: 34 }, 'x')).toBe(12);
++    expect(categoryCoordinate({ x: 12, y: 34 }, 'y')).toBe(34);
++  });
++
++  it('rejects invalid rectangles, coordinates and runtime axes without throwing', () => {
++    expect(
++      projectChartCategoryBounds({ nodeId: 'invalid', minX: 10, minY: 0, maxX: 5, maxY: 20 }, 'x'),
++    ).toBeUndefined();
++    expect(
++      projectChartCategoryBounds(
++        { nodeId: 'invalid', minX: 0, minY: 0, maxX: Number.NaN, maxY: 20 },
++        'y',
++      ),
++    ).toBeUndefined();
++    expect(categoryCoordinate({ x: Number.POSITIVE_INFINITY, y: 0 }, 'x')).toBeUndefined();
++    expect(categoryCoordinate({ x: 0, y: 0 }, 'z' as CategoryAxis)).toBeUndefined();
++  });
++});
++
++describe('category-axis drop collision', () => {
++  it('returns the same logical target for equivalent X and top-to-bottom Y gestures', () => {
++    const xResult = resolveChartCategoryDropTarget(
++      dropInput(
++        'x',
++        categoryBounds(horizontalSceneBounds, 'x'),
++        { x: 120, y: 500 },
++        {
++          x: 160,
++          y: -500,
++        },
++      ),
++    );
++    const yResult = resolveChartCategoryDropTarget(
++      dropInput(
++        'y',
++        categoryBounds(verticalSceneBounds, 'y'),
++        { x: 500, y: 120 },
++        {
++          x: -500,
++          y: 160,
++        },
++      ),
++    );
++    expect(xResult).toEqual({
++      ok: true,
++      target: { nodeId: 'right', edge: 'after', target: 220 },
++    });
++    expect(yResult).toEqual(xResult);
++  });
++
++  it('ignores value-axis movement and distinguishes threshold from no target', () => {
++    const bounds = categoryBounds(verticalSceneBounds, 'y');
++    expect(
++      resolveChartCategoryDropTarget(
++        dropInput('y', bounds, { x: 0, y: 120 }, { x: 10_000, y: 123.99 }),
++      ),
++    ).toEqual({ ok: false, reason: 'BELOW_THRESHOLD' });
++    expect(
++      resolveChartCategoryDropTarget(
++        dropInput('y', bounds, { x: 0, y: 120 }, { x: 10_000, y: 124 }),
++      ),
++    ).toEqual({ ok: false, reason: 'NO_TARGET' });
++    expect(
++      resolveChartCategoryDropTarget(
++        dropInput('y', bounds, { x: 0, y: 120 }, { x: 10_000, y: 120 }),
++      ),
++    ).toEqual({ ok: false, reason: 'BELOW_THRESHOLD' });
++  });
++
++  it('selects the furthest crossed sibling for forward and reverse motion', () => {
++    const bounds = categoryBounds(horizontalSceneBounds, 'x');
++    expect(
++      resolveChartCategoryDropTarget(
++        dropInput('x', bounds, { x: 120, y: 0 }, { x: 240, y: 0 }, { itemId: 'left' }),
++      ),
++    ).toEqual({ ok: true, target: { nodeId: 'right', edge: 'after', target: 220 } });
++    expect(
++      resolveChartCategoryDropTarget(
++        dropInput('x', bounds, { x: 200, y: 0 }, { x: 80, y: 0 }, { itemId: 'right' }),
++      ),
++    ).toEqual({ ok: true, target: { nodeId: 'left', edge: 'before', target: 20 } });
++  });
++
++  it('returns stable failures for stale, missing, invalid and ineligible candidate sets', () => {
++    const bounds = categoryBounds(horizontalSceneBounds, 'x');
++    const base = dropInput('x', bounds, { x: 120, y: 0 }, { x: 160, y: 0 });
++    expect(resolveChartCategoryDropTarget({ ...base, currentRevision: 8 })).toEqual({
++      ok: false,
++      reason: 'STALE_BOUNDS',
++    });
++    expect(resolveChartCategoryDropTarget({ ...base, itemId: 'missing' })).toEqual({
++      ok: false,
++      reason: 'SOURCE_NOT_FOUND',
++    });
++    expect(
++      resolveChartCategoryDropTarget({
++        ...base,
++        orderedBounds: [{ nodeId: 'middle', min: 10, center: 5, max: 0 }],
++      }),
++    ).toEqual({ ok: false, reason: 'INVALID_BOUNDS' });
++    expect(
++      resolveChartCategoryDropTarget({
++        ...base,
++        orderedBounds: [bounds[1] as ChartCategoryBounds],
++      }),
++    ).toEqual({ ok: false, reason: 'NO_TARGET' });
++    expect(resolveChartCategoryDropTarget({ ...base, minimumDragDistance: -1 })).toEqual({
++      ok: false,
++      reason: 'INVALID_INPUT',
++    });
++    expect(resolveChartCategoryDropTarget({ ...base, boundsRevision: 1.5 })).toEqual({
++      ok: false,
++      reason: 'INVALID_INPUT',
++    });
++  });
++
++  it('skips invalid non-source candidates without guessing replacement dimensions', () => {
++    const bounds = categoryBounds(horizontalSceneBounds, 'x');
++    expect(
++      resolveChartCategoryDropTarget({
++        ...dropInput('x', bounds, { x: 40, y: 0 }, { x: 200, y: 0 }),
++        itemId: 'left',
++        orderedBounds: [
++          bounds[0] as ChartCategoryBounds,
++          { nodeId: 'invalid', min: 180, center: Number.NaN, max: 220 },
++          bounds[2] as ChartCategoryBounds,
++        ],
++      }),
++    ).toEqual({ ok: true, target: { nodeId: 'right', edge: 'after', target: 220 } });
++    expect(
++      resolveChartCategoryDropTarget({
++        ...dropInput('x', bounds, { x: 200, y: 0 }, { x: 40, y: 0 }),
++        itemId: 'right',
++        orderedBounds: [
++          bounds[0] as ChartCategoryBounds,
++          { nodeId: 'invalid', min: 20, center: Number.NaN, max: 60 },
++          bounds[2] as ChartCategoryBounds,
++        ],
++      }),
++    ).toEqual({ ok: true, target: { nodeId: 'left', edge: 'before', target: 20 } });
++  });
++});
++
++describe('category-axis minimum pointer target', () => {
++  it('keeps two-dimensional hit testing while selecting edge on X or Y', () => {
++    const bounds = [{ nodeId: 'narrow', minX: 100, minY: 100, maxX: 110, maxY: 110 }];
++    expect(resolveChartCategoryMinimumTargetHit({ x: 92, y: 105 }, bounds, 32, 'x')).toEqual({
++      ok: true,
++      hit: { nodeId: 'narrow', edge: 'before', min: 100, max: 110, target: 100 },
++    });
++    expect(resolveChartCategoryMinimumTargetHit({ x: 105, y: 118 }, bounds, 32, 'y')).toEqual({
++      ok: true,
++      hit: { nodeId: 'narrow', edge: 'after', min: 100, max: 110, target: 110 },
++    });
++  });
++
++  it('chooses the nearest real mark and rejects invalid input or misses', () => {
++    const bounds = [
++      { nodeId: 'invalid', minX: 10, minY: 10, maxX: 5, maxY: 20 },
++      { nodeId: 'left', minX: 100, minY: 100, maxX: 108, maxY: 110 },
++      { nodeId: 'right', minX: 120, minY: 100, maxX: 128, maxY: 110 },
++    ];
++    expect(resolveChartCategoryMinimumTargetHit({ x: 115, y: 105 }, bounds, 32, 'x')).toEqual({
++      ok: true,
++      hit: { nodeId: 'right', edge: 'before', min: 120, max: 128, target: 120 },
++    });
++    expect(resolveChartCategoryMinimumTargetHit({ x: 50, y: 50 }, bounds, 32, 'x')).toEqual({
++      ok: false,
++      reason: 'NO_TARGET',
++    });
++    expect(resolveChartCategoryMinimumTargetHit({ x: 50, y: 50 }, bounds, 0, 'x')).toEqual({
++      ok: false,
++      reason: 'INVALID_INPUT',
++    });
++  });
++});

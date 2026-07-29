@@ -4,11 +4,12 @@ import {
   type EditorCommand,
   type EditorCommandType,
 } from './commands';
+import { createNarrativeChartPolicy, sourceDataKind } from './chartPolicy';
 import { commandError, type CommandError } from './errors';
 import { appendHistory, cloneViewSpec, type HistoryEntry } from './history';
 import type { GroupId, SourceItemId, ViewNodeId } from './ids';
 import { validateEditorInvariants } from './invariants';
-import type { SourceItem, ViewGroup, ViewSpec } from './model';
+import type { SourceDataItem, ViewGroup, ViewSpec } from './model';
 import type { EditorSession } from './session';
 import {
   collectLeafSourceIds,
@@ -59,7 +60,7 @@ function failure(session: EditorSession, error: CommandError): CommandResult {
   return { ok: false, session, error };
 }
 
-function itemById(session: EditorSession, itemId: SourceItemId): SourceItem | undefined {
+function itemById(session: EditorSession, itemId: SourceItemId): SourceDataItem | undefined {
   return session.sourceData.items.find(item => item.id === itemId);
 }
 
@@ -76,11 +77,14 @@ function groupById(session: EditorSession, groupId: string): ViewGroup | undefin
 }
 
 function contributionSegment(session: EditorSession, itemId: SourceItemId): number | undefined {
+  if (sourceDataKind(session.sourceData) === 'categorical') {
+    return itemById(session, itemId) === undefined ? undefined : 0;
+  }
   let segment = 0;
   for (const item of session.sourceData.items) {
-    if (item.kind === 'subtotal') {
+    if ('kind' in item && item.kind === 'subtotal') {
       segment += 1;
-    } else if (item.kind === 'contribution' && item.id === itemId) {
+    } else if ('kind' in item && item.kind === 'contribution' && item.id === itemId) {
       return segment;
     }
   }
@@ -138,7 +142,7 @@ function validateMovableItem(
   commandId: string,
   itemId: SourceItemId,
   path: string,
-): ApplyFailure | { readonly ok: true; readonly item: SourceItem } {
+): ApplyFailure | { readonly ok: true; readonly item: SourceDataItem } {
   const item = itemById(session, itemId);
   if (item === undefined) {
     return {
@@ -146,7 +150,7 @@ function validateMovableItem(
       error: commandError('ITEM_NOT_FOUND', 'ITEM_NOT_FOUND', path, commandId, { itemId }),
     };
   }
-  if (item.kind !== 'contribution') {
+  if (!createNarrativeChartPolicy(session.sourceData).isMovableItem(session.sourceData, itemId)) {
     return {
       ok: false,
       error: commandError('ITEM_LOCKED', 'SYSTEM_ANCHOR', path, commandId, {
@@ -260,21 +264,10 @@ function applyMoveNode(
       ),
     };
   }
-  if (source.containerId !== input.target.containerId && source.containerId !== 'root') {
-    const sourceGroup = groupById(session, source.containerId);
-    if (sourceGroup !== undefined && sourceGroup.childIds.length <= 2) {
-      return {
-        ok: false,
-        error: commandError(
-          'INVALID_DROP_TARGET',
-          'GROUP_WOULD_BE_TOO_SMALL',
-          '/payload/target/containerId',
-          input.commandId,
-          { minimum: 2 },
-        ),
-      };
-    }
-  }
+  const sourceGroup =
+    source.containerId === 'root' ? undefined : groupById(session, source.containerId);
+  const dissolvesSourceGroup =
+    source.containerId !== input.target.containerId && sourceGroup?.childIds.length === 2;
   const sameContainer = source.containerId === input.target.containerId;
   const destinationLength = destinationValues.length - (sameContainer ? 1 : 0);
   if (input.target.index < 0 || input.target.index > destinationLength) {
@@ -306,15 +299,64 @@ function applyMoveNode(
   }
 
   let nextRoot = session.viewSpec.rootOrder;
-  const nextGroups: Record<string, ViewGroup> = { ...session.viewSpec.groups };
+  let nextGroups: Record<string, ViewGroup> = { ...session.viewSpec.groups };
+  let nextCollapsedGroupIds = session.viewSpec.collapsedGroupIds;
+  let nextAnnotations = session.viewSpec.annotations;
+  let nextEmphasis = session.viewSpec.emphasis;
+  let remainingSourceNodeId: ViewNodeId | undefined;
   if (source.containerId === 'root') {
     nextRoot = removeAt(nextRoot, source.index);
+  } else if (dissolvesSourceGroup && sourceGroup !== undefined) {
+    remainingSourceNodeId = sourceGroup.childIds.find(nodeId => nodeId !== input.nodeId);
+    const sourceGroupLocation = locateViewNode(session.viewSpec, sourceGroup.id);
+    if (remainingSourceNodeId === undefined || sourceGroupLocation === undefined) {
+      return {
+        ok: false,
+        error: commandError(
+          'INVARIANT_VIOLATION',
+          'INVALID_SESSION_STATE',
+          input.nodePath,
+          input.commandId,
+        ),
+      };
+    }
+    nextGroups = withoutKey(nextGroups, sourceGroup.id);
+    const remainingSourceNode = remainingSourceNodeId;
+    if (sourceGroupLocation.containerId === 'root') {
+      nextRoot = session.viewSpec.rootOrder.map((nodeId, index) =>
+        index === sourceGroupLocation.index ? remainingSourceNode : nodeId,
+      );
+    } else {
+      const parentGroup = nextGroups[sourceGroupLocation.containerId];
+      if (parentGroup === undefined) {
+        return {
+          ok: false,
+          error: commandError(
+            'INVARIANT_VIOLATION',
+            'INVALID_SESSION_STATE',
+            input.nodePath,
+            input.commandId,
+          ),
+        };
+      }
+      nextGroups[sourceGroupLocation.containerId] = {
+        ...parentGroup,
+        childIds: parentGroup.childIds.map((nodeId, index) =>
+          index === sourceGroupLocation.index ? remainingSourceNode : nodeId,
+        ),
+      };
+    }
+    nextCollapsedGroupIds = session.viewSpec.collapsedGroupIds.filter(
+      groupId => groupId !== sourceGroup.id,
+    );
+    nextAnnotations = withoutKey(session.viewSpec.annotations, sourceGroup.id);
+    nextEmphasis = withoutKey(session.viewSpec.emphasis, sourceGroup.id);
   } else {
-    const sourceGroup = nextGroups[source.containerId];
-    if (sourceGroup !== undefined) {
+    const mutableSourceGroup = nextGroups[source.containerId];
+    if (mutableSourceGroup !== undefined) {
       nextGroups[source.containerId] = {
-        ...sourceGroup,
-        childIds: removeAt(sourceGroup.childIds, source.index),
+        ...mutableSourceGroup,
+        childIds: removeAt(mutableSourceGroup.childIds, source.index),
       };
     }
   }
@@ -358,9 +400,11 @@ function applyMoveNode(
       childIds: insertAt(destinationGroup.childIds, input.target.index, input.nodeId),
     };
   }
+  const groupIds = new Set([...Object.keys(session.viewSpec.groups), ...Object.keys(nextGroups)]);
   const noOp =
+    !dissolvesSourceGroup &&
     equalIds(nextRoot, session.viewSpec.rootOrder) &&
-    Object.keys(nextGroups).every(groupId =>
+    [...groupIds].every(groupId =>
       equalIds(
         nextGroups[groupId]?.childIds ?? [],
         session.viewSpec.groups[groupId]?.childIds ?? [],
@@ -370,10 +414,18 @@ function applyMoveNode(
     ok: true,
     viewSpec: noOp
       ? session.viewSpec
-      : { ...session.viewSpec, rootOrder: nextRoot, groups: nextGroups },
+      : {
+          ...session.viewSpec,
+          rootOrder: nextRoot,
+          groups: nextGroups,
+          collapsedGroupIds: nextCollapsedGroupIds,
+          annotations: nextAnnotations,
+          emphasis: nextEmphasis,
+        },
     affectedNodeIds: uniqueNodes([
       input.nodeId,
       ...(source.containerId === 'root' ? [] : [source.containerId]),
+      ...(remainingSourceNodeId === undefined ? [] : [remainingSourceNodeId]),
       ...(input.target.containerId === 'root' ? [] : [input.target.containerId]),
     ]),
     noOp,
@@ -490,8 +542,10 @@ function applyCreateGroup(
   }
 
   const orderedIds = orderedPositions.map(position => parentValues?.[position] as ViewNodeId);
-  const segments = new Set(orderedIds.map(nodeId => nodeSegment(session, nodeId)));
-  if (segments.size !== 1) {
+  const leafIds = orderedIds.flatMap(nodeId => collectLeafSourceIds(session.viewSpec, nodeId));
+  if (
+    !createNarrativeChartPolicy(session.sourceData).canShareContainer(session.sourceData, leafIds)
+  ) {
     return {
       ok: false,
       error: commandError('INVALID_DROP_TARGET', 'CROSS_SEGMENT', '/payload/nodeIds', command.id),
@@ -671,7 +725,12 @@ function applyPin(
       }),
     };
   }
-  if (item.kind !== 'contribution') {
+  if (
+    !createNarrativeChartPolicy(session.sourceData).isMovableItem(
+      session.sourceData,
+      command.payload.itemId,
+    )
+  ) {
     return {
       ok: false,
       error: commandError('ITEM_LOCKED', 'SYSTEM_ANCHOR', '/payload/itemId', command.id, {

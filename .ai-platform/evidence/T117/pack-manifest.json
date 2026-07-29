@@ -1,0 +1,22 @@
+{
+  "command": "pnpm --filter @tellplot/editor pack --dry-run --json",
+  "name": "@tellplot/editor",
+  "version": "0.1.0-beta.1",
+  "fileCount": 13,
+  "files": [
+    "dist/index.cjs",
+    "dist/index.cjs.map",
+    "dist/index.d.cts",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/styles.css",
+    "dist/styles.css.map",
+    "dist/styles.d.cts",
+    "dist/styles.d.ts",
+    "LICENSE",
+    "package.json",
+    "README.md"
+  ],
+  "allowlistPassed": true
+}

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SourceData, ViewSpec } from '../../src/domain/model';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
 import type {
   WaterfallProjection,
   WaterfallProjectionResult,
-} from '../../src/waterfall/waterfallTypes';
+} from '../../src/charts/waterfall/types';
 
 function expectProjection(result: WaterfallProjectionResult): WaterfallProjection {
   expect(result.ok).toBe(true);

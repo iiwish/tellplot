@@ -151,7 +151,7 @@ validation_loop:
     - "pnpm test:a11y -- --project=chromium"
     - "pnpm test:performance -- --project=chromium"
     - "git diff --check"
-    - "python3 /Users/iiwish/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T106"
+    - "python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 001-waterfall-editor-foundation --task-id T106"
   expected_signals:
     - "RED commands fail for missing T106 behavior or dependencies, not syntax/test-harness errors."
     - "All component/full/coverage/type/lint/format/build/package commands exit 0 after GREEN."

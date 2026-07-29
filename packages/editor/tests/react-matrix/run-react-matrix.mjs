@@ -18,6 +18,28 @@ const REACT_MATRIX = [
   { id: 'react-18', react: '18.3.1', reactDom: '18.3.1' },
   { id: 'react-19', react: '19.2.7', reactDom: '19.2.7' },
 ];
+const VITE_CONFIG = `import { defineConfig } from 'vite';
+
+export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'g2-runtime',
+              test: /node_modules[\\\\/]@antv[\\\\/]g2[\\\\/]/,
+              priority: 10,
+              minSize: 96 * 1024,
+              maxSize: 1_300 * 1024,
+            },
+          ],
+        },
+      },
+    },
+  },
+});
+`;
 
 function displayCommand(command, args, cwd) {
   const location = relative(WORKSPACE, cwd) || '.';
@@ -264,7 +286,7 @@ async function verifyConsumer(browser, consumer, directory) {
       assert.notEqual(
         configuredSignature,
         defaultSignature,
-        `${consumer.id} chartAppearance must update the real G2 canvas`,
+        `${consumer.id} public appearance config must update the real G2 canvas`,
       );
       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 1);
 
@@ -322,6 +344,7 @@ async function main() {
         )}\n`,
         'utf8',
       );
+      await writeFile(join(directory, 'vite.config.mjs'), VITE_CONFIG, 'utf8');
       const installArgs = [
         'install',
         '--ignore-workspace',
@@ -341,7 +364,10 @@ async function main() {
       );
       assert.equal(installedManifest.name, '@tellplot/editor');
       assert.equal(installedManifest.version, sourceManifest.version);
-      assert.equal(installedManifest.exports?.['./styles.css'], './dist/styles.css');
+      assert.deepEqual(installedManifest.exports?.['./styles.css'], {
+        types: './dist/styles.d.ts',
+        default: './dist/styles.css',
+      });
       await run('pnpm', ['run', 'build'], { cwd: directory });
       await verifyConsumer(browser, consumer, directory);
     }

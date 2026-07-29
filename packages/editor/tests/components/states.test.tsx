@@ -2,14 +2,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { StrictMode, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  FinancialChartEditor,
-  createInitialViewSpec,
-  type SourceData,
-  type ViewSpec,
-} from '../../src';
+import { createInitialViewSpec, type SourceData, type ViewSpec } from '../../src';
+import { FinancialChartEditor } from '../../src/components/FinancialChartEditor';
 import { WaterfallCanvas } from '../../src/components/WaterfallCanvas';
-import { projectWaterfall } from '../../src/waterfall/projectWaterfall';
+import { projectWaterfall } from '../../src/charts/waterfall/projection';
 import { anchorsOnlySourceData, financialSourceData } from '../fixtures/financialSourceData';
 import { commandSourceData } from '../fixtures/commandSourceData';
 
@@ -261,6 +257,76 @@ describe('FinancialChartEditor states', () => {
     );
   });
 
+  it('keeps the default split layout and allows every chrome panel to be hidden', async () => {
+    const { rerender } = render(<FinancialChartEditor sourceData={financialSourceData} />);
+
+    await waitFor(() => expect(editorState()).toBe('ready'));
+    const editor = document.querySelector<HTMLElement>('[data-tellplot="editor"]');
+    const workbench = document.querySelector<HTMLElement>('.tp-workbench');
+    expect(editor?.dataset['outlinePlacement']).toBe('left');
+    expect(editor?.dataset['inspectorMode']).toBe('static');
+    expect(workbench?.dataset['leftPanel']).toBe('outline');
+    expect(workbench?.dataset['rightPanel']).toBe('inspector');
+
+    rerender(
+      <FinancialChartEditor
+        sourceData={financialSourceData}
+        panels={{ outline: false, inspector: false, toolbar: false }}
+      />,
+    );
+
+    expect(screen.queryByRole('tree', { name: '结构大纲' })).toBeNull();
+    expect(screen.queryByRole('complementary', { name: '检查器' })).toBeNull();
+    expect(screen.queryByRole('toolbar', { name: '编辑器工具栏' })).toBeNull();
+    expect(editor?.dataset['toolbarVisible']).toBe('false');
+    expect(workbench?.dataset['leftPanel']).toBe('none');
+    expect(workbench?.dataset['rightPanel']).toBe('none');
+    expect(screen.getByTestId('tellplot-chart-stage')).toBeTruthy();
+  });
+
+  it('renders outline and inspector as an accessible right-side tab rail', async () => {
+    render(
+      <FinancialChartEditor
+        sourceData={financialSourceData}
+        layout={{ outlinePlacement: 'right', inspectorMode: 'tab' }}
+      />,
+    );
+
+    await waitFor(() => expect(editorState()).toBe('ready'));
+    const workbench = document.querySelector<HTMLElement>('.tp-workbench');
+    expect(workbench?.dataset['leftPanel']).toBe('none');
+    expect(workbench?.dataset['rightPanel']).toBe('tabs');
+    const tabs = screen.getByRole('tablist', { name: '结构大纲 / 检查器' });
+    const outlineTab = within(tabs).getByRole('tab', { name: '结构大纲' });
+    const inspectorTab = within(tabs).getByRole('tab', { name: '检查器' });
+    expect(outlineTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tree', { name: '结构大纲' })).toBeTruthy();
+    expect(screen.queryByRole('complementary', { name: '检查器' })).toBeNull();
+
+    fireEvent.click(inspectorTab);
+    expect(inspectorTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('tree', { name: '结构大纲' })).toBeNull();
+    expect(screen.getByRole('tabpanel', { name: '检查器' })).toBeTruthy();
+  });
+
+  it('avoids an empty tab strip when only one right-rail panel is enabled', async () => {
+    render(
+      <FinancialChartEditor
+        sourceData={financialSourceData}
+        panels={{ outline: false, inspector: true }}
+        layout={{ outlinePlacement: 'right', inspectorMode: 'tab' }}
+      />,
+    );
+
+    await waitFor(() => expect(editorState()).toBe('ready'));
+    expect(screen.queryByRole('tablist', { name: '结构大纲 / 检查器' })).toBeNull();
+    expect(screen.queryByRole('tree', { name: '结构大纲' })).toBeNull();
+    expect(screen.getByRole('complementary', { name: '检查器' })).toBeTruthy();
+    expect(document.querySelector<HTMLElement>('.tp-workbench')?.dataset['rightPanel']).toBe(
+      'inspector',
+    );
+  });
+
   it('keeps both anchors visible in the compact empty state', async () => {
     render(<FinancialChartEditor sourceData={anchorsOnlySourceData} />);
 
@@ -371,7 +437,7 @@ describe('FinancialChartEditor states', () => {
     );
   });
 
-  it('uses the locked committed-motion curve and a contrast-preserving label halo', async () => {
+  it('uses the locked committed-motion curve and a compact rounded label halo', async () => {
     render(<FinancialChartEditor sourceData={financialSourceData} />);
 
     await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
@@ -380,10 +446,13 @@ describe('FinancialChartEditor states', () => {
           readonly children?: readonly {
             readonly animate?: unknown;
             readonly labels?: readonly { readonly style?: Readonly<Record<string, unknown>> }[];
+            readonly style?: Readonly<Record<string, unknown>>;
+            readonly zIndex?: unknown;
           }[];
         }
       | undefined;
     const interval = options?.children?.[0];
+    const valueLabels = options?.children?.find(child => child.zIndex === 5);
     expect(interval?.animate).toEqual({
       enter: {
         type: 'growInY',
@@ -401,14 +470,16 @@ describe('FinancialChartEditor states', () => {
         easing: 'cubic-bezier(0.2, 0, 0, 1)',
       },
     });
-    expect(interval?.labels?.[0]?.style).toMatchObject({
+    expect(valueLabels?.style).toMatchObject({
       fill: '#18211D',
-      stroke: '#FFFFFF',
-      lineWidth: 3,
+      background: false,
+      lineJoin: 'round',
+      lineWidth: 1.5,
+      stroke: 'rgba(255, 255, 255, 0.92)',
     });
   });
 
-  it('retains amount labels in the mobile safety viewport', async () => {
+  it('lets auto labels yield on mobile while always remains an explicit override', async () => {
     vi.stubGlobal(
       'matchMedia',
       vi.fn(
@@ -426,15 +497,25 @@ describe('FinancialChartEditor states', () => {
       ),
     );
 
-    render(<FinancialChartEditor sourceData={financialSourceData} />);
+    const { rerender } = render(<FinancialChartEditor sourceData={financialSourceData} />);
 
     await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
-    expect(g2Mock.Chart.instances[0]?.options).toHaveBeenCalledWith(
-      expect.objectContaining({
-        children: [expect.objectContaining({ labels: [expect.objectContaining({})] })],
-      }),
-    );
+    const chart = g2Mock.Chart.instances[0];
+    const options = chart?.options.mock.calls[0]?.[0] as
+      { readonly children?: readonly { readonly zIndex?: unknown }[] } | undefined;
+    expect(options?.children?.some(child => child.zIndex === 5)).toBe(false);
     expect(screen.getByRole('region', { name: '图表摘要' }).textContent).toContain('收入增长');
+
+    rerender(
+      <FinancialChartEditor
+        chartAppearance={{ valueLabels: 'always' }}
+        sourceData={financialSourceData}
+      />,
+    );
+    await waitFor(() => expect(chart?.render).toHaveBeenCalledTimes(2));
+    const forced = chart?.options.mock.calls.at(-1)?.[0] as
+      { readonly children?: readonly { readonly zIndex?: unknown }[] } | undefined;
+    expect(forced?.children?.some(child => child.zIndex === 5)).toBe(true);
   });
 
   it('uses a 32px mobile target around a narrow G2 mark without stealing distant marquee space', async () => {
@@ -815,11 +896,9 @@ describe('G2 lifecycle', () => {
     await waitFor(() => expect(chart?.render).toHaveBeenCalledTimes(2));
     expect(g2Mock.Chart.instances).toHaveLength(1);
     expect(screen.getByRole('heading', { name: 'Second bridge' })).toBeTruthy();
-    expect(chart?.options).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        children: [expect.objectContaining({ labels: [expect.objectContaining({})] })],
-      }),
-    );
+    const secondScreenSpec = chart?.options.mock.calls.at(-1)?.[0] as
+      { readonly children?: readonly { readonly zIndex?: unknown }[] } | undefined;
+    expect(secondScreenSpec?.children?.some(child => child.zIndex === 5)).toBe(true);
   });
 
   it('does not report a pending render rejection after disposal', async () => {
@@ -1009,6 +1088,225 @@ describe('G2 direct pointer adapter', () => {
     expect(onToggleGroup).toHaveBeenNthCalledWith(1, 'inner', false);
     expect(onToggleGroup).toHaveBeenNthCalledWith(2, 'outer', true);
     expect(onUngroup).toHaveBeenCalledWith('inner');
+  });
+
+  it('keeps expanded-group actions after a click and hides them only after drag intent', async () => {
+    const groupedView: ViewSpec = {
+      ...initialView(commandSourceData),
+      rootOrder: ['pair', 'c', 'd', 'e'],
+      groups: {
+        pair: { id: 'pair', label: 'Pair drivers', childIds: ['a', 'b'] },
+      },
+    };
+    const projection = projectWaterfall(commandSourceData, groupedView);
+    if (!projection.ok) {
+      throw new Error('Expected valid group-action projection');
+    }
+    g2Mock.Chart.sceneElements = [
+      {
+        __data__: { data: { nodeId: 'a' } },
+        getBounds: vi.fn(() => ({ min: [30, 40], max: [90, 120] })),
+      },
+      {
+        __data__: { data: { nodeId: 'b' } },
+        getBounds: vi.fn(() => ({ min: [110, 40], max: [170, 120] })),
+      },
+    ];
+    const onMove = vi.fn(() => true);
+    const onSelectNode = vi.fn();
+    render(
+      <WaterfallCanvas
+        projection={projection.value}
+        viewSpec={groupedView}
+        onMove={onMove}
+        onSelectNode={onSelectNode}
+      />,
+    );
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    if (chart === undefined) {
+      throw new Error('Expected a mocked chart instance');
+    }
+    appendPointerCaptureCanvas();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerover',
+        semanticChartEvent({ nodeId: 'a', pointerId: 61, x: 60, minX: 30, maxX: 90 }),
+      );
+    });
+    expect(screen.getByRole('button', { name: '折叠分组: Pair drivers' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '取消分组: Pair drivers' })).toBeTruthy();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'a', pointerId: 62, x: 60, minX: 30, maxX: 90 }),
+      );
+      emitChartEvent(chart, 'plot:pointerdown', plotChartEvent(62, 60));
+      emitChartEvent(chart, 'plot:pointerup', plotChartEvent(62, 60));
+    });
+    expect(onSelectNode).toHaveBeenCalledWith('a');
+    expect(screen.getByRole('button', { name: '折叠分组: Pair drivers' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '取消分组: Pair drivers' })).toBeTruthy();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'a', pointerId: 63, x: 60, minX: 30, maxX: 90 }),
+      );
+      emitChartEvent(chart, 'plot:pointermove', plotChartEvent(63, 125));
+    });
+    expect(document.querySelector('.tp-chart-group-actions')).toBeNull();
+  });
+
+  it('moves a grouped waterfall item outside at the source group boundary', async () => {
+    const groupedView: ViewSpec = {
+      ...initialView(commandSourceData),
+      rootOrder: ['pair', 'c', 'd', 'e'],
+      groups: {
+        pair: { id: 'pair', label: 'Pair drivers', childIds: ['a', 'b'] },
+      },
+    };
+    const projection = projectWaterfall(commandSourceData, groupedView);
+    if (!projection.ok) {
+      throw new Error('Expected valid grouped drag projection');
+    }
+    g2Mock.Chart.sceneElements = [
+      {
+        __data__: { data: { nodeId: 'a' } },
+        getBounds: vi.fn(() => ({ min: [20, 20], max: [60, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'b' } },
+        getBounds: vi.fn(() => ({ min: [70, 20], max: [110, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'c' } },
+        getBounds: vi.fn(() => ({ min: [140, 20], max: [180, 90] })),
+      },
+    ];
+    const onInteractionChange = vi.fn();
+    const onMove = vi.fn(() => true);
+    render(
+      <WaterfallCanvas
+        projection={projection.value}
+        viewSpec={groupedView}
+        onInteractionChange={onInteractionChange}
+        onMove={onMove}
+      />,
+    );
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    if (chart === undefined) {
+      throw new Error('Expected a mocked chart instance');
+    }
+    appendPointerCaptureCanvas();
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'b', pointerId: 64, x: 90, minX: 70, maxX: 110 }),
+      );
+      emitChartEvent(chart, 'plot:pointermove', plotChartEvent(64, 111));
+      emitChartEvent(chart, 'plot:pointerup', plotChartEvent(64, 111));
+    });
+
+    expect(onInteractionChange).toHaveBeenCalledWith({
+      state: 'dragging',
+      itemId: 'b',
+      target: { nodeId: 'pair', placement: 'after' },
+    });
+    expect(onMove).toHaveBeenCalledWith('b', { containerId: 'root', index: 1 }, 'direct');
+  });
+
+  it('reprojects the expanded group background before a boundary drag is released', async () => {
+    const groupedView: ViewSpec = {
+      ...initialView(commandSourceData),
+      rootOrder: ['drivers', 'd', 'e'],
+      groups: {
+        drivers: { id: 'drivers', label: 'Growth drivers', childIds: ['a', 'b', 'c'] },
+      },
+    };
+    g2Mock.Chart.sceneElements = [
+      {
+        __data__: { data: { nodeId: 'a' } },
+        getBounds: vi.fn(() => ({ min: [20, 20], max: [60, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'b' } },
+        getBounds: vi.fn(() => ({ min: [70, 20], max: [110, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'c' } },
+        getBounds: vi.fn(() => ({ min: [120, 20], max: [160, 90] })),
+      },
+      {
+        __data__: { data: { nodeId: 'd' } },
+        getBounds: vi.fn(() => ({ min: [190, 20], max: [230, 90] })),
+      },
+    ];
+    const views: ViewSpec[] = [];
+    render(
+      <FinancialChartEditor
+        chartAppearance={{ animation: { enabled: false } }}
+        defaultViewSpec={groupedView}
+        sourceData={commandSourceData}
+        onViewSpecChange={view => views.push(view)}
+      />,
+    );
+    await waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    if (chart === undefined) {
+      throw new Error('Expected a mocked chart instance');
+    }
+    await waitFor(() => expect(chart.render).toHaveBeenCalledOnce());
+    appendPointerCaptureCanvas();
+
+    const groupRegionEnd = (): string | undefined => {
+      const spec = chart.options.mock.calls.at(-1)?.[0] as
+        | {
+            readonly children?: readonly {
+              readonly type?: string;
+              readonly data?: readonly {
+                readonly groupId?: string;
+                readonly endNodeId?: string;
+              }[];
+            }[];
+          }
+        | undefined;
+      return spec?.children
+        ?.find(child => child.type === 'range')
+        ?.data?.find(region => region.groupId === 'drivers')?.endNodeId;
+    };
+    expect(groupRegionEnd()).toBe('c');
+
+    act(() => {
+      emitChartEvent(
+        chart,
+        'element:pointerdown',
+        semanticChartEvent({ nodeId: 'c', pointerId: 65, x: 140, minX: 120, maxX: 160 }),
+      );
+      emitChartEvent(chart, 'plot:pointermove', plotChartEvent(65, 161));
+    });
+
+    expect(views).toHaveLength(0);
+    await waitFor(() => expect(chart.render).toHaveBeenCalledTimes(2));
+    expect(groupRegionEnd()).toBe('b');
+    expect(screen.getByTestId('tellplot-chart-stage').getAttribute('data-interaction-state')).toBe(
+      'dragging',
+    );
+
+    act(() => {
+      emitChartEvent(chart, 'plot:pointerup', plotChartEvent(65, 161));
+    });
+    await waitFor(() => expect(views).toHaveLength(1));
+    expect(views[0]?.groups['drivers']?.childIds).toEqual(['a', 'b']);
+    await waitFor(() => expect(groupRegionEnd()).toBe('b'));
   });
 
   it('routes chart ungroup through one direct command and preserves the parent group', async () => {
@@ -1592,7 +1890,7 @@ describe('G2 direct pointer adapter', () => {
         {
           state: 'dragging',
           itemId: 'revenue-growth',
-          target: { nodeId: 'cost-pressure', edge: 'after' },
+          target: { nodeId: 'cost-pressure', placement: 'after' },
         },
       ],
       [{ state: 'dragging', itemId: 'revenue-growth', target: null }],

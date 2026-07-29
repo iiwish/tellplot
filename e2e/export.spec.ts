@@ -2,13 +2,15 @@ import { readFile } from 'node:fs/promises';
 
 import { expect, test, type Download, type Page } from '@playwright/test';
 
+import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
+
 const EDITOR = '[data-tellplot="editor"]';
 const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
   process.platform === 'darwin' ? 'Meta' : 'Control';
 
 async function openEditor(page: Page, mobile = false): Promise<void> {
   await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('/playground');
   await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
   await expect(page.getByTestId('tellplot-chart').locator('canvas').first()).toBeVisible();
 }
@@ -38,6 +40,7 @@ test('ViewSpec JSON export and import preserve the current controlled view', asy
   await page.keyboard.press('Alt+ArrowDown');
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await sales.click();
+  await activateInspectorPanel(page);
   const annotationText = '董事会口径：剔除一次性项目';
   await page.getByRole('textbox', { name: '注释' }).fill(annotationText);
   await page.getByRole('button', { name: '保存注释' }).click();
@@ -74,6 +77,7 @@ test('ViewSpec JSON export and import preserve the current controlled view', asy
     .evaluateAll(rows => rows.map(row => row.getAttribute('data-node-id')));
   expect(order.slice(1, 3)).toEqual(['price-impact', 'sales-volume']);
   await page.getByRole('treeitem', { name: /销量增长/ }).click();
+  await activateInspectorPanel(page);
   await expect(page.getByRole('textbox', { name: '注释' })).toHaveValue(annotationText);
 });
 
@@ -93,6 +97,7 @@ test('saving an annotation repaints the visible G2 canvas before image export', 
   const before = await canvasImage();
 
   await page.getByRole('treeitem', { name: /销量增长/ }).click();
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '注释' }).fill('董事会复核');
   await page.getByRole('button', { name: '保存注释' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
@@ -111,7 +116,7 @@ test('invalid ViewSpec import reports code and path without changing the current
   });
 
   const status = page.getByRole('status', { name: '文件状态' });
-  await expect(status).toContainText('UNSUPPORTED_SCHEMA_VERSION');
+  await expect(status).toContainText('SOURCE_CONFLICT');
   await expect(status).toContainText('/schemaVersion');
   await expect(status).not.toContainText('销量增长');
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', before ?? '0');
@@ -251,6 +256,7 @@ test('PNG export snapshots the latest revision without reading a stale visible c
   await page.keyboard.press('Alt+ArrowDown');
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   await sales.click();
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '注释' }).fill('立即导出的最新口径');
   await page.getByRole('button', { name: '保存注释' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
@@ -343,8 +349,10 @@ test('SVG export reflects collapsed state and contains no executable or source m
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
   await page.getByRole('button', { name: '折叠 增长驱动' }).click();
 
   const download = await chooseExport(page, 'SVG 图像');
@@ -372,11 +380,15 @@ test('nested JSON preserves the recursive view and SVG exports only its visible 
   await page
     .getByRole('treeitem', { name: /价格提升/ })
     .click({ modifiers: [MULTI_SELECT_MODIFIER] });
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
   await page.getByRole('checkbox', { name: '选择 产品结构' }).click();
+  await activateInspectorPanel(page);
   await page.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
   await page.getByRole('button', { name: '创建分组' }).click();
+  await activateOutlinePanel(page);
   await page.getByRole('button', { name: '折叠 经营桥' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '3');
 

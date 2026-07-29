@@ -129,7 +129,7 @@ describe('editor invariant gate', () => {
 
     const sourceAmounts = new Map(
       start.sourceData.items
-        .filter(item => item.kind === 'contribution')
+        .filter(item => 'kind' in item && item.kind === 'contribution')
         .map(item => [item.id, item.amount] as const),
     );
     const covered = result.session.viewSpec.rootOrder.flatMap(nodeId => {
@@ -137,13 +137,13 @@ describe('editor invariant gate', () => {
       return group?.childIds ?? [nodeId as SourceItemId];
     });
     const total = start.sourceData.items
-      .filter(item => item.kind === 'contribution')
+      .filter(item => 'kind' in item && item.kind === 'contribution')
       .reduce(
         (sum, item) => sum + (covered.includes(item.id) ? (sourceAmounts.get(item.id) ?? 0) : 0),
         0,
       );
     const expected = start.sourceData.items
-      .filter(item => item.kind === 'contribution')
+      .filter(item => 'kind' in item && item.kind === 'contribution')
       .reduce((sum, item) => sum + item.amount, 0);
 
     expect(new Set(covered)).toEqual(new Set(sourceAmounts.keys()));

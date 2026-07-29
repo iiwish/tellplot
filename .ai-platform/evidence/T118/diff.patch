@@ -1,0 +1,1205 @@
+diff --git a/.ai-platform/docs/product-design.md b/.ai-platform/docs/product-design.md
+index 886e572..2aa52da 100644
+--- a/.ai-platform/docs/product-design.md
++++ b/.ai-platform/docs/product-design.md
+@@ -163,7 +163,9 @@ Tooltip、数字格式和动画。标签配置保持可序列化，不接受任
+ 
+ 展开分组在图表中具有清晰、可配置且可导出的区域表达。图表和结构大纲提供 `before`、`after` 与
+ `inside` 语义落点，并允许在不违反锁定、循环和瀑布 segment 约束的前提下跨分组移动节点。移动使来源
+-分组只剩一个直接子节点时，系统在同一条可撤销命令中解散来源分组，不持久化单成员分组。
++分组只剩一个直接子节点时，系统在同一条可撤销命令中解散来源分组，不持久化单成员分组。展开分组中的
++框选按递归树边界归一化：组内连续子集创建子分组；选择跨越分组边界时，命中的后代提升为共同父级下的
++完整分组节点，再与其他连续节点创建上层分组。界面在提交前展示归一化后的实际选择范围。
+ 
+ ### FR-015 开源官网与示例中心
+ 
+diff --git a/.ai-platform/docs/technology-decision-record.md b/.ai-platform/docs/technology-decision-record.md
+index a2b01de..af71916 100644
+--- a/.ai-platform/docs/technology-decision-record.md
++++ b/.ai-platform/docs/technology-decision-record.md
+@@ -93,6 +93,9 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ - Status: Confirmed
+ - Decision: 图表手势采用 `idle -> pending-bar -> dragging` 与 `idle -> marquee` 两条互斥路径。项目在物理 category axis 移动达到 4px 才开始拖动，空白区域拖动显示选区；锁定项目和只读模式保留 pending 点击选择，拖动尝试不进入 dragging。拖动和框选预览属于临时交互状态，提交时只产生一个领域命令。
+ - Rationale: 该状态机避免点击选择、柱子拖动和空白框选争夺 pointer，并保持一次用户意图对应一次撤销。
++- Marquee grouping: 图表框选和大纲多选先把可见命中归一化为最低共同容器下的直接子节点。选择只覆盖
++  展开分组内的连续子集时在该分组内创建子分组；选择跨越边界时，后代提升为共同父级下的完整 group
++  节点。归一化不自动补齐普通间隔节点，不允许产生单成员父分组，并在确认前显示实际生效范围。
+ - Chart boundary: 图表和结构大纲都把落点解析为 `before`、`after` 或 `inside`，并提交相同的 container/index
+   命令。图表使用 pointer down 时的 G2 scene category-axis 边界快照，waterfall/column 使用 X，bar 使用
+   Y，value-axis 位移不影响目标；结构大纲保留完整层级与键盘入口。
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/analysis.md b/.ai-platform/specs/006-group-cross-level-experience/analysis.md
+index 4e5405c..44db688 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/analysis.md
++++ b/.ai-platform/specs/006-group-cross-level-experience/analysis.md
+@@ -2,11 +2,11 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Completed
+ - Feature ID: `006-group-cross-level-experience`
+ - Goal ID: `G002-R1`
+-- Last updated: 2026-07-20
++- Last updated: 2026-07-24
+ 
+ ## Result
+ 
+@@ -21,6 +21,8 @@
+ - R1-FR-004 映射 executor、recursive group invariants、history、persistence 与 property-style regressions。
+ - R1-FR-005 / R1-FR-006 映射 shared region projection、G2 specs、appearance parser、public types 和 SVG/PNG。
+ - R1-FR-007 映射 cross-surface preview、readOnly、a11y 和 reduced motion tests。
++- R1-FR-008 映射 tree-path selection normalizer、chart/outline effective selection、Inspector/dialog scope、
++  nested group command、undo/redo 和真实 G2 marquee tests。
+ - 全部 NFR 具有 package、browser、a11y、performance、coverage 或 strict static gate。
+ 
+ ## Consistency
+@@ -28,6 +30,8 @@
+ - 产品 SSOT FR-014、CD-005、TDR-010 与 TDR-017 使用相同跨层 container/index 命令语义。
+ - `ViewSpec` schema 和 command wire 不变；inside 只存在于 interaction adapter。
+ - 自动解散维持 TDR-009 的每组至少两个 direct children，不放宽 validator。
++- 层级框选只在交互层把可见命中提升为最低共同容器下的直接子节点；领域 `createGroup` 继续只接受同父级
++  连续节点。全容器选择被识别为冗余，不产生单成员父分组。
+ - `groupRegion` 是 approved additive appearance API，继续遵守 TDR-012 的安全配置边界。
+ - region projection 是 waterfall、column、bar 的真实共享需求，不建立通用 chart registry。
+ 
+@@ -42,5 +46,5 @@
+ 
+ ## Execution Readiness
+ 
+-用户已明确批准 G002-R1。目标、公共可选配置、allowed files、TDD、validation、evidence、baseline 和 stop
+-conditions 完整，可以执行 T118 并在目标完成后停在 `Needs_Review`。
++用户已明确批准 G002-R1 与递归层级框选语义。目标、公共可选配置、allowed files、TDD、validation、
++evidence、baseline 和 stop conditions 完整；T118 已完成实现与复核，停在 `Needs_Review`。
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/checklists/requirements.md b/.ai-platform/specs/006-group-cross-level-experience/checklists/requirements.md
+index 92a6a1a..b0d7c8d 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/checklists/requirements.md
++++ b/.ai-platform/specs/006-group-cross-level-experience/checklists/requirements.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Completed
+-- Source spec: `../spec.md` 0.1.0 Confirmed
+-- Last updated: 2026-07-20
++- Source spec: `../spec.md` 0.2.0 Confirmed
++- Last updated: 2026-07-24
+ 
+ ## Interaction
+ 
+@@ -14,6 +14,10 @@
+ - [x] 是否覆盖 chart、outline 和 keyboard 的等价路径？[Accessibility]
+ - [x] 是否定义 expanded 与 collapsed group 的落点行为？[Edge Case]
+ - [x] 是否保留 locked、cycle、segment 和 readOnly 失败边界？[Safety]
++- [x] 是否定义展开分组内连续子集创建子分组？[Hierarchy]
++- [x] 是否定义跨边界选择提升为完整 group，而不是静默移出后代？[Intent]
++- [x] 是否让图表、大纲、Inspector 与确认对话框展示相同的实际生效范围？[Feedback]
++- [x] 是否拒绝冗余全选、普通节点缺口和单成员父分组？[Invariant]
+ 
+ ## Domain
+ 
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml b/.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml
+index 8e7364b..e1c90ec 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml
++++ b/.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml
+@@ -1,5 +1,5 @@
+ schema_version: 1
+-packet_id: EP-G002-R1-A001
++packet_id: EP-G002-R1-A002
+ task_id: T118
+ feature_id: 006-group-cross-level-experience
+ mode: execute_goal
+@@ -15,15 +15,16 @@ governance_inputs:
+   requirements_checklist: .ai-platform/specs/006-group-cross-level-experience/checklists/requirements.md
+   analysis: .ai-platform/specs/006-group-cross-level-experience/analysis.md
+   execution_authorization: >-
+-    Granted. The user explicitly approved and requested completion of G002-R1 on 2026-07-20. Internal workstreams
+-    may execute continuously and must stop at goal-level Needs_Review. Dependency, schema, remote Git, npm publish
+-    and formal release changes are not authorized.
++    Granted. The user approved G002-R1 and explicitly requested completion of deterministic hierarchical marquee
++    grouping on 2026-07-24. Internal workstreams may execute continuously and must stop at goal-level Needs_Review.
++    Dependency, schema, remote Git, npm publish and formal release changes are not authorized.
+ 
+ work_unit:
+   title: 分组与跨层编辑体验
+   goal: >-
+-    Deliver contextual group selection, cross-container before/after/inside drag semantics, atomic source-group
+-    dissolution and configurable G2-rendered expanded group regions across waterfall, column and bar.
++    Deliver contextual and hierarchical group selection, cross-container before/after/inside drag semantics,
++    atomic source-group dissolution and configurable G2-rendered expanded group regions across waterfall, column
++    and bar.
+   depends_on:
+     - G001 Accepted
+     - G002 T117 release candidate complete
+@@ -35,6 +36,7 @@ work_unit:
+     - R1-FR-005
+     - R1-FR-006
+     - R1-FR-007
++    - R1-FR-008
+     - R1-NFR-001
+     - R1-NFR-002
+     - R1-NFR-003
+@@ -47,11 +49,11 @@ codebase_context:
+     - AGENTS.md
+   accepted_baseline:
+     branch: codex/t112-categorical-data-contract
+-    state: G001 accepted and G002 release candidate intentionally uncommitted in the current worktree
++    commit: ead4be9
++    state: Clean local 1.0 candidate with group-boundary drag preview corrections
+     constraints:
+-      - Preserve all accepted and release-candidate changes already present in the dirty worktree.
+-      - Do not use HEAD as baseline and do not reset, stash, stage or commit.
+-      - Generate task-only evidence against the external G002-R1 snapshot.
++      - Preserve all accepted and release-candidate commits.
++      - Do not reset or rewrite existing history.
+   relevant_files:
+     - packages/editor/src/components/InspectorPanel.tsx
+     - packages/editor/src/components/OutlinePanel.tsx
+@@ -59,6 +61,7 @@ codebase_context:
+     - packages/editor/src/components/CategoricalCanvas.tsx
+     - packages/editor/src/interactions/moveTargets.ts
+     - packages/editor/src/interactions/chartPointer.ts
++    - packages/editor/src/interactions/groupSelection.ts
+     - packages/editor/src/domain/executeCommand.ts
+     - packages/editor/src/domain/viewTree.ts
+     - packages/editor/src/config/chartAppearance.ts
+@@ -68,10 +71,9 @@ codebase_context:
+     - packages/editor/src/export/pngExport.ts
+ 
+ baseline:
+-  snapshot: /tmp/tellplot-G002-R1-baseline.y3LKch/worktree
+-  manifest: /tmp/tellplot-G002-R1-baseline.y3LKch/manifest.sha256
+-  file_count: 314
+-  manifest_sha256: 367c1074a1c0021c78e9859405d4f49d76e55ba0815da9bc380e922c5cd3564c
++  commit: ead4be9
++  branch: codex/t112-categorical-data-contract
++  worktree: clean
+ 
+ execution_constraints:
+   allowed_files:
+@@ -93,6 +95,7 @@ execution_constraints:
+     - No dependency manifest or lockfile change.
+     - No SourceData or ViewSpec schema wire change.
+     - No new chart family, multi-series, data editing or multi-node batch drag.
++    - No arbitrary extraction of selected descendants from an existing group.
+     - No raw G2Spec, chart instance, internal runtime or drop callback public API.
+     - No remote Git, npm publish, GitHub release, merge or tag.
+     - No any, @ts-ignore or @ts-expect-error.
+@@ -100,13 +103,16 @@ execution_constraints:
+ tdd_plan:
+   red:
+     - Require Inspector to hide create-group validation for single item/group selections.
++    - Require expanded-group subsets to create child groups and boundary-crossing selections to lift whole groups.
++    - Require redundant full-container, non-contiguous, locked and cross-segment selections to remain blocked.
+     - Require inside resolution and cross-container chart/outline targets.
+     - Require a two-child source group to dissolve atomically and undo/redo exactly.
+     - Require deterministic expanded regions and bounded groupRegion appearance.
+     - Require value-bounded range backgrounds, first-member label anchors and independent foreground group/value
+       text marks in waterfall/column/bar shared screen/export specs.
+   green:
+-    - Implement the minimum contextual UI, resolver, executor, region projection and appearance/spec mapping.
++    - Implement the minimum hierarchical selection normalizer, effective-scope feedback, resolver, executor, region
++      projection and appearance/spec mapping.
+   refactor:
+     - Extract only the region projection/spec helpers consumed by all current chart families.
+ 
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/plan.md b/.ai-platform/specs/006-group-cross-level-experience/plan.md
+index 04dedc7..e03dd06 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/plan.md
++++ b/.ai-platform/specs/006-group-cross-level-experience/plan.md
+@@ -4,18 +4,17 @@
+ 
+ - Feature ID: `006-group-cross-level-experience`
+ - Goal ID: `G002-R1`
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+-- Last updated: 2026-07-20
+-- Approval: 用户已批准 G002-R1 目标级连续执行
++- Last updated: 2026-07-24
++- Approval: 用户已批准 G002-R1 目标级连续执行与递归层级框选语义
+ 
+ ## Baseline
+ 
+-- G001 / T101-T116 已验收；G002 / T117 release candidate 保留在当前 dirty worktree。
+-- G002-R1 外部快照：`/tmp/tellplot-G002-R1-baseline.y3LKch/worktree/`。
+-- Manifest：`/tmp/tellplot-G002-R1-baseline.y3LKch/manifest.sha256`，314 files，SHA-256
+-  `367c1074a1c0021c78e9859405d4f49d76e55ba0815da9bc380e922c5cd3564c`。
+-- 不使用 HEAD 代替 accepted baseline，不 reset、stash、stage 或 commit。
++- G001 / T101-T116 已验收；G002 / T117 release candidate 保留。
++- 本轮递归层级框选基线为分支 `codex/t112-categorical-data-contract` 的本地 commit `ead4be9`，
++  开始执行时 worktree clean。
++- 保留现有历史，不 reset、stash 或覆盖无关变更。
+ 
+ ## Delivery Strategy
+ 
+@@ -24,7 +23,8 @@
+ 3. 修改唯一 command executor，在跨容器移动中原子解散两成员来源 group，并验证 undo/redo 和不变量。
+ 4. 建立共享 `ExpandedGroupRegion` 投影，waterfall、column 和 bar 的 G2 spec 共同消费。
+ 5. 扩展 `FinancialChartAppearance.groupRegion`，屏幕和 export 共享相同 resolved appearance 与 spec。
+-6. 完成真实浏览器、视觉、a11y、performance、package 和兼容性回归，生成目标级 evidence。
++6. 在交互层归一化递归框选结果，保持 `createGroup` 领域命令的同父级与连续性合同不变。
++7. 完成真实浏览器、视觉、a11y、performance、package 和兼容性回归，生成目标级 evidence。
+ 
+ ## Interaction Decisions
+ 
+@@ -34,6 +34,12 @@
+ - collapsed group 中心 inside 默认追加到 group 末尾，group 保持 collapsed。
+ - chart pointer-down 快照包含所有可移动 projection element bounds，不包含背景 range mark。
+ - 直接移动失败继续由 command executor 提供唯一合法性结论，不复制 segment/cycle/pin 规则到 Canvas。
++- 框选命中先移除被已选祖先覆盖的后代，再通过 root-to-node 路径找到最低共同容器，并把每条路径投影为
++  该容器下的直接子节点。
++- 组内连续子集保持在当前 group 创建子分组；跨边界选择把命中的后代提升为完整 group。归一化后的
++  selection 是 Inspector、对话框、selection callback 和 `createGroup` payload 的唯一范围。
++- 归一化覆盖非根容器全部直接子节点时返回明确的 redundant 结果，不持久化单成员父分组；普通节点间
++  的未选择间隔不会被自动补齐。
+ 
+ ## Domain Decisions
+ 
+@@ -67,7 +73,8 @@
+ 
+ ## Validation Strategy
+ 
+-- RED：Inspector contextual actions、inside resolver、auto-dissolve、group region/config/spec tests 先失败。
++- RED：Inspector contextual actions、hierarchical selection lifting、inside resolver、auto-dissolve、
++  group region/config/spec tests 先失败。
+ - GREEN：按 selection -> resolver/domain -> chart/outline -> region/spec/export 顺序最小实现。
+ - REFACTOR：仅抽取两个图表真实共享的 region projection/spec helper，不创建通用 chart plugin。
+ - Final：format、lint、typecheck、unit/coverage、build、package、React、current/previous browsers、a11y、
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/spec.md b/.ai-platform/specs/006-group-cross-level-experience/spec.md
+index a30e3dc..1b13cbb 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/spec.md
++++ b/.ai-platform/specs/006-group-cross-level-experience/spec.md
+@@ -4,10 +4,10 @@
+ 
+ - Feature ID: `006-group-cross-level-experience`
+ - Goal ID: `G002-R1`
+-- Version: 0.1.0
++- Version: 0.2.0
+ - Status: Confirmed
+-- Last updated: 2026-07-20
+-- Approval: 用户于 2026-07-20 明确同意并要求继续完成 G002-R1
++- Last updated: 2026-07-24
++- Approval: 用户明确批准 G002-R1，并于 2026-07-24 批准递归层级框选与嵌套分组语义
+ 
+ ## Goal
+ 
+@@ -19,6 +19,8 @@
+ - 点击已经选中的分组只表达当前分组上下文，不显示“所选节点必须连续且位于同一父级”。
+ - 创建分组动作只在多选上下文出现，非法多选的原因只约束创建动作，不污染普通选择反馈。
+ - 用户可以在图表和结构大纲中把 item 或 group 拖到其他合法分组之前、之后或内部。
++- 用户可以在展开分组内框选连续成员创建子分组；框选跨越分组边界时，界面明确选择整个分组并与相邻
++  节点创建上层分组。
+ - 两成员分组移出一个节点后自动解散，剩余节点保持原位置，一次撤销恢复完整分组和移动。
+ - 展开分组在 waterfall、column 和 bar 中显示可配置背景，屏幕与 SVG/PNG 语义一致。
+ 
+@@ -70,6 +72,18 @@ Pointer adapter 使用 `before | after | inside` 三种内部落点。普通 ite
+ 拖拽预览在图表与大纲同步表达 before/after/inside；inside 使用区域强调而不是边线。取消、非法目标和锁定
+ 反馈保持稳定，readOnly 和 reduced motion 始终优先。
+ 
++### R1-FR-008 递归层级框选
++
++图表框选与结构大纲多选把原始可见节点归一化为最低共同容器下的直接子节点：
++
++- 选择只位于同一展开分组内时，连续的直接子节点创建该分组的子分组。
++- 选择跨越分组边界时，命中的后代提升为共同父级下的完整 group 节点，再与其他选中节点创建上层分组。
++- 归一化后的节点按树顺序去重，不自动补齐未选择的普通间隔节点；非连续结果继续拒绝。
++- 归一化覆盖非根分组的全部直接子节点时视为已有完整分组，不创建会使父分组只剩一个直接子节点的
++  冗余层级。
++- 图表、大纲、Inspector 与创建分组对话框在提交前显示归一化后的节点和来源范围。公共
++  `createGroup` command wire、同父级与连续性校验保持不变。
++
+ ## Non-Functional Requirements
+ 
+ - R1-NFR-001：无新增、删除或升级 dependency。
+@@ -81,7 +95,7 @@ Pointer adapter 使用 `before | after | inside` 三种内部落点。普通 ite
+ 
+ ## Non-Goals
+ 
+-- 新图表家族、多序列、数据编辑、任意层级自动重组或多节点批量拖拽。
++- 新图表家族、多序列、数据编辑、确定性层级框选提升之外的任意自动重组或多节点批量拖拽。
+ - 允许持久化单成员 group。
+ - 原始 `G2Spec`、chart instance、内部 scene adapter 或 drop callback 公共出口。
+ - 新拖拽、动画、状态或渲染依赖。
+@@ -95,6 +109,8 @@ Pointer adapter 使用 `before | after | inside` 三种内部落点。普通 ite
+ - R1-SC-004：默认、关闭、透明度边界、label 模式、嵌套和折叠区域通过 spec/export/视觉测试。
+ - R1-SC-005：完整 unit/coverage、package、React、current/previous browsers、a11y、performance 和 export gates
+   通过，无 unresolved Critical/High/Medium finding。
++- R1-SC-006：展开分组组内子分组、跨边界整组提升、嵌套共同父级、冗余全选、非连续、锁定、segment
++  与单步 undo/redo 均有 component/domain/真实浏览器证据。
+ 
+ ## Approval Gate
+ 
+diff --git a/.ai-platform/specs/006-group-cross-level-experience/tasks.md b/.ai-platform/specs/006-group-cross-level-experience/tasks.md
+index e488d63..6adf3b1 100644
+--- a/.ai-platform/specs/006-group-cross-level-experience/tasks.md
++++ b/.ai-platform/specs/006-group-cross-level-experience/tasks.md
+@@ -4,10 +4,10 @@
+ 
+ - Feature ID: `006-group-cross-level-experience`
+ - Goal ID: `G002-R1`
+-- Version: 0.3.0
++- Version: 0.4.0
+ - Status: Needs_Review
+-- Last updated: 2026-07-23
+-- Approval: 用户于 2026-07-20 明确批准；目标与 G002、G002-R2、G002-R3 一起等待统一验收
++- Last updated: 2026-07-24
++- Approval: 用户明确批准 G002-R1，并于 2026-07-24 要求完成递归层级框选优化
+ 
+ ## T118 - 交付 G002-R1 分组与跨层编辑体验
+ 
+@@ -15,10 +15,10 @@
+ - Priority: P0
+ - Dependencies: G001 Accepted；G002 / T117 release candidate complete
+ - Blocks: G002 目标级复验与后续基础图表扩展
+-- Story / Requirement: R1-FR-001 至 R1-FR-007；R1-NFR-001 至 R1-NFR-006
++- Story / Requirement: R1-FR-001 至 R1-FR-008；R1-NFR-001 至 R1-NFR-006
+ - Parallel: false；作为一个目标级 governed correction 连续执行
+ - Conflicts with: 新图表、schema、dependency、远程 Git、npm publish、正式 release
+-- Goal: 交付上下文选择、跨层语义拖拽、来源分组原子解散和可配置展开分组区域。
++- Goal: 交付上下文选择、递归层级框选、跨层语义拖拽、来源分组原子解散和可配置展开分组区域。
+ - Allowed files: `.ai-platform/**`、`AGENTS.md`、`docs/**`、`packages/editor/src/config/**`、
+   `packages/editor/src/charts/**`、`packages/editor/src/components/**`、`packages/editor/src/domain/**`、
+   `packages/editor/src/export/**`、`packages/editor/src/index.ts`、`packages/editor/src/interactions/**`、
+@@ -28,20 +28,22 @@
+   G2 screen/export spec、appearance parser/public types、E2E/a11y/performance/package/browser matrix
+ - Internal workstreams:
+   - contextual selection and Inspector actions
++  - hierarchical marquee normalization and effective-scope feedback
+   - before/after/inside resolution and cross-container chart/outline preview
+   - atomic two-member source-group dissolution
+   - shared expanded-group region projection and G2 rendering
+   - configuration, export, documentation and goal-level validation
+ - Deliverables: contextual Inspector；cross-container chart/outline drag；atomic group cleanup；shared G2 group regions；
+   public appearance types/docs；screen/export/browser/evidence bundle
+-- Acceptance criteria: R1-SC-001 至 R1-SC-005 全部满足；无 unresolved Critical/High/Medium finding；不执行远程动作。
++- Acceptance criteria: R1-SC-001 至 R1-SC-006 全部满足；无 unresolved Critical/High/Medium finding；不执行远程动作。
+ - Definition of Done: RED/GREEN receipts、全量 gates、三层 review 和目标级 evidence 完整；G002-R1 / T118 进入
+   `Needs_Review`，只向用户请求一次目标验收。
+ - Validation commands: `pnpm format:check`；`pnpm lint`；`pnpm typecheck`；`pnpm test:unit`；
+   `pnpm test:coverage`；`pnpm build`；`pnpm test:package`；`pnpm test:react-matrix`；`pnpm test:e2e`；
+   `pnpm test:a11y`；`pnpm test:performance`；`mise exec node@22.20.0 -- pnpm test:browser-previous`；
+   strict artifact validator；`git diff --check`
+-- TDD plan: RED contextual/inside/dissolve/region tests；GREEN minimal command/adapter/G2 implementation；REFACTOR shared region code only.
++- TDD plan: RED contextual/hierarchical-selection/inside/dissolve/region tests；GREEN minimal
++  selection-normalizer/adapter/G2 implementation；REFACTOR shared tree-path and region code only.
+ - Packet path: `.ai-platform/specs/006-group-cross-level-experience/packets/T118.yaml`
+ - Evidence required: `.ai-platform/evidence/T118/summary.md`、`test-results.md`、`diff.patch`、`review.md`、visual evidence
+ - User review: 等待 G002 系列目标级统一验收。
+diff --git a/README.md b/README.md
+index 9e6174b..322a1d8 100644
+--- a/README.md
++++ b/README.md
+@@ -55,7 +55,7 @@ pnpm test:package
+ 
+ - 财务瀑布图。
+ - 分类条形图与分类柱状图。
+-- 拖拽排序、分组与取消分组、折叠与展开。
++- 拖拽排序、递归分组与取消分组、折叠与展开；框选可在展开分组内建子组或跨边界建上层分组。
+ - 结构化大纲、撤销重做、保存视图、演示文稿友好导出。
+ - 类型化命令、可撤销历史和确定性图表不变量。
+ 
+diff --git a/docs/getting-started.md b/docs/getting-started.md
+index 678027c..336c7e3 100644
+--- a/docs/getting-started.md
++++ b/docs/getting-started.md
+@@ -104,6 +104,12 @@ export function ControlledChart() {
+ 同一实例不要同时传入 `view` 和 `defaultView`。受控 view 的 dataset、schema 和 chart type 必须与 config
+ 兼容。
+ 
++## 分组交互
++
++框选同一展开分组内的连续柱会创建子分组。框选同时覆盖分组内外的柱时，TellPlot 会把命中的内部柱提升
++为完整分组边界，再与外部连续节点创建上层分组；确认对话框会显示实际生效的节点与来源范围。原始
++`config.data` 始终不变，结构结果只写入 `ViewSpec`。
++
+ ## 保存与恢复
+ 
+ ```ts
+diff --git a/docs/roadmap.md b/docs/roadmap.md
+index 3cf5174..5c62f8c 100644
+--- a/docs/roadmap.md
++++ b/docs/roadmap.md
+@@ -39,7 +39,8 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ 
+ - Status: Needs_Review
+ - Goal: 让分组选择、跨层拖拽和展开区域在结构大纲与图表中具有一致、可理解的编辑反馈。
+-- Outcome: 已完成上下文选择、跨层移动、最小分组自动解散和可配置展开分组背景区域。
++- Outcome: 已完成上下文选择、组内子分组、跨边界整组提升、跨层移动、最小分组自动解散和可配置展开
++  分组背景区域。
+ - Boundary: 所有动作继续进入共享确定性命令，原始数据与 G2 runtime ownership 保持不变。
+ 
+ ## G002-R2 开源官网与示例中心
+diff --git a/e2e/waterfall-editor.spec.ts b/e2e/waterfall-editor.spec.ts
+index 7e00f19..75525a5 100644
+--- a/e2e/waterfall-editor.spec.ts
++++ b/e2e/waterfall-editor.spec.ts
+@@ -494,6 +494,60 @@ test('creates a nested group from contiguous sibling nodes and preserves recursi
+   await expect(sales).toBeVisible();
+ });
+ 
++test('marquee across an expanded group promotes its complete boundary into an outer group', async ({
++  page,
++}) => {
++  await openEditor(page);
++  await page.getByRole('treeitem', { name: /销量增长/ }).click();
++  await page
++    .getByRole('treeitem', { name: /价格提升/ })
++    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await page
++    .getByRole('treeitem', { name: /产品结构/ })
++    .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++  await activateInspectorPanel(page);
++  await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
++  await page.getByRole('button', { name: '创建分组' }).click();
++
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++  await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
++  const points = await waterfallBarPoints(canvas);
++  const box = await canvas.boundingBox();
++  const selectedChild = points[3];
++  const outsideItem = points[4];
++  expect(box).not.toBeNull();
++  expect(selectedChild).toBeDefined();
++  expect(outsideItem).toBeDefined();
++  if (box === null || selectedChild === undefined || outsideItem === undefined) {
++    return;
++  }
++
++  await page.mouse.move(selectedChild.minX - 4, box.y + 8);
++  await page.mouse.down();
++  await page.mouse.move(outsideItem.maxX + 4, box.y + box.height - 36, { steps: 8 });
++  await page.mouse.up();
++
++  const dialog = page.getByRole('dialog', { name: '创建折叠分组' });
++  await expect(dialog).toBeVisible();
++  await expect(dialog.locator('[data-selection-mode="lifted"]')).toContainText('按分组边界');
++  await dialog.getByRole('textbox', { name: '分组名称' }).fill('经营桥');
++  await dialog.getByRole('button', { name: '创建分组' }).click();
++
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '2');
++  await activateOutlinePanel(page);
++  const outer = page.getByRole('treeitem', { name: /经营桥/ });
++  await expect(outer).toHaveAttribute('data-source-count', '4');
++  await expect(page.getByRole('button', { name: '展开 经营桥' })).toBeVisible();
++  await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toBeHidden();
++
++  await page.getByRole('button', { name: '展开 经营桥' }).click();
++  await expect(page.getByRole('treeitem', { name: /增长驱动/ })).toHaveAttribute('aria-level', '2');
++  await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toHaveAttribute(
++    'aria-level',
++    '2',
++  );
++});
++
+ test('blank-chart marquee creates one initially collapsed direct group', async ({ page }) => {
+   await openEditor(page);
+   const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+diff --git a/packages/editor/README.md b/packages/editor/README.md
+index 3a7dab9..11297b9 100644
+--- a/packages/editor/README.md
++++ b/packages/editor/README.md
+@@ -1,7 +1,7 @@
+ # @tellplot/editor
+ 
+-基于 AntV G2 的轻量可编辑 React 图表组件。当前支持瀑布图、分类条形图和分类柱状图，并提供排序、分组、
+-跨层拖拽、撤销重做、视图持久化、SVG/PNG 导出与无障碍摘要。
++基于 AntV G2 的轻量可编辑 React 图表组件。当前支持瀑布图、分类条形图和分类柱状图，并提供排序、递归
++分组、跨层拖拽、撤销重做、视图持久化、SVG/PNG 导出与无障碍摘要。
+ 
+ ## 安装
+ 
+diff --git a/packages/editor/src/components/FinancialChartEditor.tsx b/packages/editor/src/components/FinancialChartEditor.tsx
+index 389c5f5..5c588c1 100644
+--- a/packages/editor/src/components/FinancialChartEditor.tsx
++++ b/packages/editor/src/components/FinancialChartEditor.tsx
+@@ -16,7 +16,7 @@ import type { EditorCommand } from '../domain/commands';
+ import { validationIssue, type ValidationIssue } from '../domain/errors';
+ import { executeCommand } from '../domain/executeCommand';
+ import type { GroupId, ViewNodeId } from '../domain/ids';
+-import { collectLeafSourceIds } from '../domain/viewTree';
++import { collectLeafSourceIds, ownGroup } from '../domain/viewTree';
+ import { exportError, type ExportOptions, type ExportResult } from '../export/exportTypes';
+ import { normalizeExportOptions } from '../export/exportOptions';
+ import { exportPngChart } from '../export/pngExport';
+@@ -27,7 +27,11 @@ import {
+   resolvePointerMoveTarget,
+   type InteractionCommandSource,
+ } from '../interactions/moveTargets';
+-import type { FinancialChartEditorHandle, FinancialChartEditorProps } from '../react/editorTypes';
++import type {
++  FinancialChartEditorHandle,
++  FinancialChartEditorProps,
++  SelectionState,
++} from '../react/editorTypes';
+ import { useEditorController } from '../react/useEditorController';
+ import { projectWaterfall } from '../charts/waterfall/projection';
+ import type { WaterfallProjection } from '../charts/waterfall/types';
+@@ -65,7 +69,8 @@ type FeedbackMessageKey =
+   | 'groupLabelRequired'
+   | 'groupTooSmall'
+   | 'groupNonContiguous'
+-  | 'groupLocked';
++  | 'groupLocked'
++  | 'groupRedundant';
+ 
+ interface CommandFeedbackState {
+   readonly code: string;
+@@ -197,7 +202,22 @@ function feedbackForError(code: string): FeedbackMessageKey {
+         ? 'groupNonContiguous'
+         : code === 'GROUP_TOO_SMALL'
+           ? 'groupTooSmall'
+-          : 'targetUnavailable';
++          : code === 'REDUNDANT_GROUP_SELECTION'
++            ? 'groupRedundant'
++            : 'targetUnavailable';
++}
++
++function feedbackForGroupSelection(selection: GroupSelectionResult): FeedbackMessageKey {
++  if (selection.ok) {
++    return 'targetUnavailable';
++  }
++  return selection.reason === 'GROUP_TOO_SMALL'
++    ? 'groupTooSmall'
++    : selection.reason === 'ITEM_LOCKED'
++      ? 'groupLocked'
++      : selection.reason === 'REDUNDANT_GROUP_SELECTION'
++        ? 'groupRedundant'
++        : 'groupNonContiguous';
+ }
+ 
+ function groupSelectionFallback(): GroupSelectionResult {
+@@ -614,15 +634,7 @@ export const FinancialChartEditor = forwardRef<
+     ): boolean => {
+       if (controller.viewSpec === null || !selection.ok || label.trim().length === 0) {
+         const reasonKey: FeedbackMessageKey =
+-          label.trim().length === 0
+-            ? 'groupLabelRequired'
+-            : selection.ok
+-              ? 'targetUnavailable'
+-              : selection.reason === 'GROUP_TOO_SMALL'
+-                ? 'groupTooSmall'
+-                : selection.reason === 'ITEM_LOCKED'
+-                  ? 'groupLocked'
+-                  : 'groupNonContiguous';
++          label.trim().length === 0 ? 'groupLabelRequired' : feedbackForGroupSelection(selection);
+         setFeedback({ code: 'GROUP_UNAVAILABLE', messageKey: reasonKey, tone: 'error' });
+         return false;
+       }
+@@ -678,12 +690,7 @@ export const FinancialChartEditor = forwardRef<
+       if (!result.ok) {
+         setFeedback({
+           code: 'GROUP_UNAVAILABLE',
+-          messageKey:
+-            result.reason === 'GROUP_TOO_SMALL'
+-              ? 'groupTooSmall'
+-              : result.reason === 'ITEM_LOCKED'
+-                ? 'groupLocked'
+-                : 'groupNonContiguous',
++          messageKey: feedbackForGroupSelection(result),
+           tone: 'error',
+         });
+         return;
+@@ -699,6 +706,32 @@ export const FinancialChartEditor = forwardRef<
+     [controller, props.sourceData, setChartGroupLabel, setFeedback, setPendingChartGroup],
+   );
+ 
++  const handleOutlineSelect = useCallback(
++    (selection: SelectionState): void => {
++      if (controller.viewSpec === null || selection.nodeIds.length < 2) {
++        controller.select(selection);
++        return;
++      }
++      const result = evaluateGroupSelection(
++        props.sourceData,
++        controller.viewSpec,
++        selection.nodeIds,
++      );
++      if (!result.ok) {
++        controller.select(selection);
++        return;
++      }
++      controller.select({
++        nodeId: result.nodeIds.includes(selection.nodeId)
++          ? selection.nodeId
++          : (result.nodeIds.at(-1) ?? result.nodeIds[0] ?? selection.nodeId),
++        nodeIds: [...result.nodeIds],
++        sourceIds: [...result.sourceIds],
++      });
++    },
++    [controller, props.sourceData],
++  );
++
+   const handleChartSelect = useCallback(
+     (nodeId: ViewNodeId): void => {
+       if (controller.viewSpec === null) {
+@@ -899,7 +932,7 @@ export const FinancialChartEditor = forwardRef<
+         selection={controller.selection}
+         readOnly={props.readOnly === true}
+         externalPreview={currentChartInteraction}
+-        onSelect={controller.select}
++        onSelect={handleOutlineSelect}
+         onMove={handleMove}
+         onToggleGroup={handleToggleGroup}
+         onCancel={handleCancel}
+@@ -1183,6 +1216,16 @@ export const FinancialChartEditor = forwardRef<
+             }}
+           >
+             <h2>{messages.groupDialogTitle}</h2>
++            <p className="tp-group-dialog-scope" data-selection-mode={pendingChartGroup.mode}>
++              {messages.groupSelectionSummary(
++                pendingChartGroup.mode,
++                pendingChartGroup.containerId === 'root' || currentView === null
++                  ? null
++                  : (ownGroup(currentView, pendingChartGroup.containerId)?.label ?? null),
++                pendingChartGroup.nodeIds.length,
++                pendingChartGroup.sourceIds.length,
++              )}
++            </p>
+             <label htmlFor={chartGroupLabelId}>{messages.groupLabel}</label>
+             <input
+               autoFocus
+diff --git a/packages/editor/src/components/InspectorPanel.tsx b/packages/editor/src/components/InspectorPanel.tsx
+index 1be2006..e2d6aab 100644
+--- a/packages/editor/src/components/InspectorPanel.tsx
++++ b/packages/editor/src/components/InspectorPanel.tsx
+@@ -140,7 +140,9 @@ function groupReason(
+     ? messages.groupTooSmall
+     : result.reason === 'ITEM_LOCKED'
+       ? messages.groupLocked
+-      : messages.groupNonContiguous;
++      : result.reason === 'REDUNDANT_GROUP_SELECTION'
++        ? messages.groupRedundant
++        : messages.groupNonContiguous;
+ }
+ 
+ export function InspectorPanel({
+diff --git a/packages/editor/src/components/OutlinePanel.tsx b/packages/editor/src/components/OutlinePanel.tsx
+index cde1589..ba48a74 100644
+--- a/packages/editor/src/components/OutlinePanel.tsx
++++ b/packages/editor/src/components/OutlinePanel.tsx
+@@ -25,7 +25,7 @@ import {
+ import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewGroup, ViewSpec } from '../domain/model';
+ import type { CategoricalDatum, CategoricalProjection } from '../charts/categorical/types';
+-import { collectLeafSourceIds, locateViewNode } from '../domain/viewTree';
++import { collectLeafSourceIds } from '../domain/viewTree';
+ import {
+   resolveKeyboardMoveTarget,
+   resolvePointerDropPlacement,
+@@ -599,8 +599,9 @@ export function OutlinePanel({
+       } else {
+         next.add(entryId);
+       }
+-      const location = locateViewNode(viewSpec, entryId);
+-      const orderedIds = (location?.values ?? [entryId]).filter(nodeId => next.has(nodeId));
++      const orderedIds = entries
++        .map(candidate => candidate.nodeId)
++        .filter(nodeId => next.has(nodeId));
+       const entryRemainsSelected = next.has(entryId);
+       const selectedNodeIds = orderedIds.length === 0 ? [entryId] : orderedIds;
+       onSelect({
+@@ -612,7 +613,7 @@ export function OutlinePanel({
+         sourceIds: selectedNodeIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId)),
+       });
+     },
+-    [onSelect, selection, viewSpec],
++    [entries, onSelect, selection, viewSpec],
+   );
+ 
+   useEffect(
+diff --git a/packages/editor/src/components/editorMessages.ts b/packages/editor/src/components/editorMessages.ts
+index d076035..4750f64 100644
+--- a/packages/editor/src/components/editorMessages.ts
++++ b/packages/editor/src/components/editorMessages.ts
+@@ -1,3 +1,4 @@
++import type { GroupSelectionMode } from '../interactions/groupSelection';
+ import type { EditorLocale } from './formatAmount';
+ 
+ export interface EditorMessages {
+@@ -45,6 +46,7 @@ export interface EditorMessages {
+   readonly groupTooSmall: string;
+   readonly groupNonContiguous: string;
+   readonly groupLocked: string;
++  readonly groupRedundant: string;
+   readonly dragInstructions: string;
+   readonly moveInProgress: string;
+   readonly moveValidationPending: string;
+@@ -62,6 +64,12 @@ export interface EditorMessages {
+   readonly dragLabel: (label: string) => string;
+   readonly collapseGroup: (label: string) => string;
+   readonly expandGroup: (label: string) => string;
++  readonly groupSelectionSummary: (
++    mode: GroupSelectionMode,
++    parentLabel: string | null,
++    nodeCount: number,
++    sourceCount: number,
++  ) => string;
+   readonly backdrop: (label: string) => string;
+ }
+ 
+@@ -110,6 +118,7 @@ const ZH_CN: EditorMessages = {
+   groupTooSmall: '至少选择 2 项连续贡献项',
+   groupNonContiguous: '所选节点必须连续且位于同一父级',
+   groupLocked: '所选项目包含锁定项',
++  groupRedundant: '所选内容已属于同一完整分组，请调整选择范围',
+   dragInstructions: '使用指针拖动此项目。键盘移动请聚焦结构大纲行，并按 Alt 加方向键。',
+   moveInProgress: '正在移动…',
+   moveValidationPending: '移动目标已提交，正在校验',
+@@ -127,6 +136,12 @@ const ZH_CN: EditorMessages = {
+   dragLabel: label => `拖动 ${label}`,
+   collapseGroup: label => `折叠 ${label}`,
+   expandGroup: label => `展开 ${label}`,
++  groupSelectionSummary: (mode, parentLabel, nodeCount, sourceCount) =>
++    mode === 'nested'
++      ? `将在“${parentLabel ?? '当前分组'}”内创建子分组，共 ${sourceCount} 项来源`
++      : mode === 'lifted'
++        ? `已按分组边界选择 ${nodeCount} 个完整节点，共 ${sourceCount} 项来源`
++        : `将 ${nodeCount} 个节点（${sourceCount} 项来源）创建为分组`,
+   backdrop: label => `${label}背景层`,
+ };
+ 
+@@ -175,6 +190,7 @@ const EN_US: EditorMessages = {
+   groupTooSmall: 'Select at least 2 contiguous contributions',
+   groupNonContiguous: 'Selected nodes must be contiguous siblings',
+   groupLocked: 'The selection contains a locked item',
++  groupRedundant: 'The selection already covers one complete group; adjust the selection',
+   dragInstructions:
+     'Use a pointer to drag this item. For keyboard moves, focus an outline row and press Alt plus an arrow key.',
+   moveInProgress: 'Moving…',
+@@ -193,6 +209,12 @@ const EN_US: EditorMessages = {
+   dragLabel: label => `Drag ${label}`,
+   collapseGroup: label => `Collapse ${label}`,
+   expandGroup: label => `Expand ${label}`,
++  groupSelectionSummary: (mode, parentLabel, nodeCount, sourceCount) =>
++    mode === 'nested'
++      ? `Create a subgroup inside “${parentLabel ?? 'the current group'}” from ${sourceCount} sources`
++      : mode === 'lifted'
++        ? `Selected ${nodeCount} complete nodes at group boundaries from ${sourceCount} sources`
++        : `Create a group from ${nodeCount} nodes and ${sourceCount} sources`,
+   backdrop: label => `${label} backdrop`,
+ };
+ 
+diff --git a/packages/editor/src/interactions/groupSelection.ts b/packages/editor/src/interactions/groupSelection.ts
+index 7b506d2..3dd0700 100644
+--- a/packages/editor/src/interactions/groupSelection.ts
++++ b/packages/editor/src/interactions/groupSelection.ts
+@@ -1,19 +1,84 @@
+-import type { SourceItemId, ViewNodeId } from '../domain/ids';
++import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
+ import type { SourceData, ViewSpec } from '../domain/model';
+-import { collectLeafSourceIds, locateViewNode } from '../domain/viewTree';
++import {
++  collectLeafSourceIds,
++  containerChildren,
++  locateViewNode,
++  type ViewContainerId,
++} from '../domain/viewTree';
++
++export type GroupSelectionMode = 'same-level' | 'nested' | 'lifted';
+ 
+ export type GroupSelectionResult =
+   | {
+       readonly ok: true;
+       readonly nodeIds: readonly ViewNodeId[];
+       readonly sourceIds: readonly SourceItemId[];
++      readonly containerId: ViewContainerId;
++      readonly mode: GroupSelectionMode;
+     }
+   | {
+       readonly ok: false;
+-      readonly reason: 'GROUP_TOO_SMALL' | 'NON_CONTIGUOUS_GROUP_SELECTION' | 'ITEM_LOCKED';
++      readonly reason:
++        | 'GROUP_TOO_SMALL'
++        | 'NON_CONTIGUOUS_GROUP_SELECTION'
++        | 'ITEM_LOCKED'
++        | 'REDUNDANT_GROUP_SELECTION';
+     };
+ 
+-/** Classifies contiguous, unpinned view nodes that share one direct parent. */
++function pathFromRoot(viewSpec: ViewSpec, nodeId: ViewNodeId): readonly ViewNodeId[] | undefined {
++  const reversed: ViewNodeId[] = [];
++  const visited = new Set<ViewNodeId>();
++  let current = nodeId;
++  while (!visited.has(current)) {
++    visited.add(current);
++    reversed.push(current);
++    const location = locateViewNode(viewSpec, current);
++    if (location === undefined) {
++      return undefined;
++    }
++    if (location.containerId === 'root') {
++      return reversed.reverse();
++    }
++    current = location.containerId;
++  }
++  return undefined;
++}
++
++function isProperPrefix(candidate: readonly ViewNodeId[], path: readonly ViewNodeId[]): boolean {
++  return (
++    candidate.length < path.length && candidate.every((nodeId, index) => path[index] === nodeId)
++  );
++}
++
++function commonPrefixLength(paths: readonly (readonly ViewNodeId[])[]): number {
++  const first = paths[0];
++  if (first === undefined) {
++    return 0;
++  }
++  let length = 0;
++  while (
++    length < first.length &&
++    paths.every(path => path[length] !== undefined && path[length] === first[length])
++  ) {
++    length += 1;
++  }
++  return length;
++}
++
++function sameNodeSet(left: readonly ViewNodeId[], right: readonly ViewNodeId[]): boolean {
++  if (left.length !== right.length) {
++    return false;
++  }
++  const rightIds = new Set(right);
++  return left.every(nodeId => rightIds.has(nodeId));
++}
++
++/**
++ * Normalizes selected descendants to contiguous siblings at their lowest common container.
++ * Selecting within one expanded group creates a subgroup; crossing its boundary promotes the
++ * complete group node so the command layer still receives a deterministic sibling selection.
++ */
+ export function evaluateGroupSelection(
+   sourceData: SourceData,
+   viewSpec: ViewSpec,
+@@ -24,12 +89,47 @@ export function evaluateGroupSelection(
+     return { ok: false, reason: 'GROUP_TOO_SMALL' };
+   }
+ 
+-  const sourceItems = new Map(sourceData.items.map(item => [item.id, item]));
+-  const locations = uniqueIds.map(nodeId => locateViewNode(viewSpec, nodeId));
+-  if (locations.some(location => location === undefined)) {
++  const allPaths = uniqueIds.map(nodeId => pathFromRoot(viewSpec, nodeId));
++  if (allPaths.some(path => path === undefined)) {
+     return { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
+   }
+-  const leafIds = uniqueIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId));
++  const paths = allPaths.filter(
++    (path, index): path is readonly ViewNodeId[] =>
++      path !== undefined &&
++      !allPaths.some(
++        (candidate, candidateIndex) =>
++          candidateIndex !== index && candidate !== undefined && isProperPrefix(candidate, path),
++      ),
++  );
++  if (paths.length < 2) {
++    return { ok: false, reason: 'GROUP_TOO_SMALL' };
++  }
++
++  const prefixLength = commonPrefixLength(paths);
++  const containerId: ViewContainerId =
++    prefixLength === 0 ? 'root' : (paths[0]?.[prefixLength - 1] as GroupId);
++  const values = containerChildren(viewSpec, containerId);
++  if (values === undefined) {
++    return { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
++  }
++  const normalized = new Set(
++    paths
++      .map(path => path[prefixLength])
++      .filter((nodeId): nodeId is ViewNodeId => nodeId !== undefined),
++  );
++  const orderedIds = values.filter(nodeId => normalized.has(nodeId));
++  if (orderedIds.length < 2 || orderedIds.length !== normalized.size) {
++    return { ok: false, reason: 'GROUP_TOO_SMALL' };
++  }
++
++  const firstIndex = values.indexOf(orderedIds[0] as ViewNodeId);
++  const contiguous = orderedIds.every((nodeId, offset) => values[firstIndex + offset] === nodeId);
++  if (!contiguous) {
++    return { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
++  }
++
++  const sourceItems = new Map(sourceData.items.map(item => [item.id, item]));
++  const leafIds = orderedIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId));
+   const categoricalSource =
+     sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical';
+   if (
+@@ -45,27 +145,16 @@ export function evaluateGroupSelection(
+     return { ok: false, reason: 'ITEM_LOCKED' };
+   }
+ 
+-  const firstLocation = locations[0];
+-  if (
+-    firstLocation === undefined ||
+-    locations.some(location => location?.containerId !== firstLocation.containerId)
+-  ) {
+-    return { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
++  if (containerId !== 'root' && orderedIds.length === values.length) {
++    return { ok: false, reason: 'REDUNDANT_GROUP_SELECTION' };
+   }
+-  const selected = new Set(uniqueIds);
+-  const orderedIds = firstLocation.values.filter(nodeId => selected.has(nodeId));
+-  if (orderedIds.length !== uniqueIds.length) {
+-    return { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
+-  }
+-  const firstIndex = firstLocation.values.indexOf(orderedIds[0] as ViewNodeId);
+-  const contiguous = orderedIds.every(
+-    (nodeId, offset) => firstLocation.values[firstIndex + offset] === nodeId,
+-  );
+-  return contiguous
+-    ? {
+-        ok: true,
+-        nodeIds: orderedIds,
+-        sourceIds: orderedIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId)),
+-      }
+-    : { ok: false, reason: 'NON_CONTIGUOUS_GROUP_SELECTION' };
++
++  const lifted = !sameNodeSet(uniqueIds, orderedIds);
++  return {
++    ok: true,
++    nodeIds: orderedIds,
++    sourceIds: leafIds,
++    containerId,
++    mode: lifted ? 'lifted' : containerId === 'root' ? 'same-level' : 'nested',
++  };
+ }
+diff --git a/packages/editor/src/styles/editor.css b/packages/editor/src/styles/editor.css
+index 3f12bd8..b28a89c 100644
+--- a/packages/editor/src/styles/editor.css
++++ b/packages/editor/src/styles/editor.css
+@@ -930,6 +930,13 @@
+   line-height: 22px;
+ }
+ 
++.tp-group-dialog-scope {
++  margin: 0 0 2px;
++  color: var(--tp-text-muted);
++  font-size: 12px;
++  line-height: 18px;
++}
++
+ .tp-group-dialog label {
+   color: var(--tp-text-muted);
+   font-size: 11px;
+diff --git a/packages/editor/tests/components/group-actions.test.tsx b/packages/editor/tests/components/group-actions.test.tsx
+index 036df7a..7352113 100644
+--- a/packages/editor/tests/components/group-actions.test.tsx
++++ b/packages/editor/tests/components/group-actions.test.tsx
+@@ -43,6 +43,7 @@ const categoricalSource = {
+     { id: 'category-a', label: 'Category A', amount: 10 },
+     { id: 'category-b', label: 'Category B', amount: 20 },
+     { id: 'category-c', label: 'Category C', amount: 30 },
++    { id: 'category-d', label: 'Category D', amount: 40 },
+   ],
+ } as const satisfies CategoricalSourceData;
+ 
+@@ -186,6 +187,8 @@ describe('group selection and actions', () => {
+       ok: true,
+       nodeIds: ['a', 'b'],
+       sourceIds: ['a', 'b'],
++      containerId: 'root',
++      mode: 'same-level',
+     });
+     expect(evaluateGroupSelection(commandSourceData, initialView(), ['a', 'c'])).toEqual({
+       ok: false,
+@@ -210,6 +213,8 @@ describe('group selection and actions', () => {
+       ok: true,
+       nodeIds: ['category-a', 'category-b'],
+       sourceIds: ['category-a', 'category-b'],
++      containerId: 'root',
++      mode: 'same-level',
+     });
+     expect(
+       evaluateGroupSelection(
+@@ -220,25 +225,181 @@ describe('group selection and actions', () => {
+     ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
+   });
+ 
+-  it('classifies contiguous recursive nodes only within the same parent', () => {
++  it('creates a subgroup from a contiguous selection inside an expanded group', () => {
+     const viewSpec: ViewSpec = {
+       ...initialView(),
+       rootOrder: ['outer', 'd', 'e'],
+       groups: {
+-        inner: { id: 'inner', label: 'Inner', childIds: ['a', 'b'] },
+-        outer: { id: 'outer', label: 'Outer', childIds: ['inner', 'c'] },
++        outer: { id: 'outer', label: 'Outer', childIds: ['a', 'b', 'c'] },
+       },
+     };
+ 
+-    expect(evaluateGroupSelection(commandSourceData, viewSpec, ['c', 'inner'])).toEqual({
++    expect(evaluateGroupSelection(commandSourceData, viewSpec, ['b', 'a'])).toEqual({
+       ok: true,
+-      nodeIds: ['inner', 'c'],
+-      sourceIds: ['a', 'b', 'c'],
++      nodeIds: ['a', 'b'],
++      sourceIds: ['a', 'b'],
++      containerId: 'outer',
++      mode: 'nested',
++    });
++  });
++
++  it('lifts a cross-boundary selection to complete sibling nodes', () => {
++    const rootView: ViewSpec = {
++      ...categoricalView(),
++      rootOrder: ['inner', 'category-c', 'category-d'],
++      groups: {
++        inner: {
++          id: 'inner',
++          label: 'Inner',
++          childIds: ['category-a', 'category-b'],
++        },
++      },
++    };
++    expect(
++      evaluateGroupSelection(categoricalSource, rootView, ['category-b', 'category-c']),
++    ).toEqual({
++      ok: true,
++      nodeIds: ['inner', 'category-c'],
++      sourceIds: ['category-a', 'category-b', 'category-c'],
++      containerId: 'root',
++      mode: 'lifted',
++    });
++    expect(
++      evaluateGroupSelection(categoricalSource, rootView, ['inner', 'category-b', 'category-c']),
++    ).toEqual({
++      ok: true,
++      nodeIds: ['inner', 'category-c'],
++      sourceIds: ['category-a', 'category-b', 'category-c'],
++      containerId: 'root',
++      mode: 'lifted',
++    });
++
++    const nestedView: ViewSpec = {
++      ...categoricalView(),
++      rootOrder: ['outer'],
++      groups: {
++        inner: {
++          id: 'inner',
++          label: 'Inner',
++          childIds: ['category-a', 'category-b'],
++        },
++        outer: {
++          id: 'outer',
++          label: 'Outer',
++          childIds: ['inner', 'category-c', 'category-d'],
++        },
++      },
++    };
++    expect(
++      evaluateGroupSelection(categoricalSource, nestedView, ['category-b', 'category-c']),
++    ).toEqual({
++      ok: true,
++      nodeIds: ['inner', 'category-c'],
++      sourceIds: ['category-a', 'category-b', 'category-c'],
++      containerId: 'outer',
++      mode: 'lifted',
+     });
+-    expect(evaluateGroupSelection(commandSourceData, viewSpec, ['b', 'c'])).toEqual({
++  });
++
++  it('rejects redundant, non-contiguous, or locked promoted selections', () => {
++    const rootView: ViewSpec = {
++      ...categoricalView(),
++      rootOrder: ['inner', 'category-c', 'category-d'],
++      groups: {
++        inner: {
++          id: 'inner',
++          label: 'Inner',
++          childIds: ['category-a', 'category-b'],
++        },
++      },
++    };
++    expect(
++      evaluateGroupSelection(categoricalSource, rootView, ['category-b', 'category-d']),
++    ).toEqual({
+       ok: false,
+       reason: 'NON_CONTIGUOUS_GROUP_SELECTION',
+     });
++    expect(
++      evaluateGroupSelection(categoricalSource, { ...rootView, pinnedItemIds: ['category-a'] }, [
++        'category-b',
++        'category-c',
++      ]),
++    ).toEqual({ ok: false, reason: 'ITEM_LOCKED' });
++
++    const nestedView: ViewSpec = {
++      ...categoricalView(),
++      rootOrder: ['outer', 'category-d'],
++      groups: {
++        outer: {
++          id: 'outer',
++          label: 'Outer',
++          childIds: ['category-a', 'category-b', 'category-c'],
++        },
++      },
++    };
++    expect(
++      evaluateGroupSelection(categoricalSource, nestedView, [
++        'category-a',
++        'category-b',
++        'category-c',
++      ]),
++    ).toEqual({
++      ok: false,
++      reason: 'REDUNDANT_GROUP_SELECTION',
++    });
++  });
++
++  it('normalizes an expanded cross-boundary outline selection before grouping', async () => {
++    const groupedView: ViewSpec = {
++      ...categoricalView(),
++      rootOrder: ['inner', 'category-c', 'category-d'],
++      groups: {
++        inner: {
++          id: 'inner',
++          label: 'Inner',
++          childIds: ['category-a', 'category-b'],
++        },
++      },
++    };
++    const views: ViewSpec[] = [];
++    const onSelectionChange = vi.fn();
++    render(
++      <FinancialChartEditor
++        sourceData={categoricalSource}
++        defaultViewSpec={groupedView}
++        onSelectionChange={onSelectionChange}
++        onViewSpecChange={view => views.push(view)}
++      />,
++    );
++
++    fireEvent.click(await screen.findByRole('treeitem', { name: /Category B/ }));
++    fireEvent.click(screen.getByRole('treeitem', { name: /Category C/ }), { ctrlKey: true });
++
++    await waitFor(() =>
++      expect(onSelectionChange).toHaveBeenLastCalledWith({
++        nodeId: 'category-c',
++        nodeIds: ['inner', 'category-c'],
++        sourceIds: ['category-a', 'category-b', 'category-c'],
++      }),
++    );
++    expect((screen.getByRole('checkbox', { name: '选择 Inner' }) as HTMLInputElement).checked).toBe(
++      true,
++    );
++    expect(
++      (screen.getByRole('checkbox', { name: '选择 Category C' }) as HTMLInputElement).checked,
++    ).toBe(true);
++
++    fireEvent.change(screen.getByRole('textbox', { name: '分组名称' }), {
++      target: { value: 'Outer selection' },
++    });
++    fireEvent.click(screen.getByRole('button', { name: '创建分组' }));
++
++    await waitFor(() => expect(views).toHaveLength(1));
++    const created = Object.values(views[0]?.groups ?? {}).find(
++      group => group.label === 'Outer selection',
++    );
++    expect(created?.childIds).toEqual(['inner', 'category-c']);
++    expect(views[0]?.groups['inner']?.childIds).toEqual(['category-a', 'category-b']);
+   });
+ 
+   it('supports modifier-free additive selection through touch-sized checkboxes', async () => {

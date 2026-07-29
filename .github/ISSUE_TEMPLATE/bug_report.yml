@@ -1,0 +1,42 @@
+name: Bug report
+description: 报告可复现的 TellPlot 缺陷
+title: '[Bug] '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: 请先移除真实金额、业务标签、来源引用和凭据。
+  - type: input
+    id: version
+    attributes:
+      label: TellPlot version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: React、G2、浏览器、操作系统和 Node 版本
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: 提供脱敏配置、步骤或公开仓库
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
