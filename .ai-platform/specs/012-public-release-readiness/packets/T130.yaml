@@ -1,0 +1,75 @@
+schema_version: 1
+packet_id: EP-012-T130
+task_id: T130
+feature_id: 012-public-release-readiness
+mode: execute_one_task
+adapter: codex_delegated
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/012-public-release-readiness/spec.md
+  requirements_checklist: .ai-platform/specs/012-public-release-readiness/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/012-public-release-readiness/plan.md
+  work_graph: .ai-platform/specs/012-public-release-readiness/tasks.md
+  analysis: .ai-platform/specs/012-public-release-readiness/analysis.md
+  approval_gates:
+    constitution: Confirmed by user
+    product_or_spec: Confirmed by explicit remediation request on 2026-07-31
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed within the specifically enumerated review findings
+    analysis: Clear
+work_unit:
+  title: 关闭本地公开发布准备缺口
+  goal: Make the 1.0.0 candidate reproducibly ready for a separately authorized public release
+  epic: G005
+  story: release readiness
+  requirements: [RELEASE-FR-001, RELEASE-FR-002, RELEASE-FR-003, RELEASE-FR-004, RELEASE-FR-005]
+  priority: P0
+  depends_on: [T129]
+  blocks: [G005 public release execution]
+  parallel: true
+  conflicts_with: [remote Git, npm bootstrap, npm trust, npm stage, npm publish, tag, GitHub Release, deploy, DNS]
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [e2e, playwright.config.ts, scripts/release, .github/workflows, packages/editor/tests/helpers/processLifecycle.mjs, packages/editor/tests/browser-matrix/run-previous-browsers.mjs, packages/editor/tests/react-matrix/run-react-matrix.mjs, docs/roadmap.md, .ai-platform/docs]
+  existing_patterns: [release:check, exact AntV audit, stable release contract tests, isolated-source rehearsal]
+  interfaces_or_contracts: [.ai-platform/specs/012-public-release-readiness/spec.md]
+  forbidden_changes: [public API, schema, runtime dependencies, chart behavior, remote actions]
+execution_constraints:
+  branch_or_worktree: current dirty user-owned worktree
+  allowed_files: [e2e/**, playwright.config.ts, package.json, scripts/release/**, .github/workflows/**, packages/editor/tests/package/stable-release.test.ts, packages/editor/tests/package/process-lifecycle.test.ts, packages/editor/tests/helpers/**, packages/editor/tests/browser-matrix/run-previous-browsers.mjs, packages/editor/tests/react-matrix/run-react-matrix.mjs, docs/roadmap.md, .ai-platform/docs/tasks.md, .ai-platform/docs/release-report.md, AGENTS.md, .ai-platform/specs/012-public-release-readiness/**, .ai-platform/evidence/T130/**]
+  test_targets: [browser determinism, cross-platform process-tree lifecycle, official npm production audit, public source preflight, workflow contract, docs consistency, full release matrix]
+  ownership_notes: [preserve all existing G006 work, do not stage or commit]
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: pnpm test:e2e and focused release contract tests
+    expected_failure: locked anchor feedback or browser resource failure; missing audit/preflight/workflow contracts
+  green:
+    command: pnpm release:check
+    expected_signal: all local stable gates pass without relaxed assertions
+  refactor:
+    command: pnpm release:rehearse
+    expected_signal: isolated source reproduces package and framework gates
+validation_loop:
+  commands: [pnpm release:check, pnpm release:preflight, pnpm release:trust-readiness, pnpm audit:prod, python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 012-public-release-readiness --strict, git diff --check]
+  retry_budget: 2
+  failure_policy:
+    first_failure: diagnose and fix only a T130-scoped issue
+    second_failure: classify code, browser host, registry or authorization blocker
+    beyond_budget: stop and record blocked evidence
+evidence_contract:
+  summary: .ai-platform/evidence/T130/summary.md
+  diff: .ai-platform/evidence/T130/diff.patch
+  test_results: .ai-platform/evidence/T130/test-results.md
+  required: [changed files, RED and GREEN results, full validation matrix, review, residual risks]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+  acceptance_rule: task remains Needs_Review until user explicitly accepts the completed remediation
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [keep local candidate for separately authorized G005 execution]
+stop_conditions: [remote action required, public API or dependency change required, unresolved Critical/High/Medium finding]

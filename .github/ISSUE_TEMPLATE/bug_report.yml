@@ -18,7 +18,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: React、G2、浏览器、操作系统和 Node 版本
+      description: TellPlot package、imperative/React/Vue surface、framework、G2、浏览器、操作系统和 Node 版本
     validations:
       required: true
   - type: textarea

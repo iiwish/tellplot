@@ -21,15 +21,19 @@ jobs:
       matrix:
         node-version: [22.20.0, 24.15.0]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
+          package-manager-cache: false
           cache: pnpm
+      - run: pnpm security:lock
       - run: pnpm install --frozen-lockfile
+      - run: pnpm security:dependencies
+      - run: pnpm audit:prod
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
@@ -37,32 +41,57 @@ jobs:
       - run: pnpm build
       - run: pnpm test:package
 
+  lifecycle:
+    name: Process lifecycle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          run_install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+          cache: pnpm
+      - run: pnpm security:lock
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run packages/editor/tests/package/process-lifecycle.test.ts
+
   browser:
     name: Browser and package runtime matrix
-    needs: quality
+    needs: [quality, lifecycle]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       # Hosted Linux uses software Canvas; keep this distinct from the 150ms product target.
       TELLPLOT_PERFORMANCE_P95_BUDGET_MS: 650
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
+          package-manager-cache: false
           cache: pnpm
+      - run: pnpm security:lock
       - run: pnpm install --frozen-lockfile
+      - run: pnpm security:dependencies
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm test:react-matrix
+      - run: pnpm test:framework-matrix
       - run: pnpm test:performance
       - run: pnpm test:e2e
       - run: pnpm test:browser-previous
       - name: Upload browser diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-diagnostics
           path: |

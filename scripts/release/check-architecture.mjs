@@ -3,20 +3,49 @@ import { dirname, extname, relative, resolve } from 'node:path';
 
 import ts from 'typescript';
 
+import {
+  isCoreForbidden,
+  isFrameworkNeutralForbidden,
+  matchesAnyPackageSpecifier,
+  matchesPackageSpecifier,
+} from './architecture-policy.mjs';
+import { packageContracts } from './package-contracts.mjs';
 import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
 
-const sourceRoot = resolve(repositoryRoot, 'packages/editor/src');
-const sourceFiles = walkFiles(sourceRoot).filter(path => ['.ts', '.tsx'].includes(extname(path)));
+const packageRoots = packageContracts.map(contract =>
+  resolve(repositoryRoot, 'packages', contract.directory, 'src'),
+);
+const packageSourcePolicies = packageContracts.map(contract => ({
+  contract,
+  prefix: `packages/${contract.directory}/src/`,
+  runtimePackages: Object.keys({
+    ...contract.dependencies,
+    ...contract.peerDependencies,
+  }),
+}));
+const sourceFiles = packageRoots.flatMap(root =>
+  walkFiles(root).filter(path => ['.ts', '.tsx'].includes(extname(path))),
+);
 const sourceSet = new Set(sourceFiles);
 const runtimeGraph = new Map(sourceFiles.map(path => [path, []]));
 const findings = [];
 let edgeCount = 0;
 
 function resolveLocal(source, specifier) {
-  if (!specifier.startsWith('.')) {
+  const publicPackages = {
+    '@tellplot/core': resolve(repositoryRoot, 'packages/core/src/index.ts'),
+    '@tellplot/editor': resolve(repositoryRoot, 'packages/editor/src/index.ts'),
+    '@tellplot/react': resolve(repositoryRoot, 'packages/react/src/index.tsx'),
+    '@tellplot/vue': resolve(repositoryRoot, 'packages/vue/src/index.ts'),
+  };
+  const base = publicPackages[specifier]
+    ? publicPackages[specifier]
+    : specifier.startsWith('.')
+      ? resolve(dirname(source), specifier)
+      : undefined;
+  if (base === undefined) {
     return undefined;
   }
-  const base = resolve(dirname(source), specifier);
   const candidates = [
     base,
     `${base}.ts`,
@@ -28,33 +57,38 @@ function resolveLocal(source, specifier) {
 }
 
 function sourceName(path) {
-  return toPosix(relative(sourceRoot, path));
+  return toPosix(relative(repositoryRoot, path));
 }
 
 function recordBoundary(source, target) {
   const from = sourceName(source);
   const to = sourceName(target);
   edgeCount += 1;
-
-  if (from.startsWith('domain/') && !to.startsWith('domain/')) {
-    findings.push(`domain boundary: ${from} -> ${to}`);
+  if (from.startsWith('packages/core/') && !to.startsWith('packages/core/')) {
+    findings.push(`core package boundary: ${from} -> ${to}`);
   }
   if (
-    from.startsWith('interactions/') &&
-    !(to.startsWith('domain/') || to.startsWith('interactions/'))
+    from.startsWith('packages/editor/') &&
+    !to.startsWith('packages/editor/') &&
+    !to.startsWith('packages/core/')
   ) {
-    findings.push(`interactions boundary: ${from} -> ${to}`);
+    findings.push(`editor package boundary: ${from} -> ${to}`);
+  }
+  if (from.startsWith('packages/core/src/domain/') && !to.startsWith('packages/core/src/domain/')) {
+    findings.push(`core domain boundary: ${from} -> ${to}`);
   }
   if (
-    /^(charts|domain|export|interactions|rendering)\//u.test(from) &&
-    to.startsWith('components/') &&
-    to !== 'components/formatAmount.ts'
+    from.startsWith('packages/core/src/interactions/') &&
+    !(
+      to.startsWith('packages/core/src/domain/') || to.startsWith('packages/core/src/interactions/')
+    )
   ) {
-    findings.push(`low-level component dependency: ${from} -> ${to}`);
+    findings.push(`core interactions boundary: ${from} -> ${to}`);
   }
 }
 
 function collectImports(sourcePath) {
+  const sourceNameValue = sourceName(sourcePath);
   const text = readFileSync(sourcePath, 'utf8');
   const sourceFile = ts.createSourceFile(
     sourcePath,
@@ -67,20 +101,53 @@ function collectImports(sourcePath) {
 
   function add(specifier, runtime) {
     const target = resolveLocal(sourcePath, specifier);
+    const sourcePolicy = packageSourcePolicies.find(policy =>
+      sourceNameValue.startsWith(policy.prefix),
+    );
     if (target !== undefined) {
       recordBoundary(sourcePath, target);
       if (runtime) {
         runtimeTargets?.push(target);
       }
     }
-    if (specifier === '@antv/g2' || specifier === '@antv/g-svg') {
-      const name = sourceName(sourcePath);
+    if (
+      !specifier.startsWith('.') &&
+      sourcePolicy !== undefined &&
+      !sourcePolicy.runtimePackages.some(packageName =>
+        matchesPackageSpecifier(specifier, packageName),
+      )
+    ) {
+      findings.push(
+        `external dependency outside ${sourcePolicy.contract.name} allowlist: ${sourceNameValue} -> ${specifier}`,
+      );
+    }
+    if (sourceNameValue.startsWith('packages/core/') && isCoreForbidden(specifier)) {
+      findings.push(`forbidden core dependency: ${sourceNameValue} -> ${specifier}`);
+    }
+    if (sourceNameValue.startsWith('packages/editor/') && isFrameworkNeutralForbidden(specifier)) {
+      findings.push(`forbidden editor framework dependency: ${sourceNameValue} -> ${specifier}`);
+    }
+    if (
+      sourceNameValue.startsWith('packages/react/') &&
+      matchesPackageSpecifier(specifier, 'vue')
+    ) {
+      findings.push(`cross-framework React dependency: ${sourceNameValue} -> ${specifier}`);
+    }
+    if (
+      sourceNameValue.startsWith('packages/vue/') &&
+      matchesAnyPackageSpecifier(specifier, ['react', 'react-dom'])
+    ) {
+      findings.push(`cross-framework Vue dependency: ${sourceNameValue} -> ${specifier}`);
+    }
+    if (matchesAnyPackageSpecifier(specifier, ['@antv/g2', '@antv/g-svg'])) {
       const allowed =
-        name === 'charts/groupRegions.ts' ||
-        /^charts\/(waterfall|categorical)\/spec\.ts$/u.test(name) ||
-        name.startsWith('rendering/g2/');
+        sourceNameValue === 'packages/editor/src/charts/groupRegions.ts' ||
+        /^packages\/editor\/src\/charts\/(waterfall|categorical)\/spec\.ts$/u.test(
+          sourceNameValue,
+        ) ||
+        sourceNameValue.startsWith('packages/editor/src/rendering/g2/');
       if (!allowed) {
-        findings.push(`raw G2 import outside adapter boundary: ${name}`);
+        findings.push(`raw G2 import outside editor adapter boundary: ${sourceNameValue}`);
       }
     }
   }
@@ -130,8 +197,9 @@ const stack = [];
 function visitCycle(node) {
   if (visiting.has(node)) {
     const start = stack.indexOf(node);
-    const cycle = [...stack.slice(start), node].map(sourceName).join(' -> ');
-    findings.push(`runtime import cycle: ${cycle}`);
+    findings.push(
+      `runtime import cycle: ${[...stack.slice(start), node].map(sourceName).join(' -> ')}`,
+    );
     return;
   }
   if (visited.has(node)) {
@@ -151,10 +219,16 @@ for (const sourceFile of sourceFiles) {
   visitCycle(sourceFile);
 }
 
-const publicEntry = readFileSync(resolve(sourceRoot, 'index.ts'), 'utf8');
+const coreEntry = readFileSync(resolve(repositoryRoot, 'packages/core/src/index.ts'), 'utf8');
+for (const forbidden of ['G2Spec', 'G2Chart', 'HTMLElement', 'react', 'vue']) {
+  if (coreEntry.includes(forbidden)) {
+    findings.push(`core public entry contains forbidden identifier: ${forbidden}`);
+  }
+}
+const editorEntry = readFileSync(resolve(repositoryRoot, 'packages/editor/src/index.ts'), 'utf8');
 for (const forbidden of ['G2Spec', 'G2Chart', 'FinancialChartEditor', 'rendering/g2']) {
-  if (publicEntry.includes(forbidden)) {
-    findings.push(`public entry contains internal identifier: ${forbidden}`);
+  if (editorEntry.includes(forbidden)) {
+    findings.push(`editor public entry contains internal identifier: ${forbidden}`);
   }
 }
 
@@ -165,10 +239,16 @@ if (findings.length > 0) {
     `${JSON.stringify(
       {
         status: 'passed',
+        packages: packageRoots.map(repositoryPath),
         sourceFiles: sourceFiles.length,
         importEdges: edgeCount,
         runtimeCycles: 0,
-        publicEntry: repositoryPath(resolve(sourceRoot, 'index.ts')),
+        publicEntries: [
+          repositoryPath(resolve(repositoryRoot, 'packages/core/src/index.ts')),
+          repositoryPath(resolve(repositoryRoot, 'packages/editor/src/index.ts')),
+          repositoryPath(resolve(repositoryRoot, 'packages/react/src/index.tsx')),
+          repositoryPath(resolve(repositoryRoot, 'packages/vue/src/index.ts')),
+        ],
       },
       null,
       2,

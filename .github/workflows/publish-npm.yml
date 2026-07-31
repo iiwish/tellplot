@@ -1,0 +1,229 @@
+name: Stage npm packages (stage-only Trusted Publishing after bootstrap)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: >-
+          After separately bootstrapping all four package roots and verifying that their Trusted
+          Publishers have allow-stage-publish enabled and allow-publish disabled, type
+          "stage 1.0.0 stage-only-trusted-publishers-verified" on the exact v1.0.0 tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-production-release
+  cancel-in-progress: false
+
+env:
+  TELLPLOT_RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+  TELLPLOT_REPOSITORY_VISIBILITY: ${{ github.event.repository.visibility }}
+
+jobs:
+  verify:
+    name: Verify exact tagged source and tarballs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      # Hosted Linux uses software Canvas; the local product target remains 150ms.
+      TELLPLOT_PERFORMANCE_P95_BUDGET_MS: 650
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          run_install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
+      - name: Install staged-publishing npm CLI
+        run: >-
+          npm install --global npm@11.18.0 --ignore-scripts
+          --registry=https://registry.npmjs.org/
+      - name: Verify staged-publishing npm CLI version
+        run: test "$(npm --version)" = '11.18.0'
+      - run: pnpm release:preflight:ci
+      - run: pnpm release:trust-readiness:ci
+      - run: pnpm security:lock
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - run: pnpm release:check
+      - run: pnpm release:artifact
+
+  stage:
+    name: Stage verified tarballs for human 2FA approval
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: npm-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: .ai-platform/evidence/T129/artifacts
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.20.0
+          package-manager-cache: false
+      - name: Create isolated npm configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          npm_config="$RUNNER_TEMP/tellplot-stage.npmrc"
+          printf '%s\n' \
+            'registry=https://registry.npmjs.org/' \
+            'ignore-scripts=true' \
+            'provenance=true' > "$npm_config"
+          printf 'NPM_CONFIG_USERCONFIG=%s\n' "$npm_config" >> "$GITHUB_ENV"
+      - name: Install exact staged-publishing npm CLI without lifecycle scripts
+        run: >-
+          npm install --global npm@11.18.0 --ignore-scripts
+          --registry=https://registry.npmjs.org/
+          --userconfig="$NPM_CONFIG_USERCONFIG"
+      - name: Verify staged-publishing npm CLI version
+        run: test "$(npm --version)" = '11.18.0'
+      - name: Revalidate immutable source, registry state, and tarball hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          canonical_remote='https://github.com/iiwish/tellplot.git'
+          expected_workflow_ref='iiwish/tellplot/.github/workflows/publish-npm.yml@refs/tags/v1.0.0'
+          artifact_root='.ai-platform/evidence/T129/artifacts'
+
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_ACTIONS" = 'true'
+          test "$RUNNER_ENVIRONMENT" = 'github-hosted'
+          test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
+          test "$GITHUB_REPOSITORY" = 'iiwish/tellplot'
+          test "$GITHUB_REF_TYPE" = 'tag'
+          test "$GITHUB_REF_NAME" = 'v1.0.0'
+          test "$GITHUB_WORKFLOW_REF" = "$expected_workflow_ref"
+          test "$TELLPLOT_REPOSITORY_VISIBILITY" = 'public'
+          test "$TELLPLOT_RELEASE_CONFIRMATION" = \
+            'stage 1.0.0 stage-only-trusted-publishers-verified'
+          test "$(git rev-parse --verify HEAD)" = "$GITHUB_SHA"
+          case "$(git remote get-url origin)" in
+            'https://github.com/iiwish/tellplot'|'https://github.com/iiwish/tellplot.git') ;;
+            *) exit 1 ;;
+          esac
+
+          remote_git() {
+            GIT_CONFIG_GLOBAL=/dev/null \
+              GIT_CONFIG_NOSYSTEM=1 \
+              GIT_TERMINAL_PROMPT=0 \
+              git -C "$RUNNER_TEMP" "$@"
+          }
+
+          read -r remote_main_commit remote_main_ref < <(
+            remote_git ls-remote --exit-code --refs "$canonical_remote" refs/heads/main
+          )
+          test "$remote_main_ref" = 'refs/heads/main'
+          test "$remote_main_commit" = "$GITHUB_SHA"
+
+          remote_tag_object=''
+          remote_tag_commit=''
+          while read -r commit ref; do
+            case "$ref" in
+              'refs/tags/v1.0.0') remote_tag_object="$commit" ;;
+              'refs/tags/v1.0.0^{}') remote_tag_commit="$commit" ;;
+            esac
+          done < <(
+            remote_git ls-remote --exit-code --tags "$canonical_remote" \
+              refs/tags/v1.0.0 'refs/tags/v1.0.0^{}'
+          )
+          test -n "$remote_tag_object"
+          test -n "$remote_tag_commit"
+          [[ "$remote_tag_object" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$remote_tag_commit" =~ ^[0-9a-f]{40}$ ]]
+          test "$remote_tag_object" != "$remote_tag_commit"
+          test "$remote_tag_commit" = "$GITHUB_SHA"
+
+          expected_tarballs="$(
+            printf '%s\n' \
+              'tellplot-core-1.0.0.tgz' \
+              'tellplot-editor-1.0.0.tgz' \
+              'tellplot-react-1.0.0.tgz' \
+              'tellplot-vue-1.0.0.tgz'
+          )"
+          actual_tarballs="$(
+            find "$artifact_root" -maxdepth 1 -type f -name '*.tgz' -printf '%f\n' |
+              LC_ALL=C sort
+          )"
+          test "$actual_tarballs" = "$expected_tarballs"
+
+          sha256sum --check --strict <<'SHA256'
+          40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5  .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
+          3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395  .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
+          085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a  .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
+          78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17  .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
+          SHA256
+
+          check_registry_status() {
+            local url="$1"
+            local expected="$2"
+            local label="$3"
+            local actual
+            actual="$(
+              curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 10 --max-time 20 --proto '=https' "$url"
+            )"
+            if [[ "$actual" != "$expected" ]]; then
+              printf 'npm registry check failed for %s: expected %s, received %s\n' \
+                "$label" "$expected" "$actual" >&2
+              return 1
+            fi
+          }
+
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Fcore' 200 '@tellplot/core root'
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Fcore/1.0.0' 404 '@tellplot/core@1.0.0'
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Feditor' 200 '@tellplot/editor root'
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Feditor/1.0.0' 404 '@tellplot/editor@1.0.0'
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Freact' 200 '@tellplot/react root'
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Freact/1.0.0' 404 '@tellplot/react@1.0.0'
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Fvue' 200 '@tellplot/vue root'
+          check_registry_status \
+            'https://registry.npmjs.org/%40tellplot%2Fvue/1.0.0' 404 '@tellplot/vue@1.0.0'
+      - name: Stage @tellplot/core
+        run: >-
+          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
+          --ignore-scripts --tag=latest --provenance
+          --registry=https://registry.npmjs.org/
+      - name: Stage @tellplot/editor
+        run: >-
+          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
+          --ignore-scripts --tag=latest --provenance
+          --registry=https://registry.npmjs.org/
+      - name: Stage @tellplot/react
+        run: >-
+          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
+          --ignore-scripts --tag=latest --provenance
+          --registry=https://registry.npmjs.org/
+      - name: Stage @tellplot/vue
+        run: >-
+          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
+          --ignore-scripts --tag=latest --provenance
+          --registry=https://registry.npmjs.org/

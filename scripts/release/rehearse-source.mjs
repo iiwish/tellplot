@@ -44,13 +44,16 @@ for (const entry of readdirSync(repositoryRoot)) {
 }
 
 const gates = [
+  ['pnpm', ['security:lock']],
   ['pnpm', ['install', '--frozen-lockfile']],
+  ['pnpm', ['security:dependencies']],
   ['pnpm', ['release:architecture']],
   ['pnpm', ['release:audit']],
   ['pnpm', ['typecheck']],
   ['pnpm', ['test:unit']],
   ['pnpm', ['build']],
   ['pnpm', ['test:package']],
+  ['pnpm', ['test:framework-matrix']],
 ];
 
 for (const [command, args] of gates) {

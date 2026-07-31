@@ -1,0 +1,185 @@
+{
+  "version": "1.0.0",
+  "packages": [
+    {
+      "name": "@tellplot/core",
+      "version": "1.0.0",
+      "filename": "tellplot-core-1.0.0.tgz",
+      "sizeBytes": 216934,
+      "sha256": "40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5",
+      "files": [
+        {
+          "path": "LICENSE"
+        },
+        {
+          "path": "README.md"
+        },
+        {
+          "path": "dist/index.cjs"
+        },
+        {
+          "path": "dist/index.cjs.map"
+        },
+        {
+          "path": "dist/index.d.cts"
+        },
+        {
+          "path": "dist/index.d.ts"
+        },
+        {
+          "path": "dist/index.js"
+        },
+        {
+          "path": "dist/index.js.map"
+        },
+        {
+          "path": "package.json"
+        }
+      ]
+    },
+    {
+      "name": "@tellplot/editor",
+      "version": "1.0.0",
+      "filename": "tellplot-editor-1.0.0.tgz",
+      "sizeBytes": 255550,
+      "sha256": "3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395",
+      "files": [
+        {
+          "path": "LICENSE"
+        },
+        {
+          "path": "README.md"
+        },
+        {
+          "path": "dist/index.cjs"
+        },
+        {
+          "path": "dist/index.cjs.map"
+        },
+        {
+          "path": "dist/index.d.cts"
+        },
+        {
+          "path": "dist/index.d.ts"
+        },
+        {
+          "path": "dist/index.js"
+        },
+        {
+          "path": "dist/index.js.map"
+        },
+        {
+          "path": "dist/styles.css"
+        },
+        {
+          "path": "dist/styles.css.map"
+        },
+        {
+          "path": "dist/styles.d.cts"
+        },
+        {
+          "path": "dist/styles.d.ts"
+        },
+        {
+          "path": "package.json"
+        }
+      ]
+    },
+    {
+      "name": "@tellplot/react",
+      "version": "1.0.0",
+      "filename": "tellplot-react-1.0.0.tgz",
+      "sizeBytes": 6481,
+      "sha256": "085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a",
+      "files": [
+        {
+          "path": "LICENSE"
+        },
+        {
+          "path": "README.md"
+        },
+        {
+          "path": "dist/index.cjs"
+        },
+        {
+          "path": "dist/index.cjs.map"
+        },
+        {
+          "path": "dist/index.d.cts"
+        },
+        {
+          "path": "dist/index.d.ts"
+        },
+        {
+          "path": "dist/index.js"
+        },
+        {
+          "path": "dist/index.js.map"
+        },
+        {
+          "path": "dist/styles.css"
+        },
+        {
+          "path": "dist/styles.css.map"
+        },
+        {
+          "path": "dist/styles.d.cts"
+        },
+        {
+          "path": "dist/styles.d.ts"
+        },
+        {
+          "path": "package.json"
+        }
+      ]
+    },
+    {
+      "name": "@tellplot/vue",
+      "version": "1.0.0",
+      "filename": "tellplot-vue-1.0.0.tgz",
+      "sizeBytes": 6127,
+      "sha256": "78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17",
+      "files": [
+        {
+          "path": "LICENSE"
+        },
+        {
+          "path": "README.md"
+        },
+        {
+          "path": "dist/index.cjs"
+        },
+        {
+          "path": "dist/index.cjs.map"
+        },
+        {
+          "path": "dist/index.d.cts"
+        },
+        {
+          "path": "dist/index.d.ts"
+        },
+        {
+          "path": "dist/index.js"
+        },
+        {
+          "path": "dist/index.js.map"
+        },
+        {
+          "path": "dist/styles.css"
+        },
+        {
+          "path": "dist/styles.css.map"
+        },
+        {
+          "path": "dist/styles.d.cts"
+        },
+        {
+          "path": "dist/styles.d.ts"
+        },
+        {
+          "path": "package.json"
+        }
+      ]
+    }
+  ]
+}

@@ -3,6 +3,10 @@ import { fileURLToPath } from 'node:url';
 
 const editorAliases = [
   {
+    find: '@tellplot/core',
+    replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)),
+  },
+  {
     find: '@tellplot/editor/styles.css',
     replacement: fileURLToPath(new URL('./packages/editor/src/styles/editor.css', import.meta.url)),
   },
@@ -21,6 +25,17 @@ export default defineConfig({
     projects: [
       {
         test: {
+          name: 'core-unit',
+          testTimeout: 15_000,
+          include: ['packages/core/tests/**/*.test.ts'],
+          environment: 'node',
+        },
+      },
+      {
+        resolve: {
+          alias: editorAliases,
+        },
+        test: {
           name: 'editor-unit',
           testTimeout: 15_000,
           include: [
@@ -33,6 +48,9 @@ export default defineConfig({
         },
       },
       {
+        resolve: {
+          alias: editorAliases,
+        },
         test: {
           name: 'editor-components',
           testTimeout: 15_000,
@@ -40,6 +58,7 @@ export default defineConfig({
             'packages/editor/tests/components/**/*.test.{ts,tsx}',
             'packages/editor/tests/export/**/*.test.{ts,tsx}',
             'packages/editor/tests/rendering/**/*.test.{ts,tsx}',
+            'packages/editor/tests/runtime/**/*.test.{ts,tsx}',
           ],
           environment: 'jsdom',
           setupFiles: ['packages/editor/tests/setup.ts'],
@@ -57,26 +76,44 @@ export default defineConfig({
           environment: 'node',
         },
       },
+      {
+        resolve: {
+          alias: editorAliases,
+        },
+        test: {
+          name: 'framework-adapters',
+          testTimeout: 15_000,
+          include: ['packages/react/tests/**/*.test.tsx', 'packages/vue/tests/**/*.test.ts'],
+          environment: 'jsdom',
+          setupFiles: ['packages/editor/tests/setup.ts'],
+          passWithNoTests: true,
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: 'coverage',
-      include: ['packages/editor/src/**/*.{ts,tsx}'],
+      include: [
+        'packages/core/src/**/*.ts',
+        'packages/editor/src/**/*.ts',
+        'packages/react/src/**/*.tsx',
+        'packages/vue/src/**/*.ts',
+      ],
       thresholds: {
-        'packages/editor/src/domain/**': {
+        'packages/core/src/domain/**': {
           statements: 95,
           branches: 95,
           functions: 95,
           lines: 95,
         },
-        'packages/editor/src/charts/waterfall/**': {
+        'packages/core/src/charts/waterfall/**': {
           statements: 95,
           branches: 95,
           functions: 95,
           lines: 95,
         },
-        'packages/editor/src/charts/categorical/**': {
+        'packages/core/src/charts/categorical/**': {
           statements: 95,
           branches: 95,
           functions: 95,

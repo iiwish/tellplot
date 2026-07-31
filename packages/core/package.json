@@ -1,0 +1,55 @@
+{
+  "name": "@tellplot/core",
+  "version": "1.0.0",
+  "description": "Framework-neutral data, commands and editing state for TellPlot",
+  "license": "MIT",
+  "homepage": "https://tellplot.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iiwish/tellplot.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/iiwish/tellplot/issues"
+  },
+  "keywords": [
+    "charts",
+    "framework-neutral",
+    "editor-state",
+    "data-visualization"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --root ../.. packages/core/tests",
+    "test:package": "publint && attw --pack . && node tests/public-api.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

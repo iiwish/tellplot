@@ -14,7 +14,7 @@ export default defineConfig({
   minify: false,
   platform: 'browser',
   target: 'es2022',
-  external: ['@antv/g2', 'react', 'react-dom'],
+  external: ['@antv/g2', '@tellplot/core'],
   outExtension({ format }) {
     return { js: format === 'cjs' ? '.cjs' : '.js' };
   },

@@ -3,22 +3,22 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const root = resolve(process.cwd(), 'packages/editor/src');
+const editorRoot = resolve(process.cwd(), 'packages/editor/src');
+const coreRoot = resolve(process.cwd(), 'packages/core/src');
 
 function source(path: string): string {
-  return readFileSync(resolve(root, path), 'utf8');
+  return readFileSync(resolve(editorRoot, path), 'utf8');
 }
 
 describe('internal chart architecture boundary', () => {
   it('owns projections and specs under chart-family modules', () => {
-    const required = [
+    const coreRequired = [
       'charts/waterfall/projection.ts',
-      'charts/waterfall/spec.ts',
       'charts/waterfall/types.ts',
       'charts/categorical/projection.ts',
-      'charts/categorical/spec.ts',
       'charts/categorical/types.ts',
     ];
+    const editorRequired = ['charts/waterfall/spec.ts', 'charts/categorical/spec.ts'];
     const obsolete = [
       'waterfall/projectWaterfall.ts',
       'waterfall/waterfallTypes.ts',
@@ -28,14 +28,16 @@ describe('internal chart architecture boundary', () => {
       'export/waterfallChartSpec.ts',
     ];
 
-    expect(required.every(path => existsSync(resolve(root, path)))).toBe(true);
-    expect(obsolete.some(path => existsSync(resolve(root, path)))).toBe(false);
+    expect(coreRequired.every(path => existsSync(resolve(coreRoot, path)))).toBe(true);
+    expect(editorRequired.every(path => existsSync(resolve(editorRoot, path)))).toBe(true);
+    expect(obsolete.some(path => existsSync(resolve(editorRoot, path)))).toBe(false);
+    expect(existsSync(resolve(coreRoot, 'interactions/chartPointer.ts'))).toBe(false);
+    expect(existsSync(resolve(editorRoot, 'rendering/g2/chartPointer.ts'))).toBe(true);
   });
 
   it('keeps raw G2 runtime imports out of components, exports and the public entrypoint', () => {
     const boundaryFiles = [
-      'components/WaterfallCanvas.tsx',
-      'components/CategoricalCanvas.tsx',
+      'editor/chartSurface.ts',
       'export/svgExport.ts',
       'export/pngExport.ts',
       'index.ts',

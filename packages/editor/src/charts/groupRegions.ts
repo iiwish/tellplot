@@ -1,9 +1,13 @@
 import type { Mark } from '@antv/g2';
 
-import type { ResolvedFinancialChartAppearance } from '../config/chartAppearance';
-import type { GroupId, SourceItemId, ViewNodeId } from '../domain/ids';
-import type { ViewSpec } from '../domain/model';
-import { collectLeafSourceIds, groupDepth, locateViewNode } from '../domain/viewTree';
+import type {
+  GroupId,
+  ResolvedFinancialChartAppearance,
+  SourceItemId,
+  ViewNodeId,
+  ViewSpec,
+} from '@tellplot/core';
+import { collectLeafSourceIds, groupDepth, locateViewNode } from '@tellplot/core';
 import { createForegroundLabelStyle } from './labelStyle';
 
 interface VisibleProjectionDatum {
@@ -29,6 +33,7 @@ export interface ExpandedGroupRegion {
 interface ExpandedGroupRegionMarkOptions {
   readonly regions: readonly ExpandedGroupRegion[];
   readonly categoryDomain: readonly ViewNodeId[];
+  readonly valueDomain?: readonly [number, number] | undefined;
   readonly appearance: ResolvedFinancialChartAppearance;
   readonly reducedMotion: boolean;
   readonly denseCanvas: boolean;
@@ -40,7 +45,11 @@ function coordinate(transposed: boolean) {
   return transposed ? { transform: [{ type: 'transpose' as const }] } : {};
 }
 
-function scales(categoryDomain: readonly ViewNodeId[], transposed: boolean) {
+function scales(
+  categoryDomain: readonly ViewNodeId[],
+  transposed: boolean,
+  valueDomain: readonly [number, number] | undefined,
+) {
   return {
     x: {
       type: 'band' as const,
@@ -48,7 +57,12 @@ function scales(categoryDomain: readonly ViewNodeId[], transposed: boolean) {
       padding: 0.24,
       ...(transposed ? { reverse: true } : {}),
     },
-    y: { type: 'linear' as const, nice: true, zero: true },
+    y: {
+      type: 'linear' as const,
+      nice: true,
+      zero: true,
+      ...(valueDomain === undefined ? {} : { domain: [...valueDomain] }),
+    },
   };
 }
 
@@ -78,6 +92,7 @@ function animation(appearance: ResolvedFinancialChartAppearance, reducedMotion: 
 export function createExpandedGroupRegionMark({
   regions,
   categoryDomain,
+  valueDomain,
   appearance,
   reducedMotion,
   transposed = false,
@@ -102,7 +117,7 @@ export function createExpandedGroupRegionMark({
       y: ['valueStart', 'valueEnd'],
       key: 'regionId',
     },
-    scale: scales(categoryDomain, transposed),
+    scale: scales(categoryDomain, transposed, valueDomain),
     labels: [],
     style: {
       fill: appearance.palette.group,
@@ -121,6 +136,7 @@ export function createExpandedGroupRegionMark({
 export function createExpandedGroupRegionLabelMark({
   regions,
   categoryDomain,
+  valueDomain,
   appearance,
   denseCanvas,
   transposed = false,
@@ -146,7 +162,7 @@ export function createExpandedGroupRegionLabelMark({
       key: 'regionId',
     },
     zIndex: 10,
-    scale: scales(categoryDomain, transposed),
+    scale: scales(categoryDomain, transposed, valueDomain),
     style: {
       ...createForegroundLabelStyle(labelStyle),
       dx: (region: ExpandedGroupRegion) => Math.min(Math.max(region.depth - 1, 0), 2) * 10,

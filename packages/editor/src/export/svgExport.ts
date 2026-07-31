@@ -1,16 +1,20 @@
-import type { FinancialChartAppearance } from '../config/chartAppearance';
-import type { ViewNodeId } from '../domain/ids';
-import type { Annotation, ChartType, Emphasis } from '../domain/model';
+import type {
+  Annotation,
+  CategoricalProjection,
+  ChartType,
+  Emphasis,
+  FinancialChartAppearance,
+  ViewNodeId,
+  WaterfallProjection,
+} from '@tellplot/core';
 import {
   createCategoricalChartSpec,
   shouldShowCategoricalValueLabels,
 } from '../charts/categorical/spec';
-import type { CategoricalProjection } from '../charts/categorical/types';
 import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
-import type { WaterfallProjection } from '../charts/waterfall/types';
 import type { ExpandedGroupRegion } from '../charts/groupRegions';
 import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
-import type { EditorLocale } from '../components/formatAmount';
+import type { EditorLocale } from '../editor/formatAmount';
 import { exportError, type ExportResult } from './exportTypes';
 
 interface SvgResultOptions {
@@ -22,6 +26,7 @@ interface SvgResultOptions {
 
 interface SvgChartExportBaseRequest {
   readonly ownerDocument: Document;
+  readonly signal?: AbortSignal;
   readonly title: string;
   readonly locale: EditorLocale;
   readonly currency: string | undefined;
@@ -55,7 +60,54 @@ function isCategoricalRequest(
   return request.chartType === 'bar' || request.chartType === 'column';
 }
 
-const REMOVED_ELEMENTS = 'script, foreignObject, iframe, object, embed, image, use';
+const REMOVED_ELEMENT_NAMES: ReadonlySet<string> = new Set([
+  'animate',
+  'animatemotion',
+  'animatetransform',
+  'audio',
+  'base',
+  'discard',
+  'embed',
+  'feimage',
+  'foreignobject',
+  'handler',
+  'iframe',
+  'image',
+  'link',
+  'listener',
+  'meta',
+  'mpath',
+  'object',
+  'script',
+  'set',
+  'source',
+  'style',
+  'track',
+  'use',
+  'video',
+]);
+
+const RESOURCE_ATTRIBUTES: ReadonlySet<string> = new Set(['href', 'poster', 'src', 'xlink:href']);
+
+function hasUnsafeCssUrl(value: string): boolean {
+  if (value.includes('\\')) {
+    return true;
+  }
+  for (const match of value.matchAll(/url\s*\(\s*([^)]*)\)/giu)) {
+    let target = (match[1] ?? '').trim();
+    const quote = target.at(0);
+    if (quote === '"' || quote === "'") {
+      if (target.at(-1) !== quote) {
+        return true;
+      }
+      target = target.slice(1, -1).trim();
+    }
+    if (!/^#[^\s<>"'()]+$/u.test(target)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function sanitizeElement(element: Element): void {
   for (const attribute of [...element.attributes]) {
@@ -64,8 +116,9 @@ function sanitizeElement(element: Element): void {
     if (
       name.startsWith('on') ||
       name.startsWith('data-') ||
-      ((name === 'href' || name === 'xlink:href') && !value.startsWith('#')) ||
-      /(?:https?:|javascript:|data:|url\s*\(\s*['"]?https?:)/iu.test(value)
+      (RESOURCE_ATTRIBUTES.has(name) && !/^#[^\s<>"'()]+$/u.test(value)) ||
+      /(?:https?:|javascript:|data:|file:|ftp:)/iu.test(value) ||
+      hasUnsafeCssUrl(value)
     ) {
       element.removeAttribute(attribute.name);
     }
@@ -85,10 +138,13 @@ export function createSafeSvgResult(
     throw exportError('EXPORT_FAILED', '/export/svg');
   }
   const clone = sourceSvg.cloneNode(true) as SVGSVGElement;
-  clone.querySelectorAll(REMOVED_ELEMENTS).forEach(element => element.remove());
-  sanitizeElement(clone);
-  clone.querySelectorAll('*').forEach(sanitizeElement);
-  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  for (const element of [clone, ...clone.querySelectorAll('*')]) {
+    if (REMOVED_ELEMENT_NAMES.has(element.localName.toLowerCase())) {
+      element.remove();
+    } else {
+      sanitizeElement(element);
+    }
+  }
   clone.setAttribute('width', String(options.width));
   clone.setAttribute('height', String(options.height));
   clone.setAttribute('viewBox', `0 0 ${options.width} ${options.height}`);
@@ -98,6 +154,7 @@ export function createSafeSvgResult(
     background.setAttribute('width', '100%');
     background.setAttribute('height', '100%');
     background.setAttribute('fill', options.background);
+    sanitizeElement(background);
     clone.insertBefore(background, clone.firstChild);
   }
 
@@ -150,6 +207,7 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
         ownerDocument: request.ownerDocument,
         parent: body,
         renderer: 'svg',
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
         width,
         height,
         spec: isCategoricalRequest(request)

@@ -4,7 +4,9 @@
     "skipLibCheck": true,
     "types": ["node", "vite/client", "react", "react-dom"],
     "paths": {
-      "@tellplot/editor": ["../../packages/editor/src/index.ts"]
+      "@tellplot/core": ["../../packages/core/src/index.ts"],
+      "@tellplot/editor": ["../../packages/editor/src/index.ts"],
+      "@tellplot/react": ["../../packages/react/src/index.tsx"]
     }
   },
   "include": ["src", "vite.config.ts"]

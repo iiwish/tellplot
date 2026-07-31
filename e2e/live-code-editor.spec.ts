@@ -100,11 +100,11 @@ test('integration examples remain available beside the live public files', async
   const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
   await guide.getByRole('tab', { name: '接入示例' }).click();
   await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText(
-    'pnpm add @tellplot/editor @antv/g2 react react-dom',
+    'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom',
   );
   await guide.getByRole('tab', { name: 'React' }).click();
   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
-    "import '@tellplot/editor/styles.css'",
+    "import '@tellplot/react/styles.css'",
   );
   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
     '<ChartEditor config={config} />',

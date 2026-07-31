@@ -4,6 +4,7 @@ const e2ePort = process.env['TELLPLOT_E2E_PORT'] ?? '4174';
 const e2eBaseUrl = `http://127.0.0.1:${e2ePort}`;
 const e2eWorkers = Number.parseInt(process.env['TELLPLOT_E2E_WORKERS'] ?? '2', 10);
 const performanceSpec = /performance\.spec\.ts/;
+const retryDiagnostics = process.env['CI'] ? 'on-first-retry' : 'off';
 
 export default defineConfig({
   testDir: './e2e',
@@ -15,8 +16,9 @@ export default defineConfig({
   use: {
     baseURL: e2eBaseUrl,
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    // Avoid recording every passing browser context; CI retries still retain actionable diagnostics.
+    trace: retryDiagnostics,
+    video: retryDiagnostics,
   },
   projects: [
     {
@@ -28,7 +30,13 @@ export default defineConfig({
       name: 'chromium-performance',
       retries: 0,
       testMatch: performanceSpec,
-      use: { ...devices['Desktop Chrome'] },
+      // Recording adds observer overhead to the latency samples; the test attaches its own metrics.
+      use: {
+        ...devices['Desktop Chrome'],
+        screenshot: 'off',
+        trace: 'off',
+        video: 'off',
+      },
     },
     {
       name: 'firefox',
@@ -45,5 +53,7 @@ export default defineConfig({
     command: `pnpm build && pnpm --filter @tellplot/playground exec vite preview --host 127.0.0.1 --port ${e2ePort} --strictPort`,
     url: e2eBaseUrl,
     reuseExistingServer: false,
+    // Keep multi-package startup bounded without changing any test or performance assertion timeout.
+    timeout: 180_000,
   },
 });

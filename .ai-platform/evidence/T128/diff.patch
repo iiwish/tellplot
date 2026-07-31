@@ -1,0 +1,2573 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index a231c6b..ab192ad 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -10,22 +10,23 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
+ ### Added
+ 
+ - 基于 AntV G2 的瀑布图、分类条形图和分类柱状图。
+-- React 18/19 组件，以及 source-only、非受控和受控集成模式。
++- 框架无关 `@tellplot/core`、imperative `@tellplot/editor`、React 18/19 与 Vue 3 adapters。
+ - 排序、递归分组、折叠、固定、注释、强调与撤销重做。
+ - `ViewSpec` 验证、序列化和恢复。
+ - SVG/PNG 导出、安全图表配置与无障碍摘要。
+ - ESM、CJS、TypeScript declarations 和独立样式入口。
+-- 声明式 `ChartEditor`、判别式 `ChartConfig` 与运行时 `validateChartConfig`。
++- `createEditor`、React/Vue `ChartEditor`、判别式 `ChartConfig` 与运行时 `validateChartConfig`。
+ - 可序列化的数值/分组标签位置、偏移、字体、颜色与背景配置。
+ - 分离编辑公共图表配置和 `ViewSpec` 的亮色实时工作台。
+ 
+ ### Changed
+ 
+ - `CommandSource` 固定为 `direct | outline | keyboard | host`；外部确定性命令使用 `host`。
+-- React 配置统一收纳到 `config.data`、`config.appearance` 与 `config.editor`；可编辑状态使用
+-  `view`、`defaultView` 和 `onViewChange`。
++- 配置统一收纳到 `config.data`、`config.appearance` 与 `config.editor`；可编辑状态使用 `view`、
++  `defaultView` 和受控更新事件。
++- 编辑器 runtime 与领域状态从 framework 生命周期中分离；framework adapters 只代理 create/update/destroy。
+ 
+ ### Stability
+ 
+-- runtime exports、公共类型、schema、错误码、React/G2 peer 范围和浏览器合同进入 1.x 兼容承诺。
++- 四包 runtime exports、公共类型、schema、错误码、framework/G2 peer 范围和浏览器合同进入 1.x 兼容承诺。
+ - npm publish、Git tag、GitHub Release 和生产部署需要独立授权，版本字段不表示已经公开发布。
+diff --git a/README.md b/README.md
+index 322a1d8..921e019 100644
+--- a/README.md
++++ b/README.md
+@@ -1,12 +1,17 @@
+ # TellPlot
+ 
+-TellPlot 是基于 AntV G2 的轻量可编辑基础图表库。它为 React 应用提供瀑布图、分类条形图和分类柱状图，以及一致的数据、交互、配置和导出能力。
++TellPlot 是基于 AntV G2 的框架无关可编辑基础图表库。它提供瀑布图、分类条形图和分类柱状图，完整编辑器
++可直接挂载到任意 DOM 容器，也可通过 React 18/19 或 Vue 3 薄适配器接入。
+ 
+-## 当前状态
++## 包结构
+ 
+-G001 已验收。G002、G002-R1、G002-R2、G002-R3 与 G004 已完成实现，统一等待目标级验收。
+-`@tellplot/editor@1.0.0` 本地稳定版候选、发布门禁和隔离源码复演已经完成；npm publish、
+-GitHub Release 与生产网站部署均未执行。
++- `@tellplot/core`：配置、数据模型、投影、命令、历史和无 DOM `EditorStore`。
++- `@tellplot/editor`：imperative DOM/G2 编辑器、交互、导出和样式。
++- `@tellplot/react`：React 生命周期适配器。
++- `@tellplot/vue`：Vue 3 生命周期与 `v-model:view` 适配器。
++
++编辑动作只产生新的 `ViewSpec`，不会改写宿主持有的 `SourceData`。直接操作、结构大纲、键盘和宿主命令
++进入同一套确定性命令与历史。
+ 
+ ## 本地开发
+ 
+@@ -15,60 +20,35 @@ pnpm install --frozen-lockfile
+ pnpm dev
+ ```
+ 
+-参考编辑器默认由 Vite 启动。核心质量命令：
++主要质量命令：
+ 
+ ```bash
+ pnpm format:check
+ pnpm lint
+ pnpm typecheck
+-pnpm test:coverage
++pnpm test:unit
+ pnpm build
+ pnpm test:package
++pnpm test:framework-matrix
+ ```
+ 
+-本地网站包含以下入口：
+-
+-- `/`：真实图表驱动的 TellPlot 首页。
+-- `/examples`：瀑布图、分类柱状图和分类条形图示例中心。
+-- `/docs`：安装、React 接入、数据/视图模型、配置和导出入口。
+-- `/playground`：亮色公共图表配置、独立视图状态与完整结构工作台。
++本地网站入口包括产品首页、示例中心、开发者文档和完整编辑工作台。网站使用
++`@tellplot/react`，编辑能力仍由 `@tellplot/editor` 唯一实现。
+ 
+-## 当前文档
++## 文档
+ 
+ - [文档入口](docs/README.md)
+-- [产品路线图](docs/roadmap.md)
+-- [架构概览](docs/architecture.md)
+-- [入门与集成](docs/getting-started.md)
++- [入门与三种集成](docs/getting-started.md)
+ - [公共 API](docs/api.md)
++- [架构概览](docs/architecture.md)
++- [配置边界](docs/configuration.md)
+ - [错误处理](docs/errors.md)
+-- [图表配置边界](docs/configuration.md)
+-- [迁移与兼容](docs/migration.md)
++- [包选择与状态迁移](docs/migration.md)
+ - [版本与兼容政策](docs/versioning.md)
+-- [变更记录](CHANGELOG.md)
+ - [产品设计 SSOT](.ai-platform/docs/product-design.md)
+-- [项目章程](.ai-platform/memory/constitution.md)
+-- [技术决策记录](.ai-platform/docs/technology-decision-record.md)
+-- [目标与历史任务图](.ai-platform/docs/tasks.md)
+-- [交付状态报告](.ai-platform/docs/release-report.md)
+-
+-## 第一阶段范围
+ 
+-- 财务瀑布图。
+-- 分类条形图与分类柱状图。
+-- 拖拽排序、递归分组与取消分组、折叠与展开；框选可在展开分组内建子组或跨边界建上层分组。
+-- 结构化大纲、撤销重做、保存视图、演示文稿友好导出。
+-- 类型化命令、可撤销历史和确定性图表不变量。
++`1.0.0` 四包本地候选的公开 npm、Git tag、GitHub Release 和生产部署均需独立授权。
+ 
+-## 当前里程碑
++## License
+ 
+-- [瀑布图基础切片](.ai-platform/specs/001-waterfall-editor-foundation/spec.md)
+-- [实现计划](.ai-platform/specs/001-waterfall-editor-foundation/plan.md)
+-- [设计合同](.ai-platform/specs/001-waterfall-editor-foundation/design-contract.md)
+-- [任务图](.ai-platform/specs/001-waterfall-editor-foundation/tasks.md)
+-- [安全图表配置](.ai-platform/specs/003-chart-configuration-foundation/spec.md)
+-- [分类图与多图表架构](.ai-platform/specs/004-categorical-chart-validation/spec.md)
+-- [轻量图表库 Beta](.ai-platform/specs/005-lightweight-chart-library-beta/spec.md)
+-- [分组与跨层编辑体验](.ai-platform/specs/006-group-cross-level-experience/spec.md)
+-- [开源官网与示例中心](.ai-platform/specs/007-open-source-showcase/spec.md)
+-- [公共配置 API v1](.ai-platform/specs/009-public-configuration-api/spec.md)
+-- [首个稳定版 1.0](.ai-platform/specs/010-stable-v1-release/spec.md)
++MIT
+diff --git a/SUPPORT.md b/SUPPORT.md
+index 4bf781e..a4878e7 100644
+--- a/SUPPORT.md
++++ b/SUPPORT.md
+@@ -7,7 +7,7 @@
+ 
+ ## Before Opening An Issue
+ 
+-1. 确认使用受支持的 React、G2、Node 和浏览器版本。
++1. 确认使用受支持的 framework adapter、G2、Node 和浏览器版本。
+ 2. 阅读 [入门](docs/getting-started.md)、[API](docs/api.md)、[错误处理](docs/errors.md) 和
+    [迁移说明](docs/migration.md)。
+ 3. 使用 `validateChartConfig`、`validateSourceData` 或 `validateViewSpec` 获取脱敏错误路径。
+diff --git a/apps/playground/package.json b/apps/playground/package.json
+index f2c2829..3176d92 100644
+--- a/apps/playground/package.json
++++ b/apps/playground/package.json
+@@ -10,7 +10,8 @@
+   },
+   "dependencies": {
+     "@antv/g2": "5.4.8",
+-    "@tellplot/editor": "workspace:*",
++    "@tellplot/core": "workspace:*",
++    "@tellplot/react": "workspace:*",
+     "lucide-react": "1.24.0",
+     "react": "19.2.7",
+     "react-dom": "19.2.7"
+diff --git a/apps/playground/src/DocsPage.tsx b/apps/playground/src/DocsPage.tsx
+index 831696b..86215db 100644
+--- a/apps/playground/src/DocsPage.tsx
++++ b/apps/playground/src/DocsPage.tsx
+@@ -4,8 +4,9 @@ import { DEMO_WATERFALL_COLORS } from './demoPresentation';
+ import { SiteFooter } from './SiteFooter';
+ import { SiteLink } from './SiteLink';
+ 
+-const MINIMAL_REACT_EXAMPLE = `import { ChartEditor, type ChartConfig } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
++const MINIMAL_REACT_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
++import { ChartEditor } from '@tellplot/react';
++import '@tellplot/react/styles.css';
+ 
+ const config = {
+   type: 'waterfall',
+@@ -83,11 +84,13 @@ export function DocsPage({
+                 <h2>安装</h2>
+               </header>
+               <p>
+-                <code>@tellplot/editor</code> 是 React 组件包，React、React DOM 与 G2 是显式 peer
+-                dependencies。
++                <code>@tellplot/core</code> 提供领域能力，<code>@tellplot/editor</code> 提供 DOM/G2
++                runtime，<code>@tellplot/react</code> 只负责 React 生命周期。
+               </p>
+               <pre>
+-                <code>pnpm add @tellplot/editor @antv/g2 react react-dom</code>
++                <code>
++                  pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2 react react-dom
++                </code>
+               </pre>
+             </section>
+ 
+diff --git a/apps/playground/src/ExampleWorkbench.tsx b/apps/playground/src/ExampleWorkbench.tsx
+index 6d4a3ff..4311337 100644
+--- a/apps/playground/src/ExampleWorkbench.tsx
++++ b/apps/playground/src/ExampleWorkbench.tsx
+@@ -1,16 +1,14 @@
+ import {
+-  ChartEditor,
+   createInitialViewSpec,
+   parseViewSpec,
+   serializeViewSpec,
+   validateViewSpec,
+   type ChartConfig,
+-  type ChartEditorHandle,
+   type ChartEditorOptions,
+-  type ExportError,
+   type SourceData,
+   type ViewSpec,
+-} from '@tellplot/editor';
++} from '@tellplot/core';
++import { ChartEditor, type ChartEditorHandle, type ExportError } from '@tellplot/react';
+ import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
+ import { useEffect, useMemo, useRef, useState } from 'react';
+ 
+diff --git a/apps/playground/src/HomePage.tsx b/apps/playground/src/HomePage.tsx
+index 09575f4..54637be 100644
+--- a/apps/playground/src/HomePage.tsx
++++ b/apps/playground/src/HomePage.tsx
+@@ -16,7 +16,8 @@ import { writeClipboard } from './clipboard';
+ import { ShowcaseChart } from './ShowcaseChart';
+ import { SiteFooter } from './SiteFooter';
+ 
+-const INSTALL_COMMAND = 'pnpm add @tellplot/editor @antv/g2';
++const INSTALL_COMMAND =
++  'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2 react react-dom';
+ 
+ const DATA_FLOW = [
+   {
+@@ -45,14 +46,15 @@ const DATA_FLOW = [
+   },
+ ] as const;
+ 
+-const CONFIG_EXAMPLE = `import { ChartEditor } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
++const CONFIG_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
++import { ChartEditor } from '@tellplot/react';
++import '@tellplot/react/styles.css';
+ import { revenueData } from './revenue.data';
+ 
+ const config = {
+   type: 'column',
+   data: revenueData,
+-} as const;
++} as const satisfies ChartConfig;
+ 
+ export function RevenueChart() {
+   return <ChartEditor config={config} />;
+@@ -105,7 +107,7 @@ export function HomePage(): React.JSX.Element {
+               <div className="site-home-hero__pitch">
+                 <p className="site-home-hero__lead">让图表不止被看见，也能被编辑。</p>
+                 <p>
+-                  面向 React 的轻量可编辑图表库。一份声明式配置，让排序、分组、撤销与导出保持一致。
++                  框架无关的轻量可编辑图表库。DOM、React 与 Vue 共用一套排序、分组、撤销和导出能力。
+                 </p>
+                 <div className="site-home-hero__actions">
+                   <a
+@@ -209,7 +211,7 @@ export function HomePage(): React.JSX.Element {
+                   <Code2 size={16} aria-hidden="true" />
+                   RevenueChart.tsx
+                 </span>
+-                <small>React · TypeScript</small>
++                <small>DOM · React · Vue · TypeScript</small>
+               </div>
+               <pre tabIndex={0} aria-label="可横向滚动的 TypeScript 配置代码">
+                 <code>
+diff --git a/apps/playground/src/LiveChartEditor.tsx b/apps/playground/src/LiveChartEditor.tsx
+index 4a069ee..bdab509 100644
+--- a/apps/playground/src/LiveChartEditor.tsx
++++ b/apps/playground/src/LiveChartEditor.tsx
+@@ -1,7 +1,7 @@
+ import { Check, Copy, Play } from 'lucide-react';
+ import { useEffect, useRef, useState } from 'react';
+ 
+-import type { ChartConfig, ViewSpec } from '@tellplot/editor';
++import type { ChartConfig, ViewSpec } from '@tellplot/core';
+ 
+ import {
+   parsePlaygroundChartConfig,
+diff --git a/apps/playground/src/ShowcaseChart.tsx b/apps/playground/src/ShowcaseChart.tsx
+index b47a0b4..bd9e99e 100644
+--- a/apps/playground/src/ShowcaseChart.tsx
++++ b/apps/playground/src/ShowcaseChart.tsx
+@@ -1,4 +1,5 @@
+-import { ChartEditor, type ChartConfig, type SourceData } from '@tellplot/editor';
++import type { ChartConfig, SourceData } from '@tellplot/core';
++import { ChartEditor } from '@tellplot/react';
+ 
+ import { EXAMPLE_CATALOG, type ShowcaseExampleId } from './exampleCatalog';
+ import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from './demoPresentation';
+diff --git a/apps/playground/src/UsageGuide.tsx b/apps/playground/src/UsageGuide.tsx
+index 898f61c..f2f4539 100644
+--- a/apps/playground/src/UsageGuide.tsx
++++ b/apps/playground/src/UsageGuide.tsx
+@@ -1,16 +1,17 @@
+ import { Braces, Check, Copy, FileJson2, PackageOpen, SlidersHorizontal, X } from 'lucide-react';
+ import { useEffect, useRef, useState } from 'react';
+ 
+-import type { ChartConfig, ViewSpec } from '@tellplot/editor';
++import type { ChartConfig, ViewSpec } from '@tellplot/core';
+ 
+ import { writeClipboard } from './clipboard';
+ import { DEMO_WATERFALL_COLORS } from './demoPresentation';
+ import { LiveChartEditor } from './LiveChartEditor';
+ 
+-const INSTALL_CODE = 'pnpm add @tellplot/editor @antv/g2 react react-dom';
++const INSTALL_CODE =
++  'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2 react react-dom';
+ 
+-const REACT_CODE = `import { ChartEditor } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
++const REACT_CODE = `import { ChartEditor } from '@tellplot/react';
++import '@tellplot/react/styles.css';
+ import { sourceData } from './profit-bridge.data';
+ 
+ const config = {
+@@ -22,7 +23,7 @@ export function ProfitBridge() {
+   return <ChartEditor config={config} />;
+ }`;
+ 
+-const APPEARANCE_CODE = `import { ChartEditor } from '@tellplot/editor';
++const APPEARANCE_CODE = `import { ChartEditor } from '@tellplot/react';
+ import { sourceData } from './profit-bridge.data';
+ 
+ const config = {
+@@ -210,7 +211,7 @@ export function UsageGuide({
+       <header className="playground-usage-header">
+         <div>
+           <h2 id={`${id}-title`}>在项目中使用 TellPlot</h2>
+-          <code>{developerView === 'live' ? 'tellplot.config.json' : '@tellplot/editor'}</code>
++          <code>{developerView === 'live' ? 'tellplot.config.json' : '@tellplot/react'}</code>
+         </div>
+         <button
+           ref={closeButtonRef}
+diff --git a/apps/playground/src/chartDocument.ts b/apps/playground/src/chartDocument.ts
+index 96433ec..447f26c 100644
+--- a/apps/playground/src/chartDocument.ts
++++ b/apps/playground/src/chartDocument.ts
+@@ -5,7 +5,7 @@ import {
+   type ChartConfig,
+   type ValidationErrorCode,
+   type ViewSpec,
+-} from '@tellplot/editor';
++} from '@tellplot/core';
+ 
+ export interface PlaygroundPublicFileError {
+   readonly code: 'INVALID_JSON' | ValidationErrorCode;
+diff --git a/apps/playground/src/fixtures.ts b/apps/playground/src/fixtures.ts
+index d23522b..3017162 100644
+--- a/apps/playground/src/fixtures.ts
++++ b/apps/playground/src/fixtures.ts
+@@ -1,4 +1,4 @@
+-import type { SourceData } from '@tellplot/editor';
++import type { SourceData } from '@tellplot/core';
+ 
+ const financialFixture = {
+   schemaVersion: '1.0.0',
+diff --git a/apps/playground/src/main.tsx b/apps/playground/src/main.tsx
+index e10be0f..5c79f12 100644
+--- a/apps/playground/src/main.tsx
++++ b/apps/playground/src/main.tsx
+@@ -1,7 +1,7 @@
+ import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+ 
+-import '@tellplot/editor/styles.css';
++import '@tellplot/react/styles.css';
+ 
+ import { App } from './App';
+ import './playground.css';
+diff --git a/apps/playground/src/showcaseView.ts b/apps/playground/src/showcaseView.ts
+index f7e31bb..98e33c2 100644
+--- a/apps/playground/src/showcaseView.ts
++++ b/apps/playground/src/showcaseView.ts
+@@ -3,7 +3,7 @@ import {
+   type ChartType,
+   type SourceData,
+   type ViewSpec,
+-} from '@tellplot/editor';
++} from '@tellplot/core';
+ 
+ const GROWTH_GROUP_ID = 'showcase-growth-drivers';
+ const GROWTH_ITEM_IDS = ['sales-volume', 'price-impact', 'product-mix'] as const;
+diff --git a/apps/playground/tests/chartDocument.test.ts b/apps/playground/tests/chartDocument.test.ts
+index ab8b07f..cdc136b 100644
+--- a/apps/playground/tests/chartDocument.test.ts
++++ b/apps/playground/tests/chartDocument.test.ts
+@@ -1,6 +1,6 @@
+ import { describe, expect, it } from 'vitest';
+ 
+-import type { ChartConfig, ViewSpec } from '@tellplot/editor';
++import type { ChartConfig, ViewSpec } from '@tellplot/core';
+ 
+ import {
+   parsePlaygroundChartConfig,
+diff --git a/apps/playground/tsconfig.json b/apps/playground/tsconfig.json
+index b6a78a9..ddf2319 100644
+--- a/apps/playground/tsconfig.json
++++ b/apps/playground/tsconfig.json
+@@ -4,7 +4,9 @@
+     "skipLibCheck": true,
+     "types": ["node", "vite/client", "react", "react-dom"],
+     "paths": {
+-      "@tellplot/editor": ["../../packages/editor/src/index.ts"]
++      "@tellplot/core": ["../../packages/core/src/index.ts"],
++      "@tellplot/editor": ["../../packages/editor/src/index.ts"],
++      "@tellplot/react": ["../../packages/react/src/index.tsx"]
+     }
+   },
+   "include": ["src", "vite.config.ts"]
+diff --git a/apps/playground/vite.config.ts b/apps/playground/vite.config.ts
+index 3e71085..aff4697 100644
+--- a/apps/playground/vite.config.ts
++++ b/apps/playground/vite.config.ts
+@@ -24,12 +24,24 @@ export default defineConfig({
+   },
+   resolve: {
+     alias: [
++      {
++        find: '@tellplot/core',
++        replacement: fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
++      },
++      {
++        find: '@tellplot/react/styles.css',
++        replacement: fileURLToPath(new URL('../../packages/react/src/styles.css', import.meta.url)),
++      },
+       {
+         find: '@tellplot/editor/styles.css',
+         replacement: fileURLToPath(
+           new URL('../../packages/editor/src/styles/editor.css', import.meta.url),
+         ),
+       },
++      {
++        find: '@tellplot/react',
++        replacement: fileURLToPath(new URL('../../packages/react/src/index.tsx', import.meta.url)),
++      },
+       {
+         find: '@tellplot/editor',
+         replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
+diff --git a/docs/README.md b/docs/README.md
+index 670c83d..ead8778 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -29,8 +29,9 @@
+ - `/docs`：面向接入方的可扫描文档入口。
+ - `/playground`：公共 `ChartConfig`、独立 `ViewSpec`、结构大纲、检查器与导入导出工作台。
+ 
+-网站页面直接消费 `@tellplot/editor` 和本地 fixture；`docs/**` 与 package README 仍是长期 canonical
+-文档。网站不提供远程内容、版本服务、搜索后端或公共图表 registry。
++网站页面通过 `@tellplot/react` 消费 `@tellplot/editor`，并从 `@tellplot/core` 使用数据与持久化能力。
++`docs/**` 与 package README 是长期 canonical 文档。网站不提供远程内容、版本服务、搜索后端或公共图表
++registry。
+ 
+ ## 文档规则
+ 
+diff --git a/docs/api.md b/docs/api.md
+index d6e1a31..1575460 100644
+--- a/docs/api.md
++++ b/docs/api.md
+@@ -1,92 +1,62 @@
+ # TellPlot 公共 API
+ 
+-`@tellplot/editor` 使用单一 runtime/type 入口；样式使用 `@tellplot/editor/styles.css`。
+-以下 runtime、类型、schema 与错误语义属于 1.x 兼容合同，详细政策见
+-[版本、兼容与弃用政策](versioning.md)。
++## `@tellplot/core`
+ 
+-## Runtime Exports
++领域与状态包不访问 DOM，导出：
+ 
+-| Export                  | 用途                                |
+-| ----------------------- | ----------------------------------- |
+-| `ChartEditor`           | 声明式 React 编辑器组件             |
+-| `validateChartConfig`   | 校验不可信公共配置                  |
+-| `createInitialViewSpec` | 为合法 config data 创建兼容初始视图 |
+-| `validateSourceData`    | 验证不可信 source                   |
+-| `validateViewSpec`      | 验证 source/view 不变量             |
+-| `parseViewSpec`         | 解析持久化 ViewSpec JSON            |
+-| `serializeViewSpec`     | 确定性序列化 ViewSpec               |
+-| `createEditorSession`   | 创建不可变命令会话                  |
+-| `executeCommand`        | 执行确定性编辑命令                  |
+-| `undoSession`           | 撤销一个会话动作                    |
+-| `redoSession`           | 重做一个会话动作                    |
++- `validateChartConfig`、`validateSourceData`、`validateViewSpec`。
++- `createInitialViewSpec`、`parseViewSpec`、`serializeViewSpec`。
++- `createEditorSession`、`executeCommand`、`undoSession`、`redoSession`。
++- `createEditorStore`。
++- `ChartConfig`、`SourceData`、`ViewSpec`、commands、errors、projection 与交互策略类型。
+ 
+-## ChartEditor
++## `@tellplot/editor`
+ 
+-| Prop                | 类型                    | 说明                         |
+-| ------------------- | ----------------------- | ---------------------------- |
+-| `config`            | `ChartConfig`           | 必填的声明式图表配置         |
+-| `view`              | `ViewSpec`              | 受控可编辑视图               |
+-| `defaultView`       | `ViewSpec`              | 非受控初始视图               |
+-| `onViewChange`      | `(view, event) => void` | 成功命令产生的新视图         |
+-| `onCommand`         | `(event) => void`       | 成功命令事件                 |
+-| `onCommandRejected` | `(error) => void`       | 结构化命令错误               |
+-| `onConfigRejected`  | `(issues) => void`      | 配置或 config/view 冲突      |
+-| `onSelectionChange` | `(selection) => void`   | 稳定 node/source ID 选择状态 |
+-
+-组件 ref 为 `ChartEditorHandle`：
+-
+-- `focus()`：把焦点移入编辑器。
+-- `getView()`：读取当前有效 `ViewSpec`。
+-- `exportImage(options)`：导出 SVG 或 PNG。
+-
+-## ChartConfig
+-
+-`ChartConfig` 是判别联合：
+-
+-- `type: 'waterfall'` + waterfall source + `WaterfallChartAppearance`。
+-- `type: 'bar' | 'column'` + categorical source + `CategoricalChartAppearance`。
+-
+-通用字段为 `data`、`locale`、`height`、`appearance` 和 `editor`。分类 appearance 的 colors 不包含
+-waterfall-only 的 start、subtotal 和 end。
+-
+-`appearance.labels.value` 与 `appearance.labels.group` 支持字符串显示策略简写，也支持对象式标签配置。
+-对象配置提供 `display`、`placement`、`offset`、`color`、`fontSize`、`fontWeight`、`background`、
+-`backgroundColor` 和 `backgroundOpacity`。配置保持纯数据，不接受 formatter 或 G2 callback。
++```ts
++const editor = createEditor(container, options);
++```
+ 
+-## 数据与视图
++`EditorOptions`：
+ 
+-`SourceData` 是严格判别联合：
++| 字段                | 说明                         |
++| ------------------- | ---------------------------- |
++| `config`            | 必填 `ChartConfig`           |
++| `view`              | 受控 `ViewSpec`              |
++| `defaultView`       | 非受控初始 `ViewSpec`        |
++| `onViewChange`      | 成功命令产生的候选视图与事件 |
++| `onCommand`         | 成功命令事件                 |
++| `onCommandRejected` | 稳定 `CommandError`          |
++| `onConfigRejected`  | 配置或 view 冲突             |
++| `onSelectionChange` | `SelectionState              | null` |
+ 
+-- legacy waterfall：`schemaVersion: '1.0.0'`。
+-- current waterfall：`schemaVersion: '2.0.0'`、`dataKind: 'waterfall'`。
+-- current categorical：`schemaVersion: '2.0.0'`、`dataKind: 'categorical'`。
++`EditorInstance`：
+ 
+-`ViewSpec` 保存 dataset、schema、chart type、revision、顺序、分组、折叠、固定、注释和强调。编辑器命令
+-创建新的 ViewSpec，不修改 `config.data`。
++- `update(options)`：原子更新配置、受控视图和 callbacks，不重建 runtime。
++- `dispatch(command)`、`undo(action?)`、`redo(action?)`。
++- `focus()`、`getView()`、`exportImage(options)`。
++- `destroy()`：幂等释放 G2、DOM、listeners、media queries 和容器所有权。
+ 
+-## ValidationResult
++同一 `HTMLElement` 同时只能由一个 live instance 占用。模块 import 不访问 DOM。
+ 
+-配置、数据、视图和初始化函数返回：
++## `@tellplot/react`
+ 
+-```ts
+-type ValidationResult<T> =
+-  | { readonly ok: true; readonly value: T; readonly errors: readonly [] }
+-  | { readonly ok: false; readonly errors: readonly ValidationIssue[] };
+-```
++`ChartEditor` props 与 `EditorOptions` 对齐，并支持 `className`、`style`。`ChartEditorHandle` 只代理
++`focus`、`getView` 和 `exportImage`。Strict Mode 下每个创建的 instance 都会对应一次销毁。
+ 
+-错误包含稳定 `code`、`reason`、JSON Pointer `path` 和不含业务值的 `details`。
++## `@tellplot/vue`
+ 
+-## 命令与会话
++`ChartEditor` 支持 `config`、`view`、`defaultView` 和 `v-model:view`。事件包括 `view-change`、
++`command`、`command-rejected`、`config-rejected`、`selection-change`；expose 与 React handle 相同。
+ 
+-`EditorCommand` 是封闭 discriminated union。`CommandSource` 为 `direct | outline | keyboard | host`。
+-支持移动、分组、取消分组、折叠、展开、固定、注释和历史操作。
++## 数据与命令
+ 
+-## 导出
++`ChartConfig` 以 `type` 区分 `waterfall | bar | column`。`ViewSpec` 只保存可编辑叙事状态。所有编辑入口
++产生封闭 `EditorCommand`，`CommandSource` 为 `direct | outline | keyboard | host`。
+ 
+-`ExportOptions` 支持 `svg`/`png`、`pixelRatio`、`background` 和 `filename`。返回 `ExportResult` 包含
+-`blob`、`mimeType`、`suggestedFilename`、`width` 和 `height`。
++配置、数据和视图校验返回 `ValidationResult<T>`。普通输入错误不抛异常；instance 生命周期和导出错误使用
++结构化 error name/code。
+ 
+-## Internal Boundary
++## 内部边界
+ 
+-G2 `Chart`、`G2Spec`、projection、scene bounds、chart-family modules、screen/export runtime 和 pointer
+-geometry 不是公共 API。
++G2 `Chart`/`G2Spec`、scene context、DOM controllers、gesture session、chart-family spec 和 export runtime
++不属于公共 API。应用不得导入 `src/`、`dist/` 或未声明 subpath。
+diff --git a/docs/architecture.md b/docs/architecture.md
+index c6b093d..f3bb9a8 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -1,159 +1,67 @@
+ # TellPlot 架构概览
+ 
+-## 核心数据流
+-
+-TellPlot 把原始财务事实、可编辑叙事状态、确定性操作、图表家族投影和 G2 渲染分开管理。
+-
+-```text
+-ChartConfig -> public adapter -> SourceData + ViewSpec -> Command Executor
+-                                       |              -> CommandLog / undo / redo
+-                                       +-> Chart Projection -> G2Spec -> G2 Runtime
+-                                       +-> persistence / host commands
++TellPlot 采用 core、imperative editor 和 framework adapter 分层。编辑能力只实现一次。
++
++```mermaid
++flowchart LR
++  Host["Host application"] --> React["@tellplot/react"]
++  Host --> Vue["@tellplot/vue"]
++  Host --> Editor["@tellplot/editor createEditor"]
++  React --> Editor
++  Vue --> Editor
++  Editor --> Core["@tellplot/core EditorStore"]
++  Core --> Commands["Commands and history"]
++  Core --> Projection["Chart projections"]
++  Editor --> G2["G2 screen and export runtime"]
+ ```
+ 
+-### ChartConfig
+-
+-`ChartConfig` 是公开宿主意图，以 `type` 判别图表家族并收纳 `data`、`appearance`、`editor`、`locale`
+-和 `height`。`ChartEditor` 校验配置、创建或保留兼容的 `ViewSpec`，再适配到内部工作台；它不把 G2
+-options 或 runtime handle 暴露给宿主。
+-
+-### SourceData
+-
+-`SourceData` 是 `waterfall | categorical` 的严格可判别联合，保存稳定 ID、金额、币种和来源引用。编辑操作
+-不得改写该对象。
+-
+-### ViewSpec
+-
+-`ViewSpec` 保存图表类型、顺序、递归分组树、折叠、固定、注释和强调。它是可序列化、可校验的叙事状态，
+-不包含 G2 chart instance、像素边界或渲染函数。
++## `@tellplot/core`
+ 
+-### Command Executor
++`core` 包含 schema、配置校验、领域不变量、命令执行、undo/redo、持久化、waterfall/categorical
++projection、pointer geometry 和 `EditorStore`。它不依赖 DOM、G2、React 或 Vue，Node/SSR import 不产生
++浏览器副作用。
+ 
+-直接操作、大纲、键盘和宿主操作使用同一组类型化命令。执行器校验 revision、目标位置、固定状态、
+-递归树和来源覆盖不变量，并生成可撤销历史。
++`SourceData` 保存不可变事实；`ViewSpec` 保存顺序、递归分组、折叠、固定、注释和强调。直接操作、大纲、
++键盘和宿主调用都构造同一种命令并进入同一 session。
+ 
+-`domain/chartPolicy.ts` 保持领域所有权。它只表达 waterfall anchor/segment 与 categorical movable-item 的
+-命令约束，不是图表插件接口，也不依赖 projection 或 G2。
++## `@tellplot/editor`
+ 
+-## 内部模块
++`createEditor` 在调用时创建稳定 DOM workbench 和 G2 runtime。工作台拥有 toolbar、反馈、大纲、图表、
++inspector、overlay、无障碍摘要、直接操作、历史与导出。更新通过 `EditorStore` snapshot 增量刷新，不通过
++framework render tree 间接驱动 G2。
+ 
+ ```text
+ packages/editor/src/
+-  domain/                         # schema、命令、历史、持久化、领域 policy
+-  charts/
+-    waterfall/
+-      projection.ts              # waterfall SourceData + ViewSpec -> projection
+-      spec.ts                    # waterfall projection -> G2Spec
+-      types.ts
+-    categorical/
+-      projection.ts              # categorical SourceData + ViewSpec -> projection
+-      spec.ts                    # bar/column projection -> G2Spec
+-      types.ts
+-  rendering/g2/
+-    chartRuntime.ts              # screen Chart load/render/event/destroy lifecycle
+-    exportRuntime.ts             # offscreen Canvas/SVG lifecycle
+-  interactions/
+-    categoryAxis.ts              # X/Y category-axis geometry and collision
+-    chartPointer.ts              # G2 event/scene boundary adapter
+-  components/
+-    ChartEditor.tsx              # 公共声明式 facade 与 config/view 适配
+-    FinancialChartEditor.tsx     # 唯一 session、chart dispatch 与 UI orchestration
+-    WaterfallCanvas.tsx          # waterfall gesture/presentation composition
+-    CategoricalCanvas.tsx        # bar/column gesture/presentation composition
+-  export/
+-    svgExport.ts                 # SVG sanitizer 与序列化
+-    pngExport.ts                 # PNG canvas encoding
++  editor/              # imperative instance、DOM workbench、outline、chart surface
++  charts/              # family G2 specs 与 group regions
++  rendering/g2/        # screen/offscreen G2 lifecycle
++  export/              # SVG sanitizer、PNG encoding、export options
++  styles/              # canonical workbench stylesheet
+ ```
+ 
+-依赖方向为：
+-
+-```text
+-components/export -> charts -> domain/config
+-components/export -> rendering/g2
+-components -> interactions -> domain IDs
+-rendering/g2 -> G2
+-domain -X-> charts/rendering/components
+-```
+-
+-`charts/**` 和 `rendering/g2/**` 都是包内部路径，不属于公共 import surface。
+-
+-`charts/**`、export 与 components 当前共用 `components/formatAmount.ts`。该文件是无 React
+-依赖的纯格式化函数，不形成文件级循环依赖。本次收敛保留其路径，因为移动它不能减少已验证
+-重复，也不改善运行时边界；后续只在格式化能力扩展为独立子系统时再调整 ownership。
+-
+-## G2 Runtime
+-
+-### Screen Runtime
++G2 事件只在 `chartSurface` 边界转为稳定 point、datum 和 scene bounds。排序读取 G2 scene geometry，不猜测
++柱宽；waterfall/column 使用 X category axis，bar 使用 Y category axis。
+ 
+-`chartRuntime.ts` 只拥有两类 Canvas 已共同使用的运行时职责：
++## Framework adapters
+ 
+-- 缓存并动态加载 G2 `Chart` constructor。
+-- 为 mounted host 创建单一 chart instance。
+-- 串行处理 options/render，并让最新 request 胜出。
+-- 丢弃 stale render 结果，阻止卸载后的异步初始化复活 chart。
+-- 在更新或直接操作前快速完成 active G2 animations。
+-- 成对注册/注销 G2 events，隔离结果 callback，并执行 exact-once destroy。
+-- 只向交互 adapter 提供 scene context，不把 chart instance 暴露给组件。
++React 和 Vue 包只创建一个宿主元素，将 props 映射为 `createEditor/update`，将 ref/expose 映射到窄 handle，
++并在卸载时调用 `destroy`。它们不包含 EditorStore、命令、G2、编辑 UI 或第二套状态。
+ 
+-Canvas 继续拥有 chart-family copy、projection/spec 选择、拖动状态、DOM overlay、group action 和
+-pointer-capture composition。运行时不读取财务数据，也不决定图表类型。
++## 生命周期
+ 
+-### Export Runtime
++1. import core/editor 不访问 DOM。
++2. `createEditor(container, options)` 获得容器所有权并创建资源。
++3. `update` 替换 config/view/callback contract，保留 instance 和 container。
++4. `destroy` 幂等释放异步 render、G2 events、document/window listeners、media query、DOM 和所有权。
+ 
+-`exportRuntime.ts` 创建隐藏 Canvas/SVG host，渲染调用方提供的内部 `G2Spec`，在限定 reader callback
+-完成后销毁 chart 并移除 host。success、constructor/render failure 和 reader failure 使用同一 finally cleanup。
+-
+-SVG sanitizer/serialization 留在 `svgExport.ts`，PNG pixel-ratio/encoding 留在 `pngExport.ts`。chart-family
+-spec 选择也留在 export orchestration，offscreen runtime 不认识 waterfall、bar 或 column。
+-
+-## 图表家族
+-
+-waterfall 与 categorical 各自拥有 projection、renderer-ready types 和 spec factory：
+-
+-- waterfall projection 保留 start/end/subtotal、segment、累计值和 anchor 不变量。
+-- categorical projection 保留单序列金额、compensated group aggregation 和逻辑 `rootOrder`。
+-- column 使用 X category axis；bar 通过 G2 transpose 使用 Y category axis。
+-- screen、SVG、PNG 和无障碍摘要复用同一 family projection/spec 语义。
+-
+-家族目录不包含命令执行器、session、history、公共 plugin interface 或 renderer registry。
+-
+-## 交互边界
+-
+-`categoryAxis.ts` 是 waterfall、column 和 bar 的轴向几何原语。waterfall/column 传入 `x`，bar 传入 `y`。
+-排序只读取 G2 scene `getBounds()` 投影出的 `min/center/max`，不猜测固定柱宽或行高，也不让 value-axis
+-位移改变顺序。
+-
+-`chartPointer.ts` 只把 hostile G2 event/context 转换为结构化 point、datum 和 scene bounds。固定、同父级、
+-segment、group 和 command eligibility 仍由领域 policy 与调用方冻结的 candidate set 决定。
+-
+-## 配置流
++## 依赖方向
+ 
+ ```text
+-ChartConfig.appearance -> public adapter -> internal resolved appearance
+-                                          -> family screen G2Spec
+-                                          -> family SVG/PNG G2Spec
+-                                          -> accessible chart summary
++@tellplot/react -> @tellplot/editor -> @tellplot/core
++@tellplot/vue   -> @tellplot/editor -> @tellplot/core
++@tellplot/editor -> G2
++@tellplot/core -X-> DOM / G2 / React / Vue
+ ```
+ 
+-公共配置只描述稳定的财务图表语义。内部 adapter 独占 `data`、`encode`、stable key、比例尺几何、renderer、
+-事件注册和交互状态。
+-
+-## 公共边界
+-
+-`packages/editor/src/index.ts` 只导出 `ChartEditor`、`ChartConfig`、公共数据/命令类型、session、
+-validation、persistence 和 export 合同。内部 `FinancialChartEditor` 和以下内容保持内部：
+-
+-- projection 与 G2 spec factory。
+-- `G2Spec`、G2 `Chart`、scene context 和 runtime handles。
+-- category-axis/pointer adapter 与 gesture state。
+-- chart policy 和 arbitrary spec transform。
+-
+-TellPlot 当前不提供公共或内部通用 chart plugin registry。新增图表家族先通过真实工作流证明领域、交互和
+-导出边界，再决定是否存在可复用能力。
+-
+-## 仓库边界
+-
+-- `packages/editor`：唯一产品包，包含领域、图表家族、React 工作台、G2 runtime、持久化和导出。
+-- `apps/playground`：示例数据和人工验收入口，不复制产品逻辑。
+-- `e2e`：真实浏览器、可访问性、导出和性能验证。
+-- `.ai-platform`：SSOT、feature spec、任务图、execution packet 和 evidence。
++仓库 architecture gate 解析四包 runtime import graph、拒绝循环、拒绝 core/editor framework 依赖并阻止
++React/Vue 交叉依赖。
+diff --git a/docs/configuration.md b/docs/configuration.md
+index 0d6b254..2ec5726 100644
+--- a/docs/configuration.md
++++ b/docs/configuration.md
+@@ -116,8 +116,8 @@ if (!result.ok) {
+ }
+ ```
+ 
+-validator 拒绝未知字段、非法颜色、越界数值、类型错误和图表类型/source family 冲突。`ChartEditor`
+-也会显示稳定错误状态，并通过 `onConfigRejected` 报告相同 issue。
++validator 拒绝未知字段、非法颜色、越界数值、类型错误和图表类型/source family 冲突。imperative editor
++与两个 framework adapter 都会显示稳定错误状态，并通过 `onConfigRejected`/`config-rejected` 报告相同 issue。
+ 
+ ## 内部所有权
+ 
+@@ -130,5 +130,5 @@ validator 拒绝未知字段、非法颜色、越界数值、类型错误和图
+ 
+ 需要新增呈现能力时，先定义稳定 TellPlot 语义，再由内部 adapter 映射到 G2。
+ 
+-React 宿主应把 `ChartConfig` 视为不可变值。更新数据或配置时传入新的 config/data 对象，不要原地修改
+-现有对象；`ChartEditor` 会保留仍与新 config 兼容的 `ViewSpec`，不兼容时创建新的确定初始视图。
++宿主应把 `ChartConfig` 视为不可变值。更新数据或配置时传入新的 config/data 对象，不要原地修改现有
++对象；editor 会保留仍与新 config 兼容的 `ViewSpec`，不兼容时创建新的确定初始视图。
+diff --git a/docs/errors.md b/docs/errors.md
+index 7919dac..7b79865 100644
+--- a/docs/errors.md
++++ b/docs/errors.md
+@@ -31,15 +31,18 @@ if (!result.ok) {
+ 
+ ## 命令拒绝
+ 
+-命令 API 返回 `CommandResult`。React 组件通过 `onCommandRejected` 报告相同的 `CommandError`。
++命令 API 返回 `CommandResult`。imperative/React 使用 `onCommandRejected`，Vue 使用
++`command-rejected`，三者报告相同的 `CommandError`。
+ 
+ ```tsx
++import { ChartEditor } from '@tellplot/react';
++
+ <ChartEditor
+   config={config}
+   onCommandRejected={error => {
+     console.error(error.code, error.reason, error.path, error.commandId);
+   }}
+-/>
++/>;
+ ```
+ 
+ 常见 `CommandErrorCode` 包括 `INVALID_COMMAND`、`REVISION_CONFLICT`、`ITEM_LOCKED`、
+@@ -70,7 +73,7 @@ try {
+ 
+ ## 接入排查
+ 
+-- 图表无样式：确认应用入口导入 `@tellplot/editor/styles.css`。
++- 图表无样式：确认应用入口导入所用包的 `styles.css` subpath。
+ - 图表配置无效：先调用 `validateChartConfig`，按 issue 的 `code` 与 `path` 修正公开配置。
+ - 图表显示 data/view 冲突：重新用当前 data 调用 `createInitialViewSpec`，或校验恢复的 view。
+ - 条形图初始化失败：只有 current categorical source 可以使用 `bar` 或 `column`。
+diff --git a/docs/getting-started.md b/docs/getting-started.md
+index 336c7e3..65e944c 100644
+--- a/docs/getting-started.md
++++ b/docs/getting-started.md
+@@ -1,32 +1,15 @@
+ # TellPlot 入门与集成
+ 
+-## 环境要求
++TellPlot 的领域层和包 import 支持 SSR；实际编辑器只在浏览器中调用 `createEditor` 时访问 DOM 和 G2。
+ 
+-- Node.js 22.13 或更高版本用于构建与测试。
+-- React 18.3 或 React 19。
+-- 现代浏览器环境；图表渲染依赖 DOM、Canvas 和 G2。
++## 公共配置
+ 
+-## 安装
+-
+-```bash
+-pnpm add @tellplot/editor @antv/g2 react react-dom
+-```
+-
+-应用入口需要引入一次 TellPlot 样式：
++三种接入共用同一个 `ChartConfig`：
+ 
+ ```ts
+-import '@tellplot/editor/styles.css';
+-```
+-
+-## 渲染第一个图表
+-
+-公共配置只有四个主要层次：`type`、`data`、`appearance` 和 `editor`。最小图表只需要前两个。
+-
+-```tsx
+-import { ChartEditor, type ChartConfig } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
++import type { ChartConfig } from '@tellplot/core';
+ 
+-const config = {
++export const config = {
+   type: 'column',
+   data: {
+     schemaVersion: '2.0.0',
+@@ -38,120 +21,100 @@ const config = {
+       { id: 'north', label: 'North', amount: 74 },
+     ],
+   },
+-  locale: 'en-US',
++  locale: 'zh-CN',
+ } as const satisfies ChartConfig;
++```
+ 
+-export function RevenueChart() {
+-  return <ChartEditor config={config} />;
+-}
++## 原生 DOM
++
++```bash
++pnpm add @tellplot/core @tellplot/editor @antv/g2
+ ```
+ 
+-分类数据支持 `bar` 和 `column`，图表类型直接由 `config.type` 声明。每个 item `id` 在同一数据集中必须
+-唯一，`amount` 必须是有限安全数值。
++```ts
++import { createEditor } from '@tellplot/editor';
++import '@tellplot/editor/styles.css';
++import { config } from './config';
+ 
+-## 瀑布图
++const host = document.querySelector<HTMLElement>('#chart');
++if (!host) throw new Error('Missing chart host');
+ 
+-```tsx
+-const config = {
+-  type: 'waterfall',
+-  data: {
+-    schemaVersion: '2.0.0',
+-    dataKind: 'waterfall',
+-    datasetId: 'profit-bridge',
+-    currency: 'CNY',
+-    items: [
+-      { id: 'opening', label: '期初利润', amount: 1_000, kind: 'start' },
+-      { id: 'growth', label: '收入增长', amount: 240, kind: 'contribution' },
+-      { id: 'cost', label: '成本增加', amount: -90, kind: 'contribution' },
+-      { id: 'ending', label: '期末利润', amount: 1_150, kind: 'end' },
+-    ],
+-  },
+-  appearance: {
+-    title: '经营利润桥',
+-    labels: {
+-      value: { display: 'auto', placement: 'outside', offset: 6 },
+-    },
+-    tooltip: true,
++const editor = createEditor(host, {
++  config,
++  onViewChange(view) {
++    localStorage.setItem('tellplot:view', JSON.stringify(view));
+   },
+-} as const satisfies ChartConfig;
++});
+ 
+-export function ProfitBridge() {
+-  return <ChartEditor config={config} />;
+-}
++// 组件卸载或页面释放时调用。
++editor.destroy();
+ ```
+ 
+-## 配置与视图
+-
+-`ChartConfig` 表达宿主意图和不可变来源数据；`ViewSpec` 保存顺序、分组、折叠、固定、注释和强调。
+-不传 `view` 时，组件按 `config.type` 创建并维护初始视图。
++## React
+ 
+-受控模式使用 `view` 和 `onViewChange`：
++```bash
++pnpm add @tellplot/core @tellplot/react @antv/g2
++```
+ 
+ ```tsx
+ import { useState } from 'react';
+-import { ChartEditor, createInitialViewSpec, type ViewSpec } from '@tellplot/editor';
++import { createInitialViewSpec, type ViewSpec } from '@tellplot/core';
++import { ChartEditor } from '@tellplot/react';
++import '@tellplot/react/styles.css';
++import { config } from './config';
+ 
+ const created = createInitialViewSpec(config.data, { chartType: config.type });
+-if (!created.ok) throw new Error('Unable to create view');
+-const initialView: ViewSpec = created.value;
++if (!created.ok) throw new Error('Invalid config data');
+ 
+-export function ControlledChart() {
+-  const [view, setView] = useState(initialView);
++export function RevenueChart() {
++  const [view, setView] = useState<ViewSpec>(created.value);
+   return <ChartEditor config={config} view={view} onViewChange={setView} />;
+ }
+ ```
+ 
+-同一实例不要同时传入 `view` 和 `defaultView`。受控 view 的 dataset、schema 和 chart type 必须与 config
+-兼容。
+-
+-## 分组交互
++## Vue 3
+ 
+-框选同一展开分组内的连续柱会创建子分组。框选同时覆盖分组内外的柱时，TellPlot 会把命中的内部柱提升
+-为完整分组边界，再与外部连续节点创建上层分组；确认对话框会显示实际生效的节点与来源范围。原始
+-`config.data` 始终不变，结构结果只写入 `ViewSpec`。
+-
+-## 保存与恢复
++```bash
++pnpm add @tellplot/core @tellplot/vue @antv/g2
++```
+ 
+-```ts
+-import { parseViewSpec, serializeViewSpec } from '@tellplot/editor';
++```vue
++<script setup lang="ts">
++import { ref } from 'vue';
++import { createInitialViewSpec } from '@tellplot/core';
++import { ChartEditor } from '@tellplot/vue';
++import '@tellplot/vue/styles.css';
++import { config } from './config';
+ 
+-const json = serializeViewSpec(editorRef.current!.getView());
+-localStorage.setItem('tellplot:view', json);
++const created = createInitialViewSpec(config.data, { chartType: config.type });
++if (!created.ok) throw new Error('Invalid config data');
++const view = ref(created.value);
++</script>
+ 
+-const restored = parseViewSpec(localStorage.getItem('tellplot:view') ?? '', config.data);
+-if (restored.ok && restored.value.chartType === config.type) {
+-  setView(restored.value);
+-}
++<template>
++  <ChartEditor :config="config" v-model:view="view" />
++</template>
+ ```
+ 
+-配置与视图应分别保存。TellPlot 不进行启发式 schema migration。
++## 受控与非受控
+ 
+-## 导出
++- 不传 `view`：editor 维护当前视图。
++- `defaultView`：指定非受控初始视图。
++- `view` + `onViewChange` 或 `v-model:view`：宿主维护受控视图。
++- `view` 与 `defaultView` 互斥。
+ 
+-```tsx
+-import { useRef } from 'react';
+-import { ChartEditor, type ChartEditorHandle } from '@tellplot/editor';
++`ChartConfig` 表达不可变来源数据与显示意图；`ViewSpec` 保存顺序、递归分组、折叠、固定、注释和强调。
++持久化时使用 `serializeViewSpec` 与 `parseViewSpec`，不要持久化 DOM 或 G2 instance。
+ 
+-const editorRef = useRef<ChartEditorHandle>(null);
++## 导出
+ 
+-async function exportPng() {
+-  const result = await editorRef.current?.exportImage({ format: 'png', pixelRatio: 2 });
+-  if (!result) return;
++imperative instance、React ref 和 Vue expose 都提供 `exportImage`：
+ 
+-  const url = URL.createObjectURL(result.blob);
+-  const anchor = document.createElement('a');
+-  anchor.href = url;
+-  anchor.download = result.suggestedFilename;
+-  anchor.click();
+-  URL.revokeObjectURL(url);
+-}
++```ts
++const result = await editor.exportImage({ format: 'png', pixelRatio: 2 });
++const url = URL.createObjectURL(result.blob);
++// 宿主负责下载、上传或保存 Blob，并在完成后 revoke URL。
++URL.revokeObjectURL(url);
+ ```
+ 
+-导出与屏幕渲染共享内部 G2 spec。宿主负责下载、上传或保存返回的 `Blob`。
+-
+-## 下一步
+-
+-- [公共 API](api.md)
+-- [配置边界](configuration.md)
+-- [错误处理](errors.md)
+-- [迁移与兼容](migration.md)
++继续阅读 [公共 API](api.md)、[配置边界](configuration.md) 和 [错误处理](errors.md)。
+diff --git a/docs/migration.md b/docs/migration.md
+index 967b40a..533a7a6 100644
+--- a/docs/migration.md
++++ b/docs/migration.md
+@@ -1,69 +1,37 @@
+-# TellPlot 1.0 迁移与兼容
++# TellPlot 包选择与状态迁移
+ 
+-## 版本策略
++## 包选择
+ 
+-`@tellplot/editor@1.0.0` 是首个稳定版本。1.x 遵循 Semantic Versioning；breaking public API、schema
+-或错误码变化只进入新的 major。升级仍应阅读 changelog、重新编译并运行关键交互与导出测试。
++| 场景                               | 安装与入口                           |
++| ---------------------------------- | ------------------------------------ |
++| 纯数据校验、命令或 SSR             | `@tellplot/core`                     |
++| 原生 DOM、Web Component 或其他框架 | `@tellplot/editor` 的 `createEditor` |
++| React 18/19                        | `@tellplot/react` 的 `ChartEditor`   |
++| Vue 3                              | `@tellplot/vue` 的 `ChartEditor`     |
+ 
+-npm publish、Git tag 和正式 release 是独立交付闸门，版本字段本身不表示已经公开发布。
++React/Vue adapters 依赖同一个 imperative editor，不需要把状态或命令迁移到另一套实现。
+ 
+-## 公共入口
++## ViewSpec 迁移
+ 
+-- runtime 和类型：`@tellplot/editor`
+-- 样式：`@tellplot/editor/styles.css`
++持久化内容始终与原始 `SourceData` 一起校验：
+ 
+-不要导入 `dist/`、`src/` 或内部 chart/rendering 路径。G2 `Chart`、`G2Spec`、projection 和 runtime handle
+-不属于兼容承诺。
++```ts
++import { parseViewSpec } from '@tellplot/core';
+ 
+-## 1.0 前 React API 映射
++const restored = parseViewSpec(serialized, sourceData);
++if (restored.ok) {
++  editor.update({ config, view: restored.value, onViewChange });
++}
++```
+ 
+-1.0 使用声明式 `ChartEditor` 和 `ChartConfig`。未发布开发分支中的旧名称不提供并行 runtime 入口，
+-接入代码按下表迁移：
++TellPlot 不执行启发式 schema migration。dataset、schema generation、chart type 或 source family 不兼容时，
++宿主应执行明确的数据迁移，或用 `createInitialViewSpec` 创建新视图。
+ 
+-| 1.0 前名称或属性                               | 1.0                              |
+-| ---------------------------------------------- | -------------------------------- |
+-| `FinancialChartEditor`                         | `ChartEditor`                    |
+-| `sourceData`                                   | `config.data`                    |
+-| `chartAppearance`                              | `config.appearance`              |
+-| `panels`、`layout`、`readOnly`、`historyLimit` | `config.editor`                  |
+-| `locale`、`height`                             | `config.locale`、`config.height` |
+-| `viewSpec`、`defaultViewSpec`                  | `view`、`defaultView`            |
+-| `onViewSpecChange`                             | `onViewChange`                   |
+-| `getViewSpec()`                                | `getView()`                      |
+-| `appearance.palette`                           | `appearance.colors`              |
+-| `appearance.axes.x/y`                          | `appearance.axes.category/value` |
+-| `appearance.valueLabels`                       | `appearance.labels.value`        |
+-| `appearance.groupRegion.label`                 | `appearance.labels.group`        |
+-| `appearance.groupRegion.fillOpacity`           | `appearance.groupRegion.opacity` |
++## 接入检查
+ 
+-`ChartConfig.type` 选择 `waterfall | bar | column`，并在 TypeScript 和
+-`validateChartConfig` 中约束对应的 `data` 家族。`ViewSpec` 只承载排序、分组、折叠、固定、注释和强调；
+-普通接入不需要手工创建它。
+-
+-## Schema 兼容
+-
+-| Source                            | View               | 支持                         |
+-| --------------------------------- | ------------------ | ---------------------------- |
+-| legacy waterfall `1.0.0`          | waterfall `1.0.0`  | 是，保持原 generation 序列化 |
+-| current waterfall `2.0.0`         | waterfall `2.0.0`  | 是                           |
+-| current categorical `2.0.0`       | bar/column `2.0.0` | 是                           |
+-| waterfall source                  | bar/column view    | 否                           |
+-| categorical source                | waterfall view     | 否                           |
+-| 不同 dataset 或 schema generation | 任意               | 否                           |
+-
+-TellPlot 不执行隐式 schema migration。升级持久化内容时应保留原始 source，调用 `parseViewSpec` 或
+-`validateViewSpec`，并对失败结果采用显式迁移或重新创建视图。
+-
+-## CommandSource
+-
+-1.0 公共 union 为 `direct | outline | keyboard | host`。未发布开发版本中的 `ai` literal 不进入稳定合同；
+-宿主系统、自动化流程或其他外部调用统一使用 `source: 'host'`。命令的其余 envelope 与 payload shape 不变。
+-
+-## 升级检查
+-
+-1. 安装目标 1.x 版本并保持 peer dependencies 满足范围。
+-2. 只从公共入口导入，并引入 styles subpath。
+-3. 用 TypeScript strict 重新编译应用。
+-4. 通过 `validateChartConfig` 校验宿主配置，并验证持久化 view 与当前 data 的 dataset、schema 和 chart type 兼容。
+-5. 验证受控状态更新、undo/redo、关键拖拽、SVG/PNG 和无障碍流程。
+-6. 确认宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
++1. 只从四个 package exports 导入，不导入 `src/` 或 `dist/`。
++2. 只引入一个对应的 styles subpath。
++3. 受控模式只传 `view`，非受控模式可传 `defaultView`，两者互斥。
++4. React/Vue 卸载由 adapter 自动销毁；imperative 接入显式调用 `destroy`。
++5. 宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
++6. 升级后运行 TypeScript strict、关键交互、导出与无障碍测试。
+diff --git a/docs/roadmap.md b/docs/roadmap.md
+index 5454625..32a21dc 100644
+--- a/docs/roadmap.md
++++ b/docs/roadmap.md
+@@ -2,8 +2,8 @@
+ 
+ ## North Star
+ 
+-TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图表，并把渲染、动画、交互和导出的复杂度
+-留在基于 G2 的内部实现中。
++TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础图表，并把状态、渲染、动画、交互和导出
++统一在基于 G2 的框架无关实现中。
+ 
+ ## Planning Model
+ 
+@@ -16,7 +16,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ ## G001 多图表基础能力
+ 
+ - Status: Accepted
+-- Outcome: `@tellplot/editor` 已提供瀑布图、分类条形图和分类柱状图。
++- Outcome: TellPlot 已提供瀑布图、分类条形图和分类柱状图。
+ - Capability: 类型化数据、G2 渲染与动画、排序、递归分组、折叠、固定、历史、持久化、SVG/PNG、
+   可访问性和安全语义配置。
+ - Architecture: chart-family modules、shared G2 screen/export runtime 和 X/Y category-axis 边界已通过
+@@ -28,9 +28,9 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ - Status: Accepted
+ - Goal: 把当前三个图表家族整理成开发者可以直接安装、理解和稳定集成的 beta 版本。
+ - Included outcomes:
+-  - 收敛并记录公共组件、数据、配置、事件、持久化和导出 API。
++  - 收敛并记录公共数据、配置、事件、持久化和导出 API。
+   - 完善最小安装示例、图表用法、受控/非受控模式和常见错误说明。
+-  - 验证发布 tarball、React 18/19、类型、浏览器、可访问性、性能和导出。
++  - 验证发布 tarball、类型、浏览器、可访问性、性能和导出。
+   - 确定 beta 版本、变更记录和迁移规则。
+ - Excluded: 新图表类型、通用插件系统、Dashboard 和服务端能力。
+ - Acceptance: 用户于 2026-07-29 与 G002-R1、G002-R2、G002-R3、G004 统一验收。
+@@ -54,7 +54,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ ## G002-R3 公共配置 API v1
+ 
+ - Status: Accepted
+-- Goal: 使用 `ChartEditor` 和一份判别式 `ChartConfig` 完成普通接入，并把可编辑 `ViewSpec` 作为独立高级状态。
++- Goal: 使用一份判别式 `ChartConfig` 完成普通接入，并把可编辑 `ViewSpec` 作为独立高级状态。
+ - Outcome: 类型和运行时配置校验、公开 facade、config/view 双文件工作台、迁移说明和发布候选回归。
+ - Boundary: 不增加图表家族、schema、依赖、raw G2Spec 或第二套领域状态。
+ 
+@@ -84,9 +84,18 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图
+ - Entry condition: remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 获得独立明确
+   授权；scope、2FA/Trusted Publishing 和托管权限可用。
+ 
++## G006 框架无关编辑器架构
++
++- Status: Needs Review
++- Goal: 以 `@tellplot/core` 和 `@tellplot/editor` 作为唯一领域/runtime，实现 React 18/19 与 Vue 3 薄适配。
++- Included outcomes: imperative DOM API、统一 EditorStore、完整工作台迁移、四包类型/构建/消费合同和三种
++  quickstart。
++- Boundary: 不增加图表家族、schema、通用 plugin registry、第二渲染引擎或历史兼容层；不执行远程发布。
++- Release relation: G005 在 G006 目标级候选完成并获验收前保持阻塞。
++
+ ## Decision Gates
+ 
+-- 不增加缺少明确用户价值证据的通用插件或拆分 `@tellplot/core`。
++- `@tellplot/core` 保持无 DOM/G2/framework 依赖，`@tellplot/editor` 保持无 React/Vue 依赖。
+ - 新图表只在 G003 的具体目标获得批准后实现。
+ - 原始 G2 options、G2 Chart instance 和内部 runtime handle 不进入公共 API。
+ - 项目不规划 Dashboard、通用插件平台或第二渲染引擎。
+diff --git a/docs/versioning.md b/docs/versioning.md
+index 7d6cfee..38c8f4e 100644
+--- a/docs/versioning.md
++++ b/docs/versioning.md
+@@ -2,58 +2,44 @@
+ 
+ ## Semantic Versioning
+ 
+-TellPlot 从 `1.0.0` 起遵循 Semantic Versioning：
+-
+ - patch：修复缺陷，不改变文档化公共合同。
+ - minor：增加向后兼容能力，可以引入带替代路径的弃用。
+ - major：允许 breaking public API、schema 或错误码变化，并提供迁移说明。
+ 
+-版本字段只描述候选内容。npm、Git tag、GitHub Release 和生产网站是否已发布，以公开 registry 与发布报告
+-为准。
+-
+-## 1.x 兼容承诺
++版本字段描述候选内容。npm、Git tag、GitHub Release 和生产网站状态以公开 registry 与发布报告为准。
+ 
+-兼容表面包括：
++## 1.x 公共表面
+ 
+-- `packages/editor/src/index.ts` 导出的 runtime 和 TypeScript 类型。
+-- `ChartEditor` props/handle、`ChartConfig`、`SourceData`、`ViewSpec`、commands、errors 和 export。
+-- `@tellplot/editor/styles.css` 入口。
+-- 文档化的 schema generation、error code/reason 和 JSON Pointer path 语义。
+-- React、React DOM、G2、Node 和浏览器支持矩阵。
++- `@tellplot/core` 的 runtime exports、类型、schema、命令和稳定错误语义。
++- `@tellplot/editor` 的 `createEditor`、`EditorOptions`、`EditorInstance`、export 和 styles subpath。
++- `@tellplot/react` 的 `ChartEditor` props/handle 和 styles subpath。
++- `@tellplot/vue` 的 `ChartEditor` props/emits/expose、`v-model:view` 和 styles subpath。
++- 文档化的 schema generation、error code/reason 和 JSON Pointer path。
+ 
+-内部文件、CSS class、G2Spec、G2 Chart instance、projection、scene context 和 runtime adapter 不属于
+-兼容承诺。应用不得导入 `src/`、`dist/` 或未在 package exports 中声明的路径。
++内部文件、CSS class、G2Spec、G2 Chart instance、projection implementation、scene context 和 DOM controllers
++不属于兼容承诺。应用不得导入 `src/`、`dist/` 或未声明 subpath。
+ 
+ ## 弃用政策
+ 
+-公共能力弃用至少跨一个 minor：
+-
+-1. 在类型和文档中标记弃用，并给出替代入口。
+-2. 在 CHANGELOG 和 migration 文档说明行为差异。
+-3. 保留兼容测试，直到下一 major 才允许移除。
+-4. 安全或数据正确性紧急修复可以立即限制危险行为，但必须发布公告和迁移路径。
++公共能力弃用至少跨一个 minor：在类型和文档中标记、提供替代入口、更新 changelog/migration，并保留
++兼容测试到下一 major。安全或数据正确性紧急修复可以立即限制危险行为，但必须说明迁移路径。
+ 
+ ## 支持矩阵
+ 
+-| Surface              | Stable support                                                  |
+-| -------------------- | --------------------------------------------------------------- |
+-| React                | 18.3、19.x                                                      |
+-| React DOM            | 与 React 对应的 18.3、19.x                                      |
+-| AntV G2              | peer range `^5.4.0`                                             |
+-| Node                 | 构建/验证 22.20.0；CI 验证当前 Node 24                          |
+-| Browsers             | 当前 Chromium、Firefox、WebKit；上一 Playwright browser release |
+-| WebKit compatibility | 18.4 previous-major regression matrix                           |
+-
+-超出 peer/engine range 的组合可以运行，但不属于 1.x 阻断支持合同。
++| Surface  | Stable support                                                |
++| -------- | ------------------------------------------------------------- |
++| React    | 18.3、19.x                                                    |
++| Vue      | 3.5.x                                                         |
++| AntV G2  | peer range `^5.4.0`                                           |
++| Node     | 构建与验证 `>=22.13.0`                                        |
++| Browsers | 当前 Chromium、Firefox、WebKit 与项目 previous-browser matrix |
+ 
+ ## Schema
+ 
+-- legacy waterfall `1.0.0` 保持解析和序列化兼容。
++- legacy waterfall `1.0.0` 保持读取与序列化兼容。
+ - waterfall/categorical `2.0.0` 保持严格 `dataKind` 和 chart type compatibility。
+ - TellPlot 不执行启发式 schema migration。
+-- 新 schema generation 必须向后读取现有 generation；无法兼容的变化进入新的 major。
+-
+-## 报告兼容问题
++- 新 schema generation 必须明确读取策略；无法兼容的变化进入新的 major。
+ 
+-先阅读 [支持政策](../SUPPORT.md) 和 [错误处理](errors.md)，再提交包含最小复现、版本矩阵和脱敏配置的
+-Issue。不要提交金额、业务标签、来源引用、token 或私钥。
++兼容问题应包含最小复现、包/framework/browser 版本和脱敏配置，不得提交金额、业务标签、来源引用、token
++或私钥。
+diff --git a/package.json b/package.json
+index 356cdfb..e0816ba 100644
+--- a/package.json
++++ b/package.json
+@@ -24,8 +24,8 @@
+     "typecheck": "pnpm -r --if-present run typecheck",
+     "test:unit": "vitest run --maxWorkers=4",
+     "test:coverage": "vitest run --coverage --maxWorkers=4",
+-    "test:package": "pnpm --filter @tellplot/editor run test:package",
+-    "test:react-matrix": "node packages/editor/tests/react-matrix/run-react-matrix.mjs",
++    "test:package": "pnpm --filter @tellplot/core run test:package && pnpm --filter @tellplot/editor run test:package && pnpm --filter @tellplot/react run test:package && pnpm --filter @tellplot/vue run test:package",
++    "test:framework-matrix": "pnpm --filter @tellplot/react test && pnpm --filter @tellplot/vue test && node packages/editor/tests/react-matrix/run-react-matrix.mjs",
+     "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
+     "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
+     "test:a11y": "playwright test e2e/accessibility.spec.ts",
+diff --git a/packages/editor/README.md b/packages/editor/README.md
+index 11297b9..fec05ec 100644
+--- a/packages/editor/README.md
++++ b/packages/editor/README.md
+@@ -1,69 +1,28 @@
+ # @tellplot/editor
+ 
+-基于 AntV G2 的轻量可编辑 React 图表组件。当前支持瀑布图、分类条形图和分类柱状图，并提供排序、递归
+-分组、跨层拖拽、撤销重做、视图持久化、SVG/PNG 导出与无障碍摘要。
+-
+-## 安装
++TellPlot 的框架无关 imperative DOM/G2 编辑器。完整 toolbar、outline、chart、inspector、交互、历史、
++无障碍摘要和 SVG/PNG 导出都由本包实现。
+ 
+ ```bash
+-pnpm add @tellplot/editor @antv/g2 react react-dom
++pnpm add @tellplot/core @tellplot/editor @antv/g2
+ ```
+ 
+-React 18.3 与 React 19 均受支持。应用入口需要引入一次样式：
+-
+ ```ts
+-import '@tellplot/editor/styles.css';
+-```
+-
+-## 最小示例
+-
+-```tsx
+-import { ChartEditor, type ChartConfig } from '@tellplot/editor';
++import { createEditor } from '@tellplot/editor';
+ import '@tellplot/editor/styles.css';
+ 
+-const config = {
+-  type: 'column',
+-  data: {
+-    schemaVersion: '2.0.0',
+-    dataKind: 'categorical',
+-    datasetId: 'revenue-by-region',
+-    items: [
+-      { id: 'east', label: 'East', amount: 128 },
+-      { id: 'west', label: 'West', amount: 96 },
+-      { id: 'north', label: 'North', amount: 74 },
+-    ],
++const editor = createEditor(document.querySelector('#chart')!, {
++  config,
++  onViewChange(view) {
++    save(view);
+   },
+-  locale: 'en-US',
+-} as const satisfies ChartConfig;
++});
+ 
+-export function RevenueChart() {
+-  return <ChartEditor config={config} />;
+-}
++editor.update({ config, view, onViewChange });
++editor.destroy();
+ ```
+ 
+-把 `type` 改为 `bar` 即可得到条形图，不需要手工创建 `ViewSpec`。瀑布图使用 `type: 'waterfall'` 和
+-waterfall source。编辑动作只更新独立 `ViewSpec`，不会改写 `config.data`。
+-
+-## 公共边界
+-
+-- 声明式入口：`ChartEditor` + `ChartConfig`
+-- 图表：`waterfall`、`bar`、`column`
+-- React 状态：source-only、非受控 `defaultView`、受控 `view`
+-- 校验：`validateChartConfig`、`validateSourceData`、`validateViewSpec`
+-- 输出：序列化 `ViewSpec`、SVG、PNG
+-- 内部实现：G2 spec、Chart instance、projection 与 rendering runtime 不属于公共 API
+-
+-`1.0.0` 是首个稳定版本。本地仓库已经生成并验证稳定候选；npm publish 与正式 release 需要独立授权。
+-
+-## 文档
+-
+-- [入门与集成](https://github.com/iiwish/tellplot/blob/main/docs/getting-started.md)
+-- [公共 API](https://github.com/iiwish/tellplot/blob/main/docs/api.md)
+-- [配置边界](https://github.com/iiwish/tellplot/blob/main/docs/configuration.md)
+-- [错误处理](https://github.com/iiwish/tellplot/blob/main/docs/errors.md)
+-- [迁移与兼容](https://github.com/iiwish/tellplot/blob/main/docs/migration.md)
+-- [版本与兼容政策](https://github.com/iiwish/tellplot/blob/main/docs/versioning.md)
+-
+-## License
++React 使用 `@tellplot/react`，Vue 3 使用 `@tellplot/vue`。领域校验、命令和持久化直接使用
++`@tellplot/core`。
+ 
+-MIT
++公共入口不暴露 G2 instance、spec、scene context 或 DOM controller。License: MIT。
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 7747ac5..d64c25a 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -83,9 +83,12 @@ importers:
+       '@antv/g2':
+         specifier: 5.4.8
+         version: 5.4.8
+-      '@tellplot/editor':
++      '@tellplot/core':
++        specifier: workspace:*
++        version: link:../../packages/core
++      '@tellplot/react':
+         specifier: workspace:*
+-        version: link:../../packages/editor
++        version: link:../../packages/react
+       lucide-react:
+         specifier: 1.24.0
+         version: 1.24.0(react@19.2.7)
+@@ -96,30 +99,40 @@ importers:
+         specifier: 19.2.7
+         version: 19.2.7(react@19.2.7)
+ 
++  packages/core: {}
++
+   packages/editor:
+     dependencies:
+       '@antv/g-svg':
+         specifier: 2.1.1
+         version: 2.1.1
+-      '@dnd-kit/core':
+-        specifier: 6.3.1
+-        version: 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+-      '@dnd-kit/sortable':
+-        specifier: 10.0.0
+-        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+-      lucide-react:
+-        specifier: 1.24.0
+-        version: 1.24.0(react@19.2.7)
++      '@tellplot/core':
++        specifier: workspace:*
++        version: link:../core
+     devDependencies:
+       '@antv/g2':
+         specifier: 5.4.8
+         version: 5.4.8
++
++  packages/react:
++    dependencies:
++      '@tellplot/editor':
++        specifier: workspace:*
++        version: link:../editor
++    devDependencies:
+       react:
+         specifier: 19.2.7
+         version: 19.2.7
+-      react-dom:
+-        specifier: 19.2.7
+-        version: 19.2.7(react@19.2.7)
++
++  packages/vue:
++    dependencies:
++      '@tellplot/editor':
++        specifier: workspace:*
++        version: link:../editor
++    devDependencies:
++      vue:
++        specifier: 3.5.27
++        version: 3.5.27(typescript@6.0.3)
+ 
+ packages:
+ 
+@@ -328,28 +341,6 @@ packages:
+     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
+     engines: {node: '>=20.19.0'}
+ 
+-  '@dnd-kit/accessibility@3.1.1':
+-    resolution: {integrity: sha512-2P+YgaXF+gRsIihwwY1gCsQSYnu9Zyj2py8kY5fFvUM1qm2WA2u639R6YNVfU4GWr+ZM5mqEsfHZZLoRONbemw==}
+-    peerDependencies:
+-      react: '>=16.8.0'
+-
+-  '@dnd-kit/core@6.3.1':
+-    resolution: {integrity: sha512-xkGBRQQab4RLwgXxoqETICr6S5JlogafbhNsidmrkVv2YRs5MLwpjoF2qpiGjQt8S9AoxtIV603s0GIUpY5eYQ==}
+-    peerDependencies:
+-      react: '>=16.8.0'
+-      react-dom: '>=16.8.0'
+-
+-  '@dnd-kit/sortable@10.0.0':
+-    resolution: {integrity: sha512-+xqhmIIzvAYMGfBYYnbKuNicfSsk4RksY2XdmJhT+HAC01nix6fHCztU68jooFiMUB01Ky3F0FyOvhG/BZrWkg==}
+-    peerDependencies:
+-      '@dnd-kit/core': ^6.3.0
+-      react: '>=16.8.0'
+-
+-  '@dnd-kit/utilities@3.2.2':
+-    resolution: {integrity: sha512-+MKAJEOfaBe5SmV6t34p80MMKhjvUz0vRrvVJbPT0WElzaOJ/1xs+D+KDv+tD/NE5ujfrChEcshd4fLn0wpiqg==}
+-    peerDependencies:
+-      react: '>=16.8.0'
+-
+   '@emnapi/core@1.11.1':
+     resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
+ 
+@@ -1138,6 +1129,35 @@ packages:
+   '@vitest/utils@4.1.10':
+     resolution: {integrity: sha512-fy9am/HWxbaGt/Sawrp90vt6Y6jQwf1RX77cz3uwoJwJVMli/e1IEwRPnMNJ7vKfPTwo0diXifkpPvwH9v7nGA==}
+ 
++  '@vue/compiler-core@3.5.27':
++    resolution: {integrity: sha512-gnSBQjZA+//qDZen+6a2EdHqJ68Z7uybrMf3SPjEGgG4dicklwDVmMC1AeIHxtLVPT7sn6sH1KOO+tS6gwOUeQ==}
++
++  '@vue/compiler-dom@3.5.27':
++    resolution: {integrity: sha512-oAFea8dZgCtVVVTEC7fv3T5CbZW9BxpFzGGxC79xakTr6ooeEqmRuvQydIiDAkglZEAd09LgVf1RoDnL54fu5w==}
++
++  '@vue/compiler-sfc@3.5.27':
++    resolution: {integrity: sha512-sHZu9QyDPeDmN/MRoshhggVOWE5WlGFStKFwu8G52swATgSny27hJRWteKDSUUzUH+wp+bmeNbhJnEAel/auUQ==}
++
++  '@vue/compiler-ssr@3.5.27':
++    resolution: {integrity: sha512-Sj7h+JHt512fV1cTxKlYhg7qxBvack+BGncSpH+8vnN+KN95iPIcqB5rsbblX40XorP+ilO7VIKlkuu3Xq2vjw==}
++
++  '@vue/reactivity@3.5.27':
++    resolution: {integrity: sha512-vvorxn2KXfJ0nBEnj4GYshSgsyMNFnIQah/wczXlsNXt+ijhugmW+PpJ2cNPe4V6jpnBcs0MhCODKllWG+nvoQ==}
++
++  '@vue/runtime-core@3.5.27':
++    resolution: {integrity: sha512-fxVuX/fzgzeMPn/CLQecWeDIFNt3gQVhxM0rW02Tvp/YmZfXQgcTXlakq7IMutuZ/+Ogbn+K0oct9J3JZfyk3A==}
++
++  '@vue/runtime-dom@3.5.27':
++    resolution: {integrity: sha512-/QnLslQgYqSJ5aUmb5F0z0caZPGHRB8LEAQ1s81vHFM5CBfnun63rxhvE/scVb/j3TbBuoZwkJyiLCkBluMpeg==}
++
++  '@vue/server-renderer@3.5.27':
++    resolution: {integrity: sha512-qOz/5thjeP1vAFc4+BY3Nr6wxyLhpeQgAE/8dDtKo6a6xdk+L4W46HDZgNmLOBUDEkFXV3G7pRiUqxjX0/2zWA==}
++    peerDependencies:
++      vue: 3.5.27
++
++  '@vue/shared@3.5.27':
++    resolution: {integrity: sha512-dXr/3CgqXsJkZ0n9F3I4elY8wM9jMJpP3pvRG52r6m0tu/MsAFIe6JpXVGeNMd/D9F4hQynWT8Rfuj0bdm9kFQ==}
++
+   acorn-jsx@5.3.2:
+     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
+     peerDependencies:
+@@ -1464,6 +1484,10 @@ packages:
+   emojilib@2.4.0:
+     resolution: {integrity: sha512-5U0rVMU5Y2n2+ykNLQqMoqklN9ICBT/KsvC1Gz6vqHbz2AXXGkG+Pm5rMWk/8Vjrr/mY9985Hi8DYzn1F09Nyw==}
+ 
++  entities@7.0.1:
++    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
++    engines: {node: '>=0.12'}
++
+   entities@8.0.0:
+     resolution: {integrity: sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA==}
+     engines: {node: '>=20.19.0'}
+@@ -1532,6 +1556,9 @@ packages:
+     resolution: {integrity: sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==}
+     engines: {node: '>=4.0'}
+ 
++  estree-walker@2.0.2:
++    resolution: {integrity: sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==}
++
+   estree-walker@3.0.3:
+     resolution: {integrity: sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==}
+ 
+@@ -2415,6 +2442,14 @@ packages:
+       jsdom:
+         optional: true
+ 
++  vue@3.5.27:
++    resolution: {integrity: sha512-aJ/UtoEyFySPBGarREmN4z6qNKpbEguYHMmXSiOGk69czc+zhs0NF6tEFrY8TZKAl8N/LYAkd4JHVd5E/AsSmw==}
++    peerDependencies:
++      typescript: '*'
++    peerDependenciesMeta:
++      typescript:
++        optional: true
++
+   w3c-xmlserializer@5.0.0:
+     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
+     engines: {node: '>=18'}
+@@ -2824,31 +2859,6 @@ snapshots:
+ 
+   '@csstools/css-tokenizer@4.0.0': {}
+ 
+-  '@dnd-kit/accessibility@3.1.1(react@19.2.7)':
+-    dependencies:
+-      react: 19.2.7
+-      tslib: 2.8.1
+-
+-  '@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+-    dependencies:
+-      '@dnd-kit/accessibility': 3.1.1(react@19.2.7)
+-      '@dnd-kit/utilities': 3.2.2(react@19.2.7)
+-      react: 19.2.7
+-      react-dom: 19.2.7(react@19.2.7)
+-      tslib: 2.8.1
+-
+-  '@dnd-kit/sortable@10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+-    dependencies:
+-      '@dnd-kit/core': 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+-      '@dnd-kit/utilities': 3.2.2(react@19.2.7)
+-      react: 19.2.7
+-      tslib: 2.8.1
+-
+-  '@dnd-kit/utilities@3.2.2(react@19.2.7)':
+-    dependencies:
+-      react: 19.2.7
+-      tslib: 2.8.1
+-
+   '@emnapi/core@1.11.1':
+     dependencies:
+       '@emnapi/wasi-threads': 1.2.2
+@@ -3479,6 +3489,60 @@ snapshots:
+       convert-source-map: 2.0.0
+       tinyrainbow: 3.1.0
+ 
++  '@vue/compiler-core@3.5.27':
++    dependencies:
++      '@babel/parser': 7.29.7
++      '@vue/shared': 3.5.27
++      entities: 7.0.1
++      estree-walker: 2.0.2
++      source-map-js: 1.2.1
++
++  '@vue/compiler-dom@3.5.27':
++    dependencies:
++      '@vue/compiler-core': 3.5.27
++      '@vue/shared': 3.5.27
++
++  '@vue/compiler-sfc@3.5.27':
++    dependencies:
++      '@babel/parser': 7.29.7
++      '@vue/compiler-core': 3.5.27
++      '@vue/compiler-dom': 3.5.27
++      '@vue/compiler-ssr': 3.5.27
++      '@vue/shared': 3.5.27
++      estree-walker: 2.0.2
++      magic-string: 0.30.21
++      postcss: 8.5.19
++      source-map-js: 1.2.1
++
++  '@vue/compiler-ssr@3.5.27':
++    dependencies:
++      '@vue/compiler-dom': 3.5.27
++      '@vue/shared': 3.5.27
++
++  '@vue/reactivity@3.5.27':
++    dependencies:
++      '@vue/shared': 3.5.27
++
++  '@vue/runtime-core@3.5.27':
++    dependencies:
++      '@vue/reactivity': 3.5.27
++      '@vue/shared': 3.5.27
++
++  '@vue/runtime-dom@3.5.27':
++    dependencies:
++      '@vue/reactivity': 3.5.27
++      '@vue/runtime-core': 3.5.27
++      '@vue/shared': 3.5.27
++      csstype: 3.2.3
++
++  '@vue/server-renderer@3.5.27(vue@3.5.27(typescript@6.0.3))':
++    dependencies:
++      '@vue/compiler-ssr': 3.5.27
++      '@vue/shared': 3.5.27
++      vue: 3.5.27(typescript@6.0.3)
++
++  '@vue/shared@3.5.27': {}
++
+   acorn-jsx@5.3.2(acorn@8.17.0):
+     dependencies:
+       acorn: 8.17.0
+@@ -3765,6 +3829,8 @@ snapshots:
+ 
+   emojilib@2.4.0: {}
+ 
++  entities@7.0.1: {}
++
+   entities@8.0.0: {}
+ 
+   environment@1.1.0: {}
+@@ -3877,6 +3943,8 @@ snapshots:
+ 
+   estraverse@5.3.0: {}
+ 
++  estree-walker@2.0.2: {}
++
+   estree-walker@3.0.3:
+     dependencies:
+       '@types/estree': 1.0.9
+@@ -4650,6 +4718,16 @@ snapshots:
+     transitivePeerDependencies:
+       - msw
+ 
++  vue@3.5.27(typescript@6.0.3):
++    dependencies:
++      '@vue/compiler-dom': 3.5.27
++      '@vue/compiler-sfc': 3.5.27
++      '@vue/runtime-dom': 3.5.27
++      '@vue/server-renderer': 3.5.27(vue@3.5.27(typescript@6.0.3))
++      '@vue/shared': 3.5.27
++    optionalDependencies:
++      typescript: 6.0.3
++
+   w3c-xmlserializer@5.0.0:
+     dependencies:
+       xml-name-validator: 5.0.0
+diff --git a/scripts/release/audit-release.mjs b/scripts/release/audit-release.mjs
+index fb74f6d..fa8d19c 100644
+--- a/scripts/release/audit-release.mjs
++++ b/scripts/release/audit-release.mjs
+@@ -6,9 +6,37 @@ import ts from 'typescript';
+ import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
+ 
+ const findings = [];
+-const packagePath = resolve(repositoryRoot, 'packages/editor/package.json');
+-const packageManifest = JSON.parse(readFileSync(packagePath, 'utf8'));
+-const publishConfig = packageManifest.publishConfig ?? {};
++const packageDefinitions = [
++  {
++    directory: 'core',
++    name: '@tellplot/core',
++    entry: 'src/index.ts',
++    requiredEntryFragments: [
++      './store/editorStore',
++      './domain/createInitialViewSpec',
++      './domain/executeCommand',
++      './config/chartConfig',
++    ],
++  },
++  {
++    directory: 'editor',
++    name: '@tellplot/editor',
++    entry: 'src/index.ts',
++    exactRuntimeExports: ['createEditor'],
++  },
++  {
++    directory: 'react',
++    name: '@tellplot/react',
++    entry: 'src/index.tsx',
++    exactRuntimeExports: ['ChartEditor'],
++  },
++  {
++    directory: 'vue',
++    name: '@tellplot/vue',
++    entry: 'src/index.ts',
++    exactRuntimeExports: ['ChartEditor'],
++  },
++];
+ const requiredFiles = [
+   'README.md',
+   'CHANGELOG.md',
+@@ -23,71 +51,132 @@ const requiredFiles = [
+   'docs/errors.md',
+   'docs/migration.md',
+   'docs/versioning.md',
+-  'packages/editor/README.md',
+-  'packages/editor/LICENSE',
++  ...packageDefinitions.flatMap(({ directory }) => [
++    `packages/${directory}/README.md`,
++    `packages/${directory}/LICENSE`,
++  ]),
+   '.github/ISSUE_TEMPLATE/bug_report.yml',
+   '.github/ISSUE_TEMPLATE/feature_request.yml',
+   '.github/ISSUE_TEMPLATE/config.yml',
+   '.github/pull_request_template.md',
+ ];
+ 
+-if (packageManifest.version !== '1.0.0') {
+-  findings.push(`package version must be 1.0.0, received ${String(packageManifest.version)}`);
+-}
+-if (!/^\d+\.\d+\.\d+$/u.test(String(packageManifest.version))) {
+-  findings.push('package version must not contain a prerelease suffix');
+-}
+-if (publishConfig.access !== 'public') {
+-  findings.push('package publishConfig.access must be public');
++function hasModifier(node, kind) {
++  return node.modifiers?.some(modifier => modifier.kind === kind) ?? false;
+ }
+-if (publishConfig.registry !== 'https://registry.npmjs.org/') {
+-  findings.push('package publishConfig.registry must use the official npm registry');
+-}
+-for (const path of requiredFiles) {
+-  if (!existsSync(resolve(repositoryRoot, path))) {
+-    findings.push(`missing public file: ${path}`);
++
++function runtimeExports(entryPath) {
++  const entryText = readFileSync(entryPath, 'utf8');
++  const entry = ts.createSourceFile(
++    entryPath,
++    entryText,
++    ts.ScriptTarget.Latest,
++    true,
++    entryPath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
++  );
++  const exports = [];
++
++  for (const statement of entry.statements) {
++    if (
++      ts.isExportDeclaration(statement) &&
++      !statement.isTypeOnly &&
++      statement.exportClause !== undefined &&
++      ts.isNamedExports(statement.exportClause)
++    ) {
++      for (const element of statement.exportClause.elements) {
++        if (!element.isTypeOnly) {
++          exports.push(element.name.text);
++        }
++      }
++    }
++    if (ts.isVariableStatement(statement) && hasModifier(statement, ts.SyntaxKind.ExportKeyword)) {
++      for (const declaration of statement.declarationList.declarations) {
++        if (ts.isIdentifier(declaration.name)) {
++          exports.push(declaration.name.text);
++        }
++      }
++    }
++    if (
++      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
++      hasModifier(statement, ts.SyntaxKind.ExportKeyword) &&
++      statement.name !== undefined
++    ) {
++      exports.push(statement.name.text);
++    }
+   }
++  return { entryText, exports: [...new Set(exports)].sort() };
+ }
+ 
+-const publicEntryPath = resolve(repositoryRoot, 'packages/editor/src/index.ts');
+-const publicEntryText = readFileSync(publicEntryPath, 'utf8');
+-const publicEntry = ts.createSourceFile(
+-  publicEntryPath,
+-  publicEntryText,
+-  ts.ScriptTarget.Latest,
+-  true,
+-  ts.ScriptKind.TS,
+-);
+-const runtimeExports = [];
+-for (const statement of publicEntry.statements) {
++for (const definition of packageDefinitions) {
++  const packageRoot = resolve(repositoryRoot, 'packages', definition.directory);
++  const manifestPath = resolve(packageRoot, 'package.json');
++  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
++  const publishConfig = manifest.publishConfig ?? {};
++
++  if (manifest.name !== definition.name) {
++    findings.push(`${definition.directory} package name must be ${definition.name}`);
++  }
++  if (manifest.version !== '1.0.0' || !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))) {
++    findings.push(`${definition.name} version must be stable 1.0.0`);
++  }
++  if (publishConfig.access !== 'public') {
++    findings.push(`${definition.name} publishConfig.access must be public`);
++  }
++  if (publishConfig.registry !== 'https://registry.npmjs.org/') {
++    findings.push(`${definition.name} must use the official npm registry`);
++  }
++  if (!Array.isArray(manifest.files) || !manifest.files.includes('dist')) {
++    findings.push(`${definition.name} must publish only its dist allowlist plus npm metadata`);
++  }
++
++  const { entryText, exports } = runtimeExports(resolve(packageRoot, definition.entry));
+   if (
+-    ts.isExportDeclaration(statement) &&
+-    !statement.isTypeOnly &&
+-    statement.exportClause !== undefined &&
+-    ts.isNamedExports(statement.exportClause)
++    definition.exactRuntimeExports !== undefined &&
++    JSON.stringify(exports) !== JSON.stringify([...definition.exactRuntimeExports].sort())
+   ) {
+-    for (const element of statement.exportClause.elements) {
+-      if (!element.isTypeOnly) {
+-        runtimeExports.push(element.name.text);
+-      }
++    findings.push(`${definition.name} runtime exports do not match its stable allowlist`);
++  }
++  for (const required of definition.requiredEntryFragments ?? []) {
++    if (!entryText.includes(required)) {
++      findings.push(`${definition.name} entry must re-export ${required}`);
+     }
+   }
+ }
+-const expectedRuntimeExports = [
+-  'ChartEditor',
+-  'createEditorSession',
+-  'createInitialViewSpec',
+-  'executeCommand',
+-  'parseViewSpec',
+-  'redoSession',
+-  'serializeViewSpec',
+-  'undoSession',
+-  'validateChartConfig',
+-  'validateSourceData',
+-  'validateViewSpec',
+-].sort();
+-if (JSON.stringify(runtimeExports.sort()) !== JSON.stringify(expectedRuntimeExports)) {
+-  findings.push('runtime exports do not match the stable 1.x allowlist');
++
++const manifests = Object.fromEntries(
++  packageDefinitions.map(definition => [
++    definition.name,
++    JSON.parse(
++      readFileSync(
++        resolve(repositoryRoot, 'packages', definition.directory, 'package.json'),
++        'utf8',
++      ),
++    ),
++  ]),
++);
++const coreManifest = manifests['@tellplot/core'];
++const editorManifest = manifests['@tellplot/editor'];
++const reactManifest = manifests['@tellplot/react'];
++const vueManifest = manifests['@tellplot/vue'];
++if (coreManifest.dependencies !== undefined || coreManifest.peerDependencies !== undefined) {
++  findings.push('@tellplot/core must not declare runtime or peer dependencies');
++}
++if (JSON.stringify(editorManifest.peerDependencies) !== JSON.stringify({ '@antv/g2': '^5.4.0' })) {
++  findings.push('@tellplot/editor must declare only @antv/g2 as its peer dependency');
++}
++if (
++  JSON.stringify(reactManifest.peerDependencies) !== JSON.stringify({ react: '^18.3.0 || ^19.0.0' })
++) {
++  findings.push('@tellplot/react must declare only React 18.3/19 as its framework peer');
++}
++if (JSON.stringify(vueManifest.peerDependencies) !== JSON.stringify({ vue: '^3.5.0' })) {
++  findings.push('@tellplot/vue must declare only Vue 3.5 as its framework peer');
++}
++
++for (const path of requiredFiles) {
++  if (!existsSync(resolve(repositoryRoot, path))) {
++    findings.push(`missing public file: ${path}`);
++  }
+ }
+ 
+ const markdownFiles = [
+@@ -99,7 +188,7 @@ const markdownFiles = [
+     'SECURITY.md',
+     'CODE_OF_CONDUCT.md',
+     'SUPPORT.md',
+-    'packages/editor/README.md',
++    ...packageDefinitions.map(({ directory }) => `packages/${directory}/README.md`),
+   ].map(path => resolve(repositoryRoot, path)),
+ ];
+ const linkPattern = /\[[^\]]*\]\(([^)]+)\)/gu;
+@@ -117,7 +206,7 @@ for (const markdownPath of markdownFiles) {
+   }
+ }
+ 
+-const auditRoots = ['apps', 'docs', 'packages/editor/src', 'scripts', '.github'].map(path =>
++const auditRoots = ['apps', 'docs', 'packages', 'scripts', '.github'].map(path =>
+   resolve(repositoryRoot, path),
+ );
+ const governanceAuditExtensions = new Set(['.json', '.md', '.patch', '.yaml', '.yml']);
+@@ -125,11 +214,12 @@ const governanceAuditFiles = walkFiles(resolve(repositoryRoot, '.ai-platform')).
+   governanceAuditExtensions.has(extname(path)),
+ );
+ const auditFiles = [
+-  ...auditRoots.flatMap(path => walkFiles(path, { excludedNames: ['dist'] })),
++  ...auditRoots.flatMap(path =>
++    walkFiles(path, { excludedNames: ['dist', 'node_modules', 'coverage'] }),
++  ),
+   ...governanceAuditFiles,
+   ...requiredFiles.slice(0, 6).map(path => resolve(repositoryRoot, path)),
+   resolve(repositoryRoot, 'package.json'),
+-  packagePath,
+ ];
+ const sensitivePatterns = [
+   { name: 'private key marker', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/u },
+@@ -155,8 +245,8 @@ if (findings.length > 0) {
+     `${JSON.stringify(
+       {
+         status: 'passed',
+-        version: packageManifest.version,
+-        runtimeExports: expectedRuntimeExports.length,
++        version: '1.0.0',
++        packages: packageDefinitions.map(({ name }) => name),
+         publicFiles: requiredFiles.length,
+         markdownFiles: markdownFiles.length,
+         auditedFiles: new Set(auditFiles).size,
+diff --git a/scripts/release/check-architecture.mjs b/scripts/release/check-architecture.mjs
+index 7133289..6b6fd8c 100644
+--- a/scripts/release/check-architecture.mjs
++++ b/scripts/release/check-architecture.mjs
+@@ -5,18 +5,35 @@ import ts from 'typescript';
+ 
+ import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
+ 
+-const sourceRoot = resolve(repositoryRoot, 'packages/editor/src');
+-const sourceFiles = walkFiles(sourceRoot).filter(path => ['.ts', '.tsx'].includes(extname(path)));
++const packageRoots = [
++  resolve(repositoryRoot, 'packages/core/src'),
++  resolve(repositoryRoot, 'packages/editor/src'),
++  resolve(repositoryRoot, 'packages/react/src'),
++  resolve(repositoryRoot, 'packages/vue/src'),
++];
++const sourceFiles = packageRoots.flatMap(root =>
++  walkFiles(root).filter(path => ['.ts', '.tsx'].includes(extname(path))),
++);
+ const sourceSet = new Set(sourceFiles);
+ const runtimeGraph = new Map(sourceFiles.map(path => [path, []]));
+ const findings = [];
+ let edgeCount = 0;
+ 
+ function resolveLocal(source, specifier) {
+-  if (!specifier.startsWith('.')) {
++  const publicPackages = {
++    '@tellplot/core': resolve(repositoryRoot, 'packages/core/src/index.ts'),
++    '@tellplot/editor': resolve(repositoryRoot, 'packages/editor/src/index.ts'),
++    '@tellplot/react': resolve(repositoryRoot, 'packages/react/src/index.tsx'),
++    '@tellplot/vue': resolve(repositoryRoot, 'packages/vue/src/index.ts'),
++  };
++  const base = publicPackages[specifier]
++    ? publicPackages[specifier]
++    : specifier.startsWith('.')
++      ? resolve(dirname(source), specifier)
++      : undefined;
++  if (base === undefined) {
+     return undefined;
+   }
+-  const base = resolve(dirname(source), specifier);
+   const candidates = [
+     base,
+     `${base}.ts`,
+@@ -28,33 +45,38 @@ function resolveLocal(source, specifier) {
+ }
+ 
+ function sourceName(path) {
+-  return toPosix(relative(sourceRoot, path));
++  return toPosix(relative(repositoryRoot, path));
+ }
+ 
+ function recordBoundary(source, target) {
+   const from = sourceName(source);
+   const to = sourceName(target);
+   edgeCount += 1;
+-
+-  if (from.startsWith('domain/') && !to.startsWith('domain/')) {
+-    findings.push(`domain boundary: ${from} -> ${to}`);
++  if (from.startsWith('packages/core/') && !to.startsWith('packages/core/')) {
++    findings.push(`core package boundary: ${from} -> ${to}`);
+   }
+   if (
+-    from.startsWith('interactions/') &&
+-    !(to.startsWith('domain/') || to.startsWith('interactions/'))
++    from.startsWith('packages/editor/') &&
++    !to.startsWith('packages/editor/') &&
++    !to.startsWith('packages/core/')
+   ) {
+-    findings.push(`interactions boundary: ${from} -> ${to}`);
++    findings.push(`editor package boundary: ${from} -> ${to}`);
++  }
++  if (from.startsWith('packages/core/src/domain/') && !to.startsWith('packages/core/src/domain/')) {
++    findings.push(`core domain boundary: ${from} -> ${to}`);
+   }
+   if (
+-    /^(charts|domain|export|interactions|rendering)\//u.test(from) &&
+-    to.startsWith('components/') &&
+-    to !== 'components/formatAmount.ts'
++    from.startsWith('packages/core/src/interactions/') &&
++    !(
++      to.startsWith('packages/core/src/domain/') || to.startsWith('packages/core/src/interactions/')
++    )
+   ) {
+-    findings.push(`low-level component dependency: ${from} -> ${to}`);
++    findings.push(`core interactions boundary: ${from} -> ${to}`);
+   }
+ }
+ 
+ function collectImports(sourcePath) {
++  const sourceNameValue = sourceName(sourcePath);
+   const text = readFileSync(sourcePath, 'utf8');
+   const sourceFile = ts.createSourceFile(
+     sourcePath,
+@@ -73,14 +95,36 @@ function collectImports(sourcePath) {
+         runtimeTargets?.push(target);
+       }
+     }
++    if (
++      sourceNameValue.startsWith('packages/core/') &&
++      ['react', 'react-dom', 'vue', '@antv/g2', '@antv/g-svg'].includes(specifier)
++    ) {
++      findings.push(`forbidden core dependency: ${sourceNameValue} -> ${specifier}`);
++    }
++    if (
++      sourceNameValue.startsWith('packages/editor/') &&
++      ['react', 'react-dom', 'vue'].includes(specifier)
++    ) {
++      findings.push(`forbidden editor framework dependency: ${sourceNameValue} -> ${specifier}`);
++    }
++    if (sourceNameValue.startsWith('packages/react/') && specifier === 'vue') {
++      findings.push(`cross-framework React dependency: ${sourceNameValue} -> ${specifier}`);
++    }
++    if (
++      sourceNameValue.startsWith('packages/vue/') &&
++      (specifier === 'react' || specifier === 'react-dom')
++    ) {
++      findings.push(`cross-framework Vue dependency: ${sourceNameValue} -> ${specifier}`);
++    }
+     if (specifier === '@antv/g2' || specifier === '@antv/g-svg') {
+-      const name = sourceName(sourcePath);
+       const allowed =
+-        name === 'charts/groupRegions.ts' ||
+-        /^charts\/(waterfall|categorical)\/spec\.ts$/u.test(name) ||
+-        name.startsWith('rendering/g2/');
++        sourceNameValue === 'packages/editor/src/charts/groupRegions.ts' ||
++        /^packages\/editor\/src\/charts\/(waterfall|categorical)\/spec\.ts$/u.test(
++          sourceNameValue,
++        ) ||
++        sourceNameValue.startsWith('packages/editor/src/rendering/g2/');
+       if (!allowed) {
+-        findings.push(`raw G2 import outside adapter boundary: ${name}`);
++        findings.push(`raw G2 import outside editor adapter boundary: ${sourceNameValue}`);
+       }
+     }
+   }
+@@ -130,8 +174,9 @@ const stack = [];
+ function visitCycle(node) {
+   if (visiting.has(node)) {
+     const start = stack.indexOf(node);
+-    const cycle = [...stack.slice(start), node].map(sourceName).join(' -> ');
+-    findings.push(`runtime import cycle: ${cycle}`);
++    findings.push(
++      `runtime import cycle: ${[...stack.slice(start), node].map(sourceName).join(' -> ')}`,
++    );
+     return;
+   }
+   if (visited.has(node)) {
+@@ -151,10 +196,37 @@ for (const sourceFile of sourceFiles) {
+   visitCycle(sourceFile);
+ }
+ 
+-const publicEntry = readFileSync(resolve(sourceRoot, 'index.ts'), 'utf8');
++const coreEntry = readFileSync(resolve(repositoryRoot, 'packages/core/src/index.ts'), 'utf8');
++for (const forbidden of ['G2Spec', 'G2Chart', 'HTMLElement', 'react', 'vue']) {
++  if (coreEntry.includes(forbidden)) {
++    findings.push(`core public entry contains forbidden identifier: ${forbidden}`);
++  }
++}
++const editorEntry = readFileSync(resolve(repositoryRoot, 'packages/editor/src/index.ts'), 'utf8');
+ for (const forbidden of ['G2Spec', 'G2Chart', 'FinancialChartEditor', 'rendering/g2']) {
+-  if (publicEntry.includes(forbidden)) {
+-    findings.push(`public entry contains internal identifier: ${forbidden}`);
++  if (editorEntry.includes(forbidden)) {
++    findings.push(`editor public entry contains internal identifier: ${forbidden}`);
++  }
++}
++
++const frameworkManifests = [
++  ['editor', readFileSync(resolve(repositoryRoot, 'packages/editor/package.json'), 'utf8')],
++  ['react', readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8')],
++  ['vue', readFileSync(resolve(repositoryRoot, 'packages/vue/package.json'), 'utf8')],
++].map(([name, text]) => [name, JSON.parse(text)]);
++for (const [name, manifest] of frameworkManifests) {
++  const dependencies = {
++    ...(manifest.dependencies ?? {}),
++    ...(manifest.peerDependencies ?? {}),
++  };
++  if (name === 'editor' && ['react', 'react-dom', 'vue'].some(key => dependencies[key])) {
++    findings.push('editor manifest declares a UI framework');
++  }
++  if (name === 'react' && dependencies.vue) {
++    findings.push('React adapter manifest declares Vue');
++  }
++  if (name === 'vue' && (dependencies.react || dependencies['react-dom'])) {
++    findings.push('Vue adapter manifest declares React');
+   }
+ }
+ 
+@@ -165,10 +237,16 @@ if (findings.length > 0) {
+     `${JSON.stringify(
+       {
+         status: 'passed',
++        packages: packageRoots.map(repositoryPath),
+         sourceFiles: sourceFiles.length,
+         importEdges: edgeCount,
+         runtimeCycles: 0,
+-        publicEntry: repositoryPath(resolve(sourceRoot, 'index.ts')),
++        publicEntries: [
++          repositoryPath(resolve(repositoryRoot, 'packages/core/src/index.ts')),
++          repositoryPath(resolve(repositoryRoot, 'packages/editor/src/index.ts')),
++          repositoryPath(resolve(repositoryRoot, 'packages/react/src/index.tsx')),
++          repositoryPath(resolve(repositoryRoot, 'packages/vue/src/index.ts')),
++        ],
+       },
+       null,
+       2,
+diff --git a/scripts/release/check-stable.mjs b/scripts/release/check-stable.mjs
+index fb43427..5e62b45 100644
+--- a/scripts/release/check-stable.mjs
++++ b/scripts/release/check-stable.mjs
+@@ -10,7 +10,7 @@ const gates = [
+   ['pnpm', ['build']],
+   ['pnpm', ['release:artifact']],
+   ['pnpm', ['test:package']],
+-  ['pnpm', ['test:react-matrix']],
++  ['pnpm', ['test:framework-matrix']],
+   ['pnpm', ['test:e2e']],
+   ['pnpm', ['test:a11y']],
+   ['pnpm', ['test:performance']],
+diff --git a/scripts/release/package-artifact.mjs b/scripts/release/package-artifact.mjs
+index aa750c2..f092ecd 100644
+--- a/scripts/release/package-artifact.mjs
++++ b/scripts/release/package-artifact.mjs
+@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
+ import {
+   copyFileSync,
+   existsSync,
++  mkdirSync,
+   mkdtempSync,
+   readFileSync,
+   rmSync,
+@@ -28,74 +29,96 @@ if (process.versions.node !== releaseNodeVersion) {
+   );
+ }
+ 
+-const packageRoot = resolve(repositoryRoot, 'packages/editor');
+-const packageManifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
+-const filename = `${packageManifest.name.replace(/^@/u, '').replaceAll('/', '-')}-${packageManifest.version}.tgz`;
+-const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T123');
+-const artifactPath = resolve(evidenceRoot, 'artifacts', filename);
++const packageDirectories = ['core', 'editor', 'react', 'vue'];
++const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T129');
++const artifactsRoot = resolve(evidenceRoot, 'artifacts');
+ const manifestPath = resolve(evidenceRoot, 'tarball-manifest.json');
+-const temporaryRoot = mkdtempSync(join(tmpdir(), 'tellplot-release-artifact-'));
+-const freshArtifactPath = resolve(temporaryRoot, filename);
++const temporaryRoot = mkdtempSync(join(tmpdir(), 'tellplot-release-artifacts-'));
+ 
+ function sha256(path) {
+   return createHash('sha256').update(readFileSync(path)).digest('hex');
+ }
+ 
+ function comparableFiles(files) {
+-  return files.map(file => file.path).sort();
++  return files.map(file => (typeof file === 'string' ? file : file.path)).sort();
++}
++
++function artifactFilename(manifest) {
++  return `${manifest.name.replace(/^@/u, '').replaceAll('/', '-')}-${manifest.version}.tgz`;
+ }
+ 
+ try {
+-  run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
+-  run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
+-  const packManifest = JSON.parse(
+-    run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),
+-  );
+-  const files = comparableFiles(packManifest.files).map(path => ({ path }));
+-  const current = {
+-    name: packageManifest.name,
+-    version: packageManifest.version,
+-    filename,
+-    sizeBytes: statSync(freshArtifactPath).size,
+-    sha256: sha256(freshArtifactPath),
+-    files,
+-  };
++  const currentPackages = [];
++  for (const directory of packageDirectories) {
++    const packageRoot = resolve(repositoryRoot, 'packages', directory);
++    const packageManifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
++    const filename = artifactFilename(packageManifest);
++    const freshArtifactPath = resolve(temporaryRoot, filename);
++
++    run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
++    run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
++    const packManifest = JSON.parse(
++      run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),
++    );
++    const files = comparableFiles(packManifest.files).map(path => ({ path }));
++    currentPackages.push({
++      name: packageManifest.name,
++      version: packageManifest.version,
++      filename,
++      sizeBytes: statSync(freshArtifactPath).size,
++      sha256: sha256(freshArtifactPath),
++      files,
++    });
++  }
+ 
++  const current = { version: '1.0.0', packages: currentPackages };
+   if (write) {
+-    copyFileSync(freshArtifactPath, artifactPath);
++    mkdirSync(artifactsRoot, { recursive: true });
++    for (const packageArtifact of currentPackages) {
++      copyFileSync(
++        resolve(temporaryRoot, packageArtifact.filename),
++        resolve(artifactsRoot, packageArtifact.filename),
++      );
++    }
+     writeFileSync(manifestPath, `${JSON.stringify(current, null, 2)}\n`);
+   }
+ 
+   const findings = [];
+-  if (!existsSync(artifactPath)) {
+-    findings.push(`missing release artifact: ${filename}`);
+-  }
+   if (!existsSync(manifestPath)) {
+     findings.push('missing release artifact manifest');
+   }
++  for (const packageArtifact of currentPackages) {
++    if (!existsSync(resolve(artifactsRoot, packageArtifact.filename))) {
++      findings.push(`missing release artifact: ${packageArtifact.filename}`);
++    }
++  }
+ 
+   if (findings.length === 0) {
+     const stored = JSON.parse(readFileSync(manifestPath, 'utf8'));
+-    const storedArtifact = {
+-      sizeBytes: statSync(artifactPath).size,
+-      sha256: sha256(artifactPath),
+-    };
+-
+-    for (const field of ['name', 'version', 'filename', 'sizeBytes', 'sha256']) {
+-      if (stored[field] !== current[field]) {
+-        findings.push(`manifest ${field} does not match the current package`);
++    for (const packageArtifact of currentPackages) {
++      const storedPackage = stored.packages?.find(item => item.name === packageArtifact.name);
++      if (storedPackage === undefined) {
++        findings.push(`manifest is missing ${packageArtifact.name}`);
++        continue;
++      }
++      for (const field of ['version', 'filename', 'sizeBytes', 'sha256']) {
++        if (storedPackage[field] !== packageArtifact[field]) {
++          findings.push(`manifest ${packageArtifact.name} ${field} does not match`);
++        }
++      }
++      if (
++        JSON.stringify(comparableFiles(storedPackage.files ?? [])) !==
++        JSON.stringify(comparableFiles(packageArtifact.files))
++      ) {
++        findings.push(`manifest ${packageArtifact.name} files do not match`);
++      }
++      const storedArtifactPath = resolve(artifactsRoot, packageArtifact.filename);
++      if (
++        statSync(storedArtifactPath).size !== packageArtifact.sizeBytes ||
++        sha256(storedArtifactPath) !== packageArtifact.sha256
++      ) {
++        findings.push(`stored ${packageArtifact.name} tarball does not match the manifest`);
+       }
+-    }
+-    if (
+-      JSON.stringify(comparableFiles(stored.files ?? [])) !== JSON.stringify(comparableFiles(files))
+-    ) {
+-      findings.push('manifest files do not match the current package');
+-    }
+-    if (
+-      storedArtifact.sizeBytes !== current.sizeBytes ||
+-      storedArtifact.sha256 !== current.sha256
+-    ) {
+-      findings.push('stored tarball does not match the current package');
+     }
+   }
+ 
+@@ -103,14 +126,7 @@ try {
+     fail('TellPlot release artifact check failed', findings);
+   } else {
+     process.stdout.write(
+-      `${JSON.stringify(
+-        {
+-          status: write ? 'refreshed' : 'passed',
+-          ...current,
+-        },
+-        null,
+-        2,
+-      )}\n`,
++      `${JSON.stringify({ status: write ? 'refreshed' : 'passed', ...current }, null, 2)}\n`,
+     );
+   }
+ } finally {
+diff --git a/scripts/release/rehearse-source.mjs b/scripts/release/rehearse-source.mjs
+index 4730eb5..be233bc 100644
+--- a/scripts/release/rehearse-source.mjs
++++ b/scripts/release/rehearse-source.mjs
+@@ -51,6 +51,7 @@ const gates = [
+   ['pnpm', ['test:unit']],
+   ['pnpm', ['build']],
+   ['pnpm', ['test:package']],
++  ['pnpm', ['test:framework-matrix']],
+ ];
+ 
+ for (const [command, args] of gates) {
+diff --git a/vitest.config.ts b/vitest.config.ts
+index 0843812..6970f6e 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
+ import { fileURLToPath } from 'node:url';
+ 
+ const editorAliases = [
++  {
++    find: '@tellplot/core',
++    replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)),
++  },
+   {
+     find: '@tellplot/editor/styles.css',
+     replacement: fileURLToPath(new URL('./packages/editor/src/styles/editor.css', import.meta.url)),
+@@ -20,6 +24,17 @@ export default defineConfig({
+     testTimeout: 15_000,
+     projects: [
+       {
++        test: {
++          name: 'core-unit',
++          testTimeout: 15_000,
++          include: ['packages/core/tests/**/*.test.ts'],
++          environment: 'node',
++        },
++      },
++      {
++        resolve: {
++          alias: editorAliases,
++        },
+         test: {
+           name: 'editor-unit',
+           testTimeout: 15_000,
+@@ -33,6 +48,9 @@ export default defineConfig({
+         },
+       },
+       {
++        resolve: {
++          alias: editorAliases,
++        },
+         test: {
+           name: 'editor-components',
+           testTimeout: 15_000,
+@@ -40,6 +58,7 @@ export default defineConfig({
+             'packages/editor/tests/components/**/*.test.{ts,tsx}',
+             'packages/editor/tests/export/**/*.test.{ts,tsx}',
+             'packages/editor/tests/rendering/**/*.test.{ts,tsx}',
++            'packages/editor/tests/runtime/**/*.test.{ts,tsx}',
+           ],
+           environment: 'jsdom',
+           setupFiles: ['packages/editor/tests/setup.ts'],
+@@ -57,26 +76,44 @@ export default defineConfig({
+           environment: 'node',
+         },
+       },
++      {
++        resolve: {
++          alias: editorAliases,
++        },
++        test: {
++          name: 'framework-adapters',
++          testTimeout: 15_000,
++          include: ['packages/react/tests/**/*.test.tsx', 'packages/vue/tests/**/*.test.ts'],
++          environment: 'jsdom',
++          setupFiles: ['packages/editor/tests/setup.ts'],
++          passWithNoTests: true,
++        },
++      },
+     ],
+     coverage: {
+       provider: 'v8',
+       reporter: ['text', 'json-summary', 'html'],
+       reportsDirectory: 'coverage',
+-      include: ['packages/editor/src/**/*.{ts,tsx}'],
++      include: [
++        'packages/core/src/**/*.ts',
++        'packages/editor/src/**/*.ts',
++        'packages/react/src/**/*.tsx',
++        'packages/vue/src/**/*.ts',
++      ],
+       thresholds: {
+-        'packages/editor/src/domain/**': {
++        'packages/core/src/domain/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,
+           lines: 95,
+         },
+-        'packages/editor/src/charts/waterfall/**': {
++        'packages/core/src/charts/waterfall/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,
+           lines: 95,
+         },
+-        'packages/editor/src/charts/categorical/**': {
++        'packages/core/src/charts/categorical/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,
+diff --git a/packages/core/README.md b/packages/core/README.md
+new file mode 100644
+index 0000000..c1e0a5d
+--- /dev/null
++++ b/packages/core/README.md
+@@ -0,0 +1,10 @@
++# @tellplot/core
++
++TellPlot 的框架无关领域与状态包，包含配置/数据/视图校验、投影、命令、历史、持久化、交互策略和
++`EditorStore`。模块不访问 DOM、G2、React 或 Vue，可在 Node 和 SSR 中使用。
++
++```ts
++import { createInitialViewSpec, createEditorStore } from '@tellplot/core';
++```
++
++License: MIT。
+diff --git a/packages/react/README.md b/packages/react/README.md
+new file mode 100644
+index 0000000..f9a8935
+--- /dev/null
++++ b/packages/react/README.md
+@@ -0,0 +1,14 @@
++# @tellplot/react
++
++TellPlot 的 React 18/19 薄适配器。
++
++```tsx
++import { ChartEditor } from '@tellplot/react';
++import '@tellplot/react/styles.css';
++
++export function Chart() {
++  return <ChartEditor config={config} view={view} onViewChange={setView} />;
++}
++```
++
++组件只映射 `@tellplot/editor` 生命周期；编辑状态、G2 和 UI 不在本包重复实现。License: MIT。
+diff --git a/packages/vue/README.md b/packages/vue/README.md
+new file mode 100644
+index 0000000..a80cfd5
+--- /dev/null
++++ b/packages/vue/README.md
+@@ -0,0 +1,14 @@
++# @tellplot/vue
++
++TellPlot 的 Vue 3 薄适配器，支持 `v-model:view`。
++
++```vue
++<script setup lang="ts">
++import { ChartEditor } from '@tellplot/vue';
++import '@tellplot/vue/styles.css';
++</script>
++
++<template><ChartEditor :config="config" v-model:view="view" /></template>
++```
++
++组件只映射 `@tellplot/editor` 生命周期；编辑状态、G2 和 UI 不在本包重复实现。License: MIT。

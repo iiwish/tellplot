@@ -2,8 +2,8 @@
 
 ## North Star
 
-TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图表，并把渲染、动画、交互和导出的复杂度
-留在基于 G2 的内部实现中。
+TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础图表，并把状态、渲染、动画、交互和导出
+统一在基于 G2 的框架无关实现中。
 
 ## Planning Model
 
@@ -16,7 +16,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 ## G001 多图表基础能力
 
 - Status: Accepted
-- Outcome: `@tellplot/editor` 已提供瀑布图、分类条形图和分类柱状图。
+- Outcome: TellPlot 已提供瀑布图、分类条形图和分类柱状图。
 - Capability: 类型化数据、G2 渲染与动画、排序、递归分组、折叠、固定、历史、持久化、SVG/PNG、
   可访问性和安全语义配置。
 - Architecture: chart-family modules、shared G2 screen/export runtime 和 X/Y category-axis 边界已通过
@@ -28,9 +28,9 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 - Status: Accepted
 - Goal: 把当前三个图表家族整理成开发者可以直接安装、理解和稳定集成的 beta 版本。
 - Included outcomes:
-  - 收敛并记录公共组件、数据、配置、事件、持久化和导出 API。
+  - 收敛并记录公共数据、配置、事件、持久化和导出 API。
   - 完善最小安装示例、图表用法、受控/非受控模式和常见错误说明。
-  - 验证发布 tarball、React 18/19、类型、浏览器、可访问性、性能和导出。
+  - 验证发布 tarball、类型、浏览器、可访问性、性能和导出。
   - 确定 beta 版本、变更记录和迁移规则。
 - Excluded: 新图表类型、通用插件系统、Dashboard 和服务端能力。
 - Acceptance: 用户于 2026-07-29 与 G002-R1、G002-R2、G002-R3、G004 统一验收。
@@ -54,7 +54,7 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 ## G002-R3 公共配置 API v1
 
 - Status: Accepted
-- Goal: 使用 `ChartEditor` 和一份判别式 `ChartConfig` 完成普通接入，并把可编辑 `ViewSpec` 作为独立高级状态。
+- Goal: 使用一份判别式 `ChartConfig` 完成普通接入，并把可编辑 `ViewSpec` 作为独立高级状态。
 - Outcome: 类型和运行时配置校验、公开 facade、config/view 双文件工作台、迁移说明和发布候选回归。
 - Boundary: 不增加图表家族、schema、依赖、raw G2Spec 或第二套领域状态。
 
@@ -81,12 +81,31 @@ TellPlot 让 React 开发者用简洁、稳定的 API 嵌入可编辑基础图�
 
 - Status: Blocked
 - Goal: 从干净 commit 将 1.0.0 公开为 GitHub、生产网站、tag/release 和 npm `latest`。
+- Local readiness: T130 已完成本地发布门禁与 stage-only workflow，状态为 `Needs_Review`。
+- Blocker: 等待独立远程授权、`@tellplot/*` package root bootstrap、stage-only Trusted Publisher、
+  stale `v1.0.0` tag 的受控重建与保护、可用的发布身份、2FA approval 与生产托管条件。
 - Entry condition: remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 获得独立明确
-  授权；scope、2FA/Trusted Publishing 和托管权限可用。
+  授权；scope、2FA 和托管权限可用；最终 clean main commit 与重建后的 annotated `v1.0.0` peeled commit
+  完全一致且 tag protection 已生效；`npm-production` environment 只允许 exact protected `v1.0.0` tag，
+  并启用 required reviewers 与 prevent self-review；四个 package root 已用非 1.0.0 版本完成 bootstrap；
+  Trusted Publisher 只允许 `npm stage publish`，不允许直接 `npm publish`；发布前从干净 commit 重跑的
+  完整 release gate 必须通过。四个 1.0.0 staged artifact 全部复核后，维护者再以 2FA 批准公开。
+
+## G006 框架无关编辑器架构
+
+- Status: Accepted
+- Goal: 以 `@tellplot/core` 和 `@tellplot/editor` 作为唯一领域/runtime，实现 React 18/19 与 Vue 3 薄适配。
+- Included outcomes: imperative DOM API、统一 EditorStore、完整工作台迁移、四包类型/构建/消费合同和三种
+  quickstart。
+- Outcome: T125-T129 已完成实现、质量矩阵、四包发布候选 evidence 和目标级验收；用户于 2026-07-30
+  接受 G006。
+- Boundary: 不增加图表家族、schema、通用 plugin registry、第二渲染引擎或历史兼容层；不执行远程发布。
+- Release relation: G006 验收不等于公开发布；G005 继续因独立远程授权、发布身份和生产托管条件保持
+  `Blocked`。
 
 ## Decision Gates
 
-- 不增加缺少明确用户价值证据的通用插件或拆分 `@tellplot/core`。
+- `@tellplot/core` 保持无 DOM/G2/framework 依赖，`@tellplot/editor` 保持无 React/Vue 依赖。
 - 新图表只在 G003 的具体目标获得批准后实现。
 - 原始 G2 options、G2 Chart instance 和内部 runtime handle 不进入公共 API。
 - 项目不规划 Dashboard、通用插件平台或第二渲染引擎。

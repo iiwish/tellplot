@@ -3,7 +3,7 @@ import {
   type ChartType,
   type SourceData,
   type ViewSpec,
-} from '@tellplot/editor';
+} from '@tellplot/core';
 
 const GROWTH_GROUP_ID = 'showcase-growth-drivers';
 const GROWTH_ITEM_IDS = ['sales-volume', 'price-impact', 'product-mix'] as const;

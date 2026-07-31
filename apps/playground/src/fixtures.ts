@@ -1,4 +1,4 @@
-import type { SourceData } from '@tellplot/editor';
+import type { SourceData } from '@tellplot/core';
 
 const financialFixture = {
   schemaVersion: '1.0.0',

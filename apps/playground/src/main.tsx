@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import '@tellplot/editor/styles.css';
+import '@tellplot/react/styles.css';
 
 import { App } from './App';
 import './playground.css';

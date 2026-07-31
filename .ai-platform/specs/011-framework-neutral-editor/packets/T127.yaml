@@ -1,0 +1,75 @@
+schema_version: 1
+packet_id: EP-011-T127
+task_id: T127
+feature_id: 011-framework-neutral-editor
+mode: execute_one_task
+adapter: codex_direct
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/011-framework-neutral-editor/spec.md
+  requirements_checklist: .ai-platform/specs/011-framework-neutral-editor/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/011-framework-neutral-editor/plan.md
+  work_graph: .ai-platform/specs/011-framework-neutral-editor/tasks.md
+  analysis: .ai-platform/specs/011-framework-neutral-editor/analysis.md
+  approval_gates:
+    constitution: Confirmed by user
+    product_or_spec: Confirmed by user on 2026-07-29
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed under approved G006 goal-level execution
+    analysis: No unresolved Critical/High findings
+work_unit:
+  title: React 与 Vue 薄适配包
+  goal: 让 React 18/19 和 Vue 3 只映射同一 imperative editor instance
+  epic: E011
+  story: FRAMEWORK-US-002, FRAMEWORK-US-003
+  requirements: [FRAMEWORK-FR-007, FRAMEWORK-FR-008]
+  priority: P0
+  depends_on: [T126]
+  blocks: [T128, T129]
+  parallel: false
+  conflicts_with: [T126, T128]
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [packages/editor/src, packages/editor/tests/react-matrix]
+  existing_patterns: [controlled and uncontrolled view contract, imperative focus/export/getView handle]
+  interfaces_or_contracts: [.ai-platform/specs/011-framework-neutral-editor/contracts/imperative-editor.md]
+  forbidden_changes: [second session or G2 runtime in adapters, React dependency in Vue, Vue dependency in React, remote actions]
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files: [packages/react/**, packages/vue/**, adapter tests and fixtures, root workspace and test configuration, pnpm-lock.yaml, .ai-platform/evidence/T127/**]
+  test_targets: [packages/react/tests/**, packages/vue/tests/**]
+  ownership_notes: [execute after T126 evidence and status completion]
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: pnpm vitest run packages/react/tests packages/vue/tests
+    expected_failure: adapter packages do not exist
+  green:
+    command: pnpm --filter @tellplot/react test && pnpm --filter @tellplot/vue test
+    expected_signal: adapter lifecycle contracts pass
+  refactor:
+    command: pnpm test:framework-matrix
+    expected_signal: React 18/19 and Vue consumer scenarios pass
+validation_loop:
+  commands: [pnpm --filter @tellplot/react test, pnpm --filter @tellplot/vue test, pnpm typecheck, pnpm build, pnpm test:framework-matrix, git diff --check]
+  retry_budget: 2
+  failure_policy:
+    first_failure: fix adapter mapping only
+    second_failure: audit runtime contract and peer graph
+    beyond_budget: stop and record blocked evidence
+evidence_contract:
+  summary: .ai-platform/evidence/T127/summary.md
+  diff: .ai-platform/evidence/T127/diff.patch
+  test_results: .ai-platform/evidence/T127/test-results.md
+  required: [changed files, RED/GREEN/REFACTOR results, validation results, diff summary, residual risks]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+  acceptance_rule: target remains internal until G006 goal review
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [continue approved G006 sequence]
+stop_conditions: [T126 incomplete, adapter requires duplicated domain state, unresolved Critical/High finding]

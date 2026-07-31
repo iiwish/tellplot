@@ -438,6 +438,35 @@ test('chart click retains group actions while a boundary drag moves one child ou
   await page.mouse.move(firstChild.x, firstChild.y);
   await expect(page.getByRole('button', { name: '折叠分组: 增长驱动' })).toBeVisible();
   await expect(page.getByRole('button', { name: '取消分组: 增长驱动' })).toBeVisible();
+  const chartActions = page.locator('.tp-chart-group-actions');
+  await expect(chartActions).toHaveAttribute('data-axis', 'x');
+  await expect(chartActions).toHaveAttribute('data-placement', 'bottom-right');
+  await expect(chartActions.locator('button')).toHaveText(['', '']);
+  await expect(chartActions.locator('.tp-chart-group-action-icon[aria-hidden="true"]')).toHaveCount(
+    2,
+  );
+  const actionBox = await chartActions.boundingBox();
+  const tooltip = page.locator('.g2-tooltip');
+  await expect(tooltip).toBeHidden();
+  expect(actionBox).not.toBeNull();
+  if (actionBox !== null) {
+    expect(actionBox.width).toBeLessThanOrEqual(45);
+    expect(actionBox.height).toBeLessThanOrEqual(45);
+    expect(actionBox.x + actionBox.width).toBeGreaterThanOrEqual(firstChild.maxX - 9);
+    expect(actionBox.x + actionBox.width).toBeLessThanOrEqual(firstChild.maxX + 2);
+    expect(actionBox.y + actionBox.height).toBeGreaterThanOrEqual(firstChild.maxY - 9);
+    expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(firstChild.maxY + 2);
+  }
+  const openingBar = points[0];
+  expect(openingBar).toBeDefined();
+  if (openingBar !== undefined) {
+    await page.mouse.move(openingBar.x, openingBar.y);
+    await expect(chartActions).toBeHidden();
+    await expect(tooltip).toBeVisible();
+    await page.mouse.move(firstChild.x, firstChild.y);
+    await expect(chartActions).toBeVisible();
+    await expect(tooltip).toBeHidden();
+  }
   await page.mouse.click(firstChild.x, firstChild.y);
   await expect(page.getByRole('button', { name: '折叠分组: 增长驱动' })).toBeVisible();
   await expect(page.getByRole('button', { name: '取消分组: 增长驱动' })).toBeVisible();
@@ -509,6 +538,10 @@ test('marquee across an expanded group promotes its complete boundary into an ou
   await page.getByRole('textbox', { name: '分组名称' }).fill('增长驱动');
   await page.getByRole('button', { name: '创建分组' }).click();
 
+  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
+    'data-render-state',
+    'ready',
+  );
   const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
   await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
   const points = await waterfallBarPoints(canvas);

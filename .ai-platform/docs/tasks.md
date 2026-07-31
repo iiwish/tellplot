@@ -2,10 +2,11 @@
 
 ## Metadata
 
-- Version: 0.32.0
+- Version: 0.36.0
 - Status: Active
-- Last updated: 2026-07-29
-- Scope: T101-T116、G002 系列与 G004 均已验收；1.0.0 本地稳定候选等待独立远程发布授权
+- Last updated: 2026-07-31
+- Scope: T101-T116、G002 系列、G004 与 G006 已验收；G005 / T130 本地发布准备待用户复核，
+  公开执行继续等待独立授权与外部条件
 
 ## Goal-Level Delivery
 
@@ -26,7 +27,8 @@
 | G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
 | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
 | G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
-| G005 - 公开稳定版发布 | Blocked | 等待独立远程授权与发布身份/托管条件 |
+| G005 - 公开稳定版发布 | Blocked | T130 本地发布准备 Needs_Review；等待 stale tag 受控重建、package bootstrap、独立远程授权与发布身份/托管条件 |
+| G006 - 框架无关编辑器架构 | Accepted | T125-T129；四包架构、完整编辑器与发布候选门禁已验收 |
 
 ## T001 - 确认产品设计与项目章程
 
@@ -196,3 +198,24 @@ WebKit 长队列资源耗尽、不完整聚合门禁、npm registry 漂移和内
 
 原 G004 Beta 草案与 T120/T121 不再是当前执行入口。公开 Git、仓库可见性、生产网站、DNS、tag、
 GitHub Release 和 npm publish 归入 G005，保持 `Blocked`，直到取得独立远程授权并具备发布身份与托管条件。
+
+## G006 Execution
+
+G006 以 T125-T129 交付框架无关 `@tellplot/core`、imperative `@tellplot/editor`、React 18/19 与 Vue 3
+薄适配、完整编辑器迁移、四包 tarball 与完整质量矩阵。最终 439 unit、186 current browser、45 a11y、
+186 previous browser、62 WebKit 18.4、性能、供应链、tarball 与 336-file 隔离源码复演全部通过，未解决
+Critical / High / Medium finding 为 0；用户于 2026-07-30 完成目标级验收，状态为 `Accepted`。权威
+目标图、合同和执行证据位于 `.ai-platform/specs/011-framework-neutral-editor/` 与
+`.ai-platform/evidence/T125/` 至 `.ai-platform/evidence/T129/`。G005 仅因独立远程授权、发布身份与托管
+条件、npm package bootstrap、stage-only trust 和 2FA approval 保持 `Blocked`。
+
+## G005 Local Release Readiness
+
+G005 的本地发布准备由 T130 关闭浏览器确定性、官方 production audit、public source preflight、
+stage-only Trusted Publishing workflow 和 canonical 文档缺口。当前状态为 `Needs_Review`；workflow 只把
+固定 SHA-256 的四包提交到 npm staging，不直接执行 `npm publish`。公开发布仍要求独立授权、四个
+package root bootstrap、stale annotated `v1.0.0` 的受控重建与保护、stage-only trust 配置、人类复核与
+2FA approval、公开仓库和生产托管条件。
+
+权威目标图与 evidence 位于 `.ai-platform/specs/012-public-release-readiness/` 和
+`.ai-platform/evidence/T130/`。

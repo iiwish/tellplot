@@ -72,6 +72,7 @@ export function createG2ChartRuntime<Value>(
 ): G2ChartRuntime<Value> {
   let chart: G2Chart | undefined;
   let disposed = false;
+  let initializing = false;
   let rendering = false;
   let requestId = 0;
   let attemptedRequestId = 0;
@@ -83,6 +84,9 @@ export function createG2ChartRuntime<Value>(
   let activeRegistrations: readonly G2ChartEventRegistration[] = [];
   let scheduledFrame: { readonly ownerWindow: Window; readonly id: number } | undefined;
   let scheduleToken = 0;
+  let resizeObserver: ResizeObserver | undefined;
+  let resizePending = false;
+  let resizing = false;
 
   const notifyCallbackError = (): void => {
     try {
@@ -108,7 +112,14 @@ export function createG2ChartRuntime<Value>(
     }
   };
 
+  const disconnectResizeObserver = (): void => {
+    resizePending = false;
+    resizeObserver?.disconnect();
+    resizeObserver = undefined;
+  };
+
   const releaseChart = (): void => {
+    disconnectResizeObserver();
     const current = chart;
     if (current === undefined) {
       return;
@@ -137,9 +148,31 @@ export function createG2ChartRuntime<Value>(
     }
   };
 
+  const flushResize = async (): Promise<void> => {
+    const activeChart = chart;
+    if (activeChart === undefined || disposed || rendering || resizing || !resizePending) {
+      return;
+    }
+    resizePending = false;
+    resizing = true;
+    try {
+      await activeChart.forceFit();
+    } catch {
+      // A later render request or resize can recover from a transient fit failure.
+    } finally {
+      resizing = false;
+      if (!disposed && resizePending) {
+        void flushResize();
+      }
+      if (!disposed && latestRequest !== undefined && latestRequest.id !== attemptedRequestId) {
+        void flush();
+      }
+    }
+  };
+
   const flush = async (): Promise<void> => {
     const activeChart = chart;
-    if (activeChart === undefined || disposed || rendering) {
+    if (activeChart === undefined || disposed || rendering || resizing) {
       return;
     }
 
@@ -173,6 +206,9 @@ export function createG2ChartRuntime<Value>(
       }
     } finally {
       rendering = false;
+      if (!disposed && resizePending) {
+        void flushResize();
+      }
       if (
         !disposed &&
         chart !== undefined &&
@@ -209,6 +245,10 @@ export function createG2ChartRuntime<Value>(
   };
 
   const initialize = async (): Promise<void> => {
+    if (disposed || initializing || chart !== undefined) {
+      return;
+    }
+    initializing = true;
     try {
       const Chart = await loadG2ChartConstructor();
       if (disposed) {
@@ -222,6 +262,16 @@ export function createG2ChartRuntime<Value>(
         created.on(registration.name, registration.listener);
         registered.push(registration);
       }
+      const ResizeObserver = options.container.ownerDocument.defaultView?.ResizeObserver;
+      if (ResizeObserver !== undefined) {
+        resizeObserver = new ResizeObserver(() => {
+          if (!disposed) {
+            resizePending = true;
+            void flushResize();
+          }
+        });
+        resizeObserver.observe(options.container);
+      }
       await flush();
     } catch {
       if (disposed) {
@@ -232,6 +282,16 @@ export function createG2ChartRuntime<Value>(
       if (request !== undefined) {
         attemptedRequestId = request.id;
         notifySettlement({ value: request.value, status: 'failure', latest: true });
+      }
+    } finally {
+      initializing = false;
+      if (
+        !disposed &&
+        chart === undefined &&
+        latestRequest !== undefined &&
+        latestRequest.id !== attemptedRequestId
+      ) {
+        void initialize();
       }
     }
   };
@@ -245,7 +305,11 @@ export function createG2ChartRuntime<Value>(
       }
       requestId += 1;
       latestRequest = { ...request, id: requestId };
-      scheduleFlush();
+      if (chart === undefined) {
+        void initialize();
+      } else {
+        scheduleFlush();
+      }
     },
     finishAnimations(): void {
       if (chart !== undefined && !disposed) {

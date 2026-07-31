@@ -2,19 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 const editor = await import('../../dist/index.js');
 
-const expected = [
-  'ChartEditor',
-  'createEditorSession',
-  'createInitialViewSpec',
-  'executeCommand',
-  'parseViewSpec',
-  'redoSession',
-  'serializeViewSpec',
-  'undoSession',
-  'validateChartConfig',
-  'validateSourceData',
-  'validateViewSpec',
-];
+const expected = ['createEditor'];
 
 if (JSON.stringify(Object.keys(editor).sort()) !== JSON.stringify(expected)) {
   throw new Error('ESM runtime API does not match the stable 1.x surface');

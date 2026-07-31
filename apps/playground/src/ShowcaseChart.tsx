@@ -1,4 +1,5 @@
-import { ChartEditor, type ChartConfig, type SourceData } from '@tellplot/editor';
+import type { ChartConfig, SourceData } from '@tellplot/core';
+import { ChartEditor } from '@tellplot/react';
 
 import { EXAMPLE_CATALOG, type ShowcaseExampleId } from './exampleCatalog';
 import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from './demoPresentation';
@@ -26,12 +27,21 @@ function showcaseConfig(
     appearance: {
       title,
       axes: { category: !compact, value: true },
-      labels: compact
-        ? { value: 'never' as const, group: 'auto' as const }
-        : {
-            value: { display: 'auto' as const, placement: 'outside' as const, offset: 5 },
-            group: { display: 'auto' as const, placement: 'outside' as const, offset: 4 },
-          },
+      labels: interactive
+        ? {
+            value: {
+              display: 'always' as const,
+              placement: 'outside' as const,
+              offset: compact ? 3 : 5,
+            },
+            group: 'never' as const,
+          }
+        : compact
+          ? { value: 'never' as const, group: 'never' as const }
+          : {
+              value: { display: 'auto' as const, placement: 'outside' as const, offset: 5 },
+              group: 'never' as const,
+            },
       tooltip: true,
       animation: { enabled: true, duration: 220 },
       groupRegion: { enabled: interactive || !compact, opacity: interactive ? 0.08 : 0.05 },

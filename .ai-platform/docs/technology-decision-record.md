@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Version: 0.10.0
+- Version: 0.11.0
 - Status: Confirmed
 - Last updated: 2026-07-23
 - Approval: 用户于 2026-07-20 明确确认轻量基础图表库边界、G2 ownership 和目标级交付方式，并于
@@ -42,7 +42,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-004 仓库与包边界
 
-- Status: Confirmed
+- Status: Superseded by TDR-022
 - Decision: 使用 pnpm workspace。`packages/editor` 是唯一产品包，内部按 `domain`、`charts`、`rendering/g2`、`interactions`、`components`、`export` 和 `styles` 分层；`apps/playground` 是薄参考编辑器；`e2e` 保存跨包浏览器测试。
 - Rationale: 单产品包避免过早拆分公共 core；chart-family ownership 与共享 G2 runtime 已由 waterfall 和 categorical 两类真实消费者证明。参考编辑器不复制业务逻辑。
 - Alternatives: 单应用仓库、`core` 与 `react` 多包、通用插件式图表框架。
@@ -50,7 +50,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-005 状态与 React 集成
 
-- Status: Confirmed
+- Status: Superseded by TDR-022
 - Decision: 领域命令执行器是纯函数；React 组件通过 reducer 持有 `EditorSession`。G2 生命周期封装在单独 adapter 组件内，不把 G2 chart instance 写入领域状态。
 - Rationale: 纯领域状态便于 TDD、重放、序列化和宿主复用；命令历史不依赖 React 或 G2。
 - Alternatives: 全局状态库、直接修改 G2 options、每个组件维护局部业务状态。
@@ -58,7 +58,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 ## TDR-006 拖拽与键盘排序
 
-- Status: Confirmed
+- Status: Superseded by TDR-022
 - Decision: 图表拖拽使用 Pointer Events 与 G2 命中信息；结构大纲使用稳定版 `@dnd-kit/core` 和 `@dnd-kit/sortable`，同时提供键盘排序按钮与快捷操作。
 - Rationale: 图表拖拽必须理解坐标轴和锁定项，通用 DOM 拖拽库不能代替；结构大纲需要成熟的传感器、碰撞检测和键盘能力。
 - Alternatives: HTML Drag and Drop、Motion Reorder、完全手写 DOM 拖拽。
@@ -67,7 +67,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 ## TDR-007 工具链与质量门槛
 
 - Status: Confirmed
-- Decision: 使用 Node 22.13+、pnpm 11、TypeScript 6、React 19、Vite 8、Vitest 4、Playwright 1.61、ESLint 10 和 Prettier 3。包构建采用 tsup，应用构建采用 Vite。
+- Decision: 使用 Node 22.13+、pnpm 11、TypeScript 6、React 19、Vue 3、Vite 8、Vitest 4、Playwright 1.61、ESLint 10 和 Prettier 3。包构建采用 tsup，应用构建采用 Vite。
 - Rationale: 这些版本在 2026-07-15 的 npm registry 中互相兼容，并支持严格类型、现代 ESM、快速单测与真实浏览器验证。
 - Alternatives: 单一 Vite 构建所有目标、Rollup 手工配置、Jest、仅浏览器手工测试。
 - Consequences: 开发环境最低 Node 版本由 ESLint 与 Vite 的兼容交集决定；依赖使用精确版本并由 lockfile 固化。
@@ -75,7 +75,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 ## TDR-008 测试分层
 
 - Status: Confirmed
-- Decision: 领域和投影逻辑使用 Vitest TDD；React 行为使用 Testing Library；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；公共包通过 build、publint 和类型消费示例验证。
+- Decision: 领域和投影逻辑使用 Vitest TDD；imperative runtime 与 React/Vue adapter 使用各自生命周期测试；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；四个公共包通过 build、publint、类型消费与 framework matrix 验证。
 - Rationale: Mock 无法证明 Canvas 命中、拖拽、导出或真实布局正确，纯 E2E 又无法高效覆盖不变量组合。
 - Alternatives: 只做单元测试、只做 E2E、截图代替行为断言。
 - Consequences: coverage 只作为最低信号；财务不变量、失败路径和浏览器证据是阻断门槛。
@@ -200,7 +200,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 - Status: Confirmed
 - Decision: `apps/playground` 使用现有 React/Vite 单页应用承载品牌首页、示例中心、文档入口和在线工作台。
-  路由使用本地 history API；真实预览直接消费 read-only `ChartEditor`；示例内容目录保持 playground
+  路由使用本地 history API；真实预览直接消费 `@tellplot/react` 的 read-only `ChartEditor`；示例内容目录保持 playground
   私有和显式。
 - Visual ownership: G2 继续负责图形过渡；网站导航、hover 和进入反馈只使用 CSS。网站不引入远程字体、
   图片、router、docs、编辑器或 animation dependency。
@@ -230,12 +230,13 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 ## TDR-020 声明式公共配置 API
 
 - Status: Confirmed
-- Decision: 公共 React 入口为 `ChartEditor`，必需属性为判别式 `config: ChartConfig`。`type` 与
+- Decision: framework-neutral 入口为 `createEditor`，React/Vue 入口为 `ChartEditor`，必需配置为判别式
+  `config: ChartConfig`。`type` 与
   `data` 家族在编译期和 `validateChartConfig` 运行时同时校验；呈现与编辑器选项分别位于
   `config.appearance` 和 `config.editor`。
 - State boundary: `ChartConfig` 表达宿主意图，`ViewSpec` 表达排序、分组、折叠、固定、注释与强调；
   受控模式使用 `view` 和 `onViewChange`，非受控模式由 facade 创建并维护兼容视图。
-- Internal boundary: 内部 `FinancialChartEditor`、resolved appearance、projection、G2 spec、chart
+- Internal boundary: resolved appearance、projection、G2 spec、chart
   instance 和 runtime handle 不从 package entry 导出。
 - Playground: 实时工作台分别编辑公共 `tellplot.config.json` 与 `tellplot.view.json`，不执行 JavaScript，
   非法草稿不改变最后一次合法图表。
@@ -245,12 +246,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 ## TDR-021 首个稳定版 1.0
 
 - Status: Confirmed
-- Version: `@tellplot/editor@1.0.0`，本地候选和未来公开版本使用相同稳定 metadata。
+- Version: `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 与 `@tellplot/vue` 均使用 `1.0.0`；本地候选和未来公开版本使用相同稳定 metadata。
 - Compatibility: 1.x 遵循 Semantic Versioning；runtime exports、公共类型、schema、错误码和 peer/browser
   合同只允许向后兼容扩展。弃用至少跨一个 minor，并提供迁移说明。
 - Release source: 本地目标使用隔离源码复演；公开 npm/GitHub/网站发布只允许来自独立授权后的干净
   commit、tag 和可追溯 tarball。
-- Quality: architecture import graph/cycle、public files、local links、secret/path、tarball、React、
+- Quality: architecture import graph/cycle、public files、local links、secret/path、四包 tarball、framework matrix、
   current/previous browser、a11y 和 performance 均为阻断门禁。
 - Scope: 稳定表示当前 waterfall、bar、column 的文档化能力可被兼容承诺，不表示 TellPlot 已覆盖 G2
   的通用图表范围。
@@ -258,8 +259,36 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
   和隔离源码复演提高首次公开稳定版的前置信心。
 - Rejected alternatives: 发布 Beta、用 `0.x` 模糊兼容承诺、为 1.0 增加新图表、从 dirty worktree publish。
 
+## TDR-022 框架无关编辑器架构
+
+- Status: Confirmed
+- Decision: TellPlot 使用 `@tellplot/core -> @tellplot/editor -> @tellplot/react|@tellplot/vue` 的依赖方向。
+  `@tellplot/core` 持有配置、数据、命令、历史、投影与不变量；`@tellplot/editor` 通过
+  `createEditor(container, options)` 持有完整 DOM/G2 编辑器、交互与导出；React/Vue 包只适配宿主生命周期。
+- Public contract: imperative instance 提供 `update`、`dispatch`、`undo`、`redo`、`focus`、`getView`、
+  `exportImage` 与 `destroy`。所有配置、视图、命令、错误和事件使用共享类型，不暴露 G2 chart instance。
+- Runtime boundary: `@tellplot/core` 不访问 DOM；`@tellplot/editor` 不导入 React、React DOM、Vue 或框架专属
+  drag-and-drop 库；适配包不得拥有第二套 session、projection、G2 runtime 或交互状态机。
+- UI ownership: 完整工具栏、图表直接操作、结构大纲、Inspector、弹层、键盘与无障碍语义由 framework-neutral
+  editor runtime 统一拥有。适配包只渲染一个稳定容器并转发更新、事件与实例方法。
+- Compatibility: 现有候选从未公开发布，本目标不保留旧 `@tellplot/editor` React component API 或旧包布局；
+  SourceData、ViewSpec、命令和业务不变量继续作为产品正确性合同。
+- Package strategy: `@tellplot/editor` 保持产品主包身份；新增 `@tellplot/core`、`@tellplot/react` 和
+  `@tellplot/vue`。React/Vue 只作为各自适配包 peer dependency，G2 只存在于 editor 渲染边界。
+- Quality: 包导入无浏览器全局副作用；create/update/destroy 可重复且资源可释放；imperative、React、Vue
+  共享 E2E、a11y、performance 和当前/上一浏览器门禁。
+- Rationale: 框架无关 imperative runtime 让不同宿主共享完整编辑行为，避免在 React/Vue 中复制高风险的
+  财务状态、直接操作和导出实现，同时形成与 G2/ECharts 相同的 DOM 容器生命周期边界。
+- Risks: imperative DOM controller 同时协调焦点、Pointer Events、G2 异步生命周期与资源释放；包版本和适配器
+  peer 范围必须保持同步。
+- Mitigations: store、投影与 runtime ownership 分层；create/update/destroy 和容器独占具有合同测试；React/Vue
+  适配共用同一 runtime；真实浏览器覆盖主流程、卸载、双框架与资源清理。
+- Rejected alternatives: Vue 内嵌 React root、把 React 打入 editor bundle、两套完整 UI、仅提供 read-only Vue、
+  Web Component 作为唯一公共合同、公开旧候选后再迁移。
+
 ## Approval Gate
 
-TDR-001 至 TDR-018、TDR-020 与 TDR-021 已获得用户明确批准；TDR-019 由 TDR-021 取代。后续实现以 approved goal
+TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-022 已获得用户明确批准；TDR-004 至 TDR-006
+由 TDR-022 取代，TDR-019 由 TDR-021 取代。后续实现以 approved goal
 为执行单位；内部 task graph 和 execution packet 由执行方维护。任何依赖、schema、breaking public API、
 远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。

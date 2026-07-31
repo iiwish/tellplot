@@ -6,17 +6,19 @@ import {
   type FinancialChartAppearance,
   type ResolvedFinancialChartNumberFormat,
   type ResolvedFinancialChartValueLabelAppearance,
-} from '../../config/chartAppearance';
-import type { GroupId, ViewNodeId } from '../../domain/ids';
-import type { Annotation, ChartType, Emphasis } from '../../domain/model';
+} from '@tellplot/core';
+import type { GroupId, ViewNodeId } from '@tellplot/core';
+import type { Annotation, ChartType, Emphasis } from '@tellplot/core';
 import {
   createExpandedGroupRegionLabelMark,
   createExpandedGroupRegionMark,
   type ExpandedGroupRegion,
 } from '../groupRegions';
-import { formatAmount, type EditorLocale } from '../../components/formatAmount';
+import { formatAmount, type EditorLocale } from '../../editor/formatAmount';
 import { createForegroundLabelStyle } from '../labelStyle';
-import type { CategoricalDatum, CategoricalDatumKind, CategoricalProjection } from './types';
+import { createSafeAmountTooltip, createSafeTooltipInteraction } from '../safeTooltip';
+import { zeroBasedValueDomain } from '../valueDomain';
+import type { CategoricalDatum, CategoricalDatumKind, CategoricalProjection } from '@tellplot/core';
 
 const DENSE_CANVAS_THRESHOLD = 80;
 const VALUE_LABEL_THRESHOLD = 40;
@@ -80,6 +82,7 @@ function createCategoricalValueLabelMark(
   currency: string | undefined,
   numberFormat: ResolvedFinancialChartNumberFormat,
   labelStyle: ResolvedFinancialChartValueLabelAppearance,
+  valueDomain: readonly [number, number],
 ): Mark {
   const transposed = chartType === 'bar';
   const outside = labelStyle.placement === 'outside';
@@ -108,7 +111,7 @@ function createCategoricalValueLabelMark(
         padding: 0.24,
         ...(transposed ? { reverse: true } : {}),
       },
-      y: { type: 'linear', nice: true, zero: true },
+      y: { type: 'linear', nice: true, zero: true, domain: [...valueDomain] },
     },
     style: {
       ...createForegroundLabelStyle(labelStyle),
@@ -150,6 +153,7 @@ export function createCategoricalChartSpec({
   const hasVisibleAnnotations = projection.some(
     datum => visibleCategoricalAnnotation(annotations, datum.nodeId) !== '',
   );
+  const valueDomain = zeroBasedValueDomain(projection.map(datum => datum.amount));
   const displayValueLabels =
     resolvedAppearance.valueLabels === 'always' ||
     (resolvedAppearance.valueLabels === 'auto' && showValueLabels);
@@ -185,6 +189,7 @@ export function createCategoricalChartSpec({
   const groupRegionMark = createExpandedGroupRegionMark({
     regions: groupRegions,
     categoryDomain: projection.map(datum => datum.nodeId),
+    valueDomain,
     appearance: resolvedAppearance,
     reducedMotion,
     denseCanvas,
@@ -194,6 +199,7 @@ export function createCategoricalChartSpec({
   const groupRegionLabelMark = createExpandedGroupRegionLabelMark({
     regions: groupRegions,
     categoryDomain: projection.map(datum => datum.nodeId),
+    valueDomain,
     appearance: resolvedAppearance,
     reducedMotion,
     denseCanvas,
@@ -208,6 +214,7 @@ export function createCategoricalChartSpec({
         currency,
         resolvedAppearance.numberFormat,
         resolvedAppearance.valueLabelStyle,
+        valueDomain,
       )
     : undefined;
 
@@ -226,6 +233,7 @@ export function createCategoricalChartSpec({
           },
         }),
     labelTransform: [{ type: 'overlapHide' }],
+    ...(resolvedAppearance.tooltip ? { interaction: createSafeTooltipInteraction() } : {}),
     children: [
       ...(groupRegionMark === undefined ? [] : [groupRegionMark]),
       {
@@ -246,7 +254,7 @@ export function createCategoricalChartSpec({
             padding: 0.24,
             ...(chartType === 'bar' ? { reverse: true } : {}),
           },
-          y: { type: 'linear', nice: true, zero: true },
+          y: { type: 'linear', nice: true, zero: true, domain: [...valueDomain] },
           color: {
             type: 'ordinal',
             domain: [...COLOR_DOMAIN],
@@ -285,7 +293,12 @@ export function createCategoricalChartSpec({
                 ? '#18211D'
                 : baseStroke,
         },
-        tooltip: resolvedAppearance.tooltip,
+        tooltip: createSafeAmountTooltip<CategoricalDatum>(
+          resolvedAppearance.tooltip,
+          locale,
+          currency,
+          resolvedAppearance.numberFormat,
+        ),
         animate:
           reducedMotion || denseCanvas || !resolvedAppearance.animation.enabled
             ? false

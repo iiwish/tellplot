@@ -1,0 +1,1598 @@
+diff --git a/package.json b/package.json
+index 356cdfb..e0816ba 100644
+--- a/package.json
++++ b/package.json
+@@ -24,8 +24,8 @@
+     "typecheck": "pnpm -r --if-present run typecheck",
+     "test:unit": "vitest run --maxWorkers=4",
+     "test:coverage": "vitest run --coverage --maxWorkers=4",
+-    "test:package": "pnpm --filter @tellplot/editor run test:package",
+-    "test:react-matrix": "node packages/editor/tests/react-matrix/run-react-matrix.mjs",
++    "test:package": "pnpm --filter @tellplot/core run test:package && pnpm --filter @tellplot/editor run test:package && pnpm --filter @tellplot/react run test:package && pnpm --filter @tellplot/vue run test:package",
++    "test:framework-matrix": "pnpm --filter @tellplot/react test && pnpm --filter @tellplot/vue test && node packages/editor/tests/react-matrix/run-react-matrix.mjs",
+     "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
+     "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
+     "test:a11y": "playwright test e2e/accessibility.spec.ts",
+diff --git a/packages/editor/tests/react-matrix/consumer/src/main.mjs b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+index f1bb48d..5eff69b 100644
+--- a/packages/editor/tests/react-matrix/consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+@@ -1,5 +1,5 @@
+-import { ChartEditor } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
++import { ChartEditor } from '@tellplot/react';
++import '@tellplot/react/styles.css';
+ import React from 'react';
+ import { createRoot } from 'react-dom/client';
+ 
+@@ -40,7 +40,7 @@ const renderEditor = appearance => {
+ 
+ renderEditor();
+ 
+-globalThis.__tellplotReactMatrix = {
++globalThis.__tellplotFrameworkMatrix = {
+   configure() {
+     renderEditor({
+       title: 'Configured bridge',
+@@ -63,7 +63,7 @@ globalThis.__tellplotReactMatrix = {
+       },
+     });
+   },
+-  reactVersion: React.version,
++  frameworkVersion: React.version,
+   unmount() {
+     root.unmount();
+     host.dataset.unmounted = 'true';
+diff --git a/packages/editor/tests/react-matrix/run-react-matrix.mjs b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+index 8c0bd61..1f01ae6 100644
+--- a/packages/editor/tests/react-matrix/run-react-matrix.mjs
++++ b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+@@ -10,13 +10,33 @@ import { chromium } from '@playwright/test';
+ 
+ const HERE = dirname(fileURLToPath(import.meta.url));
+ const WORKSPACE = resolve(HERE, '../../../..');
+-const EDITOR_PACKAGE = join(WORKSPACE, 'packages/editor');
+-const CONSUMER_TEMPLATE = join(HERE, 'consumer');
++const PACKAGE_DIRECTORIES = ['core', 'editor', 'react', 'vue'];
++const REACT_CONSUMER_TEMPLATE = join(HERE, 'consumer');
++const VUE_CONSUMER_TEMPLATE = join(HERE, 'vue-consumer');
+ const VITE_VERSION = '8.1.4';
+ const G2_VERSION = '5.4.8';
+-const REACT_MATRIX = [
+-  { id: 'react-18', react: '18.3.1', reactDom: '18.3.1' },
+-  { id: 'react-19', react: '19.2.7', reactDom: '19.2.7' },
++const FRAMEWORK_MATRIX = [
++  {
++    id: 'react-18',
++    framework: 'React',
++    frameworkVersion: '18.3.1',
++    template: REACT_CONSUMER_TEMPLATE,
++    dependencies: { react: '18.3.1', 'react-dom': '18.3.1' },
++  },
++  {
++    id: 'react-19',
++    framework: 'React',
++    frameworkVersion: '19.2.7',
++    template: REACT_CONSUMER_TEMPLATE,
++    dependencies: { react: '19.2.7', 'react-dom': '19.2.7' },
++  },
++  {
++    id: 'vue-3',
++    framework: 'Vue',
++    frameworkVersion: '3.5.27',
++    template: VUE_CONSUMER_TEMPLATE,
++    dependencies: { vue: '3.5.27' },
++  },
+ ];
+ const VITE_CONFIG = `import { defineConfig } from 'vite';
+ 
+@@ -43,7 +63,7 @@ export default defineConfig({
+ 
+ function displayCommand(command, args, cwd) {
+   const location = relative(WORKSPACE, cwd) || '.';
+-  console.log(`\n[react-matrix:${location}] $ ${command} ${args.join(' ')}`);
++  console.log(`\n[framework-matrix:${location}] $ ${command} ${args.join(' ')}`);
+ }
+ 
+ async function run(command, args, options) {
+@@ -244,14 +264,14 @@ async function verifyConsumer(browser, consumer, directory) {
+       assert.equal(stableSamples, 2, `${consumer.id} canvas must settle before matrix acceptance`);
+ 
+       const runtime = await page.evaluate(() => {
+-        const matrix = globalThis.__tellplotReactMatrix;
++        const matrix = globalThis.__tellplotFrameworkMatrix;
+         const editorElement = document.querySelector('.tp-editor');
+         if (matrix === undefined || !(editorElement instanceof HTMLElement)) {
+           return null;
+         }
+         const style = getComputedStyle(editorElement);
+         return {
+-          reactVersion: matrix.reactVersion,
++          frameworkVersion: matrix.frameworkVersion,
+           boxSizing: style.boxSizing,
+           display: style.display,
+           background: style.backgroundColor,
+@@ -259,14 +279,14 @@ async function verifyConsumer(browser, consumer, directory) {
+         };
+       });
+       assert.notEqual(runtime, null, `${consumer.id} runtime probe must exist`);
+-      assert.equal(runtime.reactVersion, consumer.react);
++      assert.equal(runtime.frameworkVersion, consumer.frameworkVersion);
+       assert.equal(runtime.boxSizing, 'border-box');
+       assert.equal(runtime.display, 'grid');
+       assert.equal(runtime.background, 'rgb(243, 245, 244)');
+       assert.equal(runtime.accent.toLowerCase(), '#126e57');
+ 
+       const defaultSignature = await canvasPixelSignature(canvas);
+-      await page.evaluate(() => globalThis.__tellplotReactMatrix?.configure());
++      await page.evaluate(() => globalThis.__tellplotFrameworkMatrix?.configure());
+       await page.waitForFunction(
+         () => document.querySelector('.tp-chart-stage__title')?.textContent === 'Configured bridge',
+       );
+@@ -290,13 +310,13 @@ async function verifyConsumer(browser, consumer, directory) {
+       );
+       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 1);
+ 
+-      await page.evaluate(() => globalThis.__tellplotReactMatrix?.unmount());
++      await page.evaluate(() => globalThis.__tellplotFrameworkMatrix?.unmount());
+       await page.locator('#root[data-unmounted="true"]').waitFor({ state: 'attached' });
+       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 0);
+       await page.waitForTimeout(50);
+       assert.deepEqual(runtimeErrors, []);
+       console.log(
+-        `[react-matrix:${consumer.id}] React ${runtime.reactVersion}, configured G2 canvas ${configuredPainted} painted pixels, clean unmount`,
++        `[framework-matrix:${consumer.id}] ${consumer.framework} ${runtime.frameworkVersion}, configured G2 canvas ${configuredPainted} painted pixels, clean unmount`,
+       );
+     } finally {
+       await page.close();
+@@ -307,22 +327,33 @@ async function verifyConsumer(browser, consumer, directory) {
+ }
+ 
+ async function main() {
+-  const temporaryRoot = await mkdtemp(join(tmpdir(), 'tellplot-react-matrix-'));
++  const temporaryRoot = await mkdtemp(join(tmpdir(), 'tellplot-framework-matrix-'));
+   let browser;
+   try {
+-    const sourceManifest = JSON.parse(await readFile(join(EDITOR_PACKAGE, 'package.json'), 'utf8'));
+-    await run('pnpm', ['--filter', '@tellplot/editor', 'build'], { cwd: WORKSPACE });
+     const packDirectory = join(temporaryRoot, 'package');
+     await mkdir(packDirectory);
+-    await run('pnpm', ['pack', '--pack-destination', packDirectory], { cwd: EDITOR_PACKAGE });
++    const packedPackages = {};
++    for (const packageDirectory of PACKAGE_DIRECTORIES) {
++      const packageRoot = join(WORKSPACE, 'packages', packageDirectory);
++      const sourceManifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
++      await run('pnpm', ['build'], { cwd: packageRoot });
++      await run('pnpm', ['pack', '--pack-destination', packDirectory], { cwd: packageRoot });
++      const filename = `${sourceManifest.name
++        .replace(/^@/u, '')
++        .replaceAll('/', '-')}-${sourceManifest.version}.tgz`;
++      packedPackages[sourceManifest.name] = {
++        archive: join(packDirectory, filename),
++        manifest: sourceManifest,
++      };
++    }
+     const archives = (await readdir(packDirectory)).filter(name => name.endsWith('.tgz'));
+-    assert.deepEqual(archives.length, 1, 'React matrix requires exactly one packed editor archive');
+-    const archive = join(packDirectory, archives[0]);
++    assert.deepEqual(archives.length, 4, 'Framework matrix requires all four packed packages');
+ 
+     browser = await chromium.launch();
+-    for (const consumer of REACT_MATRIX) {
++    for (const consumer of FRAMEWORK_MATRIX) {
+       const directory = join(temporaryRoot, consumer.id);
+-      await cp(CONSUMER_TEMPLATE, directory, { recursive: true });
++      const adapterName = consumer.framework === 'React' ? '@tellplot/react' : '@tellplot/vue';
++      await cp(consumer.template, directory, { recursive: true });
+       await writeFile(
+         join(directory, 'package.json'),
+         `${JSON.stringify(
+@@ -333,9 +364,10 @@ async function main() {
+             scripts: { build: 'vite build' },
+             dependencies: {
+               '@antv/g2': G2_VERSION,
+-              '@tellplot/editor': `file:${archive}`,
+-              react: consumer.react,
+-              'react-dom': consumer.reactDom,
++              '@tellplot/core': `file:${packedPackages['@tellplot/core'].archive}`,
++              '@tellplot/editor': `file:${packedPackages['@tellplot/editor'].archive}`,
++              [adapterName]: `file:${packedPackages[adapterName].archive}`,
++              ...consumer.dependencies,
+             },
+             devDependencies: { vite: VITE_VERSION },
+           },
+@@ -345,29 +377,33 @@ async function main() {
+         'utf8',
+       );
+       await writeFile(join(directory, 'vite.config.mjs'), VITE_CONFIG, 'utf8');
+-      const installArgs = [
+-        'install',
+-        '--ignore-workspace',
+-        '--no-frozen-lockfile',
+-        '--strict-peer-dependencies',
+-      ];
++      await writeFile(
++        join(directory, 'pnpm-workspace.yaml'),
++        `overrides:\n  '@tellplot/core': 'file:${packedPackages['@tellplot/core'].archive}'\n  '@tellplot/editor': 'file:${packedPackages['@tellplot/editor'].archive}'\n`,
++        'utf8',
++      );
++      const installArgs = ['install', '--no-frozen-lockfile'];
+       const matrixStore = process.env['TELLPLOT_MATRIX_STORE_DIR'];
+       if (matrixStore !== undefined && matrixStore.trim().length > 0) {
+         installArgs.push('--store-dir', matrixStore);
+       }
+       await run('pnpm', installArgs, { cwd: directory });
+-      assert.equal(await installedVersion(directory, 'react'), consumer.react);
+-      assert.equal(await installedVersion(directory, 'react-dom'), consumer.reactDom);
++      for (const [dependency, version] of Object.entries(consumer.dependencies)) {
++        assert.equal(await installedVersion(directory, dependency), version);
++      }
+       assert.equal(await installedVersion(directory, '@antv/g2'), G2_VERSION);
+-      const installedManifest = JSON.parse(
+-        await readFile(join(directory, 'node_modules/@tellplot/editor/package.json'), 'utf8'),
+-      );
+-      assert.equal(installedManifest.name, '@tellplot/editor');
+-      assert.equal(installedManifest.version, sourceManifest.version);
+-      assert.deepEqual(installedManifest.exports?.['./styles.css'], {
+-        types: './dist/styles.d.ts',
+-        default: './dist/styles.css',
+-      });
++      for (const packageName of ['@tellplot/core', '@tellplot/editor', adapterName]) {
++        const installedManifest = JSON.parse(
++          await readFile(
++            join(directory, 'node_modules', ...packageName.split('/'), 'package.json'),
++            'utf8',
++          ),
++        );
++        assert.equal(installedManifest.name, packageName);
++        assert.equal(installedManifest.version, packedPackages[packageName].manifest.version);
++      }
++      const adapterManifest = packedPackages[adapterName].manifest;
++      assert.ok(adapterManifest.exports?.['./styles.css']);
+       await run('pnpm', ['run', 'build'], { cwd: directory });
+       await verifyConsumer(browser, consumer, directory);
+     }
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 7747ac5..d64c25a 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -83,9 +83,12 @@ importers:
+       '@antv/g2':
+         specifier: 5.4.8
+         version: 5.4.8
+-      '@tellplot/editor':
++      '@tellplot/core':
++        specifier: workspace:*
++        version: link:../../packages/core
++      '@tellplot/react':
+         specifier: workspace:*
+-        version: link:../../packages/editor
++        version: link:../../packages/react
+       lucide-react:
+         specifier: 1.24.0
+         version: 1.24.0(react@19.2.7)
+@@ -96,30 +99,40 @@ importers:
+         specifier: 19.2.7
+         version: 19.2.7(react@19.2.7)
+ 
++  packages/core: {}
++
+   packages/editor:
+     dependencies:
+       '@antv/g-svg':
+         specifier: 2.1.1
+         version: 2.1.1
+-      '@dnd-kit/core':
+-        specifier: 6.3.1
+-        version: 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+-      '@dnd-kit/sortable':
+-        specifier: 10.0.0
+-        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+-      lucide-react:
+-        specifier: 1.24.0
+-        version: 1.24.0(react@19.2.7)
++      '@tellplot/core':
++        specifier: workspace:*
++        version: link:../core
+     devDependencies:
+       '@antv/g2':
+         specifier: 5.4.8
+         version: 5.4.8
++
++  packages/react:
++    dependencies:
++      '@tellplot/editor':
++        specifier: workspace:*
++        version: link:../editor
++    devDependencies:
+       react:
+         specifier: 19.2.7
+         version: 19.2.7
+-      react-dom:
+-        specifier: 19.2.7
+-        version: 19.2.7(react@19.2.7)
++
++  packages/vue:
++    dependencies:
++      '@tellplot/editor':
++        specifier: workspace:*
++        version: link:../editor
++    devDependencies:
++      vue:
++        specifier: 3.5.27
++        version: 3.5.27(typescript@6.0.3)
+ 
+ packages:
+ 
+@@ -328,28 +341,6 @@ packages:
+     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
+     engines: {node: '>=20.19.0'}
+ 
+-  '@dnd-kit/accessibility@3.1.1':
+-    resolution: {integrity: sha512-2P+YgaXF+gRsIihwwY1gCsQSYnu9Zyj2py8kY5fFvUM1qm2WA2u639R6YNVfU4GWr+ZM5mqEsfHZZLoRONbemw==}
+-    peerDependencies:
+-      react: '>=16.8.0'
+-
+-  '@dnd-kit/core@6.3.1':
+-    resolution: {integrity: sha512-xkGBRQQab4RLwgXxoqETICr6S5JlogafbhNsidmrkVv2YRs5MLwpjoF2qpiGjQt8S9AoxtIV603s0GIUpY5eYQ==}
+-    peerDependencies:
+-      react: '>=16.8.0'
+-      react-dom: '>=16.8.0'
+-
+-  '@dnd-kit/sortable@10.0.0':
+-    resolution: {integrity: sha512-+xqhmIIzvAYMGfBYYnbKuNicfSsk4RksY2XdmJhT+HAC01nix6fHCztU68jooFiMUB01Ky3F0FyOvhG/BZrWkg==}
+-    peerDependencies:
+-      '@dnd-kit/core': ^6.3.0
+-      react: '>=16.8.0'
+-
+-  '@dnd-kit/utilities@3.2.2':
+-    resolution: {integrity: sha512-+MKAJEOfaBe5SmV6t34p80MMKhjvUz0vRrvVJbPT0WElzaOJ/1xs+D+KDv+tD/NE5ujfrChEcshd4fLn0wpiqg==}
+-    peerDependencies:
+-      react: '>=16.8.0'
+-
+   '@emnapi/core@1.11.1':
+     resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
+ 
+@@ -1138,6 +1129,35 @@ packages:
+   '@vitest/utils@4.1.10':
+     resolution: {integrity: sha512-fy9am/HWxbaGt/Sawrp90vt6Y6jQwf1RX77cz3uwoJwJVMli/e1IEwRPnMNJ7vKfPTwo0diXifkpPvwH9v7nGA==}
+ 
++  '@vue/compiler-core@3.5.27':
++    resolution: {integrity: sha512-gnSBQjZA+//qDZen+6a2EdHqJ68Z7uybrMf3SPjEGgG4dicklwDVmMC1AeIHxtLVPT7sn6sH1KOO+tS6gwOUeQ==}
++
++  '@vue/compiler-dom@3.5.27':
++    resolution: {integrity: sha512-oAFea8dZgCtVVVTEC7fv3T5CbZW9BxpFzGGxC79xakTr6ooeEqmRuvQydIiDAkglZEAd09LgVf1RoDnL54fu5w==}
++
++  '@vue/compiler-sfc@3.5.27':
++    resolution: {integrity: sha512-sHZu9QyDPeDmN/MRoshhggVOWE5WlGFStKFwu8G52swATgSny27hJRWteKDSUUzUH+wp+bmeNbhJnEAel/auUQ==}
++
++  '@vue/compiler-ssr@3.5.27':
++    resolution: {integrity: sha512-Sj7h+JHt512fV1cTxKlYhg7qxBvack+BGncSpH+8vnN+KN95iPIcqB5rsbblX40XorP+ilO7VIKlkuu3Xq2vjw==}
++
++  '@vue/reactivity@3.5.27':
++    resolution: {integrity: sha512-vvorxn2KXfJ0nBEnj4GYshSgsyMNFnIQah/wczXlsNXt+ijhugmW+PpJ2cNPe4V6jpnBcs0MhCODKllWG+nvoQ==}
++
++  '@vue/runtime-core@3.5.27':
++    resolution: {integrity: sha512-fxVuX/fzgzeMPn/CLQecWeDIFNt3gQVhxM0rW02Tvp/YmZfXQgcTXlakq7IMutuZ/+Ogbn+K0oct9J3JZfyk3A==}
++
++  '@vue/runtime-dom@3.5.27':
++    resolution: {integrity: sha512-/QnLslQgYqSJ5aUmb5F0z0caZPGHRB8LEAQ1s81vHFM5CBfnun63rxhvE/scVb/j3TbBuoZwkJyiLCkBluMpeg==}
++
++  '@vue/server-renderer@3.5.27':
++    resolution: {integrity: sha512-qOz/5thjeP1vAFc4+BY3Nr6wxyLhpeQgAE/8dDtKo6a6xdk+L4W46HDZgNmLOBUDEkFXV3G7pRiUqxjX0/2zWA==}
++    peerDependencies:
++      vue: 3.5.27
++
++  '@vue/shared@3.5.27':
++    resolution: {integrity: sha512-dXr/3CgqXsJkZ0n9F3I4elY8wM9jMJpP3pvRG52r6m0tu/MsAFIe6JpXVGeNMd/D9F4hQynWT8Rfuj0bdm9kFQ==}
++
+   acorn-jsx@5.3.2:
+     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
+     peerDependencies:
+@@ -1464,6 +1484,10 @@ packages:
+   emojilib@2.4.0:
+     resolution: {integrity: sha512-5U0rVMU5Y2n2+ykNLQqMoqklN9ICBT/KsvC1Gz6vqHbz2AXXGkG+Pm5rMWk/8Vjrr/mY9985Hi8DYzn1F09Nyw==}
+ 
++  entities@7.0.1:
++    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
++    engines: {node: '>=0.12'}
++
+   entities@8.0.0:
+     resolution: {integrity: sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA==}
+     engines: {node: '>=20.19.0'}
+@@ -1532,6 +1556,9 @@ packages:
+     resolution: {integrity: sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==}
+     engines: {node: '>=4.0'}
+ 
++  estree-walker@2.0.2:
++    resolution: {integrity: sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==}
++
+   estree-walker@3.0.3:
+     resolution: {integrity: sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==}
+ 
+@@ -2415,6 +2442,14 @@ packages:
+       jsdom:
+         optional: true
+ 
++  vue@3.5.27:
++    resolution: {integrity: sha512-aJ/UtoEyFySPBGarREmN4z6qNKpbEguYHMmXSiOGk69czc+zhs0NF6tEFrY8TZKAl8N/LYAkd4JHVd5E/AsSmw==}
++    peerDependencies:
++      typescript: '*'
++    peerDependenciesMeta:
++      typescript:
++        optional: true
++
+   w3c-xmlserializer@5.0.0:
+     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
+     engines: {node: '>=18'}
+@@ -2824,31 +2859,6 @@ snapshots:
+ 
+   '@csstools/css-tokenizer@4.0.0': {}
+ 
+-  '@dnd-kit/accessibility@3.1.1(react@19.2.7)':
+-    dependencies:
+-      react: 19.2.7
+-      tslib: 2.8.1
+-
+-  '@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+-    dependencies:
+-      '@dnd-kit/accessibility': 3.1.1(react@19.2.7)
+-      '@dnd-kit/utilities': 3.2.2(react@19.2.7)
+-      react: 19.2.7
+-      react-dom: 19.2.7(react@19.2.7)
+-      tslib: 2.8.1
+-
+-  '@dnd-kit/sortable@10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+-    dependencies:
+-      '@dnd-kit/core': 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+-      '@dnd-kit/utilities': 3.2.2(react@19.2.7)
+-      react: 19.2.7
+-      tslib: 2.8.1
+-
+-  '@dnd-kit/utilities@3.2.2(react@19.2.7)':
+-    dependencies:
+-      react: 19.2.7
+-      tslib: 2.8.1
+-
+   '@emnapi/core@1.11.1':
+     dependencies:
+       '@emnapi/wasi-threads': 1.2.2
+@@ -3479,6 +3489,60 @@ snapshots:
+       convert-source-map: 2.0.0
+       tinyrainbow: 3.1.0
+ 
++  '@vue/compiler-core@3.5.27':
++    dependencies:
++      '@babel/parser': 7.29.7
++      '@vue/shared': 3.5.27
++      entities: 7.0.1
++      estree-walker: 2.0.2
++      source-map-js: 1.2.1
++
++  '@vue/compiler-dom@3.5.27':
++    dependencies:
++      '@vue/compiler-core': 3.5.27
++      '@vue/shared': 3.5.27
++
++  '@vue/compiler-sfc@3.5.27':
++    dependencies:
++      '@babel/parser': 7.29.7
++      '@vue/compiler-core': 3.5.27
++      '@vue/compiler-dom': 3.5.27
++      '@vue/compiler-ssr': 3.5.27
++      '@vue/shared': 3.5.27
++      estree-walker: 2.0.2
++      magic-string: 0.30.21
++      postcss: 8.5.19
++      source-map-js: 1.2.1
++
++  '@vue/compiler-ssr@3.5.27':
++    dependencies:
++      '@vue/compiler-dom': 3.5.27
++      '@vue/shared': 3.5.27
++
++  '@vue/reactivity@3.5.27':
++    dependencies:
++      '@vue/shared': 3.5.27
++
++  '@vue/runtime-core@3.5.27':
++    dependencies:
++      '@vue/reactivity': 3.5.27
++      '@vue/shared': 3.5.27
++
++  '@vue/runtime-dom@3.5.27':
++    dependencies:
++      '@vue/reactivity': 3.5.27
++      '@vue/runtime-core': 3.5.27
++      '@vue/shared': 3.5.27
++      csstype: 3.2.3
++
++  '@vue/server-renderer@3.5.27(vue@3.5.27(typescript@6.0.3))':
++    dependencies:
++      '@vue/compiler-ssr': 3.5.27
++      '@vue/shared': 3.5.27
++      vue: 3.5.27(typescript@6.0.3)
++
++  '@vue/shared@3.5.27': {}
++
+   acorn-jsx@5.3.2(acorn@8.17.0):
+     dependencies:
+       acorn: 8.17.0
+@@ -3765,6 +3829,8 @@ snapshots:
+ 
+   emojilib@2.4.0: {}
+ 
++  entities@7.0.1: {}
++
+   entities@8.0.0: {}
+ 
+   environment@1.1.0: {}
+@@ -3877,6 +3943,8 @@ snapshots:
+ 
+   estraverse@5.3.0: {}
+ 
++  estree-walker@2.0.2: {}
++
+   estree-walker@3.0.3:
+     dependencies:
+       '@types/estree': 1.0.9
+@@ -4650,6 +4718,16 @@ snapshots:
+     transitivePeerDependencies:
+       - msw
+ 
++  vue@3.5.27(typescript@6.0.3):
++    dependencies:
++      '@vue/compiler-dom': 3.5.27
++      '@vue/compiler-sfc': 3.5.27
++      '@vue/runtime-dom': 3.5.27
++      '@vue/server-renderer': 3.5.27(vue@3.5.27(typescript@6.0.3))
++      '@vue/shared': 3.5.27
++    optionalDependencies:
++      typescript: 6.0.3
++
+   w3c-xmlserializer@5.0.0:
+     dependencies:
+       xml-name-validator: 5.0.0
+diff --git a/vitest.config.ts b/vitest.config.ts
+index 0843812..6970f6e 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
+ import { fileURLToPath } from 'node:url';
+ 
+ const editorAliases = [
++  {
++    find: '@tellplot/core',
++    replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)),
++  },
+   {
+     find: '@tellplot/editor/styles.css',
+     replacement: fileURLToPath(new URL('./packages/editor/src/styles/editor.css', import.meta.url)),
+@@ -20,6 +24,17 @@ export default defineConfig({
+     testTimeout: 15_000,
+     projects: [
+       {
++        test: {
++          name: 'core-unit',
++          testTimeout: 15_000,
++          include: ['packages/core/tests/**/*.test.ts'],
++          environment: 'node',
++        },
++      },
++      {
++        resolve: {
++          alias: editorAliases,
++        },
+         test: {
+           name: 'editor-unit',
+           testTimeout: 15_000,
+@@ -33,6 +48,9 @@ export default defineConfig({
+         },
+       },
+       {
++        resolve: {
++          alias: editorAliases,
++        },
+         test: {
+           name: 'editor-components',
+           testTimeout: 15_000,
+@@ -40,6 +58,7 @@ export default defineConfig({
+             'packages/editor/tests/components/**/*.test.{ts,tsx}',
+             'packages/editor/tests/export/**/*.test.{ts,tsx}',
+             'packages/editor/tests/rendering/**/*.test.{ts,tsx}',
++            'packages/editor/tests/runtime/**/*.test.{ts,tsx}',
+           ],
+           environment: 'jsdom',
+           setupFiles: ['packages/editor/tests/setup.ts'],
+@@ -57,26 +76,44 @@ export default defineConfig({
+           environment: 'node',
+         },
+       },
++      {
++        resolve: {
++          alias: editorAliases,
++        },
++        test: {
++          name: 'framework-adapters',
++          testTimeout: 15_000,
++          include: ['packages/react/tests/**/*.test.tsx', 'packages/vue/tests/**/*.test.ts'],
++          environment: 'jsdom',
++          setupFiles: ['packages/editor/tests/setup.ts'],
++          passWithNoTests: true,
++        },
++      },
+     ],
+     coverage: {
+       provider: 'v8',
+       reporter: ['text', 'json-summary', 'html'],
+       reportsDirectory: 'coverage',
+-      include: ['packages/editor/src/**/*.{ts,tsx}'],
++      include: [
++        'packages/core/src/**/*.ts',
++        'packages/editor/src/**/*.ts',
++        'packages/react/src/**/*.tsx',
++        'packages/vue/src/**/*.ts',
++      ],
+       thresholds: {
+-        'packages/editor/src/domain/**': {
++        'packages/core/src/domain/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,
+           lines: 95,
+         },
+-        'packages/editor/src/charts/waterfall/**': {
++        'packages/core/src/charts/waterfall/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,
+           lines: 95,
+         },
+-        'packages/editor/src/charts/categorical/**': {
++        'packages/core/src/charts/categorical/**': {
+           statements: 95,
+           branches: 95,
+           functions: 95,
+diff --git a/packages/editor/tests/react-matrix/vue-consumer/index.html b/packages/editor/tests/react-matrix/vue-consumer/index.html
+new file mode 100644
+index 0000000..226454c
+--- /dev/null
++++ b/packages/editor/tests/react-matrix/vue-consumer/index.html
+@@ -0,0 +1,12 @@
++<!doctype html>
++<html lang="en">
++  <head>
++    <meta charset="UTF-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++    <title>TellPlot Vue consumer</title>
++  </head>
++  <body>
++    <div id="root"></div>
++    <script type="module" src="/src/main.mjs"></script>
++  </body>
++</html>
+diff --git a/packages/editor/tests/react-matrix/vue-consumer/src/host.css b/packages/editor/tests/react-matrix/vue-consumer/src/host.css
+new file mode 100644
+index 0000000..277cf76
+--- /dev/null
++++ b/packages/editor/tests/react-matrix/vue-consumer/src/host.css
+@@ -0,0 +1,12 @@
++html,
++body,
++#root {
++  width: 100%;
++  height: 100%;
++  margin: 0;
++}
++
++body {
++  padding: 24px;
++  background: #ffffff;
++}
+diff --git a/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+new file mode 100644
+index 0000000..bebe55b
+--- /dev/null
++++ b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+@@ -0,0 +1,67 @@
++import { ChartEditor } from '@tellplot/vue';
++import '@tellplot/vue/styles.css';
++import { createApp, h, ref, version } from 'vue';
++
++import './host.css';
++
++const baseConfig = {
++  type: 'waterfall',
++  data: {
++    schemaVersion: '1.0.0',
++    datasetId: 'vue-runtime-consumer',
++    currency: 'CNY',
++    items: [
++      { id: 'opening-profit', label: 'Opening profit', amount: 1_000, kind: 'start' },
++      { id: 'sales-growth', label: 'Sales growth', amount: 200, kind: 'contribution' },
++      { id: 'cost-pressure', label: 'Cost pressure', amount: -120, kind: 'contribution' },
++      { id: 'ending-profit', label: 'Ending profit', amount: 1_080, kind: 'end' },
++    ],
++  },
++  height: 680,
++};
++
++const host = document.querySelector('#root');
++if (!(host instanceof HTMLElement)) {
++  throw new Error('Vue matrix host is missing');
++}
++
++const appearance = ref(undefined);
++const app = createApp({
++  setup() {
++    return () =>
++      h(ChartEditor, {
++        config: { ...baseConfig, appearance: appearance.value },
++      });
++  },
++});
++app.mount(host);
++
++globalThis.__tellplotFrameworkMatrix = {
++  configure() {
++    appearance.value = {
++      title: 'Configured bridge',
++      colors: {
++        start: '#d946ef',
++        positive: '#d946ef',
++        negative: '#d946ef',
++        subtotal: '#d946ef',
++        group: '#d946ef',
++        end: '#d946ef',
++      },
++      axes: { category: false, value: true },
++      labels: { value: 'never' },
++      tooltip: true,
++      animation: { enabled: false, duration: 0 },
++      numberFormat: {
++        minimumFractionDigits: 1,
++        maximumFractionDigits: 1,
++        currencyDisplay: 'code',
++      },
++    };
++  },
++  frameworkVersion: version,
++  unmount() {
++    app.unmount();
++    host.dataset.unmounted = 'true';
++  },
++};
+diff --git a/packages/react/LICENSE b/packages/react/LICENSE
+new file mode 100644
+index 0000000..f709f26
+--- /dev/null
++++ b/packages/react/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2026 TellPlot contributors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/packages/react/README.md b/packages/react/README.md
+new file mode 100644
+index 0000000..f9a8935
+--- /dev/null
++++ b/packages/react/README.md
+@@ -0,0 +1,14 @@
++# @tellplot/react
++
++TellPlot 的 React 18/19 薄适配器。
++
++```tsx
++import { ChartEditor } from '@tellplot/react';
++import '@tellplot/react/styles.css';
++
++export function Chart() {
++  return <ChartEditor config={config} view={view} onViewChange={setView} />;
++}
++```
++
++组件只映射 `@tellplot/editor` 生命周期；编辑状态、G2 和 UI 不在本包重复实现。License: MIT。
+diff --git a/packages/react/package.json b/packages/react/package.json
+new file mode 100644
+index 0000000..a9b2f40
+--- /dev/null
++++ b/packages/react/package.json
+@@ -0,0 +1,67 @@
++{
++  "name": "@tellplot/react",
++  "version": "1.0.0",
++  "description": "Thin React adapter for the framework-neutral TellPlot editor",
++  "license": "MIT",
++  "homepage": "https://tellplot.com",
++  "repository": {
++    "type": "git",
++    "url": "git+https://github.com/iiwish/tellplot.git",
++    "directory": "packages/react"
++  },
++  "bugs": {
++    "url": "https://github.com/iiwish/tellplot/issues"
++  },
++  "keywords": [
++    "charts",
++    "react",
++    "g2",
++    "data-visualization"
++  ],
++  "type": "module",
++  "sideEffects": [
++    "**/*.css"
++  ],
++  "files": [
++    "dist"
++  ],
++  "main": "./dist/index.cjs",
++  "module": "./dist/index.js",
++  "types": "./dist/index.d.ts",
++  "exports": {
++    ".": {
++      "import": {
++        "types": "./dist/index.d.ts",
++        "default": "./dist/index.js"
++      },
++      "require": {
++        "types": "./dist/index.d.cts",
++        "default": "./dist/index.cjs"
++      }
++    },
++    "./styles.css": "./dist/styles.css",
++    "./package.json": "./package.json"
++  },
++  "scripts": {
++    "build": "tsup",
++    "typecheck": "tsc --noEmit -p tsconfig.json",
++    "test": "vitest run --root ../.. packages/react/tests",
++    "test:package": "publint && attw --pack . --exclude-entrypoints ./styles.css && tsc -p tests/package/tsconfig.json"
++  },
++  "engines": {
++    "node": ">=22.13.0"
++  },
++  "peerDependencies": {
++    "react": "^18.3.0 || ^19.0.0"
++  },
++  "devDependencies": {
++    "react": "19.2.7"
++  },
++  "dependencies": {
++    "@tellplot/editor": "workspace:*"
++  },
++  "publishConfig": {
++    "access": "public",
++    "registry": "https://registry.npmjs.org/"
++  }
++}
+diff --git a/packages/react/src/index.tsx b/packages/react/src/index.tsx
+new file mode 100644
+index 0000000..c6e8240
+--- /dev/null
++++ b/packages/react/src/index.tsx
+@@ -0,0 +1,114 @@
++import {
++  forwardRef,
++  useImperativeHandle,
++  useLayoutEffect,
++  useRef,
++  type CSSProperties,
++  type JSX,
++} from 'react';
++import {
++  createEditor,
++  type EditorInstance,
++  type EditorOptions,
++  type ExportOptions,
++  type ExportResult,
++  type ViewSpec,
++} from '@tellplot/editor';
++
++export interface ChartEditorProps extends EditorOptions {
++  readonly className?: string;
++  readonly style?: CSSProperties;
++}
++
++export interface ChartEditorHandle {
++  focus(): void;
++  getView(): ViewSpec;
++  exportImage(options: ExportOptions): Promise<ExportResult>;
++}
++
++function editorOptions(props: ChartEditorProps): EditorOptions {
++  return {
++    config: props.config,
++    ...(props.view === undefined ? {} : { view: props.view }),
++    ...(props.defaultView === undefined ? {} : { defaultView: props.defaultView }),
++    ...(props.onViewChange === undefined ? {} : { onViewChange: props.onViewChange }),
++    ...(props.onCommand === undefined ? {} : { onCommand: props.onCommand }),
++    ...(props.onCommandRejected === undefined
++      ? {}
++      : { onCommandRejected: props.onCommandRejected }),
++    ...(props.onConfigRejected === undefined ? {} : { onConfigRejected: props.onConfigRejected }),
++    ...(props.onSelectionChange === undefined
++      ? {}
++      : { onSelectionChange: props.onSelectionChange }),
++  };
++}
++
++/** React lifecycle adapter; all editing state and UI remain owned by `@tellplot/editor`. */
++export const ChartEditor = forwardRef<ChartEditorHandle, ChartEditorProps>(
++  function ChartEditor(props, forwardedRef): JSX.Element {
++    const hostRef = useRef<HTMLDivElement>(null);
++    const instanceRef = useRef<EditorInstance | null>(null);
++    const latestPropsRef = useRef(props);
++    latestPropsRef.current = props;
++
++    useImperativeHandle(
++      forwardedRef,
++      () => ({
++        focus: () => instanceRef.current?.focus(),
++        getView: () => {
++          const instance = instanceRef.current;
++          if (instance === null) {
++            throw new Error('TellPlot React editor is not mounted.');
++          }
++          return instance.getView();
++        },
++        exportImage: options => {
++          const instance = instanceRef.current;
++          return instance === null
++            ? Promise.reject(new Error('TellPlot React editor is not mounted.'))
++            : instance.exportImage(options);
++        },
++      }),
++      [],
++    );
++
++    useLayoutEffect(() => {
++      const host = hostRef.current;
++      if (host === null) {
++        return undefined;
++      }
++      const instance = createEditor(host, editorOptions(latestPropsRef.current));
++      instanceRef.current = instance;
++      return () => {
++        instanceRef.current = null;
++        instance.destroy();
++      };
++    }, []);
++
++    useLayoutEffect(() => {
++      instanceRef.current?.update(editorOptions(props));
++    }, [props]);
++
++    return (
++      <div
++        className={['tellplot-react-host', props.className].filter(Boolean).join(' ')}
++        ref={hostRef}
++        style={props.style}
++      />
++    );
++  },
++);
++ChartEditor.displayName = 'TellPlotChartEditor';
++
++export type {
++  ChartConfig,
++  CommandError,
++  CommandEvent,
++  ExportError,
++  ExportErrorCode,
++  ExportOptions,
++  ExportResult,
++  SelectionState,
++  ValidationIssue,
++  ViewSpec,
++} from '@tellplot/editor';
+diff --git a/packages/react/src/styles.css b/packages/react/src/styles.css
+new file mode 100644
+index 0000000..52a2451
+--- /dev/null
++++ b/packages/react/src/styles.css
+@@ -0,0 +1,10 @@
++@import '@tellplot/editor/styles.css';
++
++.tellplot-react-host {
++  contain: size;
++  overflow: hidden;
++  width: 100%;
++  height: 100%;
++  min-width: 0;
++  min-height: 0;
++}
+diff --git a/packages/react/tests/ChartEditor.test.tsx b/packages/react/tests/ChartEditor.test.tsx
+new file mode 100644
+index 0000000..6fc2ea2
+--- /dev/null
++++ b/packages/react/tests/ChartEditor.test.tsx
+@@ -0,0 +1,74 @@
++import { createRef, StrictMode } from 'react';
++import { render } from '@testing-library/react';
++import { describe, expect, it, vi } from 'vitest';
++
++import type { ChartConfig, ViewSpec } from '@tellplot/editor';
++import { ChartEditor, type ChartEditorHandle } from '../src/index';
++
++const runtime = vi.hoisted(() => {
++  const instances: {
++    update: ReturnType<typeof vi.fn>;
++    focus: ReturnType<typeof vi.fn>;
++    getView: ReturnType<typeof vi.fn>;
++    exportImage: ReturnType<typeof vi.fn>;
++    destroy: ReturnType<typeof vi.fn>;
++  }[] = [];
++  const createEditor = vi.fn(() => {
++    const instance = {
++      update: vi.fn(),
++      focus: vi.fn(),
++      getView: vi.fn(() => ({ revision: 0 }) as ViewSpec),
++      exportImage: vi.fn(),
++      destroy: vi.fn(),
++    };
++    instances.push(instance);
++    return instance;
++  });
++  return { createEditor, instances };
++});
++
++vi.mock('@tellplot/editor', () => ({ createEditor: runtime.createEditor }));
++
++const config: ChartConfig = {
++  type: 'bar',
++  data: {
++    schemaVersion: '2.0.0',
++    dataKind: 'categorical',
++    datasetId: 'react-adapter',
++    items: [{ id: 'a', label: 'Alpha', amount: 1 }],
++  },
++};
++
++describe('React ChartEditor adapter', () => {
++  it('updates one imperative instance and exposes only the public handle', () => {
++    const handle = createRef<ChartEditorHandle>();
++    const onViewChange = vi.fn();
++    const rendered = render(
++      <ChartEditor ref={handle} config={config} onViewChange={onViewChange} />,
++    );
++    const instance = runtime.instances.at(-1);
++
++    expect(runtime.createEditor).toHaveBeenCalledTimes(1);
++    expect(handle.current?.getView()).toEqual({ revision: 0 });
++    rendered.rerender(<ChartEditor ref={handle} config={config} onViewChange={vi.fn()} />);
++    expect(runtime.createEditor).toHaveBeenCalledTimes(1);
++    expect(instance?.update).toHaveBeenCalled();
++
++    rendered.unmount();
++    expect(instance?.destroy).toHaveBeenCalledTimes(1);
++  });
++
++  it('cleans every Strict Mode mount', () => {
++    const start = runtime.instances.length;
++    const rendered = render(
++      <StrictMode>
++        <ChartEditor config={config} />
++      </StrictMode>,
++    );
++    rendered.unmount();
++
++    const created = runtime.instances.slice(start);
++    expect(created.length).toBeGreaterThanOrEqual(2);
++    expect(created.every(instance => instance.destroy.mock.calls.length === 1)).toBe(true);
++  });
++});
+diff --git a/packages/react/tests/package/consumer.tsx b/packages/react/tests/package/consumer.tsx
+new file mode 100644
+index 0000000..144b330
+--- /dev/null
++++ b/packages/react/tests/package/consumer.tsx
+@@ -0,0 +1,24 @@
++import { createRef } from 'react';
++
++import {
++  ChartEditor,
++  type ChartEditorHandle,
++  type ChartEditorProps,
++  type ViewSpec,
++} from '@tellplot/react';
++
++declare const config: ChartEditorProps['config'];
++declare const view: ViewSpec;
++
++export const editorRef = createRef<ChartEditorHandle>();
++export const editor = (
++  <ChartEditor
++    config={config}
++    onViewChange={nextView => {
++      const checked: ViewSpec = nextView;
++      return checked;
++    }}
++    ref={editorRef}
++    view={view}
++  />
++);
+diff --git a/packages/react/tests/package/tsconfig.json b/packages/react/tests/package/tsconfig.json
+new file mode 100644
+index 0000000..9b308e6
+--- /dev/null
++++ b/packages/react/tests/package/tsconfig.json
+@@ -0,0 +1,10 @@
++{
++  "extends": "../../../../tsconfig.base.json",
++  "compilerOptions": {
++    "jsx": "react-jsx",
++    "module": "NodeNext",
++    "moduleResolution": "NodeNext",
++    "types": ["react"]
++  },
++  "files": ["consumer.tsx"]
++}
+diff --git a/packages/react/tsconfig.json b/packages/react/tsconfig.json
+new file mode 100644
+index 0000000..29d41cb
+--- /dev/null
++++ b/packages/react/tsconfig.json
+@@ -0,0 +1,14 @@
++{
++  "extends": "../../tsconfig.base.json",
++  "compilerOptions": {
++    "jsx": "react-jsx",
++    "skipLibCheck": true,
++    "types": ["node", "react"],
++    "paths": {
++      "@tellplot/core": ["../core/src/index.ts"],
++      "@tellplot/editor": ["../editor/src/index.ts"]
++    }
++  },
++  "include": ["src", "tests"],
++  "exclude": ["tests/package"]
++}
+diff --git a/packages/react/tsup.config.ts b/packages/react/tsup.config.ts
+new file mode 100644
+index 0000000..97ab012
+--- /dev/null
++++ b/packages/react/tsup.config.ts
+@@ -0,0 +1,17 @@
++import { defineConfig } from 'tsup';
++
++export default defineConfig({
++  entry: { index: 'src/index.tsx', styles: 'src/styles.css' },
++  format: ['esm', 'cjs'],
++  dts: true,
++  clean: true,
++  sourcemap: true,
++  splitting: false,
++  treeshake: true,
++  platform: 'browser',
++  target: 'es2022',
++  external: ['@tellplot/editor', 'react', 'react/jsx-runtime'],
++  outExtension({ format }) {
++    return { js: format === 'cjs' ? '.cjs' : '.js' };
++  },
++});
+diff --git a/packages/vue/LICENSE b/packages/vue/LICENSE
+new file mode 100644
+index 0000000..f709f26
+--- /dev/null
++++ b/packages/vue/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2026 TellPlot contributors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/packages/vue/README.md b/packages/vue/README.md
+new file mode 100644
+index 0000000..a80cfd5
+--- /dev/null
++++ b/packages/vue/README.md
+@@ -0,0 +1,14 @@
++# @tellplot/vue
++
++TellPlot 的 Vue 3 薄适配器，支持 `v-model:view`。
++
++```vue
++<script setup lang="ts">
++import { ChartEditor } from '@tellplot/vue';
++import '@tellplot/vue/styles.css';
++</script>
++
++<template><ChartEditor :config="config" v-model:view="view" /></template>
++```
++
++组件只映射 `@tellplot/editor` 生命周期；编辑状态、G2 和 UI 不在本包重复实现。License: MIT。
+diff --git a/packages/vue/package.json b/packages/vue/package.json
+new file mode 100644
+index 0000000..2655382
+--- /dev/null
++++ b/packages/vue/package.json
+@@ -0,0 +1,67 @@
++{
++  "name": "@tellplot/vue",
++  "version": "1.0.0",
++  "description": "Thin Vue 3 adapter for the framework-neutral TellPlot editor",
++  "license": "MIT",
++  "homepage": "https://tellplot.com",
++  "repository": {
++    "type": "git",
++    "url": "git+https://github.com/iiwish/tellplot.git",
++    "directory": "packages/vue"
++  },
++  "bugs": {
++    "url": "https://github.com/iiwish/tellplot/issues"
++  },
++  "keywords": [
++    "charts",
++    "vue",
++    "g2",
++    "data-visualization"
++  ],
++  "type": "module",
++  "sideEffects": [
++    "**/*.css"
++  ],
++  "files": [
++    "dist"
++  ],
++  "main": "./dist/index.cjs",
++  "module": "./dist/index.js",
++  "types": "./dist/index.d.ts",
++  "exports": {
++    ".": {
++      "import": {
++        "types": "./dist/index.d.ts",
++        "default": "./dist/index.js"
++      },
++      "require": {
++        "types": "./dist/index.d.cts",
++        "default": "./dist/index.cjs"
++      }
++    },
++    "./styles.css": "./dist/styles.css",
++    "./package.json": "./package.json"
++  },
++  "scripts": {
++    "build": "tsup",
++    "typecheck": "tsc --noEmit -p tsconfig.json",
++    "test": "vitest run --root ../.. packages/vue/tests",
++    "test:package": "publint && attw --pack . --exclude-entrypoints ./styles.css && tsc -p tests/package/tsconfig.json"
++  },
++  "engines": {
++    "node": ">=22.13.0"
++  },
++  "peerDependencies": {
++    "vue": "^3.5.0"
++  },
++  "devDependencies": {
++    "vue": "3.5.27"
++  },
++  "dependencies": {
++    "@tellplot/editor": "workspace:*"
++  },
++  "publishConfig": {
++    "access": "public",
++    "registry": "https://registry.npmjs.org/"
++  }
++}
+diff --git a/packages/vue/src/index.ts b/packages/vue/src/index.ts
+new file mode 100644
+index 0000000..39581cd
+--- /dev/null
++++ b/packages/vue/src/index.ts
+@@ -0,0 +1,106 @@
++import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
++import {
++  createEditor,
++  type ChartConfig,
++  type CommandError,
++  type CommandEvent,
++  type EditorInstance,
++  type EditorOptions,
++  type ExportOptions,
++  type ExportResult,
++  type SelectionState,
++  type ValidationIssue,
++  type ViewSpec,
++} from '@tellplot/editor';
++
++export interface ChartEditorExposed {
++  focus(): void;
++  getView(): ViewSpec;
++  exportImage(options: ExportOptions): Promise<ExportResult>;
++}
++
++/** Vue lifecycle adapter with `v-model:view`; the imperative editor remains the only runtime. */
++export const ChartEditor = defineComponent({
++  name: 'TellPlotChartEditor',
++  inheritAttrs: false,
++  props: {
++    config: { type: Object as PropType<ChartConfig>, required: true },
++    view: { type: Object as PropType<ViewSpec>, required: false },
++    defaultView: { type: Object as PropType<ViewSpec>, required: false },
++  },
++  emits: {
++    'update:view': (view: ViewSpec): boolean => typeof view === 'object',
++    'view-change': (view: ViewSpec, event: CommandEvent): boolean =>
++      typeof view === 'object' && typeof event === 'object',
++    command: (event: CommandEvent): boolean => typeof event === 'object',
++    'command-rejected': (error: CommandError): boolean => typeof error === 'object',
++    'config-rejected': (issues: readonly ValidationIssue[]): boolean => Array.isArray(issues),
++    'selection-change': (selection: SelectionState | null): boolean =>
++      selection === null || typeof selection === 'object',
++  },
++  setup(props, { attrs, emit, expose }) {
++    const host = ref<HTMLElement | null>(null);
++    let instance: EditorInstance | null = null;
++
++    const toOptions = (): EditorOptions => ({
++      config: props.config,
++      ...(props.view === undefined ? {} : { view: props.view }),
++      ...(props.defaultView === undefined ? {} : { defaultView: props.defaultView }),
++      onViewChange: (view, event) => {
++        emit('update:view', view);
++        emit('view-change', view, event);
++      },
++      onCommand: event => emit('command', event),
++      onCommandRejected: error => emit('command-rejected', error),
++      onConfigRejected: issues => emit('config-rejected', issues),
++      onSelectionChange: selection => emit('selection-change', selection),
++    });
++
++    const exposed: ChartEditorExposed = {
++      focus: () => instance?.focus(),
++      getView: () => {
++        if (instance === null) {
++          throw new Error('TellPlot Vue editor is not mounted.');
++        }
++        return instance.getView();
++      },
++      exportImage: options =>
++        instance === null
++          ? Promise.reject(new Error('TellPlot Vue editor is not mounted.'))
++          : instance.exportImage(options),
++    };
++    expose(exposed);
++
++    onMounted(() => {
++      if (host.value !== null) {
++        instance = createEditor(host.value, toOptions());
++      }
++    });
++    watch(
++      () => [props.config, props.view, props.defaultView] as const,
++      () => instance?.update(toOptions()),
++    );
++    onBeforeUnmount(() => {
++      instance?.destroy();
++      instance = null;
++    });
++
++    return () =>
++      h('div', {
++        ...attrs,
++        ref: host,
++        class: ['tellplot-vue-host', attrs['class']],
++      });
++  },
++});
++
++export type {
++  ChartConfig,
++  CommandError,
++  CommandEvent,
++  ExportOptions,
++  ExportResult,
++  SelectionState,
++  ValidationIssue,
++  ViewSpec,
++} from '@tellplot/editor';
+diff --git a/packages/vue/src/styles.css b/packages/vue/src/styles.css
+new file mode 100644
+index 0000000..038d6d8
+--- /dev/null
++++ b/packages/vue/src/styles.css
+@@ -0,0 +1,10 @@
++@import '@tellplot/editor/styles.css';
++
++.tellplot-vue-host {
++  contain: size;
++  overflow: hidden;
++  width: 100%;
++  height: 100%;
++  min-width: 0;
++  min-height: 0;
++}
+diff --git a/packages/vue/tests/ChartEditor.test.ts b/packages/vue/tests/ChartEditor.test.ts
+new file mode 100644
+index 0000000..67bafb7
+--- /dev/null
++++ b/packages/vue/tests/ChartEditor.test.ts
+@@ -0,0 +1,71 @@
++import { createApp, defineComponent, h, nextTick, ref } from 'vue';
++import { describe, expect, it, vi } from 'vitest';
++
++import type { ChartConfig, CommandEvent, ViewSpec } from '@tellplot/editor';
++import { ChartEditor } from '../src/index';
++
++const runtime = vi.hoisted(() => {
++  const instances: {
++    update: ReturnType<typeof vi.fn>;
++    destroy: ReturnType<typeof vi.fn>;
++  }[] = [];
++  const createEditor = vi.fn((_container: HTMLElement, options: object) => {
++    const instance = {
++      update: vi.fn(),
++      destroy: vi.fn(),
++      focus: vi.fn(),
++      getView: vi.fn(),
++      exportImage: vi.fn(),
++      options,
++    };
++    instances.push(instance);
++    return instance;
++  });
++  return { createEditor, instances };
++});
++
++vi.mock('@tellplot/editor', () => ({ createEditor: runtime.createEditor }));
++
++const config: ChartConfig = {
++  type: 'column',
++  data: {
++    schemaVersion: '2.0.0',
++    dataKind: 'categorical',
++    datasetId: 'vue-adapter',
++    items: [{ id: 'a', label: 'Alpha', amount: 1 }],
++  },
++};
++
++describe('Vue ChartEditor adapter', () => {
++  it('maps updates and update:view to one imperative instance', async () => {
++    const host = document.createElement('div');
++    const currentConfig = ref(config);
++    const updateView = vi.fn();
++    const app = createApp(
++      defineComponent({
++        setup: () => () =>
++          h(ChartEditor, {
++            config: currentConfig.value,
++            'onUpdate:view': updateView,
++          }),
++      }),
++    );
++    app.mount(host);
++    const instance = runtime.instances.at(-1);
++
++    expect(runtime.createEditor).toHaveBeenCalledTimes(1);
++    currentConfig.value = { ...config, height: 720 };
++    await nextTick();
++    expect(instance?.update).toHaveBeenCalled();
++    const options = (
++      instance as typeof instance & {
++        readonly options: { readonly onViewChange: (view: ViewSpec, event: CommandEvent) => void };
++      }
++    )?.options;
++    options?.onViewChange({ revision: 1 } as ViewSpec, {} as CommandEvent);
++    expect(updateView).toHaveBeenCalledWith({ revision: 1 });
++
++    app.unmount();
++    expect(instance?.destroy).toHaveBeenCalledTimes(1);
++  });
++});
+diff --git a/packages/vue/tests/package/consumer.ts b/packages/vue/tests/package/consumer.ts
+new file mode 100644
+index 0000000..5510a49
+--- /dev/null
++++ b/packages/vue/tests/package/consumer.ts
+@@ -0,0 +1,21 @@
++import { h, ref, type ComponentPublicInstance } from 'vue';
++
++import {
++  ChartEditor,
++  type ChartConfig,
++  type ChartEditorExposed,
++  type ViewSpec,
++} from '@tellplot/vue';
++
++declare const config: ChartConfig;
++declare const initialView: ViewSpec;
++
++export const view = ref(initialView);
++export const editor = h(ChartEditor, {
++  config,
++  view: view.value,
++  'onUpdate:view': nextView => {
++    view.value = nextView;
++  },
++});
++export const exposed = ref<(ComponentPublicInstance & ChartEditorExposed) | null>(null);
+diff --git a/packages/vue/tests/package/tsconfig.json b/packages/vue/tests/package/tsconfig.json
+new file mode 100644
+index 0000000..7267def
+--- /dev/null
++++ b/packages/vue/tests/package/tsconfig.json
+@@ -0,0 +1,9 @@
++{
++  "extends": "../../../../tsconfig.base.json",
++  "compilerOptions": {
++    "module": "NodeNext",
++    "moduleResolution": "NodeNext",
++    "types": []
++  },
++  "files": ["consumer.ts"]
++}
+diff --git a/packages/vue/tsconfig.json b/packages/vue/tsconfig.json
+new file mode 100644
+index 0000000..c434c17
+--- /dev/null
++++ b/packages/vue/tsconfig.json
+@@ -0,0 +1,13 @@
++{
++  "extends": "../../tsconfig.base.json",
++  "compilerOptions": {
++    "skipLibCheck": true,
++    "types": ["node"],
++    "paths": {
++      "@tellplot/core": ["../core/src/index.ts"],
++      "@tellplot/editor": ["../editor/src/index.ts"]
++    }
++  },
++  "include": ["src", "tests"],
++  "exclude": ["tests/package"]
++}
+diff --git a/packages/vue/tsup.config.ts b/packages/vue/tsup.config.ts
+new file mode 100644
+index 0000000..90abc06
+--- /dev/null
++++ b/packages/vue/tsup.config.ts
+@@ -0,0 +1,17 @@
++import { defineConfig } from 'tsup';
++
++export default defineConfig({
++  entry: { index: 'src/index.ts', styles: 'src/styles.css' },
++  format: ['esm', 'cjs'],
++  dts: true,
++  clean: true,
++  sourcemap: true,
++  splitting: false,
++  treeshake: true,
++  platform: 'browser',
++  target: 'es2022',
++  external: ['@tellplot/editor', 'vue'],
++  outExtension({ format }) {
++    return { js: format === 'cjs' ? '.cjs' : '.js' };
++  },
++});

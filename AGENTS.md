@@ -2,9 +2,12 @@
 
 ## 项目状态
 
-- 当前阶段：T101-T116、G002 / T117、G002-R1 / T118、G002-R2 / T119、G002-R3 / T122 与
-  G004 / T123 均已验收；`@tellplot/editor@1.0.0` 是等待独立远程发布授权的本地稳定候选。
-- 当前仓库包含 `@tellplot/editor`、薄参考编辑器、单元/组件/E2E/兼容性测试和发布候选 evidence。
+- 当前阶段：T101-T116、G002 / T117、G002-R1 / T118、G002-R2 / T119、G002-R3 / T122、
+  G004 / T123 与 G006 / T125-T129 均已验收；G005 / T130 本地发布准备为 `Needs_Review`，公开执行
+  等待独立远程授权、stale tag 受控重建、npm package bootstrap、stage-only Trusted Publisher、2FA 与
+  托管外部条件。
+- 当前仓库包含 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue`、完整
+  playground、单元/组件/E2E/兼容性测试和四包发布候选 evidence。
 - 产品 SSOT：`.ai-platform/docs/product-design.md`。
 - 项目原则：`.ai-platform/memory/constitution.md`。
 - 技术决策：`.ai-platform/docs/technology-decision-record.md`。

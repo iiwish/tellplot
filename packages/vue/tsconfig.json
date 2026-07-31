@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "types": ["node"],
+    "paths": {
+      "@tellplot/core": ["../core/src/index.ts"],
+      "@tellplot/editor": ["../editor/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests"],
+  "exclude": ["tests/package"]
+}

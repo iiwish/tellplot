@@ -5,7 +5,7 @@ import {
   type ChartConfig,
   type ValidationErrorCode,
   type ViewSpec,
-} from '@tellplot/editor';
+} from '@tellplot/core';
 
 export interface PlaygroundPublicFileError {
   readonly code: 'INVALID_JSON' | ValidationErrorCode;

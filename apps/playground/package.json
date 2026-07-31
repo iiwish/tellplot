@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@antv/g2": "5.4.8",
-    "@tellplot/editor": "workspace:*",
+    "@tellplot/core": "workspace:*",
+    "@tellplot/react": "workspace:*",
     "lucide-react": "1.24.0",
     "react": "19.2.7",
     "react-dom": "19.2.7"

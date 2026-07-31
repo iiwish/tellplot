@@ -19,6 +19,7 @@ const g2Mock = vi.hoisted(() => {
     readonly render = vi.fn(
       (): Promise<void> => Chart.renderQueue.shift()?.() ?? Promise.resolve(),
     );
+    readonly forceFit = vi.fn((): Promise<this> => Promise.resolve(this));
     readonly on = vi.fn((name: string): this => {
       if (
         Chart.onError !== undefined &&
@@ -174,6 +175,59 @@ describe('G2 chart runtime', () => {
     expect(runtime.getContext()).toBeUndefined();
   });
 
+  it('fits after an active render when its container resizes and disconnects on disposal', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    const pendingRender = deferred();
+    g2Mock.Chart.renderQueue.push(() => pendingRender.promise);
+    let resize: ResizeObserverCallback | undefined;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+
+      readonly observe = observe;
+      readonly unobserve = vi.fn();
+      readonly disconnect = disconnect;
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+
+    try {
+      const host = document.createElement('div');
+      document.body.append(host);
+      const runtime = createG2ChartRuntime<string>({
+        container: host,
+        events: [],
+        onRenderSettled: vi.fn(),
+      });
+      runtime.request({ value: 'ready', spec: { type: 'interval' } });
+
+      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
+      expect(observe).toHaveBeenCalledWith(host);
+      resize?.([], {} as ResizeObserver);
+      expect(g2Mock.Chart.instances[0]?.forceFit).not.toHaveBeenCalled();
+      pendingRender.resolve();
+      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce());
+
+      runtime.dispose();
+      resize?.([], {} as ResizeObserver);
+      await Promise.resolve();
+
+      expect(disconnect).toHaveBeenCalledOnce();
+      expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce();
+    } finally {
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(window, 'ResizeObserver');
+      } else {
+        Object.defineProperty(window, 'ResizeObserver', descriptor);
+      }
+    }
+  });
+
   it('isolates a throwing settlement callback and still processes the next request', async () => {
     const host = document.createElement('div');
     document.body.append(host);
@@ -246,6 +300,66 @@ describe('G2 chart runtime', () => {
 
     await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce());
     expect(settled).not.toHaveBeenCalled();
+  });
+
+  it('reinitializes after a failed constructor boundary when a new request arrives', async () => {
+    const settled = vi.fn();
+    g2Mock.Chart.onError = new Error('private event registration failure');
+    const runtime = createG2ChartRuntime<string>({
+      container: document.body,
+      events: [{ name: 'plot:pointerdown', listener: vi.fn() }],
+      onRenderSettled: settled,
+    });
+    runtime.request({ value: 'failed', spec: { type: 'interval' } });
+    await vi.waitFor(() =>
+      expect(settled).toHaveBeenCalledWith({
+        value: 'failed',
+        status: 'failure',
+        latest: true,
+      }),
+    );
+
+    g2Mock.Chart.onError = undefined;
+    runtime.request({ value: 'retry', spec: { type: 'interval' } });
+
+    await vi.waitFor(() =>
+      expect(settled).toHaveBeenLastCalledWith({
+        value: 'retry',
+        status: 'success',
+        latest: true,
+      }),
+    );
+    expect(g2Mock.Chart.instances).toHaveLength(2);
+    runtime.dispose();
+  });
+
+  it('reinitializes when an initialization failure callback synchronously queues a newer request', async () => {
+    const settled = vi.fn();
+    g2Mock.Chart.onError = new Error('private event registration failure');
+    const runtime = createG2ChartRuntime<string>({
+      container: document.body,
+      events: [{ name: 'plot:pointerdown', listener: vi.fn() }],
+      onRenderSettled: settlement => {
+        settled(settlement);
+        if (settlement.value === 'failed') {
+          g2Mock.Chart.onError = undefined;
+          runtime.request({ value: 'retry', spec: { type: 'interval' } });
+        }
+      },
+    });
+    runtime.request({ value: 'failed', spec: { type: 'interval' } });
+
+    await vi.waitFor(() =>
+      expect(settled).toHaveBeenLastCalledWith({
+        value: 'retry',
+        status: 'success',
+        latest: true,
+      }),
+    );
+    expect(g2Mock.Chart.instances).toHaveLength(2);
+    expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
+    expect(g2Mock.Chart.instances[1]?.render).toHaveBeenCalledOnce();
+    runtime.dispose();
   });
 
   it('unregisters events that succeeded before a later registration failure', async () => {

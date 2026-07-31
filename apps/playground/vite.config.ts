@@ -25,10 +25,22 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: '@tellplot/core',
+        replacement: fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
+      },
+      {
+        find: '@tellplot/react/styles.css',
+        replacement: fileURLToPath(new URL('../../packages/react/src/styles.css', import.meta.url)),
+      },
+      {
         find: '@tellplot/editor/styles.css',
         replacement: fileURLToPath(
           new URL('../../packages/editor/src/styles/editor.css', import.meta.url),
         ),
+      },
+      {
+        find: '@tellplot/react',
+        replacement: fileURLToPath(new URL('../../packages/react/src/index.tsx', import.meta.url)),
       },
       {
         find: '@tellplot/editor',

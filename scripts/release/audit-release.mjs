@@ -1,14 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, extname, relative, resolve } from 'node:path';
 
-import ts from 'typescript';
-
+import {
+  collectPublicSurface,
+  packageContracts,
+  validatePackageContract,
+  workspacePackageEntries,
+} from './package-contracts.mjs';
 import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
 
 const findings = [];
-const packagePath = resolve(repositoryRoot, 'packages/editor/package.json');
-const packageManifest = JSON.parse(readFileSync(packagePath, 'utf8'));
-const publishConfig = packageManifest.publishConfig ?? {};
+const packageEntries = workspacePackageEntries(repositoryRoot);
+const publicSurfaceCounts = {};
 const requiredFiles = [
   'README.md',
   'CHANGELOG.md',
@@ -23,71 +26,50 @@ const requiredFiles = [
   'docs/errors.md',
   'docs/migration.md',
   'docs/versioning.md',
-  'packages/editor/README.md',
-  'packages/editor/LICENSE',
+  ...packageContracts.flatMap(({ directory }) => [
+    `packages/${directory}/README.md`,
+    `packages/${directory}/LICENSE`,
+  ]),
   '.github/ISSUE_TEMPLATE/bug_report.yml',
   '.github/ISSUE_TEMPLATE/feature_request.yml',
   '.github/ISSUE_TEMPLATE/config.yml',
   '.github/pull_request_template.md',
 ];
 
-if (packageManifest.version !== '1.0.0') {
-  findings.push(`package version must be 1.0.0, received ${String(packageManifest.version)}`);
+for (const contract of packageContracts) {
+  const packageRoot = resolve(repositoryRoot, 'packages', contract.directory);
+  const manifestPath = resolve(packageRoot, 'package.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  const publishConfig = manifest.publishConfig ?? {};
+
+  if (manifest.name !== contract.name) {
+    findings.push(`${contract.directory} package name must be ${contract.name}`);
+  }
+  if (manifest.version !== '1.0.0' || !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))) {
+    findings.push(`${contract.name} version must be stable 1.0.0`);
+  }
+  if (publishConfig.access !== 'public') {
+    findings.push(`${contract.name} publishConfig.access must be public`);
+  }
+  if (publishConfig.registry !== 'https://registry.npmjs.org/') {
+    findings.push(`${contract.name} must use the official npm registry`);
+  }
+  if (!Array.isArray(manifest.files) || !manifest.files.includes('dist')) {
+    findings.push(`${contract.name} must publish only its dist allowlist plus npm metadata`);
+  }
+
+  const surface = collectPublicSurface(resolve(packageRoot, contract.entry), { packageEntries });
+  publicSurfaceCounts[contract.name] = {
+    runtime: surface.runtime.length,
+    types: surface.types.length,
+  };
+  findings.push(...validatePackageContract(manifest, surface, contract));
 }
-if (!/^\d+\.\d+\.\d+$/u.test(String(packageManifest.version))) {
-  findings.push('package version must not contain a prerelease suffix');
-}
-if (publishConfig.access !== 'public') {
-  findings.push('package publishConfig.access must be public');
-}
-if (publishConfig.registry !== 'https://registry.npmjs.org/') {
-  findings.push('package publishConfig.registry must use the official npm registry');
-}
+
 for (const path of requiredFiles) {
   if (!existsSync(resolve(repositoryRoot, path))) {
     findings.push(`missing public file: ${path}`);
   }
-}
-
-const publicEntryPath = resolve(repositoryRoot, 'packages/editor/src/index.ts');
-const publicEntryText = readFileSync(publicEntryPath, 'utf8');
-const publicEntry = ts.createSourceFile(
-  publicEntryPath,
-  publicEntryText,
-  ts.ScriptTarget.Latest,
-  true,
-  ts.ScriptKind.TS,
-);
-const runtimeExports = [];
-for (const statement of publicEntry.statements) {
-  if (
-    ts.isExportDeclaration(statement) &&
-    !statement.isTypeOnly &&
-    statement.exportClause !== undefined &&
-    ts.isNamedExports(statement.exportClause)
-  ) {
-    for (const element of statement.exportClause.elements) {
-      if (!element.isTypeOnly) {
-        runtimeExports.push(element.name.text);
-      }
-    }
-  }
-}
-const expectedRuntimeExports = [
-  'ChartEditor',
-  'createEditorSession',
-  'createInitialViewSpec',
-  'executeCommand',
-  'parseViewSpec',
-  'redoSession',
-  'serializeViewSpec',
-  'undoSession',
-  'validateChartConfig',
-  'validateSourceData',
-  'validateViewSpec',
-].sort();
-if (JSON.stringify(runtimeExports.sort()) !== JSON.stringify(expectedRuntimeExports)) {
-  findings.push('runtime exports do not match the stable 1.x allowlist');
 }
 
 const markdownFiles = [
@@ -99,7 +81,7 @@ const markdownFiles = [
     'SECURITY.md',
     'CODE_OF_CONDUCT.md',
     'SUPPORT.md',
-    'packages/editor/README.md',
+    ...packageContracts.map(({ directory }) => `packages/${directory}/README.md`),
   ].map(path => resolve(repositoryRoot, path)),
 ];
 const linkPattern = /\[[^\]]*\]\(([^)]+)\)/gu;
@@ -117,7 +99,7 @@ for (const markdownPath of markdownFiles) {
   }
 }
 
-const auditRoots = ['apps', 'docs', 'packages/editor/src', 'scripts', '.github'].map(path =>
+const auditRoots = ['apps', 'docs', 'packages', 'scripts', '.github'].map(path =>
   resolve(repositoryRoot, path),
 );
 const governanceAuditExtensions = new Set(['.json', '.md', '.patch', '.yaml', '.yml']);
@@ -125,11 +107,12 @@ const governanceAuditFiles = walkFiles(resolve(repositoryRoot, '.ai-platform')).
   governanceAuditExtensions.has(extname(path)),
 );
 const auditFiles = [
-  ...auditRoots.flatMap(path => walkFiles(path, { excludedNames: ['dist'] })),
+  ...auditRoots.flatMap(path =>
+    walkFiles(path, { excludedNames: ['dist', 'node_modules', 'coverage'] }),
+  ),
   ...governanceAuditFiles,
   ...requiredFiles.slice(0, 6).map(path => resolve(repositoryRoot, path)),
   resolve(repositoryRoot, 'package.json'),
-  packagePath,
 ];
 const sensitivePatterns = [
   { name: 'private key marker', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/u },
@@ -155,8 +138,9 @@ if (findings.length > 0) {
     `${JSON.stringify(
       {
         status: 'passed',
-        version: packageManifest.version,
-        runtimeExports: expectedRuntimeExports.length,
+        version: '1.0.0',
+        packages: packageContracts.map(({ name }) => name),
+        publicSurface: publicSurfaceCounts,
         publicFiles: requiredFiles.length,
         markdownFiles: markdownFiles.length,
         auditedFiles: new Set(auditFiles).size,

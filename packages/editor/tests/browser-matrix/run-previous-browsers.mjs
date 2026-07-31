@@ -17,6 +17,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createProcessLifecycle } from '../helpers/processLifecycle.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE = resolve(HERE, '../../../..');
 const ROOT_E2E = join(WORKSPACE, 'e2e');
@@ -67,6 +69,7 @@ const MATRIX_DEFINITIONS = [
   },
 ];
 const collectOnly = process.argv.includes('--collect-only');
+const lifecycle = createProcessLifecycle('previous-browser-matrix');
 
 function displayCommand(command, args, cwd, matrixId) {
   const location = relative(WORKSPACE, cwd) || '.';
@@ -78,36 +81,32 @@ async function run(command, args, options) {
   displayCommand(command, args, options.cwd, options.matrixId);
   await new Promise((resolvePromise, rejectPromise) => {
     let timedOut = false;
-    let forceKillTimeout;
-    const child = spawn(command, args, {
-      cwd: options.cwd,
-      env: options.env ?? process.env,
-      stdio: 'inherit',
-    });
+    const processGroup = process.platform !== 'win32';
+    const child = lifecycle.trackProcess(
+      spawn(command, args, {
+        cwd: options.cwd,
+        detached: processGroup,
+        env: options.env ?? process.env,
+        stdio: 'inherit',
+      }),
+      processGroup,
+    );
     const timeout =
       options.timeoutMs === undefined
         ? undefined
         : setTimeout(() => {
             timedOut = true;
-            child.kill('SIGTERM');
-            forceKillTimeout = setTimeout(() => child.kill('SIGKILL'), 5_000);
-            forceKillTimeout.unref();
+            void lifecycle.stopProcess(child, processGroup).catch(rejectPromise);
           }, options.timeoutMs);
     child.once('error', error => {
       if (timeout !== undefined) {
         clearTimeout(timeout);
-      }
-      if (forceKillTimeout !== undefined) {
-        clearTimeout(forceKillTimeout);
       }
       rejectPromise(error);
     });
     child.once('exit', (code, signal) => {
       if (timeout !== undefined) {
         clearTimeout(timeout);
-      }
-      if (forceKillTimeout !== undefined) {
-        clearTimeout(forceKillTimeout);
       }
       if (timedOut) {
         rejectPromise(
@@ -147,6 +146,7 @@ async function availablePort() {
 async function waitForPreview(url, child) {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
+    lifecycle.throwIfTerminationRequested();
     if (child.exitCode !== null) {
       throw new Error(`Vite preview exited before becoming ready: ${child.exitCode}`);
     }
@@ -161,39 +161,6 @@ async function waitForPreview(url, child) {
     await new Promise(resolvePromise => setTimeout(resolvePromise, 100));
   }
   throw new Error(`Vite preview did not become ready at ${url}`);
-}
-
-async function stopProcess(child) {
-  if (child === undefined || child.exitCode !== null || child.signalCode !== null) {
-    return;
-  }
-  const signalTree = signal => {
-    if (process.platform !== 'win32' && child.pid !== undefined) {
-      try {
-        process.kill(-child.pid, signal);
-      } catch (error) {
-        if (error?.code !== 'ESRCH') {
-          throw error;
-        }
-      }
-      return;
-    }
-    child.kill(signal);
-  };
-  const waitForExit = timeoutMs => {
-    if (child.exitCode !== null || child.signalCode !== null) {
-      return Promise.resolve(true);
-    }
-    return Promise.race([
-      new Promise(resolvePromise => child.once('exit', () => resolvePromise(true))),
-      new Promise(resolvePromise => setTimeout(() => resolvePromise(false), timeoutMs)),
-    ]);
-  };
-  signalTree('SIGTERM');
-  if (!(await waitForExit(5_000))) {
-    signalTree('SIGKILL');
-    await waitForExit(5_000);
-  }
 }
 
 async function copyFixture(matrix, directory) {
@@ -220,6 +187,7 @@ async function writeConfig(matrix, directory) {
   const config = `import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.TELLPLOT_PREVIOUS_BASE_URL ?? 'http://127.0.0.1:4174';
+const retryDiagnostics = process.env.CI ? 'on-first-retry' : 'off';
 
 export default defineConfig({
   testDir: './e2e',
@@ -231,8 +199,8 @@ export default defineConfig({
   use: {
     baseURL,
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    trace: retryDiagnostics,
+    video: retryDiagnostics,
   },
   projects: [
 ${projects}
@@ -409,9 +377,13 @@ async function assertProjectNodeRuntime() {
 async function prepareMatrix(matrix, temporaryRoot) {
   const directory = join(temporaryRoot, matrix.id);
   const specs = await copyFixture(matrix, directory);
+  lifecycle.throwIfTerminationRequested();
   await writeConfig(matrix, directory);
+  lifecycle.throwIfTerminationRequested();
   await installFixture(matrix, directory);
+  lifecycle.throwIfTerminationRequested();
   await verifyBrowserMetadata(matrix, directory);
+  lifecycle.throwIfTerminationRequested();
   return { directory, matrix, specs };
 }
 
@@ -420,9 +392,25 @@ async function main() {
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'tellplot-previous-browser-matrix-'));
   const preparedMatrices = [];
   let preview;
+  let cleanupPromise;
+  const cleanup = () =>
+    (cleanupPromise ??= (async () => {
+      try {
+        await lifecycle.stopActiveProcesses();
+      } finally {
+        await rm(temporaryRoot, {
+          force: true,
+          maxRetries: 5,
+          recursive: true,
+          retryDelay: 100,
+        });
+      }
+    })());
+  lifecycle.installSignalCleanup();
   try {
     for (const matrix of MATRIX_DEFINITIONS) {
       preparedMatrices.push(await prepareMatrix(matrix, temporaryRoot));
+      lifecycle.throwIfTerminationRequested();
     }
 
     if (collectOnly) {
@@ -432,6 +420,7 @@ async function main() {
           '--config=playwright.config.mjs',
           '--list',
         ]);
+        lifecycle.throwIfTerminationRequested();
         console.log(
           `[previous-browser-matrix:${prepared.matrix.id}] collected ${prepared.specs.length} non-performance specs with Playwright ${prepared.matrix.playwrightVersion}`,
         );
@@ -442,35 +431,43 @@ async function main() {
     if (process.env.TELLPLOT_PREVIOUS_SKIP_BROWSER_INSTALL !== '1') {
       for (const prepared of preparedMatrices) {
         await installBrowsers(prepared.matrix, prepared.directory);
+        lifecycle.throwIfTerminationRequested();
       }
     }
     for (const prepared of preparedMatrices) {
       await verifyLaunchedBrowserVersions(prepared.matrix, prepared.directory);
+      lifecycle.throwIfTerminationRequested();
     }
     await run('pnpm', ['build'], { cwd: WORKSPACE });
+    lifecycle.throwIfTerminationRequested();
 
     const port = await availablePort();
+    lifecycle.throwIfTerminationRequested();
     const baseURL = `http://127.0.0.1:${port}`;
-    preview = spawn(
-      'pnpm',
-      [
-        '--filter',
-        '@tellplot/playground',
-        'exec',
-        'vite',
-        'preview',
-        '--host',
-        '127.0.0.1',
-        '--port',
-        String(port),
-        '--strictPort',
-      ],
-      {
-        cwd: WORKSPACE,
-        detached: process.platform !== 'win32',
-        env: process.env,
-        stdio: 'inherit',
-      },
+    const previewProcessGroup = process.platform !== 'win32';
+    preview = lifecycle.trackProcess(
+      spawn(
+        'pnpm',
+        [
+          '--filter',
+          '@tellplot/playground',
+          'exec',
+          'vite',
+          'preview',
+          '--host',
+          '127.0.0.1',
+          '--port',
+          String(port),
+          '--strictPort',
+        ],
+        {
+          cwd: WORKSPACE,
+          detached: previewProcessGroup,
+          env: process.env,
+          stdio: 'inherit',
+        },
+      ),
+      previewProcessGroup,
     );
     await waitForPreview(baseURL, preview);
     for (const prepared of preparedMatrices) {
@@ -480,15 +477,21 @@ async function main() {
         ['test', '--config=playwright.config.mjs'],
         { env: { ...process.env, TELLPLOT_PREVIOUS_BASE_URL: baseURL } },
       );
+      lifecycle.throwIfTerminationRequested();
     }
   } catch (error) {
-    for (const prepared of preparedMatrices) {
-      await preserveDiagnostics(prepared.matrix, prepared.directory);
+    if (lifecycle.receivedSignal === undefined) {
+      for (const prepared of preparedMatrices) {
+        await preserveDiagnostics(prepared.matrix, prepared.directory);
+      }
+      throw error;
     }
-    throw error;
   } finally {
-    await stopProcess(preview);
-    await rm(temporaryRoot, { force: true, recursive: true });
+    try {
+      await cleanup();
+    } finally {
+      lifecycle.finishCleanup();
+    }
   }
 }
 

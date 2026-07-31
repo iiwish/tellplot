@@ -16,7 +16,8 @@ import { writeClipboard } from './clipboard';
 import { ShowcaseChart } from './ShowcaseChart';
 import { SiteFooter } from './SiteFooter';
 
-const INSTALL_COMMAND = 'pnpm add @tellplot/editor @antv/g2';
+const INSTALL_COMMAND =
+  'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom';
 
 const DATA_FLOW = [
   {
@@ -45,14 +46,15 @@ const DATA_FLOW = [
   },
 ] as const;
 
-const CONFIG_EXAMPLE = `import { ChartEditor } from '@tellplot/editor';
-import '@tellplot/editor/styles.css';
+const CONFIG_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
+import { ChartEditor } from '@tellplot/react';
+import '@tellplot/react/styles.css';
 import { revenueData } from './revenue.data';
 
 const config = {
   type: 'column',
   data: revenueData,
-} as const;
+} as const satisfies ChartConfig;
 
 export function RevenueChart() {
   return <ChartEditor config={config} />;
@@ -105,7 +107,7 @@ export function HomePage(): React.JSX.Element {
               <div className="site-home-hero__pitch">
                 <p className="site-home-hero__lead">让图表不止被看见，也能被编辑。</p>
                 <p>
-                  面向 React 的轻量可编辑图表库。一份声明式配置，让排序、分组、撤销与导出保持一致。
+                  框架无关的轻量可编辑图表库。DOM、React 与 Vue 共用一套排序、分组、撤销和导出能力。
                 </p>
                 <div className="site-home-hero__actions">
                   <a
@@ -209,7 +211,7 @@ export function HomePage(): React.JSX.Element {
                   <Code2 size={16} aria-hidden="true" />
                   RevenueChart.tsx
                 </span>
-                <small>React · TypeScript</small>
+                <small>DOM · React · Vue · TypeScript</small>
               </div>
               <pre tabIndex={0} aria-label="可横向滚动的 TypeScript 配置代码">
                 <code>

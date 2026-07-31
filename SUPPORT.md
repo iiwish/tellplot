@@ -7,7 +7,7 @@
 
 ## Before Opening An Issue
 
-1. 确认使用受支持的 React、G2、Node 和浏览器版本。
+1. 确认使用受支持的 framework adapter、G2、Node 和浏览器版本。
 2. 阅读 [入门](docs/getting-started.md)、[API](docs/api.md)、[错误处理](docs/errors.md) 和
    [迁移说明](docs/migration.md)。
 3. 使用 `validateChartConfig`、`validateSourceData` 或 `validateViewSpec` 获取脱敏错误路径。

@@ -2,15 +2,15 @@
 
 ## Metadata
 
-- Version: 1.0.0
+- Version: 1.1.0
 - Status: Confirmed
-- Last updated: 2026-07-23
-- Approval: 用户已确认轻量可编辑基础图表库定位、声明式公共配置 API 与 1.0.0 稳定版目标
+- Last updated: 2026-07-29
+- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构与首个公开稳定版目标
 
 ## Product Positioning
 
-TellPlot 是基于 AntV G2 的轻量、可嵌入、可编辑基础图表库。它面向需要稳定业务图表能力的 React
-应用，提供经过封装的数据合同、图表组件、直接操作、结构编辑、历史、导出和安全语义配置。
+TellPlot 是基于 AntV G2 的轻量、可嵌入、可编辑基础图表库。它面向需要稳定业务图表能力的 Web
+应用，提供经过封装的数据合同、框架无关编辑器 runtime、直接操作、结构编辑、历史、导出和安全语义配置。
 
 G2 是唯一图表渲染与图形动画引擎。TellPlot 不复制 G2 的绘制、场景图、比例尺或动画系统，也不以
 替代 G2、建设通用 BI 平台或提供任意图表插件框架为目标。
@@ -26,10 +26,13 @@ registry、通用 adapter 或公共扩展协议。
 
 ## Delivery Form
 
-项目交付 `@tellplot/editor` React 组件包和薄参考编辑器：
+项目交付框架无关核心、imperative 编辑器 runtime、React/Vue 薄适配包和参考编辑器：
 
-- 组件包通过 `ChartEditor` 和判别式 `ChartConfig` 提供数据、呈现和编辑器配置，并拥有图表投影、
-  G2 spec、交互、历史、持久化、导出和公共类型。
+- `@tellplot/core` 拥有数据合同、配置、命令、历史、投影、不变量和持久化，不依赖 DOM 或 UI 框架。
+- `@tellplot/editor` 通过 `createEditor(container, options)` 提供完整编辑器、G2 生命周期、交互、导出和
+  框架无关宿主合同，不依赖 React 或 Vue。
+- `@tellplot/react` 与 `@tellplot/vue` 只映射宿主生命周期、属性、事件和实例方法，不拥有第二套领域状态、
+  图表 runtime 或编辑行为。
 - 参考编辑器只提供示例数据、功能演示和视觉验收，不复制领域状态或业务逻辑。
 - 开源官网在参考应用中提供品牌首页、真实图表示例目录、开发者文档入口和在线工作台；它只消费公共组件，
   不进入核心包或图表运行时。
@@ -38,9 +41,10 @@ registry、通用 adapter 或公共扩展协议。
 
 ## Target Users
 
-### TU-001 React 应用开发者
+### TU-001 Web 应用开发者
 
-需要在业务系统中快速嵌入稳定、可配置、可导出的图表，而不直接维护 G2 生命周期、事件和导出细节。
+需要在原生 DOM、React 或 Vue 业务系统中快速嵌入稳定、可配置、可导出的图表，而不直接维护 G2
+生命周期、事件和导出细节。
 
 ### TU-002 财务分析与汇报用户
 
@@ -50,7 +54,7 @@ registry、通用 adapter 或公共扩展协议。
 
 ### JTBD-001 快速嵌入基础图表
 
-开发者可以使用类型化数据和配置创建图表，并在 React 18/19 宿主中可靠地安装、渲染、更新和卸载。
+开发者可以使用类型化数据和配置创建图表，并在原生 DOM、React 或 Vue 宿主中可靠地创建、更新和销毁。
 
 ### JTBD-002 调整图表叙事顺序
 
@@ -88,7 +92,7 @@ registry、通用 adapter 或公共扩展协议。
 
 ### US-006 宿主集成
 
-开发者可以通过类型化属性、回调和命令把图表接入 React 应用，而不操作 G2 instance。
+开发者可以通过 imperative API 或框架适配组件把图表接入 Web 应用，而不操作 G2 instance。
 
 ### US-007 图表输出
 
@@ -96,9 +100,10 @@ registry、通用 adapter 或公共扩展协议。
 
 ## Core User Journey
 
-1. 宿主应用向 `ChartEditor` 传入声明图表类型、数据、外观和编辑能力的 `ChartConfig`。
+1. 宿主应用向 `createEditor` 或框架适配组件传入声明图表类型、数据、外观和编辑能力的 `ChartConfig`。
 2. TellPlot 创建确定的初始 `ViewSpec` 并通过 G2 渲染图表。
-3. 用户通过图表或结构大纲调整顺序、分组、折叠和强调。
+3. 用户通过图表或结构大纲调整顺序、分组和折叠，通过 Inspector 编辑注释；宿主可以在 `ViewSpec`
+   中提供强调状态。
 4. 系统通过同一套类型化命令校验并提交变更。
 5. 用户撤销、重做、保存视图或导出 SVG/PNG。
 
@@ -143,7 +148,8 @@ registry、通用 adapter 或公共扩展协议。
 
 ### FR-010 宿主控制
 
-宿主可以通过公共组件属性、回调和类型化命令控制图表。核心包不连接外部业务服务或提供自动执行层。
+宿主可以通过 imperative editor instance、框架适配组件、事件和类型化命令控制图表。核心包不连接
+外部业务服务或提供自动执行层。
 
 ### FR-011 保存与加载
 
@@ -174,15 +180,16 @@ Tooltip、数字格式和动画。标签配置保持可序列化，不接受任�
 
 ### FR-016 声明式公共配置
 
-公共 React 入口使用 `ChartEditor` 和以 `type` 判别的 `ChartConfig`。图表配置承载宿主意图，
-`ViewSpec` 独立承载排序、分组、折叠、固定、注释和强调；普通接入不要求手工初始化视图。TypeScript
-和 `validateChartConfig` 必须拒绝图表家族、数据和配置字段冲突。
+框架无关入口使用 `createEditor(container, options)` 和以 `type` 判别的 `ChartConfig`；React/Vue
+适配层提供同语义的 `ChartEditor`。图表配置承载宿主意图，`ViewSpec` 独立承载排序、分组、折叠、固定、
+注释和强调；普通接入不要求手工初始化视图。TypeScript 和 `validateChartConfig` 必须拒绝图表家族、
+数据和配置字段冲突。
 
 ### FR-017 稳定版合同
 
-`@tellplot/editor@1.0.0` 对文档化的 runtime/type/schema/error/peer/browser 表面遵循 Semantic
-Versioning。1.x 不进行 breaking public API 或 schema 变更；弃用至少跨一个 minor，并提供替代路径、
-迁移说明和兼容测试。
+首个公开稳定版对文档化的 core/editor/react/vue runtime、type、schema、error、peer 和 browser 表面遵循
+Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包袱；公开 1.x 不进行 breaking public API
+或 schema 变更，弃用至少跨一个 minor，并提供替代路径、迁移说明和兼容测试。
 
 ## Non-Functional Requirements
 
@@ -213,7 +220,8 @@ Versioning。1.x 不进行 breaking public API 或 schema 变更；弃用至少�
 
 ### NFR-007 包兼容性
 
-公共包提供 ESM、CJS 和类型声明，验证 React 18/19、当前及上一发布浏览器，并保持 G2 为明确依赖边界。
+公共包提供 ESM、CJS 和类型声明，验证 imperative DOM、React 18/19、Vue 3、当前及上一发布浏览器，
+并保持 G2 为明确依赖边界。`@tellplot/core` 与 `@tellplot/editor` 的安装和运行合同不得包含 React 或 Vue。
 
 ## Current Scope
 
@@ -221,10 +229,10 @@ Versioning。1.x 不进行 breaking public API 或 schema 变更；弃用至少�
 - 图表渲染、更新动画、直接排序和结构大纲。
 - 分组、取消分组、折叠、展开、固定、撤销和重做。
 - `SourceData`、`ViewSpec`、确定性命令和持久化。
-- `ChartEditor`、`ChartConfig`、运行时配置校验，以及标题、颜色、坐标轴、标签、Tooltip、数字格式和动画配置。
+- `createEditor`、React/Vue `ChartEditor`、`ChartConfig`、运行时配置校验，以及标题、颜色、坐标轴、标签、Tooltip、数字格式和动画配置。
 - 展开分组区域配置、上下文分组操作和跨层级语义拖拽。
 - SVG、PNG 和 ViewSpec JSON 导出。
-- React 组件包、薄参考编辑器和发布候选质量门禁。
+- 框架无关 core/editor、React/Vue 薄适配包、参考编辑器和发布候选质量门禁。
 - 真实图表驱动的开源官网、示例中心、开发者文档入口和在线工作台。
 
 ## Expansion Policy
@@ -252,7 +260,7 @@ Versioning。1.x 不进行 breaking public API 或 schema 变更；弃用至少�
 - SC-001：当前三个图表家族的主流程、失败路径和财务不变量测试全部通过。
 - SC-002：200 个可见项目的真实浏览器重排满足 150ms 反馈预算。
 - SC-003：屏幕、SVG、PNG 和无障碍摘要保持顺序与显示语义一致。
-- SC-004：公共包通过 ESM、CJS、类型、React 和浏览器兼容矩阵。
+- SC-004：公共包通过 ESM、CJS、类型、imperative DOM、React、Vue 和浏览器兼容矩阵。
 - SC-005：新增图表不要求宿主接触 G2 instance 或复制 TellPlot 内部生命周期。
 - SC-006：核心包不存在模型调用、外部业务请求或未经授权的数据发送。
 - SC-007：最小瀑布图、条形图和柱状图接入只需要一份 `ChartConfig`；公共配置与可编辑视图状态边界明确。
@@ -262,7 +270,7 @@ Versioning。1.x 不进行 breaking public API 或 schema 变更；弃用至少�
 
 ### CD-001 交付形态
 
-交付可嵌入 React 组件包与薄参考编辑器，不建设独立 SaaS。
+交付框架无关 core/editor、React/Vue 薄适配包与参考编辑器，不建设独立 SaaS。
 
 ### CD-002 导出边界
 
@@ -292,16 +300,17 @@ breaking API、schema、依赖、远程 Git 和发布仍是独立人工闸门。
 
 ### CD-008 展示网站边界
 
-官网与示例中心是 `apps/playground` 的开发者体验层，只消费 `@tellplot/editor` 公共 API。网站内容目录不是
+官网与示例中心是 `apps/playground` 的开发者体验层，只消费 `@tellplot/core` 与 `@tellplot/react` 公共 API。网站内容目录不是
 核心图表 registry，不向公共包增加路由、文档、动画或在线执行依赖。
 
 ### CD-009 公共配置入口
 
-公共组件使用 `ChartEditor`；`ChartConfig` 收纳 `type`、`data`、`appearance`、`editor`、`locale` 和
-`height`，受控状态使用 `view`、`defaultView` 与 `onViewChange`。内部适配层保留领域模型和 G2
+公共 imperative 入口使用 `createEditor`，React/Vue 入口使用 `ChartEditor`；`ChartConfig` 收纳 `type`、
+`data`、`appearance`、`editor`、`locale` 和 `height`，受控状态使用 `view`、`defaultView` 与更新事件。
+core/editor 保留领域模型和 G2
 ownership，不提供 raw `G2Spec`。
 
 ### CD-010 稳定版本
 
-首个稳定包版本为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
+四个公共包的首个稳定版本均为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
 作为稳定条件。公开发布只允许来自后续授权的干净 commit；本地稳定候选不等于 npm/GitHub/网站已发布。

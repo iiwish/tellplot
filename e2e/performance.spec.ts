@@ -19,12 +19,19 @@ interface CanvasSignatureRegion {
   readonly maxXRatio: number;
 }
 
+interface ExpectedEditorState {
+  readonly expectedRevision: number;
+  readonly expectedPrefix: readonly string[];
+  readonly expectedKey: 'ArrowDown' | 'ArrowUp';
+}
+
 interface PerformanceWindow extends Window {
+  __tellplotAnimationFrames?: number;
   __tellplotRootCommits?: number;
   __tellplotPointerMoves?: number;
   __tellplotPerf?: {
     samples: number[];
-    start: number | null;
+    pending: Promise<number> | null;
   };
   __tellplotPointerLifecycle?: string[];
 }
@@ -52,6 +59,7 @@ async function installReactCommitProbe(page: Page): Promise<void> {
         }
         const type = fiber.type;
         const typeObject = objectValue(type);
+        const render = typeObject?.render;
         const name =
           typeof type === 'function'
             ? type.name
@@ -59,8 +67,10 @@ async function installReactCommitProbe(page: Page): Promise<void> {
               ? typeObject.displayName
               : typeof typeObject?.name === 'string'
                 ? typeObject.name
-                : '';
-        if (name === 'FinancialChartEditor') {
+                : typeof render === 'function'
+                  ? render.name
+                  : '';
+        if (name === 'TellPlotChartEditor' || name === 'ChartEditor') {
           return true;
         }
         const child = objectValue(fiber.child);
@@ -260,7 +270,7 @@ async function installLatencyProbe(page: Page): Promise<void> {
     const performanceWindow = window as PerformanceWindow;
     performanceWindow.__tellplotPerf = {
       samples: [],
-      start: null,
+      pending: null,
     };
   });
 }
@@ -295,19 +305,86 @@ async function canvasPixelSignature(
   }, region);
 }
 
-async function recordFirstVisibleCanvasUpdate(
+async function waitForStableCanvas(
   canvas: Locator,
-  previousSignature: number,
   region: CanvasSignatureRegion,
 ): Promise<number> {
   return canvas.evaluate(
+    (element, targetRegion) =>
+      new Promise<number>((resolve, reject) => {
+        if (!(element instanceof HTMLCanvasElement)) {
+          reject(new Error('Performance target is not a canvas'));
+          return;
+        }
+        const context = element.getContext('2d');
+        if (context === null) {
+          reject(new Error('Performance canvas does not expose a 2D context'));
+          return;
+        }
+        const minX = Math.max(0, Math.floor(targetRegion.minXRatio * element.width));
+        const maxX = Math.min(element.width - 1, Math.ceil(targetRegion.maxXRatio * element.width));
+        const signature = (): number => {
+          const pixels = context.getImageData(
+            minX,
+            0,
+            Math.max(1, maxX - minX + 1),
+            element.height,
+          ).data;
+          let hash = 2166136261;
+          for (let offset = 0; offset < pixels.length; offset += 4) {
+            hash ^= pixels[offset] ?? 0;
+            hash = Math.imul(hash, 16777619);
+            hash ^= pixels[offset + 1] ?? 0;
+            hash = Math.imul(hash, 16777619);
+            hash ^= pixels[offset + 2] ?? 0;
+            hash = Math.imul(hash, 16777619);
+            hash ^= pixels[offset + 3] ?? 0;
+            hash = Math.imul(hash, 16777619);
+          }
+          return hash >>> 0;
+        };
+        const deadline = performance.now() + 2_000;
+        let previousSignature = signature();
+        let stableFrameCount = 0;
+        const inspect = (): void => {
+          const inspectedAt = performance.now();
+          const currentSignature = signature();
+          if (currentSignature === previousSignature) {
+            stableFrameCount += 1;
+          } else {
+            previousSignature = currentSignature;
+            stableFrameCount = 0;
+          }
+          if (stableFrameCount >= 4) {
+            resolve(currentSignature);
+            return;
+          }
+          if (inspectedAt >= deadline) {
+            reject(new Error('Canvas did not remain stable across four animation frames'));
+            return;
+          }
+          requestAnimationFrame(inspect);
+        };
+        requestAnimationFrame(inspect);
+      }),
+    region,
+  );
+}
+
+async function armFirstVisibleCanvasUpdate(
+  canvas: Locator,
+  previousSignature: number,
+  region: CanvasSignatureRegion,
+  expectedState: ExpectedEditorState,
+): Promise<void> {
+  await canvas.evaluate(
     (element, input) => {
       if (!(element instanceof HTMLCanvasElement)) {
         throw new Error('Performance target is not a canvas');
       }
       const context = element.getContext('2d');
       const metric = (window as PerformanceWindow).__tellplotPerf;
-      if (context === null || metric === undefined || metric.start === null) {
+      if (context === null || metric === undefined || metric.pending !== null) {
         throw new Error('Visible performance probe is not initialized');
       }
       const minX = Math.max(0, Math.floor(input.region.minXRatio * element.width));
@@ -332,29 +409,81 @@ async function recordFirstVisibleCanvasUpdate(
         }
         return hash >>> 0;
       };
-      const startedAt = metric.start;
-      return new Promise<number>((resolve, reject) => {
-        const deadline = startedAt + 1_000;
-        const inspect = (): void => {
-          const inspectedAt = performance.now();
-          if (signature() !== input.expectedSignature) {
-            const elapsed = inspectedAt - startedAt;
-            metric.samples.push(elapsed);
-            metric.start = null;
-            resolve(elapsed);
+      const targetStateMatches = (): boolean => {
+        const editor = document.querySelector(input.editorSelector);
+        if (
+          !(editor instanceof HTMLElement) ||
+          editor.getAttribute('data-view-revision') !== String(input.expectedRevision)
+        ) {
+          return false;
+        }
+        const rootPrefix = [
+          ...editor.querySelectorAll(
+            '[role="treeitem"][aria-level="1"][data-node-kind="contribution"]',
+          ),
+        ]
+          .slice(0, input.expectedPrefix.length)
+          .map(row => row.getAttribute('data-node-id') ?? 'missing-node-id');
+        return input.expectedPrefix.every((nodeId, index) => rootPrefix[index] === nodeId);
+      };
+      const pending = new Promise<number>((resolve, reject) => {
+        const armDeadline = window.setTimeout(() => {
+          document.removeEventListener('keydown', handleKeyDown, true);
+          reject(new Error('Performance command keydown was not observed within 1000ms'));
+        }, 1_000);
+        const handleKeyDown = (event: KeyboardEvent): void => {
+          if (!event.altKey || event.key !== input.expectedKey) {
             return;
           }
-          if (inspectedAt >= deadline) {
-            reject(new Error('Canvas did not expose a new painted frame within 1000ms'));
-            return;
-          }
-          requestAnimationFrame(inspect);
+          window.clearTimeout(armDeadline);
+          document.removeEventListener('keydown', handleKeyDown, true);
+          const startedAt = performance.now();
+          const deadline = startedAt + 1_000;
+          const inspect = (): void => {
+            const inspectedAt = performance.now();
+            if (signature() !== input.expectedSignature && targetStateMatches()) {
+              const elapsed = inspectedAt - startedAt;
+              metric.samples.push(elapsed);
+              resolve(elapsed);
+              return;
+            }
+            if (inspectedAt >= deadline) {
+              reject(new Error('Canvas did not expose a new painted frame within 1000ms'));
+              return;
+            }
+            requestAnimationFrame(inspect);
+          };
+          queueMicrotask(() => requestAnimationFrame(inspect));
         };
-        requestAnimationFrame(inspect);
+        document.addEventListener('keydown', handleKeyDown, true);
       });
+      void pending.catch(() => undefined);
+      metric.pending = pending;
     },
-    { expectedSignature: previousSignature, region },
+    {
+      editorSelector: EDITOR,
+      expectedKey: expectedState.expectedKey,
+      expectedPrefix: expectedState.expectedPrefix,
+      expectedRevision: expectedState.expectedRevision,
+      expectedSignature: previousSignature,
+      region,
+    },
   );
+}
+
+async function waitForFirstVisibleCanvasUpdate(page: Page): Promise<number> {
+  return page.evaluate(async () => {
+    const metric = (window as PerformanceWindow).__tellplotPerf;
+    if (metric === undefined || metric.pending === null) {
+      throw new Error('Visible performance probe is not armed');
+    }
+    const pending = metric.pending;
+    try {
+      return await pending;
+    } finally {
+      metric.pending = null;
+    }
+  });
 }
 
 async function rootContributionPrefix(page: Page): Promise<readonly string[]> {
@@ -365,6 +494,44 @@ async function rootContributionPrefix(page: Page): Promise<readonly string[]> {
       rows.slice(0, 3).map(row => row.getAttribute('data-node-id') ?? 'missing-node-id'),
     );
 }
+
+test('latency probe waits for an unfinished prior canvas animation to settle', async ({ page }) => {
+  await page.setContent('<canvas width="48" height="24"></canvas>');
+  const canvas = page.locator('canvas');
+  const signatureRegion: CanvasSignatureRegion = {
+    minXRatio: 0,
+    maxXRatio: 1,
+  };
+  await page.evaluate(() => {
+    const canvasElement = document.querySelector('canvas');
+    if (!(canvasElement instanceof HTMLCanvasElement)) {
+      throw new Error('Animation regression canvas is missing');
+    }
+    const context = canvasElement.getContext('2d');
+    if (context === null) {
+      throw new Error('Animation regression canvas does not expose a 2D context');
+    }
+    const performanceWindow = window as PerformanceWindow;
+    performanceWindow.__tellplotAnimationFrames = 0;
+    const animate = (): void => {
+      const frame = (performanceWindow.__tellplotAnimationFrames ?? 0) + 1;
+      performanceWindow.__tellplotAnimationFrames = frame;
+      context.fillStyle = `rgb(${String(frame * 20)}, ${String(frame * 10)}, ${String(frame * 5)})`;
+      context.fillRect(0, 0, canvasElement.width, canvasElement.height);
+      if (frame < 8) {
+        requestAnimationFrame(animate);
+      }
+    };
+    requestAnimationFrame(animate);
+  });
+
+  const stableSignature = await waitForStableCanvas(canvas, signatureRegion);
+
+  expect(
+    await page.evaluate(() => (window as PerformanceWindow).__tellplotAnimationFrames ?? 0),
+  ).toBe(8);
+  expect(stableSignature).toBe(await canvasPixelSignature(canvas, signatureRegion));
+});
 
 test('200-item chart keeps pointer feedback outside React and meets commit p95', async ({
   page,
@@ -453,6 +620,10 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
   await page.keyboard.press('Escape');
   await page.mouse.up();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
+  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
+    'data-render-state',
+    'ready',
+  );
   await page.waitForTimeout(180);
   await expect.poll(() => barSlots(canvas)).toHaveLength(202);
 
@@ -461,26 +632,28 @@ test('200-item chart keeps pointer feedback outside React and meets commit p95',
   for (let sample = 0; sample < SAMPLE_COUNT; sample += 1) {
     const expectsSwappedOrder = sample % 2 === 0;
     const nextRevision = sample + 1;
-
-    await keyboardMover.focus();
-    const previousSignature = await canvasPixelSignature(canvas, signatureRegion);
-    await page.evaluate(() => {
-      const metric = (window as PerformanceWindow).__tellplotPerf;
-      if (metric !== undefined) {
-        metric.start = performance.now();
-      }
-    });
-    await page.keyboard.press(expectsSwappedOrder ? 'Alt+ArrowDown' : 'Alt+ArrowUp');
-    await recordFirstVisibleCanvasUpdate(canvas, previousSignature, signatureRegion);
-    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', String(nextRevision));
     const expectedPrefix = expectsSwappedOrder
       ? ['perf-002', 'perf-001', 'perf-003']
       : ['perf-001', 'perf-002', 'perf-003'];
+
+    await keyboardMover.focus();
+    const previousSignature = await waitForStableCanvas(canvas, signatureRegion);
+    await armFirstVisibleCanvasUpdate(canvas, previousSignature, signatureRegion, {
+      expectedRevision: nextRevision,
+      expectedPrefix,
+      expectedKey: expectsSwappedOrder ? 'ArrowDown' : 'ArrowUp',
+    });
+    await page.keyboard.press(expectsSwappedOrder ? 'Alt+ArrowDown' : 'Alt+ArrowUp');
+    await waitForFirstVisibleCanvasUpdate(page);
+    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', String(nextRevision));
     expect(await rootContributionPrefix(page)).toEqual(expectedPrefix);
     expect(
       await page.evaluate(() => (window as PerformanceWindow).__tellplotPerf?.samples.length ?? 0),
     ).toBe(nextRevision);
-    await page.waitForTimeout(180);
+    await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
+      'data-render-state',
+      'ready',
+    );
   }
 
   const samples = await page.evaluate(
@@ -602,28 +775,34 @@ test('200-item categorical G2 chart keeps direct feedback outside React and meet
   await page.keyboard.press('Escape');
   await page.mouse.up();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
+  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
+    'data-render-state',
+    'ready',
+  );
 
   await installLatencyProbe(page);
   const keyboardMover = page.locator('[role="treeitem"][data-node-id="category-001"]');
   for (let sample = 0; sample < SAMPLE_COUNT; sample += 1) {
     const expectsSwappedOrder = sample % 2 === 0;
     const nextRevision = sample + 1;
-    await keyboardMover.focus();
-    const previousSignature = await canvasPixelSignature(canvas, signatureRegion);
-    await page.evaluate(() => {
-      const metric = (window as PerformanceWindow).__tellplotPerf;
-      if (metric !== undefined) {
-        metric.start = performance.now();
-      }
-    });
-    await page.keyboard.press(expectsSwappedOrder ? 'Alt+ArrowDown' : 'Alt+ArrowUp');
-    await recordFirstVisibleCanvasUpdate(canvas, previousSignature, signatureRegion);
-    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', String(nextRevision));
     const expectedPrefix = expectsSwappedOrder
       ? ['category-002', 'category-001', 'category-003']
       : ['category-001', 'category-002', 'category-003'];
+    await keyboardMover.focus();
+    const previousSignature = await waitForStableCanvas(canvas, signatureRegion);
+    await armFirstVisibleCanvasUpdate(canvas, previousSignature, signatureRegion, {
+      expectedRevision: nextRevision,
+      expectedPrefix,
+      expectedKey: expectsSwappedOrder ? 'ArrowDown' : 'ArrowUp',
+    });
+    await page.keyboard.press(expectsSwappedOrder ? 'Alt+ArrowDown' : 'Alt+ArrowUp');
+    await waitForFirstVisibleCanvasUpdate(page);
+    await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', String(nextRevision));
     expect(await rootContributionPrefix(page)).toEqual(expectedPrefix);
-    await page.waitForTimeout(180);
+    await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
+      'data-render-state',
+      'ready',
+    );
   }
 
   const samples = await page.evaluate(

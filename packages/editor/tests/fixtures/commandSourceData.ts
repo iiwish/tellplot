@@ -1,4 +1,4 @@
-import type { SourceData } from '../../src/domain/model';
+import type { SourceData } from '@tellplot/core';
 
 export const commandSourceData = {
   schemaVersion: '1.0.0',

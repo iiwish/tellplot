@@ -9,6 +9,7 @@ export interface OffscreenG2RenderRequest {
   readonly width: number;
   readonly height: number;
   readonly spec: G2Spec;
+  readonly signal?: AbortSignal;
 }
 
 function createOffscreenHost(request: OffscreenG2RenderRequest): HTMLDivElement {
@@ -25,6 +26,38 @@ function createOffscreenHost(request: OffscreenG2RenderRequest): HTMLDivElement 
   return host;
 }
 
+function abortReason(signal: AbortSignal): unknown {
+  return signal.reason ?? new Error('Offscreen render aborted.');
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted === true) {
+    throw abortReason(signal);
+  }
+}
+
+function waitWithAbort<Result>(
+  promise: Promise<Result>,
+  signal: AbortSignal | undefined,
+): Promise<Result> {
+  if (signal === undefined) {
+    return promise;
+  }
+  if (signal.aborted) {
+    return Promise.reject(abortReason(signal));
+  }
+  return new Promise<Result>((resolve, reject) => {
+    const handleAbort = (): void => {
+      signal.removeEventListener('abort', handleAbort);
+      reject(abortReason(signal));
+    };
+    signal.addEventListener('abort', handleAbort, { once: true });
+    void promise.then(resolve, reject).finally(() => {
+      signal.removeEventListener('abort', handleAbort);
+    });
+  });
+}
+
 /** Keeps the rendered surface alive only for the bounded format reader. */
 export async function withOffscreenG2Render<Result>(
   request: OffscreenG2RenderRequest,
@@ -32,10 +65,25 @@ export async function withOffscreenG2Render<Result>(
 ): Promise<Result> {
   const host = createOffscreenHost(request);
   let chart: G2Chart | undefined;
+  let chartDestroyed = false;
+  const cleanup = (): void => {
+    if (chart !== undefined && !chartDestroyed) {
+      chartDestroyed = true;
+      try {
+        chart.destroy();
+      } catch {
+        // Cleanup failure must not expose renderer internals or financial data.
+      }
+    }
+    host.remove();
+  };
+  request.signal?.addEventListener('abort', cleanup, { once: true });
   try {
-    const Chart = await loadG2ChartConstructor();
+    const Chart = await waitWithAbort(loadG2ChartConstructor(), request.signal);
+    throwIfAborted(request.signal);
     if (request.renderer === 'svg') {
-      const { Renderer } = await import('@antv/g-svg');
+      const { Renderer } = await waitWithAbort(import('@antv/g-svg'), request.signal);
+      throwIfAborted(request.signal);
       chart = new Chart({
         container: host,
         width: request.width,
@@ -51,15 +99,13 @@ export async function withOffscreenG2Render<Result>(
         autoFit: false,
       });
     }
+    throwIfAborted(request.signal);
     chart.options(request.spec);
-    await chart.render();
-    return await readResult(host);
+    await waitWithAbort(chart.render(), request.signal);
+    throwIfAborted(request.signal);
+    return await waitWithAbort(Promise.resolve(readResult(host)), request.signal);
   } finally {
-    try {
-      chart?.destroy();
-    } catch {
-      // Cleanup failure must not expose renderer internals or financial data.
-    }
-    host.remove();
+    request.signal?.removeEventListener('abort', cleanup);
+    cleanup();
   }
 }

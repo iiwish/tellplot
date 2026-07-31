@@ -1,69 +1,37 @@
-# TellPlot 1.0 迁移与兼容
+# TellPlot 包选择与状态迁移
 
-## 版本策略
+## 包选择
 
-`@tellplot/editor@1.0.0` 是首个稳定版本。1.x 遵循 Semantic Versioning；breaking public API、schema
-或错误码变化只进入新的 major。升级仍应阅读 changelog、重新编译并运行关键交互与导出测试。
+| 场景                               | 安装与入口                           |
+| ---------------------------------- | ------------------------------------ |
+| 纯数据校验、命令或 SSR             | `@tellplot/core`                     |
+| 原生 DOM、Web Component 或其他框架 | `@tellplot/editor` 的 `createEditor` |
+| React 18/19                        | `@tellplot/react` 的 `ChartEditor`   |
+| Vue 3                              | `@tellplot/vue` 的 `ChartEditor`     |
 
-npm publish、Git tag 和正式 release 是独立交付闸门，版本字段本身不表示已经公开发布。
+React/Vue adapters 依赖同一个 imperative editor，不需要把状态或命令迁移到另一套实现。
 
-## 公共入口
+## ViewSpec 迁移
 
-- runtime 和类型：`@tellplot/editor`
-- 样式：`@tellplot/editor/styles.css`
+持久化内容始终与原始 `SourceData` 一起校验：
 
-不要导入 `dist/`、`src/` 或内部 chart/rendering 路径。G2 `Chart`、`G2Spec`、projection 和 runtime handle
-不属于兼容承诺。
+```ts
+import { parseViewSpec } from '@tellplot/core';
 
-## 1.0 前 React API 映射
+const restored = parseViewSpec(serialized, sourceData);
+if (restored.ok) {
+  editor.update({ config, view: restored.value, onViewChange });
+}
+```
 
-1.0 使用声明式 `ChartEditor` 和 `ChartConfig`。未发布开发分支中的旧名称不提供并行 runtime 入口，
-接入代码按下表迁移：
+TellPlot 不执行启发式 schema migration。dataset、schema generation、chart type 或 source family 不兼容时，
+宿主应执行明确的数据迁移，或用 `createInitialViewSpec` 创建新视图。
 
-| 1.0 前名称或属性                               | 1.0                              |
-| ---------------------------------------------- | -------------------------------- |
-| `FinancialChartEditor`                         | `ChartEditor`                    |
-| `sourceData`                                   | `config.data`                    |
-| `chartAppearance`                              | `config.appearance`              |
-| `panels`、`layout`、`readOnly`、`historyLimit` | `config.editor`                  |
-| `locale`、`height`                             | `config.locale`、`config.height` |
-| `viewSpec`、`defaultViewSpec`                  | `view`、`defaultView`            |
-| `onViewSpecChange`                             | `onViewChange`                   |
-| `getViewSpec()`                                | `getView()`                      |
-| `appearance.palette`                           | `appearance.colors`              |
-| `appearance.axes.x/y`                          | `appearance.axes.category/value` |
-| `appearance.valueLabels`                       | `appearance.labels.value`        |
-| `appearance.groupRegion.label`                 | `appearance.labels.group`        |
-| `appearance.groupRegion.fillOpacity`           | `appearance.groupRegion.opacity` |
+## 接入检查
 
-`ChartConfig.type` 选择 `waterfall | bar | column`，并在 TypeScript 和
-`validateChartConfig` 中约束对应的 `data` 家族。`ViewSpec` 只承载排序、分组、折叠、固定、注释和强调；
-普通接入不需要手工创建它。
-
-## Schema 兼容
-
-| Source                            | View               | 支持                         |
-| --------------------------------- | ------------------ | ---------------------------- |
-| legacy waterfall `1.0.0`          | waterfall `1.0.0`  | 是，保持原 generation 序列化 |
-| current waterfall `2.0.0`         | waterfall `2.0.0`  | 是                           |
-| current categorical `2.0.0`       | bar/column `2.0.0` | 是                           |
-| waterfall source                  | bar/column view    | 否                           |
-| categorical source                | waterfall view     | 否                           |
-| 不同 dataset 或 schema generation | 任意               | 否                           |
-
-TellPlot 不执行隐式 schema migration。升级持久化内容时应保留原始 source，调用 `parseViewSpec` 或
-`validateViewSpec`，并对失败结果采用显式迁移或重新创建视图。
-
-## CommandSource
-
-1.0 公共 union 为 `direct | outline | keyboard | host`。未发布开发版本中的 `ai` literal 不进入稳定合同；
-宿主系统、自动化流程或其他外部调用统一使用 `source: 'host'`。命令的其余 envelope 与 payload shape 不变。
-
-## 升级检查
-
-1. 安装目标 1.x 版本并保持 peer dependencies 满足范围。
-2. 只从公共入口导入，并引入 styles subpath。
-3. 用 TypeScript strict 重新编译应用。
-4. 通过 `validateChartConfig` 校验宿主配置，并验证持久化 view 与当前 data 的 dataset、schema 和 chart type 兼容。
-5. 验证受控状态更新、undo/redo、关键拖拽、SVG/PNG 和无障碍流程。
-6. 确认宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
+1. 只从四个 package exports 导入，不导入 `src/` 或 `dist/`。
+2. 只引入一个对应的 styles subpath。
+3. 受控模式只传 `view`，非受控模式可传 `defaultView`，两者互斥。
+4. React/Vue 卸载由 adapter 自动销毁；imperative 接入显式调用 `destroy`。
+5. 宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
+6. 升级后运行 TypeScript strict、关键交互、导出与无障碍测试。

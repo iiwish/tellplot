@@ -5,9 +5,11 @@ import {
   createExpandedGroupRegionMark,
   projectExpandedGroupRegions,
 } from '../../src/charts/groupRegions';
-import type { CategoricalProjection } from '../../src/charts/categorical/types';
-import { resolveFinancialChartAppearance } from '../../src/config/chartAppearance';
-import type { ViewSpec } from '../../src/domain/model';
+import {
+  resolveFinancialChartAppearance,
+  type CategoricalProjection,
+  type ViewSpec,
+} from '@tellplot/core';
 
 const projection = [
   {
@@ -194,7 +196,10 @@ describe('expanded group regions', () => {
       regions,
       categoryDomain: ['a', 'b', 'c', 'd'],
       appearance: resolveFinancialChartAppearance(
-        { groupRegion: { fillOpacity: 0.06 }, palette: { group: '#664400' } },
+        {
+          groupRegion: { fillOpacity: 0.06, label: 'auto' },
+          palette: { group: '#664400' },
+        },
         'Chart',
       ),
       reducedMotion: true,
@@ -208,7 +213,10 @@ describe('expanded group regions', () => {
       regions,
       categoryDomain: ['a', 'b', 'c', 'd'],
       appearance: resolveFinancialChartAppearance(
-        { groupRegion: { fillOpacity: 0.06 }, palette: { group: '#664400' } },
+        {
+          groupRegion: { fillOpacity: 0.06, label: 'auto' },
+          palette: { group: '#664400' },
+        },
         'Chart',
       ),
       reducedMotion: true,
@@ -336,6 +344,7 @@ describe('expanded group regions', () => {
       appearance: resolveFinancialChartAppearance(
         {
           groupRegion: {
+            label: 'auto',
             labelStyle: {
               placement: 'inside',
               offset: 6,

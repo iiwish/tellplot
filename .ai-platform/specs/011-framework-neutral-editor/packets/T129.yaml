@@ -1,0 +1,80 @@
+schema_version: 1
+packet_id: EP-011-T129
+task_id: T129
+feature_id: 011-framework-neutral-editor
+mode: execute_one_task
+adapter: codex_direct
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/011-framework-neutral-editor/spec.md
+  requirements_checklist: .ai-platform/specs/011-framework-neutral-editor/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/011-framework-neutral-editor/plan.md
+  work_graph: .ai-platform/specs/011-framework-neutral-editor/tasks.md
+  analysis: .ai-platform/specs/011-framework-neutral-editor/analysis.md
+  approval_gates:
+    constitution: Confirmed by user
+    product_or_spec: Confirmed by user on 2026-07-29
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed under approved G006 goal-level execution
+    analysis: No unresolved Critical/High findings
+work_unit:
+  title: 完整质量矩阵与发布候选 evidence
+  goal: 形成无阻断 finding、可复演但不执行远程发布的四包 1.0 候选
+  epic: E011
+  story: FRAMEWORK-US-004
+  requirements: [all FRAMEWORK-FR, all FRAMEWORK-NFR, all FRAMEWORK-SC]
+  priority: P0
+  depends_on: [T128]
+  blocks: [G005]
+  parallel: false
+  conflicts_with: [remote Git, publish, release, schema expansion]
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [packages, apps/playground, e2e, scripts/release, .ai-platform]
+  existing_patterns: [stable release architecture audit, isolated-source rehearsal, three-pass review]
+  interfaces_or_contracts: [.ai-platform/specs/011-framework-neutral-editor/contracts/imperative-editor.md]
+  forbidden_changes: [remote actions, new chart family, schema or command behavior expansion]
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files: [all G006 source, tests, docs, release scripts, package metadata, .ai-platform/**]
+  test_targets: [all unit, package, framework, E2E, a11y, performance, browser and release gates]
+  ownership_notes: [execute after T128 evidence and status completion]
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: pnpm release:check
+    expected_failure: old release gates do not yet validate four-package architecture
+  green:
+    command: pnpm release:check
+    expected_signal: all local stable gates pass
+  refactor:
+    command: pnpm release:rehearse
+    expected_signal: isolated source reproduces all four package candidates
+validation_loop:
+  commands: [pnpm release:check, pnpm release:rehearse, python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 011-framework-neutral-editor --strict, git diff --check]
+  retry_budget: 2
+  failure_policy:
+    first_failure: fix only G006 regression or release gate drift
+    second_failure: classify architecture, environment, or scope blocker
+    beyond_budget: stop and record blocked evidence
+evidence_contract:
+  summary: .ai-platform/evidence/T129/summary.md
+  diff: .ai-platform/evidence/T129/diff.patch
+  test_results: .ai-platform/evidence/T129/test-results.md
+  required: [changed files, full validation matrix, diff summary, architecture report, review, residual risks]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+  acceptance_rule: G006 was explicitly accepted by the user after the complete local release matrix passed
+  acceptance_record:
+    status: Accepted
+    date: 2026-07-30
+    authority: user
+    basis: FRAMEWORK-SC-001 through FRAMEWORK-SC-007 passed with no unresolved Critical, High or Medium finding
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [keep accepted local candidate for separately authorized G005 release]
+stop_conditions: [remote authorization required, unresolved Critical/High/Medium finding, release gate unavailable]

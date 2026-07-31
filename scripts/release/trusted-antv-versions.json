@@ -1,0 +1,47 @@
+{
+  "@antv/component": {
+    "2.1.9": "sha512-HPvE3AtlnzJZSEGk3jGphG+zVV8z7dH3PeF0sM2rX5WLvUUyAA79QwMZ+WAhF6C3e2VgSUx342PH75tm/LGnmg=="
+  },
+  "@antv/coord": {
+    "0.4.7": "sha512-UTbrMLhwJUkKzqJx5KFnSRpU3BqrdLORJbwUbHK2zHSCT3q3bjcFA//ZYLVfIlwqFDXp/hzfMyRtp0c77A9ZVA=="
+  },
+  "@antv/event-emitter": {
+    "0.1.3": "sha512-4ddpsiHN9Pd4UIlWuKVK1C4IiZIdbwQvy9i7DUSI3xNJ89FPUFt8lxDYj8GzzfdllV0NkJTRxnG+FvLk0llidg=="
+  },
+  "@antv/expr": {
+    "1.0.2": "sha512-vrfdmPHkTuiS5voVutKl2l06w1ihBh9A8SFdQPEE+2KMVpkymzGOF1eWpfkbGZ7tiFE15GodVdhhHomD/hdIwg=="
+  },
+  "@antv/g": {
+    "6.3.1": "sha512-WYEKqy86LHB2PzTmrZXrIsIe+3Epeds2f68zceQ+BJtRoGki7Sy4IhlC8LrUMztgfT1t3d/0L745NWZwITroKA=="
+  },
+  "@antv/g-canvas": {
+    "2.2.0": "sha512-h7zVBBo2aO64DuGKvq9sG+yTU3sCUb9DALCVm7nz8qGPs8hhLuFOkKPEzUDNfNYZGJUGzY8UDtJ3QRGRFcvEQg=="
+  },
+  "@antv/g-lite": {
+    "2.7.0": "sha512-uSzgHYa5bwR5L2Au7/5tsOhFmXKZKLPBH90+Q9bP9teVs5VT4kOAi0isPSpDI8uhdDC2/VrfTWu5K9HhWI6FWw=="
+  },
+  "@antv/g-math": {
+    "3.1.0": "sha512-DtN1Gj/yI0UiK18nSBsZX8RK0LszGwqfb+cBYWgE+ddyTm8dZnW4tPUhV7QXePsS6/A5hHC+JFpAAK7OEGo5ZQ=="
+  },
+  "@antv/g-plugin-dragndrop": {
+    "2.1.1": "sha512-+aesDUJVQDs6UJ2bOBbDlaGAPCfHmU0MbrMTlQlfpwNplWueqtgVAZ3L57oZ2ZGHRWUHiRwZGPjXMBM3O2LELw=="
+  },
+  "@antv/g-svg": {
+    "2.1.1": "sha512-gVzBkjqA8FzDTbkuIxj6L0Omz/X/hFbYLzK6alWr0sHTfywqP6czcjDUJU8DF2MRIY1Twy55uZYW4dqqLXOXXg=="
+  },
+  "@antv/g2": {
+    "5.4.8": "sha512-IvgIpwmT4M5/QAd3Mn2WiHIDeBqFJ4WA2gcZhRRSZuZ2KmgCqZWZwwIT0hc+kIGxwYeDoCQqf//t6FMVu3ryBg=="
+  },
+  "@antv/scale": {
+    "0.4.12": "sha512-7klJjPXUpCwYc7WADh1XBC11DJYrP5fJoNfv4Ks6z7zPkIM7/PTGr+nU48P69nFL3X04Pe7QjVpevdfCqWvhZQ==",
+    "0.4.16": "sha512-5wg/zB5kXHxpTV5OYwJD3ja6R8yTiqIOkjOhmpEJiowkzRlbEC/BOyMvNUq5fqFIHnMCE9woO7+c3zxEQCKPjw==",
+    "0.5.1": "sha512-YnipyLgotgvbTn1puouBW7q4ckz0mOS2YW2GtefSRInaJuDykiMZJEyzoT0YZkJ950G+Xkip4QIsTKCSS2oVWw=="
+  },
+  "@antv/util": {
+    "2.0.13": "sha512-mfYL7K8XJIeDmal33K+6abr8Yb526YXKg5XQlddNo+X1Doll+gun6HxnbdySoLv21vW4bLkcbVPjqxWl7ZJAFA==",
+    "3.3.11": "sha512-FII08DFM4ABh2q5rPYdr0hMtKXRgeZazvXaFYCs7J7uTcWDHUhczab2qOCJLNDugoj8jFag1djb7wS9ehaRYBg=="
+  },
+  "@antv/vendor": {
+    "1.0.11": "sha512-LmhPEQ+aapk3barntaiIxJ5VHno/Tyab2JnfdcPzp5xONh/8VSfed4bo/9xKo5HcUAEydko38vYLfj6lJliLiw=="
+  }
+}

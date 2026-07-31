@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CategoricalProjection } from '../../src/charts/categorical/types';
+import type { CategoricalProjection } from '@tellplot/core';
 import { exportSvgChart } from '../../src/export/svgExport';
 
 const svgG2Mock = vi.hoisted(() => {
@@ -123,6 +123,7 @@ describe('categorical SVG export', () => {
       height: 360,
       background: '#ffffff',
       suggestedFilename: 'grouped-categories.svg',
+      appearance: { groupRegion: { label: 'auto' } },
       annotations: {},
       emphasis: {},
       groupRegions: [

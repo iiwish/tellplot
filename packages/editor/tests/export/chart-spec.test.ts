@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
+import { createInitialViewSpec, projectWaterfall, type WaterfallDatum } from '@tellplot/core';
 import { createWaterfallChartSpec } from '../../src/charts/waterfall/spec';
 import { shouldShowWaterfallValueLabels } from '../../src/charts/waterfall/spec';
-import { projectWaterfall } from '../../src/charts/waterfall/projection';
-import type { WaterfallDatum } from '../../src/charts/waterfall/types';
 import { financialSourceData } from '../fixtures/financialSourceData';
 
 interface WaterfallValueLabelDatum {
@@ -358,7 +356,10 @@ describe('waterfall chart appearance', () => {
     expect(child?.axis?.x).toBe(false);
     expect(child?.axis?.y).toEqual(expect.objectContaining({ labelFill: '#5F6B65' }));
     expect(child?.labels).toEqual([]);
-    expect(child?.tooltip).toBe(true);
+    expect(child?.tooltip).toMatchObject({
+      title: expect.any(Function),
+      items: [expect.any(Function)],
+    });
     expect(child?.animate?.enter?.duration).toBe(240);
     expect(child?.animate?.update?.duration).toBe(240);
     expect(child?.animate?.exit?.duration).toBe(240);
@@ -565,6 +566,7 @@ describe('waterfall chart annotations', () => {
       currency: financialSourceData.currency,
       reducedMotion: true,
       showValueLabels: false,
+      appearance: { groupRegion: { label: 'auto' } },
       annotations: {},
       emphasis: {},
       groupRegions: [
@@ -581,9 +583,27 @@ describe('waterfall chart annotations', () => {
         },
       ],
     });
-    const children = (spec as { readonly children?: readonly { readonly type?: unknown }[] })
-      .children;
+    const children = (
+      spec as {
+        readonly children?: readonly {
+          readonly type?: unknown;
+          readonly scale?: { readonly y?: { readonly domain?: readonly number[] } };
+        }[];
+      }
+    ).children;
+    const expectedDomain = projection.value.reduce<readonly [number, number]>(
+      ([minimum, maximum], datum) => [
+        Math.min(minimum, datum.start, datum.end),
+        Math.max(maximum, datum.start, datum.end),
+      ],
+      [0, 0],
+    );
 
     expect(children?.map(child => child.type)).toEqual(['range', 'interval', 'text']);
+    expect(children?.map(child => child.scale?.y?.domain)).toEqual([
+      expectedDomain,
+      expectedDomain,
+      expectedDomain,
+    ]);
   });
 });

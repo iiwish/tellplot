@@ -1,20 +1,25 @@
-import type { FinancialChartAppearance } from '../config/chartAppearance';
-import type { ViewNodeId } from '../domain/ids';
-import type { Annotation, ChartType, Emphasis } from '../domain/model';
+import type {
+  Annotation,
+  CategoricalProjection,
+  ChartType,
+  Emphasis,
+  FinancialChartAppearance,
+  ViewNodeId,
+  WaterfallProjection,
+} from '@tellplot/core';
 import {
   createCategoricalChartSpec,
   shouldShowCategoricalValueLabels,
 } from '../charts/categorical/spec';
-import type { CategoricalProjection } from '../charts/categorical/types';
 import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
-import type { WaterfallProjection } from '../charts/waterfall/types';
 import type { ExpandedGroupRegion } from '../charts/groupRegions';
 import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
-import type { EditorLocale } from '../components/formatAmount';
+import type { EditorLocale } from '../editor/formatAmount';
 import { exportError, type ExportResult, type NormalizedExportOptions } from './exportTypes';
 
 interface PngChartExportBaseRequest {
   readonly ownerDocument: Document;
+  readonly signal?: AbortSignal;
   readonly title: string;
   readonly locale: EditorLocale;
   readonly currency: string | undefined;
@@ -141,6 +146,7 @@ export async function exportPngChart(
         ownerDocument: request.ownerDocument,
         parent: body,
         renderer: 'canvas',
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
         width,
         height,
         spec: isCategoricalRequest(request)

@@ -31,7 +31,7 @@ const config = {
         fontSize: 12,
         fontWeight: 600,
       },
-      group: { display: 'auto', placement: 'outside', offset: 4 },
+      group: 'never',
     },
     tooltip: true,
     animation: { enabled: true, duration: 160 },
@@ -55,7 +55,8 @@ const config = {
 - `type`：`waterfall`、`bar` 或 `column`。
 - `data`：与 type 家族兼容的严格 `SourceData`。
 - `locale`：`zh-CN` 或 `en-US`。
-- `height`：正有限数字或非空 CSS 高度字符串。
+- `height`：正有限数字或非空 CSS 高度字符串；数字值以 px 渲染，未提供时为 680px，最终布局受
+  480px 最小高度约束。
 - `appearance`：图表呈现语义。
 - `editor`：编辑能力和工作台 chrome。
 
@@ -65,7 +66,7 @@ const config = {
 - `colors`：正值、负值和分组颜色；waterfall 额外支持 start、subtotal 和 end。
 - `axes`：以 `category` / `value` 表达语义轴，不要求用户理解 bar 的物理转置。
 - `labels.value`：可使用 `auto`、`always`、`never` 简写，或使用下方对象式配置。
-- `labels.group`：可使用 `auto`、`never` 简写，或使用下方对象式配置。
+- `labels.group`：默认 `never`；可使用 `auto` 显式显示，也可使用下方对象式配置。
 - `tooltip`：是否启用 G2 Tooltip；静态导出不包含交互 Tooltip。
 - `animation`：启用状态和 0 至 1000ms 的时长；reduced motion 始终优先。
 - `groupRegion`：展开分组背景与 0 至 0.2 的透明度。
@@ -95,6 +96,20 @@ const config = {
 TellPlot 的 `auto` 策略管理；碰撞选项暂不开放，避免提供一个对独立前景 text mark 无法可靠生效的
 伪配置。
 
+### 呈现能力矩阵
+
+| 能力               | 公共配置 | 当前合同                                                        |
+| ------------------ | -------- | --------------------------------------------------------------- |
+| 业务语义颜色       | 是       | `appearance.colors`；按图表家族映射到稳定 G2 color scale        |
+| 数值/分组标签显示  | 是       | `display` 支持 `auto/always/never` 的对应子集                   |
+| 标签位置与偏移     | 是       | `placement: auto/inside/outside` 与 `offset: 0..24`             |
+| 标签字体、颜色背景 | 是       | 字号、字重、文字色、背景色和透明度；标签背景使用固定 3px 圆角   |
+| 柱形圆角           | 否       | 柱形保持渲染器管理的直角；不透传 G2 `radius*` 或任意 mark style |
+| 坐标轴、Tooltip    | 是       | 语义开关；布局、碰撞、HTML 和交互位置由渲染器管理               |
+| 分组区域           | 是       | 显示、透明度及分组标签；屏幕和导出共享同一数值域                |
+
+公共配置只承诺表中标为“是”的稳定语义。G2 自身具备但 TellPlot 未定义稳定语义的字段不属于可透传配置。
+
 ## Editor
 
 - `readOnly`：禁用编辑命令。
@@ -104,6 +119,10 @@ TellPlot 的 `auto` 策略管理；碰撞选项暂不开放，避免提供一个
 - `inspector.mode`：`static` 或 `tabs`。
 
 这些字段只控制编辑器呈现，不进入 `ViewSpec`。
+
+编辑器的响应式布局由挂载容器的实际宽度驱动，并通过 `ResizeObserver` 跟随 flex、grid、侧栏和面板尺寸
+变化；它不依赖浏览器 viewport 宽度。宿主应为容器提供可计算的宽度，定高布局可通过 `height` 或父级约束
+控制工作台高度。
 
 ## 运行时校验
 
@@ -116,8 +135,8 @@ if (!result.ok) {
 }
 ```
 
-validator 拒绝未知字段、非法颜色、越界数值、类型错误和图表类型/source family 冲突。`ChartEditor`
-也会显示稳定错误状态，并通过 `onConfigRejected` 报告相同 issue。
+validator 拒绝未知字段、非法颜色、越界数值、类型错误和图表类型/source family 冲突。imperative editor
+与两个 framework adapter 都会显示稳定错误状态，并通过 `onConfigRejected`/`config-rejected` 报告相同 issue。
 
 ## 内部所有权
 
@@ -130,5 +149,5 @@ validator 拒绝未知字段、非法颜色、越界数值、类型错误和图�
 
 需要新增呈现能力时，先定义稳定 TellPlot 语义，再由内部 adapter 映射到 G2。
 
-React 宿主应把 `ChartConfig` 视为不可变值。更新数据或配置时传入新的 config/data 对象，不要原地修改
-现有对象；`ChartEditor` 会保留仍与新 config 兼容的 `ViewSpec`，不兼容时创建新的确定初始视图。
+宿主应把 `ChartConfig` 视为不可变值。更新数据或配置时传入新的 config/data 对象，不要原地修改现有
+对象；editor 会保留仍与新 config 兼容的 `ViewSpec`，不兼容时创建新的确定初始视图。

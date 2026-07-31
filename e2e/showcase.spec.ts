@@ -22,6 +22,8 @@ test.describe('TellPlot 开源官网', () => {
     await expect(editor).toHaveAttribute('data-chart-type', 'waterfall');
     await expect(editor).toHaveAttribute('data-read-only', 'false');
     await expect(editor).toHaveAttribute('data-view-revision', '0');
+    await expect(showcase.locator('.tp-toolbar')).toBeHidden();
+    await expect(showcase.locator('.tp-toolbar')).toHaveCSS('display', 'none');
     await expect(page.getByRole('heading', { name: '一个配置，直接开始' })).toBeVisible();
     await expect(page.locator('.site-home-code code')).toContainText('const config = {');
     await expect(page.locator('.site-home-developer__flow li')).toHaveCount(4);
@@ -84,7 +86,12 @@ test.describe('TellPlot 开源官网', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: '开发者文档' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '安装' })).toBeVisible();
-    await expect(page.getByText('pnpm add @tellplot/editor')).toBeVisible();
+    await expect(
+      page.locator('pre').filter({
+        hasText:
+          'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom',
+      }),
+    ).toBeVisible();
     await expect(page.getByRole('heading', { name: 'SourceData 与 ViewSpec' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '安全配置边界' })).toBeVisible();
   });

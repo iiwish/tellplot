@@ -1,0 +1,224 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  DEFAULT_FINANCIAL_CHART_PALETTE,
+  resolveFinancialChartAppearance,
+} from '../../src/config/chartAppearance';
+import type { FinancialChartAppearance } from '../../src/config/chartAppearance';
+
+describe('financial chart appearance', () => {
+  it('hides group labels by default and preserves explicit opt-in', () => {
+    expect(resolveFinancialChartAppearance(undefined, 'Chart').groupRegion.label).toBe('never');
+    expect(
+      resolveFinancialChartAppearance({ groupRegion: { label: 'auto' } }, 'Chart').groupRegion
+        .label,
+    ).toBe('auto');
+  });
+
+  it('resolves a bounded immutable appearance without exposing G2 options', () => {
+    const input: FinancialChartAppearance = {
+      title: '  Cash bridge  ',
+      palette: {
+        positive: '#00A36C',
+        negative: '#D23B3B',
+      },
+      axis: { x: false, y: true },
+      valueLabels: 'always',
+      valueLabelStyle: {
+        placement: 'outside',
+        offset: 8,
+        color: '#102A43',
+        fontSize: 13,
+        fontWeight: 700,
+        background: true,
+        backgroundColor: '#FFFFFF',
+        backgroundOpacity: 0.9,
+      },
+      tooltip: true,
+      animation: { enabled: true, duration: 240 },
+      groupRegion: {
+        enabled: false,
+        fillOpacity: 0.12,
+        label: 'never',
+        labelStyle: {
+          placement: 'inside',
+          offset: 6,
+          color: '#7A4B00',
+          fontSize: 12,
+          fontWeight: 600,
+          background: true,
+          backgroundColor: '#FFF8E8',
+          backgroundOpacity: 0.82,
+        },
+      },
+      numberFormat: {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 1,
+        currencyDisplay: 'code',
+      },
+    };
+
+    const resolved = resolveFinancialChartAppearance(input, 'Operating bridge');
+
+    expect(resolved).toEqual({
+      title: 'Cash bridge',
+      palette: {
+        ...DEFAULT_FINANCIAL_CHART_PALETTE,
+        positive: '#00A36C',
+        negative: '#D23B3B',
+      },
+      axis: { x: false, y: true },
+      valueLabels: 'always',
+      valueLabelStyle: {
+        placement: 'outside',
+        offset: 8,
+        color: '#102A43',
+        fontSize: 13,
+        fontWeight: 700,
+        background: true,
+        backgroundColor: '#FFFFFF',
+        backgroundOpacity: 0.9,
+      },
+      tooltip: true,
+      animation: { enabled: true, duration: 240 },
+      groupRegion: {
+        enabled: false,
+        fillOpacity: 0.12,
+        label: 'never',
+        labelStyle: {
+          placement: 'inside',
+          offset: 6,
+          color: '#7A4B00',
+          fontSize: 12,
+          fontWeight: 600,
+          background: true,
+          backgroundColor: '#FFF8E8',
+          backgroundOpacity: 0.82,
+        },
+      },
+      numberFormat: {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3,
+        currencyDisplay: 'code',
+      },
+    });
+    expect(Object.isFrozen(resolved)).toBe(true);
+    expect(Object.isFrozen(resolved.palette)).toBe(true);
+    expect('g2Spec' in resolved).toBe(false);
+    expect('options' in resolved).toBe(false);
+  });
+
+  it('contains hostile JavaScript values within documented defaults and ranges', () => {
+    const hostile = {
+      title: '   ',
+      palette: { positive: 'not-a-color', negative: 42 },
+      axis: { x: 'false', y: null },
+      valueLabels: 'everything',
+      valueLabelStyle: {
+        placement: 'around',
+        offset: 100,
+        color: 'not-a-color',
+        fontSize: 100,
+        fontWeight: 42,
+        background: 'yes',
+        backgroundColor: 'bad',
+        backgroundOpacity: 5,
+      },
+      tooltip: 'yes',
+      animation: { enabled: 'yes', duration: Number.NaN },
+      groupRegion: {
+        enabled: 'yes',
+        fillOpacity: 10,
+        label: 'always',
+        labelStyle: {
+          placement: 'around',
+          offset: 100,
+          color: 'not-a-color',
+          fontSize: 100,
+          fontWeight: 42,
+          background: 'yes',
+          backgroundColor: 'bad',
+          backgroundOpacity: 5,
+        },
+      },
+      numberFormat: {
+        minimumFractionDigits: -20,
+        maximumFractionDigits: 100,
+        currencyDisplay: 'private',
+      },
+    } as unknown as FinancialChartAppearance;
+
+    expect(resolveFinancialChartAppearance(hostile, '  Operating bridge  ')).toEqual({
+      title: 'Operating bridge',
+      palette: DEFAULT_FINANCIAL_CHART_PALETTE,
+      axis: { x: true, y: true },
+      valueLabels: 'auto',
+      valueLabelStyle: {
+        placement: 'auto',
+        offset: 24,
+        color: '#18211D',
+        fontSize: 32,
+        fontWeight: 100,
+        background: false,
+        backgroundColor: '#FFFFFF',
+        backgroundOpacity: 1,
+      },
+      tooltip: false,
+      animation: { enabled: true, duration: 160 },
+      groupRegion: {
+        enabled: true,
+        fillOpacity: 0.2,
+        label: 'never',
+        labelStyle: {
+          placement: 'auto',
+          offset: 24,
+          color: '#A46812',
+          fontSize: 32,
+          fontWeight: 100,
+          background: false,
+          backgroundColor: '#FFFFFF',
+          backgroundOpacity: 1,
+        },
+      },
+      numberFormat: {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 6,
+        currencyDisplay: 'narrowSymbol',
+      },
+    });
+  });
+
+  it('falls back to a stable accessible title when both runtime titles are empty', () => {
+    const hostile = { title: '' } as unknown as FinancialChartAppearance;
+
+    expect(resolveFinancialChartAppearance(hostile, '  ').title).toBe('Financial chart');
+  });
+
+  it('does not execute accessors or propagate hostile proxy reflection errors', () => {
+    let getterCalled = false;
+    const accessorInput = {};
+    Object.defineProperty(accessorInput, 'title', {
+      get() {
+        getterCalled = true;
+        return 'Unsafe title';
+      },
+    });
+    const unreadable = new Proxy(
+      {},
+      {
+        getOwnPropertyDescriptor() {
+          throw new Error('private runtime details');
+        },
+      },
+    );
+
+    expect(
+      resolveFinancialChartAppearance(accessorInput as FinancialChartAppearance, 'Fallback title')
+        .title,
+    ).toBe('Fallback title');
+    expect(getterCalled).toBe(false);
+    expect(() =>
+      resolveFinancialChartAppearance(unreadable as FinancialChartAppearance, 'Safe title'),
+    ).not.toThrow();
+  });
+});

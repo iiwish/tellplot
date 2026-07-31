@@ -43,6 +43,24 @@ describe('export options', () => {
     );
   });
 
+  it('neutralizes cross-platform filename controls, reserved names and excessive length', () => {
+    expect(
+      normalizeExportOptions({
+        format: 'svg',
+        filename: 'invoice\u202Egpj.exe.svg',
+      }).suggestedFilename,
+    ).toBe('invoice-gpj.exe.svg');
+    expect(normalizeExportOptions({ format: 'png', filename: 'CON.png' }).suggestedFilename).toBe(
+      'tellplot-CON.png',
+    );
+
+    const bounded = normalizeExportOptions({
+      format: 'svg',
+      filename: `${'财'.repeat(200)}.svg`,
+    }).suggestedFilename;
+    expect([...bounded.replace(/\.svg$/u, '')]).toHaveLength(120);
+  });
+
   it('rejects unsupported formats and invalid pixel ratios with structured errors', () => {
     const formatError = captureError(() =>
       normalizeExportOptions({ format: 'pdf' } as unknown as ExportOptions),
@@ -62,5 +80,62 @@ describe('export options', () => {
         path: '/pixelRatio',
       });
     }
+  });
+
+  it('rejects invalid runtime option shapes without leaking native errors', () => {
+    const accessorOptions = Object.defineProperty({}, 'format', {
+      enumerable: true,
+      get(): never {
+        throw new Error('private accessor failure');
+      },
+    });
+    const proxyOptions = new Proxy(
+      {},
+      {
+        getOwnPropertyDescriptor(): never {
+          throw new Error('private proxy failure');
+        },
+      },
+    );
+    const cases: readonly [unknown, string][] = [
+      [null, '/'],
+      [{ format: 'png', background: 42 }, '/background'],
+      [{ format: 'png', filename: 42 }, '/filename'],
+      [accessorOptions, '/format'],
+      [proxyOptions, '/format'],
+    ];
+
+    for (const [options, path] of cases) {
+      expect(captureError(() => normalizeExportOptions(options as ExportOptions))).toMatchObject({
+        name: 'TellPlotExportError',
+        code: 'INVALID_EXPORT_OPTIONS',
+        path,
+        message: 'Export options are invalid.',
+      });
+    }
+  });
+
+  it('rejects unknown fields, symbol keys and escaped external background resources', () => {
+    expect(
+      captureError(() =>
+        normalizeExportOptions({ format: 'svg', experimental: true } as unknown as ExportOptions),
+      ),
+    ).toMatchObject({ code: 'INVALID_EXPORT_OPTIONS', path: '/experimental' });
+
+    const symbolOptions = { format: 'svg' } as ExportOptions;
+    Object.defineProperty(symbolOptions, Symbol('private'), { value: true, enumerable: true });
+    expect(captureError(() => normalizeExportOptions(symbolOptions))).toMatchObject({
+      code: 'INVALID_EXPORT_OPTIONS',
+      path: '/',
+    });
+
+    expect(
+      captureError(() =>
+        normalizeExportOptions({
+          format: 'svg',
+          background: String.raw`u\72l(https://attacker.example/background.svg)`,
+        }),
+      ),
+    ).toMatchObject({ code: 'INVALID_EXPORT_OPTIONS', path: '/background' });
   });
 });

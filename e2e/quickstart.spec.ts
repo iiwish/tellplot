@@ -204,6 +204,15 @@ async function chartPoints(page: Page): Promise<{
   return { canvas, points: await waterfallBarPoints(canvas) };
 }
 
+async function finishChartAnimationsWithoutMutation(page: Page, point: BarPoint): Promise<void> {
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.keyboard.press('Escape');
+  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ACTION_CANCELLED');
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
+  await page.mouse.up();
+}
+
 async function groupBarContrastPixels(page: Page): Promise<number> {
   return page
     .getByTestId('tellplot-chart')
@@ -295,6 +304,10 @@ async function dragChartContributionBefore(
 }
 
 async function createCostPressureMarquee(page: Page): Promise<void> {
+  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
+    'data-render-state',
+    'ready',
+  );
   const { canvas, points } = await chartPoints(page);
   const material = points[4];
   const labor = points[6];
@@ -320,13 +333,72 @@ async function createCostPressureMarquee(page: Page): Promise<void> {
 
 async function expectLockedAnchorDoesNotStartSession(
   page: Page,
-  index: number,
+  anchorNodeId: string,
   expectedRevision: number,
   expectedRootOrder: readonly string[],
   expectedTreeOrder: readonly string[],
 ): Promise<void> {
-  const { points } = await chartPoints(page);
-  const anchor = points[index];
+  const chartStage = page.getByTestId('tellplot-chart-stage');
+  await expect(chartStage).toHaveAttribute('data-render-state', 'ready');
+  const animatedGeometry = await chartPoints(page);
+  const animationFinishPoint = animatedGeometry.points[1];
+  expect(animationFinishPoint).toBeDefined();
+  if (animationFinishPoint === undefined) {
+    return;
+  }
+
+  // Pointerdown synchronously finishes G2 animations. Cancel the non-mutating session, then
+  // read the authoritative final canvas geometry rather than coordinates from an active tween.
+  await finishChartAnimationsWithoutMutation(page, animationFinishPoint);
+
+  const { points: settledPoints } = await chartPoints(page);
+  const projectedNodeIds = await page
+    .getByRole('tree', { name: '结构大纲' })
+    .locator('[role="treeitem"][data-node-id]:not([data-node-kind="group"])')
+    .evaluateAll(rows =>
+      rows
+        .filter(row => row instanceof HTMLElement && row.offsetParent !== null)
+        .map(row => row.getAttribute('data-node-id'))
+        .filter((nodeId): nodeId is string => nodeId !== null),
+    );
+  expect(projectedNodeIds).toHaveLength(settledPoints.length);
+  const resetIndex = projectedNodeIds.indexOf('sales-volume');
+  const resetTargetIndex = projectedNodeIds.indexOf('price-impact');
+  const anchorIndex = projectedNodeIds.indexOf(anchorNodeId);
+  expect(resetIndex).toBeGreaterThanOrEqual(0);
+  expect(resetTargetIndex).toBeGreaterThanOrEqual(0);
+  expect(anchorIndex).toBeGreaterThanOrEqual(0);
+  const resetPoint = settledPoints[resetIndex];
+  const resetTargetPoint = settledPoints[resetTargetIndex];
+  expect(resetPoint).toBeDefined();
+  expect(resetTargetPoint).toBeDefined();
+  if (resetPoint === undefined || resetTargetPoint === undefined) {
+    return;
+  }
+
+  // Prove the semantic reset point starts the intended draggable contribution before cancelling it.
+  await page.mouse.move(resetPoint.x, resetPoint.y);
+  await page.mouse.down();
+  await page.mouse.move(resetTargetPoint.x, resetTargetPoint.y, { steps: 6 });
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'dragging');
+  await expect(page.getByTestId('chart-drag-overlay')).toHaveText('销量增长');
+  await page.keyboard.press('Escape');
+  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ACTION_CANCELLED');
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
+  await expect(page.getByTestId('chart-drag-overlay')).toHaveCount(0);
+  await page.mouse.up();
+
+  // Cancelling a visible drag restores the canonical chart through another G2 render.
+  await expect(chartStage).toHaveAttribute('data-render-state', 'ready');
+  const recoveringGeometry = await chartPoints(page);
+  const recoveryFinishPoint = recoveringGeometry.points[resetIndex];
+  expect(recoveryFinishPoint).toBeDefined();
+  if (recoveryFinishPoint === undefined) {
+    return;
+  }
+  await finishChartAnimationsWithoutMutation(page, recoveryFinishPoint);
+  const authoritativePoints = (await chartPoints(page)).points;
+  const anchor = authoritativePoints[anchorIndex];
   expect(anchor).toBeDefined();
   if (anchor === undefined) {
     return;
@@ -334,11 +406,10 @@ async function expectLockedAnchorDoesNotStartSession(
 
   await page.mouse.move(anchor.x, anchor.y);
   await page.mouse.down();
-  await page.mouse.move(anchor.x + 6, anchor.y, { steps: 3 });
+  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ITEM_LOCKED');
   await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
   await expect(page.getByTestId('chart-drag-overlay')).toHaveCount(0);
   await page.mouse.up();
-  await expect(page.locator(COMMAND_FEEDBACK)).toContainText('ITEM_LOCKED');
 
   await expect(page.locator(EDITOR)).toHaveAttribute(
     'data-view-revision',
@@ -442,7 +513,10 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
     'true',
   );
   await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toBeVisible();
-  await page.waitForTimeout(180); // Let the default 160ms G2 transition finish before canvas hit testing.
+  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
+    'data-render-state',
+    'ready',
+  );
   const finalRootOrder = [
     'opening-profit',
     'sales-volume',
@@ -474,9 +548,27 @@ test('canonical quickstart survives the exact production-preview workflow', asyn
   expect(await visibleTreeOrder(page)).toEqual(finalTreeOrder);
   await expect(page.getByRole('treeitem', { name: /期末净利润/ })).toContainText('3,440');
 
-  await expectLockedAnchorDoesNotStartSession(page, 0, 8, finalRootOrder, finalTreeOrder);
-  await expectLockedAnchorDoesNotStartSession(page, 7, 8, finalRootOrder, finalTreeOrder);
-  await expectLockedAnchorDoesNotStartSession(page, 11, 8, finalRootOrder, finalTreeOrder);
+  await expectLockedAnchorDoesNotStartSession(
+    page,
+    'opening-profit',
+    8,
+    finalRootOrder,
+    finalTreeOrder,
+  );
+  await expectLockedAnchorDoesNotStartSession(
+    page,
+    'operating-subtotal',
+    8,
+    finalRootOrder,
+    finalTreeOrder,
+  );
+  await expectLockedAnchorDoesNotStartSession(
+    page,
+    'ending-profit',
+    8,
+    finalRootOrder,
+    finalTreeOrder,
+  );
 
   await page.getByRole('button', { name: '折叠 成本压力' }).click();
   await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '9');

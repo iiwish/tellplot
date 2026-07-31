@@ -1,16 +1,14 @@
 import {
-  ChartEditor,
   createInitialViewSpec,
   parseViewSpec,
   serializeViewSpec,
   validateViewSpec,
   type ChartConfig,
-  type ChartEditorHandle,
   type ChartEditorOptions,
-  type ExportError,
   type SourceData,
   type ViewSpec,
-} from '@tellplot/editor';
+} from '@tellplot/core';
+import { ChartEditor, type ChartEditorHandle, type ExportError } from '@tellplot/react';
 import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -35,7 +33,7 @@ function initialConfig(sourceData: SourceData, requestedChartType: 'bar' | undef
         colors: DEMO_CATEGORICAL_COLORS,
         labels: {
           value: { display: 'auto', placement: 'outside', offset: 6 },
-          group: { display: 'auto', placement: 'outside', offset: 4 },
+          group: 'never',
         },
         tooltip: true,
       },
@@ -52,7 +50,7 @@ function initialConfig(sourceData: SourceData, requestedChartType: 'bar' | undef
       colors: DEMO_WATERFALL_COLORS,
       labels: {
         value: { display: 'auto', placement: 'outside', offset: 6 },
-        group: { display: 'auto', placement: 'outside', offset: 4 },
+        group: 'never',
       },
       tooltip: true,
     },

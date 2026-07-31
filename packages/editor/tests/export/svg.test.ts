@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createInitialViewSpec } from '../../src/domain/createInitialViewSpec';
+import { createInitialViewSpec, projectWaterfall } from '@tellplot/core';
 import { createSafeSvgResult, exportSvgChart } from '../../src/export/svgExport';
-import { projectWaterfall } from '../../src/charts/waterfall/projection';
 import { financialSourceData } from '../fixtures/financialSourceData';
 
 const svgG2Mock = vi.hoisted(() => {
@@ -112,6 +111,34 @@ describe('SVG export safety', () => {
     expect(text).not.toContain('ledger:');
     expect(text).not.toContain('data-source-ref');
     expect(text).toContain('fill="#ffffff"');
+    expect(text.match(/\sxmlns=/gu)).toHaveLength(1);
+  });
+
+  it('removes active SVG content and non-fragment CSS resource references', async () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.innerHTML = [
+      '<style>@import url("//attacker.example/theme.css");</style>',
+      '<defs><filter id="local-filter" /></defs>',
+      '<rect id="local" style="filter: url(#local-filter)" />',
+      '<rect id="protocol-relative" style="filter: url(//attacker.example/filter.svg#x)" />',
+      '<rect id="relative" mask="url(/private/filter.svg#x)" />',
+      '<animate attributeName="href" values="https://attacker.example/payload" />',
+    ].join('');
+
+    const result = createSafeSvgResult(svg, {
+      width: 640,
+      height: 360,
+      background: undefined,
+      suggestedFilename: 'safe.svg',
+    });
+    const text = await result.blob.text();
+
+    expect(text).not.toContain('<style');
+    expect(text).not.toContain('<animate');
+    expect(text).not.toContain('attacker.example');
+    expect(text).not.toContain('/private/filter.svg');
+    expect(text).toContain('filter: url(#local-filter)');
+    expect(text.match(/\sxmlns=/gu)).toHaveLength(1);
   });
 
   it('renders visible annotations through the shared G2 SVG chart spec as escaped text', async () => {
@@ -255,6 +282,7 @@ describe('SVG export safety', () => {
       height: 520,
       background: '#ffffff',
       suggestedFilename: 'grouped.svg',
+      appearance: { groupRegion: { label: 'auto' } },
       annotations: {},
       emphasis: {},
       groupRegions: [

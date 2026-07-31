@@ -1,32 +1,17 @@
 # TellPlot 入门与集成
 
-## 环境要求
+TellPlot 的领域层和包 import 支持 SSR；实际编辑器只在浏览器中调用 `createEditor` 时访问 DOM 和 G2。
+以下命令用于已经创建好的宿主项目；React 与 Vue 示例默认项目本身已安装对应 framework。三个 UI 入口都
+使用经过兼容与安全复核的精确 G2 peer `5.4.8`。
 
-- Node.js 22.13 或更高版本用于构建与测试。
-- React 18.3 或 React 19。
-- 现代浏览器环境；图表渲染依赖 DOM、Canvas 和 G2。
+## 公共配置
 
-## 安装
-
-```bash
-pnpm add @tellplot/editor @antv/g2 react react-dom
-```
-
-应用入口需要引入一次 TellPlot 样式：
+三种接入共用同一个 `ChartConfig`：
 
 ```ts
-import '@tellplot/editor/styles.css';
-```
+import type { ChartConfig } from '@tellplot/core';
 
-## 渲染第一个图表
-
-公共配置只有四个主要层次：`type`、`data`、`appearance` 和 `editor`。最小图表只需要前两个。
-
-```tsx
-import { ChartEditor, type ChartConfig } from '@tellplot/editor';
-import '@tellplot/editor/styles.css';
-
-const config = {
+export const config = {
   type: 'column',
   data: {
     schemaVersion: '2.0.0',
@@ -38,120 +23,141 @@ const config = {
       { id: 'north', label: 'North', amount: 74 },
     ],
   },
-  locale: 'en-US',
+  locale: 'zh-CN',
 } as const satisfies ChartConfig;
-
-export function RevenueChart() {
-  return <ChartEditor config={config} />;
-}
 ```
 
-分类数据支持 `bar` 和 `column`，图表类型直接由 `config.type` 声明。每个 item `id` 在同一数据集中必须
-唯一，`amount` 必须是有限安全数值。
+`bar` 使用同一 categorical data，只需把 `type` 改为 `bar`。waterfall 使用带明确锚点语义的 current schema：
 
-## 瀑布图
-
-```tsx
-const config = {
+```ts
+export const waterfallConfig = {
   type: 'waterfall',
   data: {
     schemaVersion: '2.0.0',
     dataKind: 'waterfall',
     datasetId: 'profit-bridge',
-    currency: 'CNY',
     items: [
-      { id: 'opening', label: '期初利润', amount: 1_000, kind: 'start' },
-      { id: 'growth', label: '收入增长', amount: 240, kind: 'contribution' },
-      { id: 'cost', label: '成本增加', amount: -90, kind: 'contribution' },
-      { id: 'ending', label: '期末利润', amount: 1_150, kind: 'end' },
+      { id: 'opening', label: 'Opening', amount: 320, kind: 'start' },
+      { id: 'growth', label: 'Growth', amount: 80, kind: 'contribution' },
+      { id: 'cost', label: 'Cost', amount: -45, kind: 'contribution' },
+      { id: 'subtotal', label: 'Operating', amount: 355, kind: 'subtotal' },
+      { id: 'closing', label: 'Closing', amount: 355, kind: 'end' },
     ],
   },
-  appearance: {
-    title: '经营利润桥',
-    labels: {
-      value: { display: 'auto', placement: 'outside', offset: 6 },
-    },
-    tooltip: true,
-  },
 } as const satisfies ChartConfig;
+```
 
-export function ProfitBridge() {
-  return <ChartEditor config={config} />;
+`start`、`subtotal`、`end` 是不可排序的 waterfall anchor，`contribution` 才进入叙事编辑；所有 item ID 在
+同一 dataset 内唯一。
+
+## 原生 DOM
+
+```bash
+pnpm add @tellplot/core @tellplot/editor @antv/g2@5.4.8
+```
+
+```ts
+import { createEditor } from '@tellplot/editor';
+import '@tellplot/editor/styles.css';
+import { config } from './config';
+
+const host = document.querySelector<HTMLElement>('#chart');
+if (!host) throw new Error('Missing chart host');
+
+const editor = createEditor(host, {
+  config,
+  onViewChange(view) {
+    localStorage.setItem('tellplot:view', JSON.stringify(view));
+  },
+});
+
+// 在组件卸载或页面退出时调用。
+export function unmountChart(): void {
+  editor.destroy();
 }
 ```
 
-## 配置与视图
+## React
 
-`ChartConfig` 表达宿主意图和不可变来源数据；`ViewSpec` 保存顺序、分组、折叠、固定、注释和强调。
-不传 `view` 时，组件按 `config.type` 创建并维护初始视图。
-
-受控模式使用 `view` 和 `onViewChange`：
+```bash
+pnpm add @tellplot/core @tellplot/react @antv/g2@5.4.8
+```
 
 ```tsx
 import { useState } from 'react';
-import { ChartEditor, createInitialViewSpec, type ViewSpec } from '@tellplot/editor';
+import { createInitialViewSpec, type ViewSpec } from '@tellplot/core';
+import { ChartEditor } from '@tellplot/react';
+import '@tellplot/react/styles.css';
+import { config } from './config';
 
 const created = createInitialViewSpec(config.data, { chartType: config.type });
-if (!created.ok) throw new Error('Unable to create view');
-const initialView: ViewSpec = created.value;
+if (!created.ok) throw new Error('Invalid config data');
 
-export function ControlledChart() {
-  const [view, setView] = useState(initialView);
+export function RevenueChart() {
+  const [view, setView] = useState<ViewSpec>(created.value);
   return <ChartEditor config={config} view={view} onViewChange={setView} />;
 }
 ```
 
-同一实例不要同时传入 `view` 和 `defaultView`。受控 view 的 dataset、schema 和 chart type 必须与 config
-兼容。
+## Vue 3
 
-## 分组交互
-
-框选同一展开分组内的连续柱会创建子分组。框选同时覆盖分组内外的柱时，TellPlot 会把命中的内部柱提升
-为完整分组边界，再与外部连续节点创建上层分组；确认对话框会显示实际生效的节点与来源范围。原始
-`config.data` 始终不变，结构结果只写入 `ViewSpec`。
-
-## 保存与恢复
-
-```ts
-import { parseViewSpec, serializeViewSpec } from '@tellplot/editor';
-
-const json = serializeViewSpec(editorRef.current!.getView());
-localStorage.setItem('tellplot:view', json);
-
-const restored = parseViewSpec(localStorage.getItem('tellplot:view') ?? '', config.data);
-if (restored.ok && restored.value.chartType === config.type) {
-  setView(restored.value);
-}
+```bash
+pnpm add @tellplot/core @tellplot/vue @antv/g2@5.4.8
 ```
 
-配置与视图应分别保存。TellPlot 不进行启发式 schema migration。
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { createInitialViewSpec } from '@tellplot/core';
+import { ChartEditor } from '@tellplot/vue';
+import '@tellplot/vue/styles.css';
+import { config } from './config';
+
+const created = createInitialViewSpec(config.data, { chartType: config.type });
+if (!created.ok) throw new Error('Invalid config data');
+const view = ref(created.value);
+</script>
+
+<template>
+  <ChartEditor :config="config" v-model:view="view" />
+</template>
+```
+
+## 受控与非受控
+
+- 不传 `view`：editor 维护并立即提交当前视图，`onViewChange` 收到已经提交的结果。
+- `defaultView`：指定兼容的非受控初始视图；它不是持续同步的状态输入。
+- 传入 `view`：editor 进入受控模式。React/imperative 使用 `onViewChange`，Vue 推荐 `v-model:view`。
+- `view` 与 `defaultView` 互斥。
+
+受控模式不会自行提交候选视图。用户操作、`dispatch`、`undo` 或 `redo` 成功后，界面仍显示宿主传入的
+`view`；宿主应把 callback/event 的候选值重新传给 `editor.update`、React props 或 Vue `v-model:view` 才算
+接受。外部命令使用当前可见 `view.revision` 作为 `baseRevision`，并为每次动作提供唯一 ID；同一候选被接受
+前重复使用 ID 会稳定拒绝。
+
+非法 config/view 会进入可恢复的 invalid 状态并调用 `onConfigRejected`/`config-rejected`，不会猜测迁移。
+后续传入有效且兼容的 config/view 即可恢复。
+
+`ChartConfig` 表达不可变来源数据与显示意图；`ViewSpec` 保存顺序、递归分组、折叠、固定、注释和强调。
+持久化时使用 `serializeViewSpec` 与 `parseViewSpec`，不要持久化 DOM 或 G2 instance。
 
 ## 导出
 
-```tsx
-import { useRef } from 'react';
-import { ChartEditor, type ChartEditorHandle } from '@tellplot/editor';
+imperative instance、React ref 和 Vue expose 都提供 `exportImage`：
 
-const editorRef = useRef<ChartEditorHandle>(null);
-
-async function exportPng() {
-  const result = await editorRef.current?.exportImage({ format: 'png', pixelRatio: 2 });
-  if (!result) return;
-
-  const url = URL.createObjectURL(result.blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = result.suggestedFilename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
+```ts
+const result = await editor.exportImage({ format: 'png', pixelRatio: 2 });
+const url = URL.createObjectURL(result.blob);
+// 宿主负责下载、上传或保存 Blob，并在完成后 revoke URL。
+URL.revokeObjectURL(url);
 ```
 
-导出与屏幕渲染共享内部 G2 spec。宿主负责下载、上传或保存返回的 `Blob`。
+## 生命周期
 
-## 下一步
+- imperative 接入在宿主卸载时调用幂等 `destroy()`；React/Vue adapter 自动处理卸载和 Strict Mode cleanup。
+- 同一个 `HTMLElement` 同时只能挂载一个 live imperative instance。
+- 每次 `update` 都提供完整 `EditorOptions`（包括 `config`）；省略的 callback 会被移除，不会沿用旧 callback。
+- `destroy()` 后 `update`/`focus` 为 no-op，`dispatch`/`undo`/`redo` 返回 `null`，`getView` 抛出
+  `EDITOR_DESTROYED`，`exportImage` 以 `EXPORT_UNAVAILABLE` 拒绝。
 
-- [公共 API](api.md)
-- [配置边界](configuration.md)
-- [错误处理](errors.md)
-- [迁移与兼容](migration.md)
+继续阅读 [公共 API](api.md)、[配置边界](configuration.md) 和 [错误处理](errors.md)。

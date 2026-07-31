@@ -7,8 +7,7 @@ import {
   shouldShowCategoricalValueLabels,
   visibleCategoricalAnnotation,
 } from '../../src/charts/categorical/spec';
-import type { CategoricalDatum, CategoricalProjection } from '../../src/charts/categorical/types';
-import type { ViewNodeId } from '../../src/domain/ids';
+import type { CategoricalDatum, CategoricalProjection, ViewNodeId } from '@tellplot/core';
 
 const projection = [
   {
@@ -305,7 +304,10 @@ describe('categorical G2 appearance and semantics', () => {
       domain: ['positive', 'negative', 'group'],
       range: ['#00A36C', '#D23B3B', '#8A5A00'],
     });
-    expect(child.tooltip).toBe(true);
+    expect(child.tooltip).toMatchObject({
+      title: expect.any(Function),
+      items: [expect.any(Function)],
+    });
     expect(child.animate).toEqual({
       enter: {
         type: 'growInX',
@@ -606,6 +608,7 @@ describe('categorical G2 appearance and semantics', () => {
         currency: undefined,
         reducedMotion: true,
         showValueLabels: false,
+        appearance: { groupRegion: { label: 'auto' } },
         annotations: {},
         emphasis: {},
         groupRegions: [
@@ -624,11 +627,20 @@ describe('categorical G2 appearance and semantics', () => {
       });
       const children = (
         spec as {
-          readonly children?: readonly { readonly type?: unknown; readonly coordinate?: unknown }[];
+          readonly children?: readonly {
+            readonly type?: unknown;
+            readonly coordinate?: unknown;
+            readonly scale?: { readonly y?: { readonly domain?: readonly number[] } };
+          }[];
         }
       ).children;
 
       expect(children?.map(child => child.type)).toEqual(['range', 'interval', 'text']);
+      expect(children?.map(child => child.scale?.y?.domain)).toEqual([
+        [-4, 12],
+        [-4, 12],
+        [-4, 12],
+      ]);
       expect(children?.[0]?.coordinate).toEqual(
         chartType === 'bar' ? { transform: [{ type: 'transpose' }] } : undefined,
       );

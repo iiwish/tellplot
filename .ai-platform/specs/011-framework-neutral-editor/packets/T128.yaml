@@ -1,0 +1,75 @@
+schema_version: 1
+packet_id: EP-011-T128
+task_id: T128
+feature_id: 011-framework-neutral-editor
+mode: execute_one_task
+adapter: codex_direct
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/011-framework-neutral-editor/spec.md
+  requirements_checklist: .ai-platform/specs/011-framework-neutral-editor/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/011-framework-neutral-editor/plan.md
+  work_graph: .ai-platform/specs/011-framework-neutral-editor/tasks.md
+  analysis: .ai-platform/specs/011-framework-neutral-editor/analysis.md
+  approval_gates:
+    constitution: Confirmed by user
+    product_or_spec: Confirmed by user on 2026-07-29
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed under approved G006 goal-level execution
+    analysis: No unresolved Critical/High findings
+work_unit:
+  title: 迁移 playground、文档与消费合同
+  goal: 让站点、文档和 tarball consumers 只使用新的四包公共边界
+  epic: E011
+  story: FRAMEWORK-US-001, FRAMEWORK-US-002, FRAMEWORK-US-003
+  requirements: [FRAMEWORK-FR-009, FRAMEWORK-FR-010, FRAMEWORK-FR-011]
+  priority: P0
+  depends_on: [T127]
+  blocks: [T129]
+  parallel: false
+  conflicts_with: [T127, T129]
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [apps/playground, docs, README.md, scripts/release]
+  existing_patterns: [playground consumes only public package, compile-checked examples, local release audit]
+  interfaces_or_contracts: [.ai-platform/specs/011-framework-neutral-editor/contracts/imperative-editor.md]
+  forbidden_changes: [private source imports in playground, stale React-only package claim, remote actions]
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files: [apps/playground/**, docs/**, README.md, CHANGELOG.md, SUPPORT.md, package.json, packages/*/README.md, package consumer fixtures, scripts/release/**, pnpm-lock.yaml, .ai-platform/evidence/T128/**]
+  test_targets: [apps/playground/tests/**, packages/*/tests/package/**]
+  ownership_notes: [execute after T127 evidence and status completion]
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: pnpm vitest run apps/playground/tests packages/editor/tests/package
+    expected_failure: consumers and docs still target old React-only package
+  green:
+    command: pnpm build && pnpm test:package
+    expected_signal: site and all public consumers use new package contracts
+  refactor:
+    command: pnpm release:audit
+    expected_signal: metadata and links pass without stale package claims
+validation_loop:
+  commands: [pnpm --filter @tellplot/playground test, pnpm build, pnpm test:package, pnpm release:audit, git diff --check]
+  retry_budget: 2
+  failure_policy:
+    first_failure: fix consumer or canonical documentation drift
+    second_failure: audit package exports and release scripts
+    beyond_budget: stop and record blocked evidence
+evidence_contract:
+  summary: .ai-platform/evidence/T128/summary.md
+  diff: .ai-platform/evidence/T128/diff.patch
+  test_results: .ai-platform/evidence/T128/test-results.md
+  required: [changed files, RED/GREEN/REFACTOR results, validation results, diff summary, residual risks]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+  acceptance_rule: target remains internal until G006 goal review
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [continue approved G006 sequence]
+stop_conditions: [T127 incomplete, consumer needs private imports, unresolved Critical/High finding]

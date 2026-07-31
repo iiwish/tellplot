@@ -6,17 +6,19 @@ import {
   type FinancialChartAppearance,
   type ResolvedFinancialChartNumberFormat,
   type ResolvedFinancialChartValueLabelAppearance,
-} from '../../config/chartAppearance';
-import type { GroupId, ViewNodeId } from '../../domain/ids';
-import type { Annotation, Emphasis } from '../../domain/model';
+} from '@tellplot/core';
+import type { GroupId, ViewNodeId } from '@tellplot/core';
+import type { Annotation, Emphasis } from '@tellplot/core';
 import {
   createExpandedGroupRegionLabelMark,
   createExpandedGroupRegionMark,
   type ExpandedGroupRegion,
 } from '../groupRegions';
-import { formatAmount, type EditorLocale } from '../../components/formatAmount';
+import { formatAmount, type EditorLocale } from '../../editor/formatAmount';
 import { createForegroundLabelStyle } from '../labelStyle';
-import type { WaterfallDatum, WaterfallDatumKind, WaterfallProjection } from './types';
+import { createSafeAmountTooltip, createSafeTooltipInteraction } from '../safeTooltip';
+import { zeroBasedValueDomain } from '../valueDomain';
+import type { WaterfallDatum, WaterfallDatumKind, WaterfallProjection } from '@tellplot/core';
 
 const DENSE_CANVAS_THRESHOLD = 80;
 const VALUE_LABEL_THRESHOLD = 40;
@@ -84,6 +86,7 @@ function createWaterfallValueLabelMark(
   currency: string | undefined,
   numberFormat: ResolvedFinancialChartNumberFormat,
   labelStyle: ResolvedFinancialChartValueLabelAppearance,
+  valueDomain: readonly [number, number],
 ): Mark {
   const data: readonly WaterfallValueLabelDatum[] = projection.map(datum => ({
     labelId: `value-label:${datum.nodeId}`,
@@ -109,7 +112,7 @@ function createWaterfallValueLabelMark(
         domain: projection.map(datum => datum.nodeId),
         padding: 0.24,
       },
-      y: { type: 'linear', nice: true, zero: true },
+      y: { type: 'linear', nice: true, zero: true, domain: [...valueDomain] },
     },
     style: {
       ...createForegroundLabelStyle(labelStyle),
@@ -147,6 +150,7 @@ export function createWaterfallChartSpec({
   const hasVisibleAnnotations = projection.some(
     datum => visibleWaterfallAnnotation(annotations, datum.nodeId) !== '',
   );
+  const valueDomain = zeroBasedValueDomain(projection.flatMap(datum => [datum.start, datum.end]));
   const displayValueLabels =
     resolvedAppearance.valueLabels === 'always' ||
     (resolvedAppearance.valueLabels === 'auto' && showValueLabels);
@@ -169,6 +173,7 @@ export function createWaterfallChartSpec({
   const groupRegionMark = createExpandedGroupRegionMark({
     regions: groupRegions,
     categoryDomain: projection.map(datum => datum.nodeId),
+    valueDomain,
     appearance: resolvedAppearance,
     reducedMotion,
     denseCanvas,
@@ -177,6 +182,7 @@ export function createWaterfallChartSpec({
   const groupRegionLabelMark = createExpandedGroupRegionLabelMark({
     regions: groupRegions,
     categoryDomain: projection.map(datum => datum.nodeId),
+    valueDomain,
     appearance: resolvedAppearance,
     reducedMotion,
     denseCanvas,
@@ -189,6 +195,7 @@ export function createWaterfallChartSpec({
         currency,
         resolvedAppearance.numberFormat,
         resolvedAppearance.valueLabelStyle,
+        valueDomain,
       )
     : undefined;
 
@@ -207,6 +214,7 @@ export function createWaterfallChartSpec({
           },
         }),
     labelTransform: [{ type: 'overlapHide' }],
+    ...(resolvedAppearance.tooltip ? { interaction: createSafeTooltipInteraction() } : {}),
     children: [
       ...(groupRegionMark === undefined ? [] : [groupRegionMark]),
       {
@@ -220,7 +228,7 @@ export function createWaterfallChartSpec({
         },
         scale: {
           x: { type: 'band', padding: 0.24 },
-          y: { type: 'linear', nice: true, zero: true },
+          y: { type: 'linear', nice: true, zero: true, domain: [...valueDomain] },
           color: {
             type: 'ordinal',
             domain: [...COLOR_DOMAIN],
@@ -268,7 +276,12 @@ export function createWaterfallChartSpec({
                 ? '#18211D'
                 : baseStroke,
         },
-        tooltip: resolvedAppearance.tooltip,
+        tooltip: createSafeAmountTooltip<WaterfallDatum>(
+          resolvedAppearance.tooltip,
+          locale,
+          currency,
+          resolvedAppearance.numberFormat,
+        ),
         animate:
           reducedMotion || denseCanvas || !resolvedAppearance.animation.enabled
             ? false

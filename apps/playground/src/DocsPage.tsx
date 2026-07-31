@@ -4,8 +4,9 @@ import { DEMO_WATERFALL_COLORS } from './demoPresentation';
 import { SiteFooter } from './SiteFooter';
 import { SiteLink } from './SiteLink';
 
-const MINIMAL_REACT_EXAMPLE = `import { ChartEditor, type ChartConfig } from '@tellplot/editor';
-import '@tellplot/editor/styles.css';
+const MINIMAL_REACT_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
+import { ChartEditor } from '@tellplot/react';
+import '@tellplot/react/styles.css';
 
 const config = {
   type: 'waterfall',
@@ -36,7 +37,7 @@ const APPEARANCE_EXAMPLE = `appearance: {
       fontSize: 12,
       fontWeight: 600,
     },
-    group: { display: 'auto', placement: 'outside', offset: 4 },
+    group: 'never',
   },
 }`;
 
@@ -83,11 +84,14 @@ export function DocsPage({
                 <h2>安装</h2>
               </header>
               <p>
-                <code>@tellplot/editor</code> 是 React 组件包，React、React DOM 与 G2 是显式 peer
-                dependencies。
+                <code>@tellplot/core</code> 提供领域能力，<code>@tellplot/editor</code> 提供 DOM/G2
+                runtime，<code>@tellplot/react</code> 只负责 React 生命周期。
               </p>
               <pre>
-                <code>pnpm add @tellplot/editor @antv/g2 react react-dom</code>
+                <code>
+                  pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react
+                  react-dom
+                </code>
               </pre>
             </section>
 

@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { loadG2ChartConstructor } from '../../../src/rendering/g2/chartRuntime';
 import { withOffscreenG2Render } from '../../../src/rendering/g2/exportRuntime';
 
 const g2Mock = vi.hoisted(() => {
   class Chart {
     static instances: Chart[] = [];
     static renderError: Error | undefined;
+    static renderPromise: Promise<void> | undefined;
 
     readonly options = vi.fn((): this => this);
     readonly render = vi.fn((): Promise<void> => {
       if (Chart.renderError !== undefined) {
         return Promise.reject(Chart.renderError);
+      }
+      if (Chart.renderPromise !== undefined) {
+        return Chart.renderPromise;
       }
       const host = (this.config as { readonly container: HTMLElement }).container;
       host.append(document.createElement('canvas'));
@@ -40,10 +45,63 @@ vi.mock('@antv/g-svg', () => ({ Renderer: svgMock.Renderer }));
 beforeEach(() => {
   g2Mock.Chart.instances = [];
   g2Mock.Chart.renderError = undefined;
+  g2Mock.Chart.renderPromise = undefined;
   document.body.replaceChildren();
 });
 
 describe('offscreen G2 export runtime', () => {
+  it('aborts a pending render and synchronously releases its chart and host', async () => {
+    g2Mock.Chart.renderPromise = new Promise(() => undefined);
+    const controller = new AbortController();
+    const reason = new Error('stable abort reason');
+    const pending = withOffscreenG2Render(
+      {
+        ownerDocument: document,
+        parent: document.body,
+        renderer: 'canvas',
+        width: 640,
+        height: 360,
+        spec: { type: 'interval' },
+        signal: controller.signal,
+      },
+      () => undefined,
+    );
+
+    await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(1));
+    const chart = g2Mock.Chart.instances[0];
+    controller.abort(reason);
+
+    expect(chart?.destroy).toHaveBeenCalledOnce();
+    expect(document.body.querySelector('[data-tellplot-offscreen-chart]')).toBeNull();
+    await expect(pending).rejects.toBe(reason);
+    expect(chart?.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('does not leak a chart when abort wins an already-loaded constructor microtask', async () => {
+    await loadG2ChartConstructor();
+    const controller = new AbortController();
+    const reason = new Error('stable constructor abort');
+    const pending = withOffscreenG2Render(
+      {
+        ownerDocument: document,
+        parent: document.body,
+        renderer: 'canvas',
+        width: 640,
+        height: 360,
+        spec: { type: 'interval' },
+        signal: controller.signal,
+      },
+      () => undefined,
+    );
+    const rejected = expect(pending).rejects.toBe(reason);
+
+    queueMicrotask(() => controller.abort(reason));
+
+    await rejected;
+    expect(document.body.querySelector('[data-tellplot-offscreen-chart]')).toBeNull();
+    expect(g2Mock.Chart.instances.every(chart => chart.destroy.mock.calls.length === 1)).toBe(true);
+  });
+
   it('awaits the format reader, then destroys the chart and removes the host', async () => {
     let releaseReader: () => void = () => undefined;
     const readerGate = new Promise<void>(resolve => {
