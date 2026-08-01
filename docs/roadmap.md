@@ -97,15 +97,16 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
 
 ## G007 单包分发与公开发布
 
-- Status: In_Progress
+- Status: Accepted
 - Goal: 只发布无 scope 的 `tellplot@1.0.0`，通过稳定子路径交付 imperative DOM、core、React、Vue 与 CSS。
 - Public entrypoints: `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue`、`tellplot/styles.css`。
 - Internal architecture: core、editor、React adapter 与 Vue adapter 继续是 private workspace layers，保持
   G006 的依赖方向、测试隔离和唯一 runtime ownership。
 - Release controls: T131 使用单一可复现 tarball、exact annotated tag、protected `npm-production`
   environment、stage-only Trusted Publisher、provenance、人类 artifact 复核与 2FA approval。
-- Completion: package/framework/browser/security/isolated-source 门禁、旧 stage 清理、public fresh install、
-  provenance、tag、GitHub Release 和 Registry evidence 全部一致。
+- Outcome: `tellplot@1.0.0` 已从受保护的 `v1.0.0` tag 完成 stage-only Trusted Publishing、人类 2FA
+  approval 和公开发布；package/framework/browser/security/isolated-source 门禁、fresh install、provenance、
+  GitHub Release 与 Registry evidence 全部一致。
 
 ## Decision Gates
 

@@ -5,13 +5,13 @@
 - Feature ID: `013-single-package-distribution`
 - Goal ID: `G007`
 - Version: 1.0.0
-- Status: In_Progress
+- Status: Accepted
 - Last updated: 2026-08-01
 - Approval: 用户明确批准本目标及单包发布边界
 
 ## T131 - 收敛单包分发并完成公开发布
 
-- Status: In_Progress
+- Status: Accepted
 - Priority: P0
 - Story / Requirement: DIST-FR-001 至 005；DIST-NFR-001 至 004
 - Dependencies: G006 / T125-T129 Accepted；G005 / T130 本地发布安全门禁可复用

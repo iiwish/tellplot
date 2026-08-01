@@ -428,7 +428,7 @@ describe('1.0 stable release contract', () => {
     );
   });
 
-  it('keeps the canonical first-publish runbook fail-closed and status-aligned', () => {
+  it('keeps the canonical post-release evidence immutable and status-aligned', () => {
     const report = text('.ai-platform/docs/release-report.md');
     const workflow = text('.github/workflows/publish-npm.yml');
     const tasks = text('.ai-platform/docs/tasks.md');
@@ -439,22 +439,29 @@ describe('1.0 stable release contract', () => {
     expect(tasks).toContain('T131');
     expect(roadmap).toContain('T131');
     expect(agentGuide).toContain('G007 / T131');
-    expect(report).toContain('TELLPLOT_FINAL_COMMIT_SHA');
-    expect(report).toContain('--force-with-lease="refs/tags/v1.0.0:$old_tag_object"');
-    expect(report).toContain('^url\\..*\\.(push)?insteadof$');
-    expect(report).toContain('deployment branches/tags policy');
+    expect(tasks).toContain('| G007 - 单包分发与公开发布 | Accepted |');
+    expect(roadmap).toContain('- Status: Accepted');
+    expect(agentGuide).toContain('`tellplot@1.0.0` 已发布到 npm 和 GitHub');
+    expect(report).toContain('- Status: Released');
+    expect(report).toContain('a3e07c9ac9b20183092729cde234322db98f9835');
+    expect(report).toContain('d86cc8dff46f64c7e487153121b3f503e76ba5dc');
+    expect(report).toContain('Tag protection ruleset | `20169540`，active');
+    expect(report).toContain('Workflow run | `30701441776`');
+    expect(report).toContain('Environment deployment | `5705046643`');
     expect(report).toContain('npm-production');
-    expect(report).toContain('export GH_HOST=github.com');
-    expect(report).toContain('--repo iiwish/tellplot');
-    expect(report).toContain('gh run watch "$run_id" --repo iiwish/tellplot --exit-status');
-    expect(report).toContain('npm stage list "$package"');
-    expect(report).not.toContain('npm stage list @tellplot/{core,editor,react,vue}');
-    expect(report).toContain('npm stage reject "$stage_id" --registry=https://registry.npmjs.org/');
-    expect(report).toContain('npm stage approve "${stage_ids[$index]}"');
+    expect(report).toContain('187969a4-f39a-40e0-b602-8bccb975f9b2');
+    expect(report).toContain(
+      'sha512-+GHSo5QRkYyKTmFpn5Qbq6h4BrVizS31g0nn+QjL+5kOA8RBdC9w6nua2rENjx8mUocEtfr1yQkdEgHdlRFbqw==',
+    );
+    expect(report).toContain('`latest` 指向 `tellplot@1.0.0`');
+    expect(report).toContain('SLSA provenance v1');
+    expect(report).toContain('refs/tags/v1.0.0');
+    expect(report).toContain('React 18.3.1、React 19.2.7、Vue 3.5.27');
+    expect(report).toContain('`0.0.0-bootstrap.0` 仅保留历史占位');
     expect(report).toContain('.ai-platform/evidence/T131/tarball-manifest.json');
-    expect(report).toMatch(/不得声称\s+已原子回滚/u);
-    expect(report).toContain('只重试 pending');
-    expect([...report.matchAll(/^set -euo pipefail$/gmu)].length).toBeGreaterThanOrEqual(3);
+    expect(report).toContain('没有已知发布阻塞');
+    expect(report).not.toContain('TELLPLOT_FINAL_COMMIT_SHA');
+    expect(report).not.toContain('- Status: Not_Released');
     const workflowSha = workflow.match(
       /^\s+([0-9a-f]{64})\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
     )?.[1];

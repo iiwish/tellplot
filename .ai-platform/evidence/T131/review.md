@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: In_Progress
+- Status: Accepted
 - Unresolved Critical: 0
 - Unresolved High: 0
 - Unresolved Medium: 0
@@ -27,7 +27,9 @@
 - E2E 接入文档断言仍引用旧 scoped package：迁移为 `pnpm add tellplot` 与
   `import 'tellplot/styles.css'`，当前及上一浏览器矩阵通过。
 
-## Local Verdict
+## Final Verdict
 
-本地 spec compliance、bug/code quality、package artifact 和 QA gate 通过；无未解决 Critical、High 或
-Medium finding。公开 staging、2FA approval、Registry fresh install 和 provenance 仍是 T131 完成条件。
+spec compliance、bug/code quality、package artifact、QA、托管 workflow、stage download、2FA approval、
+Registry fresh install、SLSA provenance 与 GitHub Release 全部通过；无未解决 Critical、High 或 Medium
+finding。`tellplot@1.0.0`、受保护 tag、workflow head、公开 tarball 和 provenance 指向同一发布提交，T131
+满足 Definition of Done 并验收为 `Accepted`。

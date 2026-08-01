@@ -267,7 +267,8 @@ optional peer dependencies，根入口和 imperative consumer 不安装框架也
 - SC-005：新增图表不要求宿主接触 G2 instance 或复制 TellPlot 内部生命周期。
 - SC-006：核心包不存在模型调用、外部业务请求或未经授权的数据发送。
 - SC-007：最小瀑布图、条形图和柱状图接入只需要一份 `ChartConfig`；公共配置与可编辑视图状态边界明确。
-- SC-008：1.0.0 package、公开资料、架构/发布审计和隔离源码复演全部通过，且不会被描述为已公开发布。
+- SC-008：`tellplot@1.0.0` 的 package、公开资料、架构/发布审计、隔离源码复演、npm provenance 与
+  fresh install 全部通过，并与受保护 Git tag 和 GitHub Release 一致。
 
 ## Confirmed Decisions
 
@@ -316,4 +317,5 @@ ownership，不提供 raw `G2Spec`。
 ### CD-010 稳定版本
 
 公共包 `tellplot` 的首个稳定版本为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
-作为稳定条件。公开发布只允许来自后续授权的干净 commit；本地稳定候选不等于 npm/GitHub/网站已发布。
+作为稳定条件。`1.0.0` 从受保护的 annotated tag、stage-only Trusted Publisher 和人类 2FA approval 发布；
+后续公开版本继续只允许来自明确授权的干净 commit、受保护 tag 和可追溯 artifact。

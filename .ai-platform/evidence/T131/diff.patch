@@ -1,5 +1,5 @@
 diff --git a/.ai-platform/docs/product-design.md b/.ai-platform/docs/product-design.md
-index 2fddc27..afb4caa 100644
+index 2fddc27..232e70a 100644
 --- a/.ai-platform/docs/product-design.md
 +++ b/.ai-platform/docs/product-design.md
 @@ -2,10 +2,10 @@
@@ -58,7 +58,15 @@ index 2fddc27..afb4caa 100644
  - 真实图表驱动的开源官网、示例中心、开发者文档入口和在线工作台。
  
  ## Expansion Policy
-@@ -270,7 +273,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
+@@ -264,13 +267,14 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
+ - SC-005：新增图表不要求宿主接触 G2 instance 或复制 TellPlot 内部生命周期。
+ - SC-006：核心包不存在模型调用、外部业务请求或未经授权的数据发送。
+ - SC-007：最小瀑布图、条形图和柱状图接入只需要一份 `ChartConfig`；公共配置与可编辑视图状态边界明确。
+-- SC-008：1.0.0 package、公开资料、架构/发布审计和隔离源码复演全部通过，且不会被描述为已公开发布。
++- SC-008：`tellplot@1.0.0` 的 package、公开资料、架构/发布审计、隔离源码复演、npm provenance 与
++  fresh install 全部通过，并与受保护 Git tag 和 GitHub Release 一致。
+ 
+ ## Confirmed Decisions
  
  ### CD-001 交付形态
  
@@ -67,7 +75,7 @@ index 2fddc27..afb4caa 100644
  
  ### CD-002 导出边界
  
-@@ -282,7 +285,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
+@@ -282,7 +286,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
  
  ### CD-004 产品身份
  
@@ -76,7 +84,7 @@ index 2fddc27..afb4caa 100644
  
  ### CD-005 编辑模型
  
-@@ -300,7 +303,7 @@ breaking API、schema、依赖、远程 Git 和发布仍是独立人工闸门。
+@@ -300,7 +304,7 @@ breaking API、schema、依赖、远程 Git 和发布仍是独立人工闸门。
  
  ### CD-008 展示网站边界
  
@@ -85,27 +93,37 @@ index 2fddc27..afb4caa 100644
  核心图表 registry，不向公共包增加路由、文档、动画或在线执行依赖。
  
  ### CD-009 公共配置入口
-@@ -312,5 +315,5 @@ ownership，不提供 raw `G2Spec`。
+@@ -312,5 +316,6 @@ ownership，不提供 raw `G2Spec`。
  
  ### CD-010 稳定版本
  
 -四个公共包的首个稳定版本均为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
+-作为稳定条件。公开发布只允许来自后续授权的干净 commit；本地稳定候选不等于 npm/GitHub/网站已发布。
 +公共包 `tellplot` 的首个稳定版本为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
- 作为稳定条件。公开发布只允许来自后续授权的干净 commit；本地稳定候选不等于 npm/GitHub/网站已发布。
++作为稳定条件。`1.0.0` 从受保护的 annotated tag、stage-only Trusted Publisher 和人类 2FA approval 发布；
++后续公开版本继续只允许来自明确授权的干净 commit、受保护 tag 和可追溯 artifact。
 diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
-index e73de7f..9cb9cd2 100644
+index 703a434..3ae5ea3 100644
 --- a/.ai-platform/docs/release-report.md
 +++ b/.ai-platform/docs/release-report.md
-@@ -4,126 +4,119 @@
+@@ -1,397 +1,116 @@
+-# TellPlot 交付状态报告
++# TellPlot 1.0.0 发布报告
+ 
+ ## Metadata
  
  - Version: 1.0.0
- - Status: Not_Released
+-- Status: Not_Released
 -- Last updated: 2026-07-31
-+- Last updated: 2026-08-01
- - Working branch: `main`
-+- Active goal: G007 / T131
+-- Working branch: `main`
++- Status: Released
++- Released: 2026-08-01
++- Repository: `iiwish/tellplot`
++- Package: `tellplot@1.0.0`
++- GitHub Release: `https://github.com/iiwish/tellplot/releases/tag/v1.0.0`
  
- ## Current State
+-## Current State
++## Public Contract
  
 -TellPlot 是基于 G2 的框架无关可编辑基础图表库，当前内建瀑布图、分类条形图和分类柱状图。
 -G001、G002 系列、G004 与 G006 均已验收；G006 / T125-T129 于 2026-07-30 完成目标级验收。
@@ -113,21 +131,34 @@ index e73de7f..9cb9cd2 100644
 -身份、四个 npm package root bootstrap、stage-only Trusted Publisher、2FA approval 与生产托管条件保持
 -`Blocked`。T130 已完成本地修复、完整门禁和独立复核，状态为 `Needs_Review`，等待用户验收；这不构成
 -任何远程发布授权。
--
++TellPlot 通过一个无 scope 的 `tellplot` 包交付框架无关 core、imperative editor、React/Vue adapters 和
++完整样式。公开入口为：
+ 
 -## Package Architecture
--
++- `tellplot`：core 领域 API 与 `createEditor`。
++- `tellplot/core`：显式 core-only 入口。
++- `tellplot/react`：React 18/19 `ChartEditor`。
++- `tellplot/vue`：Vue 3 `ChartEditor`。
++- `tellplot/styles.css`：完整编辑器样式。
+ 
 -- `@tellplot/core`：拥有 SourceData、ViewSpec、配置验证、投影、确定性命令、交互策略和 `EditorStore`；
 -  不依赖 DOM、G2、React 或 Vue。
 -- `@tellplot/editor`：通过 `createEditor(container, options)` 提供完整 imperative DOM/G2 工作台，
 -  包含图表直接操作、结构大纲、Inspector、Toolbar、分组、批注、历史、持久化、SVG/PNG 导出和 a11y。
 -- `@tellplot/react`：React 18.3/19.x 薄适配，只管理宿主节点、props/ref 映射与 lifecycle。
 -- `@tellplot/vue`：Vue 3.5+ 薄适配，提供 props、emits、`v-model:view` 与 expose，不持有第二套状态。
--
++内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 和 `@tellplot/vue` 保持 private workspace
++layers，不形成独立公开版本。G2/G SVG 是 direct dependencies，React/Vue 是 optional peers；imperative
++consumer 不要求安装 UI framework。
+ 
 -G2 仍独占图形渲染、场景边界、事件与动画。三种宿主进入同一套 command/store/runtime，不含历史
 -React-only API 兼容层、Dashboard、第二渲染引擎或通用 plugin registry。
--
++单包分发减少安装、版本协调和 npm organization 管理成本，同时保留内部 layers 的依赖方向、独立测试和
++唯一 editor runtime ownership；本次发布不改变图表 schema、命令语义或 G2 渲染边界。
+ 
 -## Delivered Scope
--
++## Immutable Source
+ 
 -- T125：框架无关 core、领域不变量和统一 `EditorStore`。
 -- T126：完整 imperative DOM/G2 编辑器、资源释放和全交互面迁移。
 -- T127：React 18/19 与 Vue 3 适配包及隔离 tarball consumer。
@@ -206,63 +237,11 @@ index e73de7f..9cb9cd2 100644
 -  T130 保持 `Needs_Review`，完整本地结果不能替代 G005 的 clean commit、托管 CI 与远程人工闸门。
 -- G006 的已验收证据继续有效，但不能替代从干净 commit 对最终发布内容执行的 fresh-clone CI 与完整
 -  release gate。
-+TellPlot 是基于 G2 的框架无关可编辑基础图表库，内建瀑布图、分类条形图和分类柱状图。G006 已验收
-+core、imperative editor、React adapter 与 Vue adapter 的内部 ownership。G007 只把公共分发收敛为一个
-+无 scope 的 `tellplot` 包，不改变图表、schema、命令、交互或 G2 runtime。
-+
-+当前工作树包含 `tellplot@1.0.0` 本地候选，尚未作为该包名的 1.0.0 发布。公开入口为：
-+
-+- `tellplot`：core 领域 API 与 `createEditor`。
-+- `tellplot/core`：显式 core-only 入口。
-+- `tellplot/react`：React 18/19 `ChartEditor`。
-+- `tellplot/vue`：Vue 3 `ChartEditor`。
-+- `tellplot/styles.css`：完整编辑器样式。
-+
-+内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 和 `@tellplot/vue` 都是 private workspace
-+layers，不独立生成发布 artifact。G2/G SVG 是公共包 direct dependencies，React/Vue 是 optional peers；
-+imperative consumer 不需要安装框架。
-+
-+## Release Candidate
-+
-+唯一权威 artifact manifest 是 `.ai-platform/evidence/T131/tarball-manifest.json`。当前候选为：
-+
-+| Package | Artifact | SHA-256 |
-+| --- | --- | --- |
-+| `tellplot@1.0.0` | `tellplot-1.0.0.tgz` | `e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e` |
-+
-+该 hash 在任何 package 内容变化后必须通过 `pnpm release:artifact:refresh` 重新生成，并同步到
-+`.github/workflows/publish-npm.yml`。本表、本地 manifest、workflow 和 staged download 四处必须完全一致。
-+
-+## Quality Gates
-+
-+T131 完成前必须从 Node 22.20.0、clean source 执行以下阻断门禁：
-+
-+- supply-chain lock、installed manifest 与官方 npm production advisory audit。
-+- format、lint、strict typecheck、coverage、build、architecture cycle 和 public surface audit。
-+- 单包 ESM/CJS/types/CSS、publint、ATTW、pack allowlist 和可复现 SHA-256。
-+- imperative no-framework、React 18、React 19 与 Vue 3 strict peer consumer matrix。
-+- 当前/上一浏览器、WebKit 18.4、a11y、200-item performance 和 isolated-source rehearsal。
-+- public source preflight、tag/main/workflow contract、Registry availability 和 release artifact check。
-+
-+T129/T130 的已验收结果是回归基线，不代替对最终单包候选执行的新门禁。T131 最新结果记录在
-+`.ai-platform/evidence/T131/test-results.md` 和 `review.md`。
-+
-+## Remote Baseline
-+
-+- GitHub 仓库：`iiwish/tellplot`，公开可见。
-+- `main` 与 annotated `v1.0.0` 当前 peeled commit：
-+  `f3a32282cc6d61d1ad23a5801b8ddc0eb944c747`。
-+- 当前 remote tag object：`e695354321c70c40e59c99af99dc062dc7b786ce`。
-+- `npm-production` environment 与 exact tag protection 已建立；最终候选提交后仍需受控重建 tag 并复核规则。
-+- 旧 scoped bootstrap package 只有 `0.0.0-bootstrap.0`；四个 scoped 1.0.0 stage 从未批准，不属于发布结果。
-+- `tellplot` package root、stage-only Trusted Publisher 与 package-level 2FA 必须在正式 staging 前核验。
- 
- ## First-Publish Gate
- 
+-
+-## First-Publish Gate
+-
 -以下步骤属于 G005 远程发布操作，必须取得独立明确授权；T130 不执行这些命令：
-+以下顺序失败关闭。远程写操作只在既有用户授权范围内执行；任何身份、2FA、Registry 或 ref 状态不确定时
-+立即停止。
- 
+-
 -1. 确认 `@tellplot` scope ownership、维护者 2FA、公开仓库，以及 `npm-production` environment 的
 -   required reviewers 与 prevent self-review；在第 3 步完成前保持该 environment 禁止部署。审计既有 tag、
 -   GitHub Release 与 npm version。当前远端 `v1.0.0` tag object 为
@@ -274,91 +253,33 @@ index e73de7f..9cb9cd2 100644
 -   gate；取得独立远程 Git 授权后再推送 `main`，在发布评审记录中固定唯一 final commit SHA。
 -3. 在独立 tag-update 授权下，以带 expected-old-object lease 的方式把 stale `v1.0.0` 重建为指向 final
 -   commit 的 annotated tag。任何旧 tag object、remote main 或 lease 漂移都必须失败关闭：
-+### 1. 清理旧 scoped staging
-+
-+先逐包读取 staged queue，核对下列旧 stage ID 后拒绝，不得批准：
-+
-+```bash
-+set -euo pipefail
-+
-+packages=(@tellplot/core @tellplot/editor @tellplot/react @tellplot/vue)
-+stage_ids=(
-+  1f94311c-06ee-4149-ad84-e53263dc285c
-+  9e585db9-3289-4626-9a2c-e2b68a5db020
-+  1604e85d-2a29-46a9-af73-e0cc9a3007f9
-+  a1b6cf23-5beb-4403-a0a2-03169214fb58
-+)
-+for package in "${packages[@]}"; do
-+  npm stage list "$package" --json --registry=https://registry.npmjs.org/
-+done
-+for stage_id in "${stage_ids[@]}"; do
-+  npm stage reject "$stage_id" --registry=https://registry.npmjs.org/
-+done
-+```
-+
-+拒绝后再次逐包读取 queue。旧 bootstrap versions 可以保留为历史占位，但应在新包公开后 deprecate 并明确
-+指向 `tellplot`；不得为 scoped package 发布 1.x。
-+
-+### 2. Bootstrap 与 Trusted Publisher
-+
-+使用单独构建、单独复核的 `tellplot@0.0.0-bootstrap.0`，以非 `latest` dist-tag 首次创建 package root。
-+bootstrap artifact 不得复用 1.0.0 候选，不得进入 GitHub Release。随后为 `tellplot` 配置：
-+
-+- repository `iiwish/tellplot`；workflow `publish-npm.yml`；environment `npm-production`。
-+- 只启用 `allow-stage-publish`，禁用直接 `allow-publish`。
-+- package access 要求 2FA 并 disallow tokens；配置后重新读取并归档结果。
-+
-+核对命令固定官方 Registry：
-+
-+```bash
-+set -euo pipefail
-+
-+package=tellplot
-+npm trust list "$package" --json --registry=https://registry.npmjs.org/
-+npm stage list "$package" --json --registry=https://registry.npmjs.org/
-+npm view "$package" versions dist-tags --json --registry=https://registry.npmjs.org/
-+```
-+
-+package root 不存在、trust 权限不是 stage-only、queue 不为空或 1.0.0 已存在都阻断 workflow。
-+
-+### 3. 固定最终 main 与 annotated tag
-+
-+最终变更提交并推送到 clean `main`，托管 CI 全绿后记录唯一 `TELLPLOT_FINAL_COMMIT_SHA`。tag 更新前拒绝
-+任何 Git URL rewrite，并以 expected-old-object lease 受控替换：
- 
- ```bash
- set -euo pipefail
-@@ -133,130 +126,35 @@ if git config --show-origin --get-regexp '^url\..*\.(push)?insteadof$'; then
-   printf 'refusing tag update while a Git URL rewrite is active\n' >&2
-   exit 1
- fi
+-
+-```bash
+-set -euo pipefail
+-
+-canonical_remote='https://github.com/iiwish/tellplot.git'
+-if git config --show-origin --get-regexp '^url\..*\.(push)?insteadof$'; then
+-  printf 'refusing tag update while a Git URL rewrite is active\n' >&2
+-  exit 1
+-fi
 -: "${TELLPLOT_FINAL_COMMIT_SHA:?set the SHA fixed in the approved release record}"
-+: "${TELLPLOT_FINAL_COMMIT_SHA:?}"
- [[ "$TELLPLOT_FINAL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+-[[ "$TELLPLOT_FINAL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
 -final_commit="$TELLPLOT_FINAL_COMMIT_SHA"
 -test "$(git rev-parse --verify HEAD)" = "$final_commit"
-+test "$(git rev-parse HEAD)" = "$TELLPLOT_FINAL_COMMIT_SHA"
- remote_main="$(
+-remote_main="$(
 -  git ls-remote --exit-code --refs "$canonical_remote" refs/heads/main | awk '{print $1}'
-+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
-+    git ls-remote --exit-code --refs "$canonical_remote" refs/heads/main | awk '{print $1}'
- )"
- old_tag_object="$(
+-)"
+-old_tag_object="$(
 -  git ls-remote --exit-code --tags "$canonical_remote" refs/tags/v1.0.0 | awk '{print $1}'
-+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
-+    git ls-remote --exit-code --tags "$canonical_remote" refs/tags/v1.0.0 | awk '{print $1}'
- )"
+-)"
 -test "$remote_main" = "$final_commit"
 -test "$old_tag_object" = '56a998894668ce0f265f9ef676d88bb79ee06ad6'
 -
 -# 以下两条写操作仍需独立明确授权。
 -git tag --force --annotate v1.0.0 "$final_commit" --message 'TellPlot v1.0.0'
-+test "$remote_main" = "$TELLPLOT_FINAL_COMMIT_SHA"
-+test "$old_tag_object" = 'e695354321c70c40e59c99af99dc062dc7b786ce'
-+git tag --force --annotate v1.0.0 "$TELLPLOT_FINAL_COMMIT_SHA" --message 'TellPlot v1.0.0'
- git push \
-   --force-with-lease="refs/tags/v1.0.0:$old_tag_object" \
-   "$canonical_remote" refs/tags/v1.0.0
+-git push \
+-  --force-with-lease="refs/tags/v1.0.0:$old_tag_object" \
+-  "$canonical_remote" refs/tags/v1.0.0
 -
 -remote_tag_object="$(
 -  git ls-remote --exit-code --tags "$canonical_remote" refs/tags/v1.0.0 | awk '{print $1}'
@@ -401,7 +322,15 @@ index e73de7f..9cb9cd2 100644
 -    --json \
 -    --registry=https://registry.npmjs.org/
 -done
- ```
+-```
++| Item | Value |
++| --- | --- |
++| Release commit | `a3e07c9ac9b20183092729cde234322db98f9835` |
++| Annotated tag | `v1.0.0` |
++| Remote tag object | `d86cc8dff46f64c7e487153121b3f503e76ba5dc` |
++| Tag protection ruleset | `20169540`，active，禁止 update/deletion |
++| Workflow run | `30701441776` |
++| Environment deployment | `5705046643`，`npm-production` |
  
 -   任一写入或读取失败都必须立即停止，不得启用 disallow-tokens 或触发 workflow。维护者逐包执行
 -   `npm trust list --json`，核对 configuration ID、repository、workflow、environment 和 permissions；修正
@@ -413,12 +342,15 @@ index e73de7f..9cb9cd2 100644
 -   失败都停在本步骤，不得继续。
 -7. 触发前使用已认证维护者会话逐包检查 staged queue，确认四包均没有 pending 1.0.0 stage。`npm stage
 -   list` 只接收一个可选 package spec，不能把四个 package 作为同一次调用的 positional arguments：
-+重建后确认 remote main、local tag peeled commit、remote tag peeled commit 和 final SHA 完全相同，再恢复并
-+负向验证 exact `v1.0.0` tag protection 与 `npm-production` deployment branches/tags policy。
++`main`、annotated tag peeled commit、workflow head 和 provenance git dependency 在发布时均解析到同一
++release commit。受控标签重建使用旧 tag object
++`e695354321c70c40e59c99af99dc062dc7b786ce` 作为 exact force-with-lease；保护恢复后，删除探针被 GitHub
++ruleset 拒绝。
  
 -```bash
 -set -euo pipefail
--
++## Artifact
+ 
 -queue_evidence="$(mktemp -d)"
 -for package in @tellplot/core @tellplot/editor @tellplot/react @tellplot/vue; do
 -  npm stage list "$package" \
@@ -428,19 +360,27 @@ index e73de7f..9cb9cd2 100644
 -done
 -printf 'archive staged-queue evidence from %s\n' "$queue_evidence"
 -```
--
++唯一发布 artifact 为 `.ai-platform/evidence/T131/artifacts/tellplot-1.0.0.tgz`：
+ 
 -   将四个 JSON 结果附到发布评审记录，并逐包确认不存在 pending 1.0.0。任何 auth/network/query failure 都
 -   禁止 dispatch；公共 version endpoint 的 404 不能证明 staged queue 为空。
 -8. 从 exact annotated `v1.0.0` tag 触发工作流：
-+### 4. 从 exact tag 执行 staging workflow
++| Property | Value |
++| --- | --- |
++| Size | 485325 bytes |
++| SHA-1 | `662d0280de22a634c80471e6d16cca2a312cd829` |
++| SHA-256 | `e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e` |
++| npm integrity | `sha512-+GHSo5QRkYyKTmFpn5Qbq6h4BrVizS31g0nn+QjL+5kOA8RBdC9w6nua2rENjx8mUocEtfr1yQkdEgHdlRFbqw==` |
  
- ```bash
- set -euo pipefail
+-```bash
+-set -euo pipefail
++本地 artifact manifest、workflow 固定 hash、npm staged download、公开 registry 和 GitHub Release asset
++使用同一 tarball。构建在 Node 22.20.0 下规范化 package manifest key order 与 gzip stream，连续重建保持
++相同 size 和 SHA-256。
  
 -: "${TELLPLOT_FINAL_COMMIT_SHA:?set the SHA fixed in the approved release record}"
 -[[ "$TELLPLOT_FINAL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
-+: "${TELLPLOT_FINAL_COMMIT_SHA:?}"
- export GH_HOST=github.com
+-export GH_HOST=github.com
 -canonical_remote='https://github.com/iiwish/tellplot.git'
 -dispatch_check_root="$(mktemp -d)"
 -remote_git() {
@@ -469,27 +409,26 @@ index e73de7f..9cb9cd2 100644
 -[[ "$remote_tag_commit" =~ ^[0-9a-f]{40}$ ]]
 -test "$remote_tag_object" != "$remote_tag_commit"
 -test "$remote_tag_commit" = "$TELLPLOT_FINAL_COMMIT_SHA"
- run_url="$(
-   gh workflow run publish-npm.yml \
-     --repo iiwish/tellplot \
-@@ -264,134 +162,80 @@ run_url="$(
-     -f confirmation='stage 1.0.0 stage-only-trusted-publishers-verified' |
-     awk '/^https:\/\/github\.com\/iiwish\/tellplot\/actions\/runs\/[0-9]+$/ { print; exit }'
- )"
+-run_url="$(
+-  gh workflow run publish-npm.yml \
+-    --repo iiwish/tellplot \
+-    --ref v1.0.0 \
+-    -f confirmation='stage 1.0.0 stage-only-trusted-publishers-verified' |
+-    awk '/^https:\/\/github\.com\/iiwish\/tellplot\/actions\/runs\/[0-9]+$/ { print; exit }'
+-)"
 -[[ "$run_url" =~ ^https://github\.com/iiwish/tellplot/actions/runs/[0-9]+$ ]]
 -printf 'record workflow run %s\n' "$run_url"
-+[[ "$run_url" =~ ^https://github.com/iiwish/tellplot/actions/runs/[0-9]+$ ]]
- run_id="${run_url##*/}"
- run_head="$(
+-run_id="${run_url##*/}"
+-run_head="$(
 -  gh run view "$run_id" \
 -    --repo iiwish/tellplot \
 -    --json headSha \
 -    --jq '.headSha'
-+  gh run view "$run_id" --repo iiwish/tellplot --json headSha --jq '.headSha'
- )"
- test "$run_head" = "$TELLPLOT_FINAL_COMMIT_SHA"
- gh run watch "$run_id" --repo iiwish/tellplot --exit-status
- ```
+-)"
+-test "$run_head" = "$TELLPLOT_FINAL_COMMIT_SHA"
+-gh run watch "$run_id" --repo iiwish/tellplot --exit-status
+-```
++## npm Controls
  
 -   `gh run watch` 会在 stage job 的 `npm-production` environment gate 等待。独立 reviewer 必须先核对
 -   exact run URL/head SHA、verify job 全绿、tag/environment policy 和四包 readiness，再批准 environment；
@@ -497,13 +436,19 @@ index e73de7f..9cb9cd2 100644
 -   “最新一次 run”替代 `--repo iiwish/tellplot` 与该 run ID。
 -9. 工作流成功只表示四个 1.0.0 artifact 已进入 npm staging，尚未公开。维护者把四个 stage ID 写入受审
 -   变量，再从独立目录逐个查看和下载：
-+environment reviewer 必须核对 exact run URL/head SHA、verify job、tag policy、trust readiness 和候选 hash 后
-+批准。工作流只执行一次 `npm stage publish`，不执行 `npm publish`。
-+
-+### 5. 下载并复核 staged artifact
++- Trusted Publisher：GitHub Actions，repository `iiwish/tellplot`，workflow `publish-npm.yml`，environment
++  `npm-production`。
++- Trust permission：只允许 `npm stage publish`，禁止直接 `npm publish`。
++- Package access：要求 2FA 并禁止 bypass 2FA token。
++- Bootstrap：`tellplot@0.0.0-bootstrap.0` 保留在 `bootstrap` dist-tag。
++- Stable：`latest` 指向 `tellplot@1.0.0`。
++- Stage queue：公开批准后为空。
  
- ```bash
- set -euo pipefail
+-```bash
+-set -euo pipefail
++workflow 从 exact `v1.0.0` tag 执行完整 release gate，verify job 在 23m6s 内通过，stage job 在 environment
++审批后 26s 内完成。npm stage `187969a4-f39a-40e0-b602-8bccb975f9b2` 的 actor 为 GitHub Actions trusted
++automation；下载复核通过后由维护者完成 WebAuthn 2FA approval。
  
 -: "${TELLPLOT_CORE_STAGE_ID:?}"
 -: "${TELLPLOT_EDITOR_STAGE_ID:?}"
@@ -516,8 +461,7 @@ index e73de7f..9cb9cd2 100644
 -  "$TELLPLOT_REACT_STAGE_ID"
 -  "$TELLPLOT_VUE_STAGE_ID"
 -)
-+: "${TELLPLOT_STAGE_ID:?}"
- review_root="$(mktemp -d)"
+-review_root="$(mktemp -d)"
 -for index in "${!stage_ids[@]}"; do
 -  label="${stage_labels[$index]}"
 -  stage_id="${stage_ids[$index]}"
@@ -533,28 +477,29 @@ index e73de7f..9cb9cd2 100644
 -  )
 -done
 -printf 'archive staged-artifact evidence from %s\n' "$review_root"
-+npm stage view "$TELLPLOT_STAGE_ID" --json --registry=https://registry.npmjs.org/ |
-+  tee "$review_root/stage.json"
-+(
-+  cd "$review_root"
-+  npm stage download "$TELLPLOT_STAGE_ID" --registry=https://registry.npmjs.org/
-+)
-+printf 'expected sha256: %s\n' \
-+  'e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e'
- ```
+-```
++## Provenance
  
 -   对每个 stage 核对 package/version/tag、provenance，并对下载文件执行 `sha256sum`；macOS 使用
 -   `shasum -a 256`。结果必须同时匹配
 -   `.ai-platform/evidence/T129/tarball-manifest.json` 和下表。四包检查矩阵全部通过并签字前，不得批准
 -   任何单包：
--
++公开 `dist.attestations` 包含 npm publish attestation 与 SLSA provenance v1。解码后的 SLSA statement 固定：
+ 
 -| Package | Candidate SHA-256 |
 -| --- | --- |
--| `@tellplot/core@1.0.0` | `4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b` |
--| `@tellplot/editor@1.0.0` | `3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2` |
--| `@tellplot/react@1.0.0` | `c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242` |
--| `@tellplot/vue@1.0.0` | `a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811` |
--
+-| `@tellplot/core@1.0.0` | `40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5` |
+-| `@tellplot/editor@1.0.0` | `3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395` |
+-| `@tellplot/react@1.0.0` | `085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a` |
+-| `@tellplot/vue@1.0.0` | `78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17` |
++- subject `pkg:npm/tellplot@1.0.0`。
++- repository `https://github.com/iiwish/tellplot`。
++- workflow `.github/workflows/publish-npm.yml`。
++- ref `refs/tags/v1.0.0`。
++- git commit `a3e07c9ac9b20183092729cde234322db98f9835`。
++- invocation `https://github.com/iiwish/tellplot/actions/runs/30701441776/attempts/1`。
++- builder `https://github.com/actions/runner/github-hosted`。
+ 
 -   任一 metadata、tarball、hash 或 provenance 不一致都必须停止；在尚无 approval 的前提下，按第 10 步
 -   reject 本次全部 stage。不得批准“未受影响”的单包，也不得原地替换 staged artifact。
 -10. 任一 package 在四包全部进入 staging 前失败时，禁止直接重跑。已产生的 stage 保持非公开；维护者
@@ -563,16 +508,11 @@ index e73de7f..9cb9cd2 100644
 -   staged queue 为空且 1.0.0 仍未公开后再触发工作流；任何 Registry 未显式固定的命令都不得用于该流程。
 -11. 第 9 步四包预验全部通过后，才按 `core -> editor -> react -> vue` 逐个执行
 -   `npm stage approve`，并在每次 approval 后立即核对对应 Registry version：
-+核对 package/version/tag、provenance、文件清单和 SHA-256；结果必须匹配
-+`.ai-platform/evidence/T131/tarball-manifest.json`。任一不一致都使用
-+`npm stage reject "$stage_id" --registry=https://registry.npmjs.org/` 拒绝，不批准也不原地替换。
-+
-+### 6. 2FA approval 与公开验证
-+
-+只有 staged artifact 复核通过才执行 approval：
++## Acceptance
  
- ```bash
- set -euo pipefail
+-```bash
+-set -euo pipefail
++以下阻断门禁全部通过：
  
 -: "${TELLPLOT_CORE_STAGE_ID:?}"
 -: "${TELLPLOT_EDITOR_STAGE_ID:?}"
@@ -585,19 +525,21 @@ index e73de7f..9cb9cd2 100644
 -  "$TELLPLOT_REACT_STAGE_ID"
 -  "$TELLPLOT_VUE_STAGE_ID"
 -)
-+packages=(tellplot)
-+stage_ids=("${TELLPLOT_STAGE_ID:?}")
- for index in "${!stage_ids[@]}"; do
+-for index in "${!stage_ids[@]}"; do
 -  npm stage approve "${stage_ids[$index]}" \
 -    --registry=https://registry.npmjs.org/
 -  npm view "${packages[$index]}@1.0.0" version dist.integrity \
 -    --json \
 -    --registry=https://registry.npmjs.org/
-+  npm stage approve "${stage_ids[$index]}" --registry=https://registry.npmjs.org/
-+  npm view "${packages[$index]}@1.0.0" version dist.integrity dist.tarball \
-+    --json --registry=https://registry.npmjs.org/
- done
- ```
+-done
+-```
++- 55 unit files、454 tests；coverage statements 88.44%、branches 80.65%、functions 89.40%、lines 88.52%。
++- 当前 Chromium/Firefox/WebKit 186/186、上一发布浏览器 186/186、WebKit 18.4 62/62。
++- accessibility 45/45；performance waterfall p95 90.3ms、categorical p95 101.2ms，均低于 150ms budget。
++- supply chain、production advisory、architecture、package contract、376-file isolated-source rehearsal 和
++  reproducible artifact。
++- 官方 Registry fresh consumers：imperative no-framework、React 18.3.1、React 19.2.7、Vue 3.5.27 的
++  strict peer install、ESM/CJS import 与 Vite production build；无框架 consumer 未安装 React/Vue。
  
 -   approval 不是原子事务：若任一后续 approval 失败，立即停止 GitHub Release、网站部署和发布公告；不得
 -   重跑 staging，不得 reject 或回滚已经公开的版本。先用显式官方 Registry 的 `npm stage list`/`view` 和
@@ -608,23 +550,21 @@ index e73de7f..9cb9cd2 100644
 -12. 四包 approval 完成后，核对四个 `@1.0.0`、`latest`、provenance 和 Registry integrity，并从全新目录
 -   使用显式 `--registry=https://registry.npmjs.org/` 执行 public fresh-install smoke。上述检查通过前不得
 -   将 TellPlot 标记为 `Released`。
--
++旧 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 和 `@tellplot/vue` 的
++`0.0.0-bootstrap.0` 仅保留历史占位，均已 deprecated 并指向 `tellplot`。四个 scoped `1.0.0` stage 已拒绝，
++没有进入公开稳定结果。
+ 
 -权威 npm 行为以
 -[Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) 和
 -[Staged Publishing](https://docs.npmjs.com/staged-publishing/) 为准。
-+approval 完成后验证 `latest=1.0.0`、provenance、Registry integrity，并从全新目录安装 `tellplot@1.0.0`，
-+分别构建 imperative、React 和 Vue smoke。bootstrap dist-tag 不得保持为 `latest`。
-+
-+若 approval 状态未知，先用官方 Registry 的 `npm stage list`、`npm stage view` 和 `npm view` 分类为
-+public、pending 或 unknown。公开版本不可 reject 或覆盖；不得声称 已原子回滚。诊断后只重试 pending
-+stage 的 approval，unknown 状态继续失败关闭。
-+
-+### 7. GitHub Release 与收尾
-+
-+npm fresh install、provenance 和 tag 全部通过后，才创建 GitHub Release `v1.0.0`，更新 T131 evidence 与
-+状态文档。旧 scoped bootstrap package 逐个 deprecate 为“install tellplot instead”，但不得删除历史版本。
++## Evidence
  
- ## Known Limitations
+-## Known Limitations
++- 发布摘要：`.ai-platform/evidence/T131/summary.md`。
++- 完整验证矩阵：`.ai-platform/evidence/T131/test-results.md`。
++- spec、code quality、QA 与 release artifact review：`.ai-platform/evidence/T131/review.md`。
++- 权威 artifact manifest：`.ai-platform/evidence/T131/tarball-manifest.json`。
++- 可复核 task patch：`.ai-platform/evidence/T131/diff.patch`。
  
 -- 1.0.0 四包候选只存在本地未提交工作树，不是 npm 或 GitHub 上的公开版本。
 -- 远端现有 annotated `v1.0.0` 指向旧 main commit
@@ -637,45 +577,38 @@ index e73de7f..9cb9cd2 100644
 -- G2 运行时保持按需加载；playground 和 framework consumers 的生产构建由 500 kB chunk 门禁约束。
 -- 当前未验证生产域名、SPA fallback、公开链接、npm 发布身份或实际公开安装。
 -- G005 clean commit/CI 演练必须重新执行官方 registry advisory 检查和全部浏览器门禁。
-+- 当前单包候选仍在未提交工作树，现有 `v1.0.0` 不是最终单包 tag。
-+- 当前 manifest hash 会随 package README、bundle 或 sourcemap 改变，最终提交前必须 refresh。
-+- staging 不是公开发布；环境审批和 npm 2FA 都可能需要用户在浏览器完成。
-+- G2 runtime 体积由 500 kB chunk/build 门禁与 consumer matrix 持续观察。
- - 永久 command ID 去重集合在超长常驻实例中线性增长；strict Trusted Types 宿主仍需持续兼容验证。
+-- 永久 command ID 去重集合在超长常驻实例中线性增长；strict Trusted Types 宿主仍需持续兼容验证。
++## Residual Risk
  
-+权威 npm 行为以 [Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) 和
-+[Staged Publishing](https://docs.npmjs.com/staged-publishing/) 为准。
-+
- ## Next Gate
+-## Next Gate
++没有已知发布阻塞。G2 runtime 体积继续由 500 kB chunk/build gate 和 consumer matrix 监控；永久 command ID
++去重集合在超长常驻 editor 实例中会随已处理命令数量线性增长，属于当前已接受的运行时边界。
  
 -G006 已验收。G005 继续保持 `Blocked`，等待独立远程授权、scope/package root bootstrap、stage-only
 -Trusted Publisher、2FA approval、发布身份与生产托管条件；远程 Git、仓库公开、生产网站、DNS、Git tag、
 -GitHub Release、npm stage 与 npm publish 均未获授权。进入公开发布操作前，必须从干净 commit 重新通过
 -fresh-clone CI、官方 registry audit 与完整 release gate，并按 `First-Publish Gate` 完成人工复核。
-+完成 T131 本地全量门禁并刷新唯一 tarball；随后清理旧 scoped stages、bootstrap `tellplot`、配置
-+stage-only trust，提交/push final main，受控重建 `v1.0.0` 并执行 staged release。公开验证完成前状态保持
-+`Not_Released`。
++T131 无未解决 Critical、High 或 Medium finding，G007 状态为 `Accepted`。
 diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
-index 88560af..a385047 100644
+index 88560af..b570c14 100644
 --- a/.ai-platform/docs/tasks.md
 +++ b/.ai-platform/docs/tasks.md
-@@ -2,11 +2,11 @@
+@@ -2,11 +2,10 @@
  
  ## Metadata
  
 -- Version: 0.36.0
-+- Version: 0.37.0
++- Version: 0.38.0
  - Status: Active
 -- Last updated: 2026-07-31
 -- Scope: T101-T116、G002 系列、G004 与 G006 已验收；G005 / T130 本地发布准备待用户复核，
 -  公开执行继续等待独立授权与外部条件
 +- Last updated: 2026-08-01
-+- Scope: T101-T116、G002 系列、G004 与 G006 已验收；用户批准 G007 / T131 把公共分发收敛为一个
-+  `tellplot` 包并完成公开发布
++- Scope: T101-T116、G002 系列、G004、G006 与 G007 已验收；`tellplot@1.0.0` 已完成公开发布
  
  ## Goal-Level Delivery
  
-@@ -27,8 +27,9 @@
+@@ -27,8 +26,9 @@
  | G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
  | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
  | G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
@@ -683,11 +616,11 @@ index 88560af..a385047 100644
 -| G006 - 框架无关编辑器架构 | Accepted | T125-T129；四包架构、完整编辑器与发布候选门禁已验收 |
 +| G005 - 四包公开稳定版发布 | Superseded | T130 的安全门禁由 G007 复用；四包公开目标由单包决策取代 |
 +| G006 - 框架无关编辑器架构 | Accepted | T125-T129；内部四层架构、完整编辑器与质量门禁已验收 |
-+| G007 - 单包分发与公开发布 | In_Progress | T131；只发布 `tellplot`，内部 core/editor/React/Vue layers 保持 private |
++| G007 - 单包分发与公开发布 | Accepted | T131；`tellplot@1.0.0` 已发布，内部 core/editor/React/Vue layers 保持 private |
  
  ## T001 - 确认产品设计与项目章程
  
-@@ -219,3 +220,19 @@ package root bootstrap、stale annotated `v1.0.0` 的受控重建与保护、sta
+@@ -219,3 +219,20 @@ package root bootstrap、stale annotated `v1.0.0` 的受控重建与保护、sta
  
  权威目标图与 evidence 位于 `.ai-platform/specs/012-public-release-readiness/` 和
  `.ai-platform/evidence/T130/`。
@@ -696,19 +629,20 @@ index 88560af..a385047 100644
 +registry audit、protected environment、stage-only Trusted Publishing、provenance、固定 hash 和 2FA
 +approval 继续由 G007 复用。
 +
-+## G007 Execution
++## G007 Delivery
 +
-+G007 由用户于 2026-08-01 明确批准，以 T131 把 npm 公共分发收敛为一个无 scope 的 `tellplot` 包。
++G007 以 T131 把 npm 公共分发收敛为一个无 scope 的 `tellplot` 包。
 +公共入口固定为 `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue` 和 `tellplot/styles.css`；
 +内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` 保持 private workspace
 +layers，不独立发布，不建设兼容 shim。
 +
-+T131 连续完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
-+清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval 和公开 fresh install。
-+权威目标图与 evidence 位于 `.ai-platform/specs/013-single-package-distribution/` 和
-+`.ai-platform/evidence/T131/`。
++T131 已完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
++清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval、公开 fresh install
++和 GitHub Release。npm `latest` 指向 `1.0.0`，provenance 解析到受保护的 `v1.0.0` 与发布提交
++`a3e07c9ac9b20183092729cde234322db98f9835`；状态为 `Accepted`。权威目标图与 evidence 位于
++`.ai-platform/specs/013-single-package-distribution/` 和 `.ai-platform/evidence/T131/`。
 diff --git a/.ai-platform/docs/technology-decision-record.md b/.ai-platform/docs/technology-decision-record.md
-index cfe14d3..e47fe72 100644
+index cfe14d3..805ac13 100644
 --- a/.ai-platform/docs/technology-decision-record.md
 +++ b/.ai-platform/docs/technology-decision-record.md
 @@ -75,7 +75,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
@@ -766,17 +700,22 @@ index cfe14d3..e47fe72 100644
    current/previous browser、a11y 和 performance 均为阻断门禁。
  - Scope: 稳定表示当前 waterfall、bar、column 的文档化能力可被兼容承诺，不表示 TellPlot 已覆盖 G2
    的通用图表范围。
-@@ -273,8 +277,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -271,10 +275,10 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+   drag-and-drop 库；适配包不得拥有第二套 session、projection、G2 runtime 或交互状态机。
+ - UI ownership: 完整工具栏、图表直接操作、结构大纲、Inspector、弹层、键盘与无障碍语义由 framework-neutral
    editor runtime 统一拥有。适配包只渲染一个稳定容器并转发更新、事件与实例方法。
- - Compatibility: 现有候选从未公开发布，本目标不保留旧 `@tellplot/editor` React component API 或旧包布局；
-   SourceData、ViewSpec、命令和业务不变量继续作为产品正确性合同。
+-- Compatibility: 现有候选从未公开发布，本目标不保留旧 `@tellplot/editor` React component API 或旧包布局；
+-  SourceData、ViewSpec、命令和业务不变量继续作为产品正确性合同。
 -- Package strategy: `@tellplot/editor` 保持产品主包身份；新增 `@tellplot/core`、`@tellplot/react` 和
 -  `@tellplot/vue`。React/Vue 只作为各自适配包 peer dependency，G2 只存在于 editor 渲染边界。
++- Compatibility: 公开兼容承诺从 `tellplot@1.0.0` 及其文档化子路径开始；不保留旧
++  `@tellplot/editor` React component API 或 scoped 包布局。SourceData、ViewSpec、命令和业务不变量继续
++  作为产品正确性合同。
 +- Package strategy: 由 TDR-023 的单包公共分发决策取代；本 TDR 的内部依赖方向和 runtime ownership 保持有效。
  - Quality: 包导入无浏览器全局副作用；create/update/destroy 可重复且资源可释放；imperative、React、Vue
    共享 E2E、a11y、performance 和当前/上一浏览器门禁。
  - Rationale: 框架无关 imperative runtime 让不同宿主共享完整编辑行为，避免在 React/Vue 中复制高风险的
-@@ -286,9 +289,36 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -286,9 +290,36 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
  - Rejected alternatives: Vue 内嵌 React root、把 React 打入 editor bundle、两套完整 UI、仅提供 read-only Vue、
    Web Component 作为唯一公共合同、公开旧候选后再迁移。
  
@@ -817,15 +756,15 @@ index cfe14d3..e47fe72 100644
  远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。
 diff --git a/.ai-platform/evidence/T131/review.md b/.ai-platform/evidence/T131/review.md
 new file mode 100644
-index 0000000..2fa7d8b
+index 0000000..26d6fa5
 --- /dev/null
 +++ b/.ai-platform/evidence/T131/review.md
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,35 @@
 +# T131 Review
 +
 +## Status
 +
-+- Status: In_Progress
++- Status: Accepted
 +- Unresolved Critical: 0
 +- Unresolved High: 0
 +- Unresolved Medium: 0
@@ -850,23 +789,25 @@ index 0000000..2fa7d8b
 +- E2E 接入文档断言仍引用旧 scoped package：迁移为 `pnpm add tellplot` 与
 +  `import 'tellplot/styles.css'`，当前及上一浏览器矩阵通过。
 +
-+## Local Verdict
++## Final Verdict
 +
-+本地 spec compliance、bug/code quality、package artifact 和 QA gate 通过；无未解决 Critical、High 或
-+Medium finding。公开 staging、2FA approval、Registry fresh install 和 provenance 仍是 T131 完成条件。
++spec compliance、bug/code quality、package artifact、QA、托管 workflow、stage download、2FA approval、
++Registry fresh install、SLSA provenance 与 GitHub Release 全部通过；无未解决 Critical、High 或 Medium
++finding。`tellplot@1.0.0`、受保护 tag、workflow head、公开 tarball 和 provenance 指向同一发布提交，T131
++满足 Definition of Done 并验收为 `Accepted`。
 diff --git a/.ai-platform/evidence/T131/summary.md b/.ai-platform/evidence/T131/summary.md
 new file mode 100644
-index 0000000..0816e53
+index 0000000..395de83
 --- /dev/null
 +++ b/.ai-platform/evidence/T131/summary.md
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,40 @@
 +# T131 Evidence Summary
 +
 +## Status
 +
 +- Task: T131
 +- Goal: G007
-+- Status: In_Progress
++- Status: Accepted
 +- Date: 2026-08-01
 +
 +## Scope
@@ -887,7 +828,19 @@ index 0000000..0816e53
 +  aliases 后复演通过，该回归由单包合同测试固定。
 +- release artifact 会规范化 tarball 内的 package manifest key order 和 gzip stream；在锁定的 Node
 +  22.20.0 runtime 下连续重建保持 485325 bytes 与同一 SHA-256。
-+- 远程 staging 与公开 registry evidence 待完成后补齐。
++- GitHub Actions run `30701441776` 从 exact `v1.0.0` tag 和提交
++  `a3e07c9ac9b20183092729cde234322db98f9835` 完成 verify 与 stage job；`npm-production` environment
++  审批记录对应 deployment `5705046643`。
++- npm stage `187969a4-f39a-40e0-b602-8bccb975f9b2` 由 GitHub Actions 的 trusted automation 创建；下载件
++  SHA-1 为 `662d0280de22a634c80471e6d16cca2a312cd829`，SHA-256 与本地 manifest 完全一致，经人类 2FA
++  approval 后公开。
++- npm `latest` 指向 `tellplot@1.0.0`，`bootstrap` 保留指向 `0.0.0-bootstrap.0`；pending stage queue 为空。
++- SLSA provenance 固定 workflow `.github/workflows/publish-npm.yml`、ref `refs/tags/v1.0.0`、上述提交和
++  GitHub-hosted runner；GitHub Release 为 `https://github.com/iiwish/tellplot/releases/tag/v1.0.0`。
++- 官方 Registry 的 imperative no-framework、React 18.3.1、React 19.2.7 与 Vue 3.5.27 fresh consumer
++  均通过 strict peer install、ESM/CJS import 和 Vite production build；无框架 consumer 未安装 React/Vue。
++- 旧 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` bootstrap versions 均已
++  deprecate，并明确指向 `tellplot`。
 diff --git a/.ai-platform/evidence/T131/tarball-manifest.json b/.ai-platform/evidence/T131/tarball-manifest.json
 new file mode 100644
 index 0000000..8e9f90d
@@ -1033,15 +986,15 @@ index 0000000..8e9f90d
 +}
 diff --git a/.ai-platform/evidence/T131/test-results.md b/.ai-platform/evidence/T131/test-results.md
 new file mode 100644
-index 0000000..097e70c
+index 0000000..e226302
 --- /dev/null
 +++ b/.ai-platform/evidence/T131/test-results.md
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,33 @@
 +# T131 Test Results
 +
 +## Status
 +
-+- Status: In_Progress
++- Status: Accepted
 +- Runtime: Node 22.20.0 release runtime；开发期 focused tests 可使用 workspace runtime
 +
 +## Results
@@ -1062,7 +1015,14 @@ index 0000000..097e70c
 +| Previous browser | Passed | previous release 186/186；WebKit 18.4 62/62 |
 +| Isolated source rehearsal | Passed | 376 source files；frozen install 到单包 framework matrix 全部通过 |
 +| Reproducible artifact | Passed | `tellplot-1.0.0.tgz` 485325 bytes；SHA-256 `e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e` |
-+| Public staged artifact | Pending | 远程执行阶段生成 |
++| GitHub release workflow | Passed | run `30701441776`；verify 23m6s，stage 26s；head `a3e07c9ac9b20183092729cde234322db98f9835` |
++| Public staged artifact | Passed | stage `187969a4-f39a-40e0-b602-8bccb975f9b2`；485325 bytes；SHA-1 `662d0280de22a634c80471e6d16cca2a312cd829`；SHA-256 与 manifest 一致 |
++| npm public registry | Passed | `tellplot@1.0.0` 公开；`latest=1.0.0`；pending stage queue 为空 |
++| SLSA provenance | Passed | workflow、exact tag、commit、run 与 GitHub-hosted builder 全部一致 |
++| Public fresh install | Passed | imperative、React 18.3.1、React 19.2.7、Vue 3.5.27 strict peer + ESM/CJS + Vite build |
++| GitHub Release | Passed | `v1.0.0` latest release；附带 exact `tellplot-1.0.0.tgz` |
++| Scoped bootstrap cleanup | Passed | 四个 `@tellplot/*@0.0.0-bootstrap.0` 均 deprecated 为安装 `tellplot` |
++| Post-release evidence contract | Passed | stable release 与 single-package contract 2 files、19/19；strict artifact validator、Prettier、patch reverse-apply 与 `git diff --check` 通过 |
 diff --git a/.ai-platform/specs/013-single-package-distribution/analysis.md b/.ai-platform/specs/013-single-package-distribution/analysis.md
 new file mode 100644
 index 0000000..87aa8a9
@@ -1107,7 +1067,7 @@ index 0000000..87aa8a9
 +  Trusted Publisher、2FA approval 与 npm 发布
 diff --git a/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md b/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md
 new file mode 100644
-index 0000000..7c2e0c7
+index 0000000..14cf160
 --- /dev/null
 +++ b/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md
 @@ -0,0 +1,11 @@
@@ -1120,8 +1080,8 @@ index 0000000..7c2e0c7
 +- [x] 不保留未公开四包 API 兼容负担。
 +- [x] 单包 package 与 framework consumer 门禁通过。
 +- [x] 完整 release gate 与 reproducible artifact 通过。
-+- [ ] 旧 staged candidates 清理并完成新 package trust 配置。
-+- [ ] 公开 npm、tag、GitHub Release 与 fresh install 证据一致。
++- [x] 旧 staged candidates 清理并完成新 package trust 配置。
++- [x] 公开 npm、tag、GitHub Release 与 fresh install 证据一致。
 diff --git a/.ai-platform/specs/013-single-package-distribution/packets/T131.yaml b/.ai-platform/specs/013-single-package-distribution/packets/T131.yaml
 new file mode 100644
 index 0000000..020f120
@@ -1347,7 +1307,7 @@ index 0000000..df26196
 +- 注册 npm organization 或把 `@tellplot` scope 作为公共安装前提。
 diff --git a/.ai-platform/specs/013-single-package-distribution/tasks.md b/.ai-platform/specs/013-single-package-distribution/tasks.md
 new file mode 100644
-index 0000000..b4043bb
+index 0000000..f30bb64
 --- /dev/null
 +++ b/.ai-platform/specs/013-single-package-distribution/tasks.md
 @@ -0,0 +1,36 @@
@@ -1358,13 +1318,13 @@ index 0000000..b4043bb
 +- Feature ID: `013-single-package-distribution`
 +- Goal ID: `G007`
 +- Version: 1.0.0
-+- Status: In_Progress
++- Status: Accepted
 +- Last updated: 2026-08-01
 +- Approval: 用户明确批准本目标及单包发布边界
 +
 +## T131 - 收敛单包分发并完成公开发布
 +
-+- Status: In_Progress
++- Status: Accepted
 +- Priority: P0
 +- Story / Requirement: DIST-FR-001 至 005；DIST-NFR-001 至 004
 +- Dependencies: G006 / T125-T129 Accepted；G005 / T130 本地发布安全门禁可复用
@@ -1388,7 +1348,7 @@ index 0000000..b4043bb
 +- Evidence required: `.ai-platform/evidence/T131/summary.md`、`test-results.md`、`review.md`、
 +  `tarball-manifest.json`、workflow/stage/registry evidence
 diff --git a/.github/workflows/publish-npm.yml b/.github/workflows/publish-npm.yml
-index 3961bdf..5981347 100644
+index 5fec9f0..5981347 100644
 --- a/.github/workflows/publish-npm.yml
 +++ b/.github/workflows/publish-npm.yml
 @@ -1,12 +1,12 @@
@@ -1444,10 +1404,10 @@ index 3961bdf..5981347 100644
            test "$actual_tarballs" = "$expected_tarballs"
  
            sha256sum --check --strict <<'SHA256'
--          4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b  .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
--          3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2  .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
--          c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242  .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
--          a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811  .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
+-          40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5  .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
+-          3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395  .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
+-          085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a  .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
+-          78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17  .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
 +          e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e  .ai-platform/evidence/T131/artifacts/tellplot-1.0.0.tgz
            SHA256
  
@@ -1496,10 +1456,10 @@ index 3961bdf..5981347 100644
            --ignore-scripts --tag=latest --provenance
            --registry=https://registry.npmjs.org/
 diff --git a/AGENTS.md b/AGENTS.md
-index cdeea21..9f1f4bb 100644
+index cdeea21..cf14031 100644
 --- a/AGENTS.md
 +++ b/AGENTS.md
-@@ -3,11 +3,11 @@
+@@ -3,11 +3,10 @@
  ## 项目状态
  
  - 当前阶段：T101-T116、G002 / T117、G002-R1 / T118、G002-R2 / T119、G002-R3 / T122、
@@ -1508,19 +1468,25 @@ index cdeea21..9f1f4bb 100644
 -  托管外部条件。
 -- 当前仓库包含 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue`、完整
 -  playground、单元/组件/E2E/兼容性测试和四包发布候选 evidence。
-+  G004 / T123 与 G006 / T125-T129 均已验收；G007 / T131 已获用户批准，正在把公共分发收敛为单个
-+  `tellplot` 包并完成 1.0.0 发布。
++  G004 / T123、G006 / T125-T129 与 G007 / T131 均已验收；`tellplot@1.0.0` 已发布到 npm 和 GitHub。
 +- 当前仓库以 `tellplot` 作为唯一公共包；内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、
 +  `@tellplot/vue` 均为 private workspace layers。playground、单元/组件/E2E/兼容性测试和单包发布 evidence
-+  共同验证公共入口。
++  共同验证公共入口；npm 发布使用 stage-only Trusted Publisher、人类 2FA approval 与 SLSA provenance。
  - 产品 SSOT：`.ai-platform/docs/product-design.md`。
  - 项目原则：`.ai-platform/memory/constitution.md`。
  - 技术决策：`.ai-platform/docs/technology-decision-record.md`。
 diff --git a/CHANGELOG.md b/CHANGELOG.md
-index 7dc5b7a..15b572f 100644
+index 7dc5b7a..b28810f 100644
 --- a/CHANGELOG.md
 +++ b/CHANGELOG.md
-@@ -10,7 +10,9 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
+@@ -5,12 +5,15 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
+ 
+ ## 1.0.0
+ 
+-首个稳定版本。当前仓库生成本地稳定候选；公开 npm、GitHub Release 与生产网站状态以发布报告为准。
++首个稳定版本。`tellplot@1.0.0` 已发布到 npm，GitHub Release 与受保护的 `v1.0.0` tag、发布 artifact
++和 SLSA provenance 保持一致。
+ 
  ### Added
  
  - 基于 AntV G2 的瀑布图、分类条形图和分类柱状图。
@@ -1531,7 +1497,7 @@ index 7dc5b7a..15b572f 100644
  - 排序、递归分组、折叠、固定、注释、强调与撤销重做。
  - `ViewSpec` 验证、序列化和恢复。
  - SVG/PNG 导出、安全图表配置与无障碍摘要。
-@@ -27,8 +29,10 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
+@@ -27,8 +30,10 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
  - 配置统一收纳到 `config.data`、`config.appearance` 与 `config.editor`；可编辑状态使用 `view`、
    `defaultView` 和受控更新事件。
  - 编辑器 runtime 与领域状态从 framework 生命周期中分离；framework adapters 只代理 create/update/destroy。
@@ -1540,9 +1506,10 @@ index 7dc5b7a..15b572f 100644
  ### Stability
  
 -- 四包 runtime exports、公共类型、schema、错误码、framework/G2 peer 范围和浏览器合同进入 1.x 兼容承诺。
+-- npm publish、Git tag、GitHub Release 和生产部署需要独立授权，版本字段不表示已经公开发布。
 +- `tellplot` 根入口及文档化子路径的 runtime exports、公共类型、schema、错误码、framework peer 与浏览器
 +  合同进入 1.x 兼容承诺。
- - npm publish、Git tag、GitHub Release 和生产部署需要独立授权，版本字段不表示已经公开发布。
++- npm `latest` 指向 `1.0.0`；公开版本由 stage-only Trusted Publisher、人类 2FA approval 与受保护 tag 发布。
 diff --git a/README.md b/README.md
 index dbef449..ab78693 100644
 --- a/README.md
@@ -2188,10 +2155,10 @@ index 533a7a6..b7b5979 100644
  4. React/Vue 卸载由 adapter 自动销毁；imperative 接入显式调用 `destroy`。
  5. 宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
 diff --git a/docs/roadmap.md b/docs/roadmap.md
-index f1b4e3e..e1b8654 100644
+index f1b4e3e..ba9ffd5 100644
 --- a/docs/roadmap.md
 +++ b/docs/roadmap.md
-@@ -77,35 +77,39 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
+@@ -77,35 +77,40 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
  - Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，并于 2026-07-29 通过目标级验收。
  - Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；不执行远程发布。
  
@@ -2233,15 +2200,16 @@ index f1b4e3e..e1b8654 100644
 +
 +## G007 单包分发与公开发布
 +
-+- Status: In_Progress
++- Status: Accepted
 +- Goal: 只发布无 scope 的 `tellplot@1.0.0`，通过稳定子路径交付 imperative DOM、core、React、Vue 与 CSS。
 +- Public entrypoints: `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue`、`tellplot/styles.css`。
 +- Internal architecture: core、editor、React adapter 与 Vue adapter 继续是 private workspace layers，保持
 +  G006 的依赖方向、测试隔离和唯一 runtime ownership。
 +- Release controls: T131 使用单一可复现 tarball、exact annotated tag、protected `npm-production`
 +  environment、stage-only Trusted Publisher、provenance、人类 artifact 复核与 2FA approval。
-+- Completion: package/framework/browser/security/isolated-source 门禁、旧 stage 清理、public fresh install、
-+  provenance、tag、GitHub Release 和 Registry evidence 全部一致。
++- Outcome: `tellplot@1.0.0` 已从受保护的 `v1.0.0` tag 完成 stage-only Trusted Publishing、人类 2FA
++  approval 和公开发布；package/framework/browser/security/isolated-source 门禁、fresh install、provenance、
++  GitHub Release 与 Registry evidence 全部一致。
  
  ## Decision Gates
  
@@ -2607,7 +2575,7 @@ index 0000000..0288906
 +  });
 +});
 diff --git a/packages/editor/tests/package/stable-release.test.ts b/packages/editor/tests/package/stable-release.test.ts
-index 9c8b9e4..7818d16 100644
+index 05478cc..932bdd2 100644
 --- a/packages/editor/tests/package/stable-release.test.ts
 +++ b/packages/editor/tests/package/stable-release.test.ts
 @@ -51,22 +51,27 @@ function runModuleSource(source: string): {
@@ -2645,7 +2613,7 @@ index 9c8b9e4..7818d16 100644
      expect(scripts['release:architecture']).toBe('node scripts/release/check-architecture.mjs');
      expect(scripts['release:audit']).toBe('node scripts/release/audit-release.mjs');
      expect(scripts['security:lock']).toBe(
-@@ -106,24 +111,33 @@ describe('1.0 stable release contract', () => {
+@@ -106,8 +111,58 @@ describe('1.0 stable release contract', () => {
      expect(productionAudit).not.toContain('--ignore-registry-errors');
      expect(artifactScript).toContain("resolve(repositoryRoot, '.nvmrc')");
      expect(artifactScript).toContain('process.versions.node');
@@ -2653,24 +2621,19 @@ index 9c8b9e4..7818d16 100644
 -    expect(artifactScript).toContain("'.ai-platform/evidence/T129'");
 +    expect(artifactScript).toContain("const packageDirectories = ['tellplot']");
 +    expect(artifactScript).toContain("'.ai-platform/evidence/T131'");
-   });
- 
--  it('normalizes npm tarball gzip headers without changing package contents', () => {
++  });
++
 +  it('normalizes npm tarball compression without changing package contents', () => {
-     const result = runModuleSource(`
-       import { createHash } from 'node:crypto';
-       import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-       import { gzipSync, gunzipSync } from 'node:zlib';
-       import { tmpdir } from 'node:os';
-       import { resolve } from 'node:path';
--      import { canonicalizeGzipHeader } from './scripts/release/canonical-gzip.mjs';
++    const result = runModuleSource(`
++      import { createHash } from 'node:crypto';
++      import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
++      import { gzipSync, gunzipSync } from 'node:zlib';
++      import { tmpdir } from 'node:os';
++      import { resolve } from 'node:path';
 +      import { canonicalizeNpmTarball } from './scripts/release/canonical-gzip.mjs';
- 
-       const directory = mkdtempSync(resolve(tmpdir(), 'tellplot-gzip-header-'));
-       try {
--        const payload = Buffer.from('same npm package bytes');
--        const macos = gzipSync(payload, { mtime: 0 });
--        const linux = Buffer.from(macos);
++
++      const directory = mkdtempSync(resolve(tmpdir(), 'tellplot-gzip-header-'));
++      try {
 +        const tar = manifest => {
 +          const payload = Buffer.from(JSON.stringify(manifest, null, 2) + '\\n');
 +          const archive = Buffer.alloc(512 + 512 + 1024);
@@ -2683,38 +2646,35 @@ index 9c8b9e4..7818d16 100644
 +        const secondPayload = tar({ devDependencies: { react: '19', vue: '3' }, name: 'tellplot' });
 +        const macos = gzipSync(firstPayload, { level: 1, mtime: 0 });
 +        const linux = gzipSync(secondPayload, { level: 9, mtime: 0 });
-         macos[9] = 19;
-         linux[9] = 3;
-         const macosPath = resolve(directory, 'macos.tgz');
-@@ -131,15 +145,15 @@ describe('1.0 stable release contract', () => {
-         writeFileSync(macosPath, macos);
-         writeFileSync(linuxPath, linux);
- 
--        canonicalizeGzipHeader(macosPath);
--        canonicalizeGzipHeader(linuxPath);
++        macos[9] = 19;
++        linux[9] = 3;
++        const macosPath = resolve(directory, 'macos.tgz');
++        const linuxPath = resolve(directory, 'linux.tgz');
++        writeFileSync(macosPath, macos);
++        writeFileSync(linuxPath, linux);
++
 +        canonicalizeNpmTarball(macosPath);
 +        canonicalizeNpmTarball(linuxPath);
- 
-         const normalizedMacos = readFileSync(macosPath);
-         const normalizedLinux = readFileSync(linuxPath);
-         const digest = value => createHash('sha256').update(value).digest('hex');
-         if (normalizedMacos[9] !== 255 || normalizedLinux[9] !== 255) process.exit(1);
-         if (digest(normalizedMacos) !== digest(normalizedLinux)) process.exit(1);
--        if (!gunzipSync(normalizedMacos).equals(payload)) process.exit(1);
++
++        const normalizedMacos = readFileSync(macosPath);
++        const normalizedLinux = readFileSync(linuxPath);
++        const digest = value => createHash('sha256').update(value).digest('hex');
++        if (normalizedMacos[9] !== 255 || normalizedLinux[9] !== 255) process.exit(1);
++        if (digest(normalizedMacos) !== digest(normalizedLinux)) process.exit(1);
 +        if (!gunzipSync(normalizedMacos).equals(gunzipSync(normalizedLinux))) process.exit(1);
-       } finally {
-         rmSync(directory, { recursive: true, force: true });
-       }
-@@ -147,7 +161,7 @@ describe('1.0 stable release contract', () => {
- 
-     expect(result.status, result.output).toBe(0);
-     expect(text('scripts/release/package-artifact.mjs')).toContain(
--      'canonicalizeGzipHeader(freshArtifactPath)',
++      } finally {
++        rmSync(directory, { recursive: true, force: true });
++      }
++    `);
++
++    expect(result.status, result.output).toBe(0);
++    expect(text('scripts/release/package-artifact.mjs')).toContain(
 +      'canonicalizeNpmTarball(freshArtifactPath)',
-     );
++    );
    });
  
-@@ -300,9 +314,7 @@ describe('1.0 stable release contract', () => {
+   it('keeps the public release command and browser matrix release-complete', () => {
+@@ -259,9 +314,7 @@ describe('1.0 stable release contract', () => {
        sourceRehearsal.indexOf("['pnpm', ['install', '--frozen-lockfile']]"),
      );
      expect(packageTestRunner).toContain('NPM_CONFIG_CACHE');
@@ -2725,7 +2685,7 @@ index 9c8b9e4..7818d16 100644
    });
  
    it('keeps public npm staging manual, approved, provenance-enabled, minimal, and ordered', () => {
-@@ -339,7 +351,7 @@ describe('1.0 stable release contract', () => {
+@@ -298,7 +351,7 @@ describe('1.0 stable release contract', () => {
      expect(stageJob).toContain('ref: ${{ github.sha }}');
      expect(stageJob).toContain('persist-credentials: false');
      expect([...workflow.matchAll(/persist-credentials: false/gu)]).toHaveLength(2);
@@ -2734,7 +2694,7 @@ index 9c8b9e4..7818d16 100644
      expect(stageJob).toContain('node-version: 22.20.0');
      expect(stageJob).toContain('npm_config="$RUNNER_TEMP/tellplot-stage.npmrc"');
      expect(stageJob).toContain('NPM_CONFIG_USERCONFIG=%s');
-@@ -368,35 +380,29 @@ describe('1.0 stable release contract', () => {
+@@ -327,35 +380,29 @@ describe('1.0 stable release contract', () => {
      expect(stageJob).toContain('test "$remote_tag_object" != "$remote_tag_commit"');
      expect(stageJob).toContain('test "$remote_tag_commit" = "$GITHUB_SHA"');
      expect(stageJob).not.toContain('remote_tag_commit="$remote_tag_object"');
@@ -2776,15 +2736,15 @@ index 9c8b9e4..7818d16 100644
      for (const command of stageCommands) {
        expect(command).toContain('--ignore-scripts');
        expect(command).toContain('--tag=latest');
-@@ -417,32 +423,27 @@ describe('1.0 stable release contract', () => {
+@@ -376,51 +423,50 @@ describe('1.0 stable release contract', () => {
        verifyJob.indexOf('pnpm release:artifact'),
      );
  
 -    for (const sha256 of [
--      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
--      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
--      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
--      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
+-      '40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5',
+-      '3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395',
+-      '085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a',
+-      '78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17',
 -    ]) {
 -      expect(stageJob).toContain(sha256);
 -    }
@@ -2793,7 +2753,8 @@ index 9c8b9e4..7818d16 100644
 +    );
    });
  
-   it('keeps the canonical first-publish runbook fail-closed and status-aligned', () => {
+-  it('keeps the canonical first-publish runbook fail-closed and status-aligned', () => {
++  it('keeps the canonical post-release evidence immutable and status-aligned', () => {
      const report = text('.ai-platform/docs/release-report.md');
 +    const workflow = text('.github/workflows/publish-npm.yml');
      const tasks = text('.ai-platform/docs/tasks.md');
@@ -2805,36 +2766,57 @@ index 9c8b9e4..7818d16 100644
 -    expect(roadmap).toContain('- Status: Blocked');
 -    expect(roadmap).toContain('Local readiness: T130');
 -    expect(agentGuide).toContain('G005 / T130 本地发布准备为 `Needs_Review`');
+-    expect(report).toContain('TELLPLOT_FINAL_COMMIT_SHA');
+-    expect(report).toContain('--force-with-lease="refs/tags/v1.0.0:$old_tag_object"');
+-    expect(report).toContain('^url\\..*\\.(push)?insteadof$');
+-    expect(report).toContain('deployment branches/tags policy');
+-    expect(report).toContain('prevent self-review');
+-    expect(report).toContain('export GH_HOST=github.com');
+-    expect(report).toContain('--repo iiwish/tellplot');
+-    expect(report).toContain('gh run watch "$run_id" --repo iiwish/tellplot --exit-status');
+-    expect(report).toContain('npm stage list "$package"');
+-    expect(report).not.toContain('npm stage list @tellplot/{core,editor,react,vue}');
+-    expect(report).toContain('npm stage reject "$stage_id" --registry=https://registry.npmjs.org/');
+-    expect(report).toContain('npm stage approve "${stage_ids[$index]}"');
+-    expect(report).toContain('.ai-platform/evidence/T129/tarball-manifest.json');
+-    expect(report).toMatch(/不得声称\s+已原子回滚/u);
+-    expect(report).toContain('只重试 pending');
+-    expect([...report.matchAll(/^set -euo pipefail$/gmu)].length).toBeGreaterThanOrEqual(3);
+-    for (const sha256 of [
+-      '40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5',
+-      '3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395',
+-      '085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a',
+-      '78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17',
+-    ]) {
+-      expect(report).toContain(sha256);
+-    }
 +    expect(tasks).toContain('G007');
 +    expect(tasks).toContain('T131');
 +    expect(roadmap).toContain('T131');
 +    expect(agentGuide).toContain('G007 / T131');
-     expect(report).toContain('TELLPLOT_FINAL_COMMIT_SHA');
-     expect(report).toContain('--force-with-lease="refs/tags/v1.0.0:$old_tag_object"');
-     expect(report).toContain('^url\\..*\\.(push)?insteadof$');
-     expect(report).toContain('deployment branches/tags policy');
--    expect(report).toContain('prevent self-review');
++    expect(tasks).toContain('| G007 - 单包分发与公开发布 | Accepted |');
++    expect(roadmap).toContain('- Status: Accepted');
++    expect(agentGuide).toContain('`tellplot@1.0.0` 已发布到 npm 和 GitHub');
++    expect(report).toContain('- Status: Released');
++    expect(report).toContain('a3e07c9ac9b20183092729cde234322db98f9835');
++    expect(report).toContain('d86cc8dff46f64c7e487153121b3f503e76ba5dc');
++    expect(report).toContain('Tag protection ruleset | `20169540`，active');
++    expect(report).toContain('Workflow run | `30701441776`');
++    expect(report).toContain('Environment deployment | `5705046643`');
 +    expect(report).toContain('npm-production');
-     expect(report).toContain('export GH_HOST=github.com');
-     expect(report).toContain('--repo iiwish/tellplot');
-     expect(report).toContain('gh run watch "$run_id" --repo iiwish/tellplot --exit-status');
-@@ -450,18 +451,15 @@ describe('1.0 stable release contract', () => {
-     expect(report).not.toContain('npm stage list @tellplot/{core,editor,react,vue}');
-     expect(report).toContain('npm stage reject "$stage_id" --registry=https://registry.npmjs.org/');
-     expect(report).toContain('npm stage approve "${stage_ids[$index]}"');
--    expect(report).toContain('.ai-platform/evidence/T129/tarball-manifest.json');
++    expect(report).toContain('187969a4-f39a-40e0-b602-8bccb975f9b2');
++    expect(report).toContain(
++      'sha512-+GHSo5QRkYyKTmFpn5Qbq6h4BrVizS31g0nn+QjL+5kOA8RBdC9w6nua2rENjx8mUocEtfr1yQkdEgHdlRFbqw==',
++    );
++    expect(report).toContain('`latest` 指向 `tellplot@1.0.0`');
++    expect(report).toContain('SLSA provenance v1');
++    expect(report).toContain('refs/tags/v1.0.0');
++    expect(report).toContain('React 18.3.1、React 19.2.7、Vue 3.5.27');
++    expect(report).toContain('`0.0.0-bootstrap.0` 仅保留历史占位');
 +    expect(report).toContain('.ai-platform/evidence/T131/tarball-manifest.json');
-     expect(report).toMatch(/不得声称\s+已原子回滚/u);
-     expect(report).toContain('只重试 pending');
-     expect([...report.matchAll(/^set -euo pipefail$/gmu)].length).toBeGreaterThanOrEqual(3);
--    for (const sha256 of [
--      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
--      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
--      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
--      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
--    ]) {
--      expect(report).toContain(sha256);
--    }
++    expect(report).toContain('没有已知发布阻塞');
++    expect(report).not.toContain('TELLPLOT_FINAL_COMMIT_SHA');
++    expect(report).not.toContain('- Status: Not_Released');
 +    const workflowSha = workflow.match(
 +      /^\s+([0-9a-f]{64})\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
 +    )?.[1];
@@ -2843,7 +2825,7 @@ index 9c8b9e4..7818d16 100644
    });
  
    it('separates clean public-release source checks from the dirty-capable local RC gate', () => {
-@@ -473,19 +471,9 @@ describe('1.0 stable release contract', () => {
+@@ -432,19 +478,9 @@ describe('1.0 stable release contract', () => {
        } from './scripts/release/preflight-public.mjs';
  
        const head = 'a'.repeat(40);
@@ -2865,7 +2847,7 @@ index 9c8b9e4..7818d16 100644
        const packageManifests = packageVersions.map(([name, version]) => ({
          name,
          version,
-@@ -710,7 +698,7 @@ describe('1.0 stable release contract', () => {
+@@ -669,7 +705,7 @@ describe('1.0 stable release contract', () => {
        const missingRemote = resolve(temporaryRoot, 'missing-origin.git');
        const canonicalRemote = 'https://github.com/iiwish/tellplot.git';
        const remoteQueryUrl = pathToFileURL(remote).href;
@@ -2874,7 +2856,7 @@ index 9c8b9e4..7818d16 100644
  
        function git(cwd, args) {
          const command = spawnSync('git', args, { cwd, encoding: 'utf8' });
-@@ -728,7 +716,7 @@ describe('1.0 stable release contract', () => {
+@@ -687,7 +723,7 @@ describe('1.0 stable release contract', () => {
  
          const artifactsRoot = resolve(
            repository,
@@ -2883,7 +2865,7 @@ index 9c8b9e4..7818d16 100644
          );
          mkdirSync(artifactsRoot, { recursive: true });
          const artifactEntries = packages.map(directory => {
-@@ -737,7 +725,7 @@ describe('1.0 stable release contract', () => {
+@@ -696,7 +732,7 @@ describe('1.0 stable release contract', () => {
            writeFileSync(
              resolve(packageRoot, 'package.json'),
              JSON.stringify({
@@ -2892,7 +2874,7 @@ index 9c8b9e4..7818d16 100644
                version: '1.0.0',
                publishConfig: {
                  access: 'public',
-@@ -745,11 +733,11 @@ describe('1.0 stable release contract', () => {
+@@ -704,11 +740,11 @@ describe('1.0 stable release contract', () => {
                },
              }),
            );
@@ -2906,7 +2888,7 @@ index 9c8b9e4..7818d16 100644
              version: '1.0.0',
              filename,
              sizeBytes: statSync(artifactPath).size,
-@@ -759,7 +747,7 @@ describe('1.0 stable release contract', () => {
+@@ -718,7 +754,7 @@ describe('1.0 stable release contract', () => {
            };
          });
          writeFileSync(
@@ -2915,7 +2897,7 @@ index 9c8b9e4..7818d16 100644
            JSON.stringify({ version: '1.0.0', packages: artifactEntries }),
          );
  
-@@ -868,12 +856,7 @@ describe('1.0 stable release contract', () => {
+@@ -827,12 +863,7 @@ describe('1.0 stable release contract', () => {
          validateTrustReadiness,
        } from './scripts/release/check-package-availability.mjs';
  
@@ -2929,7 +2911,7 @@ index 9c8b9e4..7818d16 100644
        const ready = packages.map(({ name, version }) => ({
          name,
          version,
-@@ -883,16 +866,16 @@ describe('1.0 stable release contract', () => {
+@@ -842,16 +873,16 @@ describe('1.0 stable release contract', () => {
        const confirmation = 'stage 1.0.0 stage-only-trusted-publishers-verified';
        assert.deepEqual(validateTrustReadiness(packages, ready, confirmation), []);
        assert.equal(
@@ -2951,7 +2933,7 @@ index 9c8b9e4..7818d16 100644
          confirmation,
        );
        assert.ok(bootstrapFindings.some(finding => finding.includes('bootstrap required')));
-@@ -901,14 +884,14 @@ describe('1.0 stable release contract', () => {
+@@ -860,14 +891,14 @@ describe('1.0 stable release contract', () => {
        assert.ok(
          validateTrustReadiness(
            packages,
@@ -2968,7 +2950,7 @@ index 9c8b9e4..7818d16 100644
            confirmation,
          ).some(finding => finding.includes('package root query failed')),
        );
-@@ -918,8 +901,8 @@ describe('1.0 stable release contract', () => {
+@@ -877,8 +908,8 @@ describe('1.0 stable release contract', () => {
          ),
        );
        assert.ok(
@@ -2979,7 +2961,7 @@ index 9c8b9e4..7818d16 100644
          ),
        );
      `);
-@@ -950,22 +933,17 @@ describe('1.0 stable release contract', () => {
+@@ -909,22 +940,17 @@ describe('1.0 stable release contract', () => {
      const gettingStarted = text('docs/getting-started.md');
      const api = text('docs/api.md');
      const errors = text('docs/errors.md');
@@ -3011,7 +2993,7 @@ index 9c8b9e4..7818d16 100644
      expect(gettingStarted).toContain('受控模式不会自行提交候选视图');
      expect(api).toContain('`dispatch(command): CommandResult | null`');
      expect(api).toContain('`getView(): ViewSpec`');
-@@ -1160,7 +1138,7 @@ describe('1.0 stable release contract', () => {
+@@ -1119,7 +1145,7 @@ describe('1.0 stable release contract', () => {
            runtime: ['run', 'value'],
            types: ['Alias', 'PublicShape', 'Shape'],
          });
@@ -4021,19 +4003,20 @@ index e4c3413..fc64b57 100644
          publicFiles: requiredFiles.length,
          markdownFiles: markdownFiles.length,
 diff --git a/scripts/release/canonical-gzip.mjs b/scripts/release/canonical-gzip.mjs
-index f5b265a..c4c72cf 100644
---- a/scripts/release/canonical-gzip.mjs
+new file mode 100644
+index 0000000..c4c72cf
+--- /dev/null
 +++ b/scripts/release/canonical-gzip.mjs
-@@ -1,4 +1,5 @@
- import { readFileSync, writeFileSync } from 'node:fs';
+@@ -0,0 +1,95 @@
++import { readFileSync, writeFileSync } from 'node:fs';
 +import { gunzipSync, gzipSync } from 'node:zlib';
- 
- const GZIP_HEADER_LENGTH = 10;
- const GZIP_ID1 = 0x1f;
-@@ -6,8 +7,72 @@ const GZIP_ID2 = 0x8b;
- const GZIP_DEFLATE_METHOD = 8;
- const GZIP_OS_OFFSET = 9;
- const GZIP_UNKNOWN_OS = 255;
++
++const GZIP_HEADER_LENGTH = 10;
++const GZIP_ID1 = 0x1f;
++const GZIP_ID2 = 0x8b;
++const GZIP_DEFLATE_METHOD = 8;
++const GZIP_OS_OFFSET = 9;
++const GZIP_UNKNOWN_OS = 255;
 +const TAR_BLOCK_SIZE = 512;
 +const TAR_NAME_OFFSET = 0;
 +const TAR_NAME_LENGTH = 100;
@@ -4042,8 +4025,7 @@ index f5b265a..c4c72cf 100644
 +const TAR_PREFIX_OFFSET = 345;
 +const TAR_PREFIX_LENGTH = 155;
 +const PACKAGE_MANIFEST_PATH = 'package/package.json';
- 
--export function canonicalizeGzipHeader(path) {
++
 +function tarString(buffer, offset, length) {
 +  const end = buffer.indexOf(0, offset);
 +  const boundedEnd = end === -1 || end > offset + length ? offset + length : end;
@@ -4101,15 +4083,16 @@ index f5b265a..c4c72cf 100644
 +}
 +
 +export function canonicalizeNpmTarball(path) {
-   const artifact = readFileSync(path);
-   if (
-     artifact.length < GZIP_HEADER_LENGTH ||
-@@ -18,6 +83,13 @@ export function canonicalizeGzipHeader(path) {
-     throw new Error(`Release artifact is not a valid gzip stream: ${path}`);
-   }
- 
--  artifact[GZIP_OS_OFFSET] = GZIP_UNKNOWN_OS;
--  writeFileSync(path, artifact);
++  const artifact = readFileSync(path);
++  if (
++    artifact.length < GZIP_HEADER_LENGTH ||
++    artifact[0] !== GZIP_ID1 ||
++    artifact[1] !== GZIP_ID2 ||
++    artifact[2] !== GZIP_DEFLATE_METHOD
++  ) {
++    throw new Error(`Release artifact is not a valid gzip stream: ${path}`);
++  }
++
 +  const archive = gunzipSync(artifact);
 +  canonicalizePackageManifest(archive);
 +
@@ -4119,7 +4102,7 @@ index f5b265a..c4c72cf 100644
 +  const canonical = gzipSync(archive, { level: 9, mtime: 0 });
 +  canonical[GZIP_OS_OFFSET] = GZIP_UNKNOWN_OS;
 +  writeFileSync(path, canonical);
- }
++}
 diff --git a/scripts/release/check-architecture.mjs b/scripts/release/check-architecture.mjs
 index 45f3944..6b87b53 100644
 --- a/scripts/release/check-architecture.mjs
@@ -4206,19 +4189,18 @@ index 5fc4769..e2a6bf6 100644
        };
      }
 diff --git a/scripts/release/package-artifact.mjs b/scripts/release/package-artifact.mjs
-index ba214ba..6858e74 100644
+index f092ecd..6858e74 100644
 --- a/scripts/release/package-artifact.mjs
 +++ b/scripts/release/package-artifact.mjs
-@@ -12,7 +12,7 @@ import {
+@@ -12,6 +12,7 @@ import {
  import { tmpdir } from 'node:os';
  import { join, resolve } from 'node:path';
  
--import { canonicalizeGzipHeader } from './canonical-gzip.mjs';
 +import { canonicalizeNpmTarball } from './canonical-gzip.mjs';
  import { fail, repositoryRoot, run } from './release-utils.mjs';
  
  const write = process.argv.slice(2).includes('--write');
-@@ -30,8 +30,8 @@ if (process.versions.node !== releaseNodeVersion) {
+@@ -29,8 +30,8 @@ if (process.versions.node !== releaseNodeVersion) {
    );
  }
  
@@ -4229,11 +4211,10 @@ index ba214ba..6858e74 100644
  const artifactsRoot = resolve(evidenceRoot, 'artifacts');
  const manifestPath = resolve(evidenceRoot, 'tarball-manifest.json');
  const temporaryRoot = mkdtempSync(join(tmpdir(), 'tellplot-release-artifacts-'));
-@@ -58,7 +58,7 @@ try {
+@@ -57,6 +58,7 @@ try {
  
      run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
      run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
--    canonicalizeGzipHeader(freshArtifactPath);
 +    canonicalizeNpmTarball(freshArtifactPath);
      const packManifest = JSON.parse(
        run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),

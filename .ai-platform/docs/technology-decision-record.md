@@ -275,8 +275,9 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
   drag-and-drop 库；适配包不得拥有第二套 session、projection、G2 runtime 或交互状态机。
 - UI ownership: 完整工具栏、图表直接操作、结构大纲、Inspector、弹层、键盘与无障碍语义由 framework-neutral
   editor runtime 统一拥有。适配包只渲染一个稳定容器并转发更新、事件与实例方法。
-- Compatibility: 现有候选从未公开发布，本目标不保留旧 `@tellplot/editor` React component API 或旧包布局；
-  SourceData、ViewSpec、命令和业务不变量继续作为产品正确性合同。
+- Compatibility: 公开兼容承诺从 `tellplot@1.0.0` 及其文档化子路径开始；不保留旧
+  `@tellplot/editor` React component API 或 scoped 包布局。SourceData、ViewSpec、命令和业务不变量继续
+  作为产品正确性合同。
 - Package strategy: 由 TDR-023 的单包公共分发决策取代；本 TDR 的内部依赖方向和 runtime ownership 保持有效。
 - Quality: 包导入无浏览器全局副作用；create/update/destroy 可重复且资源可释放；imperative、React、Vue
   共享 E2E、a11y、performance 和当前/上一浏览器门禁。

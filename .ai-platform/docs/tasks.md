@@ -2,11 +2,10 @@
 
 ## Metadata
 
-- Version: 0.37.0
+- Version: 0.38.0
 - Status: Active
 - Last updated: 2026-08-01
-- Scope: T101-T116、G002 系列、G004 与 G006 已验收；用户批准 G007 / T131 把公共分发收敛为一个
-  `tellplot` 包并完成公开发布
+- Scope: T101-T116、G002 系列、G004、G006 与 G007 已验收；`tellplot@1.0.0` 已完成公开发布
 
 ## Goal-Level Delivery
 
@@ -29,7 +28,7 @@
 | G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
 | G005 - 四包公开稳定版发布 | Superseded | T130 的安全门禁由 G007 复用；四包公开目标由单包决策取代 |
 | G006 - 框架无关编辑器架构 | Accepted | T125-T129；内部四层架构、完整编辑器与质量门禁已验收 |
-| G007 - 单包分发与公开发布 | In_Progress | T131；只发布 `tellplot`，内部 core/editor/React/Vue layers 保持 private |
+| G007 - 单包分发与公开发布 | Accepted | T131；`tellplot@1.0.0` 已发布，内部 core/editor/React/Vue layers 保持 private |
 
 ## T001 - 确认产品设计与项目章程
 
@@ -225,14 +224,15 @@ G005 / T130 保留为已完成的本地发布安全基线；其四包 artifact �
 registry audit、protected environment、stage-only Trusted Publishing、provenance、固定 hash 和 2FA
 approval 继续由 G007 复用。
 
-## G007 Execution
+## G007 Delivery
 
-G007 由用户于 2026-08-01 明确批准，以 T131 把 npm 公共分发收敛为一个无 scope 的 `tellplot` 包。
+G007 以 T131 把 npm 公共分发收敛为一个无 scope 的 `tellplot` 包。
 公共入口固定为 `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue` 和 `tellplot/styles.css`；
 内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` 保持 private workspace
 layers，不独立发布，不建设兼容 shim。
 
-T131 连续完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
-清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval 和公开 fresh install。
-权威目标图与 evidence 位于 `.ai-platform/specs/013-single-package-distribution/` 和
-`.ai-platform/evidence/T131/`。
+T131 已完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
+清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval、公开 fresh install
+和 GitHub Release。npm `latest` 指向 `1.0.0`，provenance 解析到受保护的 `v1.0.0` 与发布提交
+`a3e07c9ac9b20183092729cde234322db98f9835`；状态为 `Accepted`。权威目标图与 evidence 位于
+`.ai-platform/specs/013-single-package-distribution/` 和 `.ai-platform/evidence/T131/`。

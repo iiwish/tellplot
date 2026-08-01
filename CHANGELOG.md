@@ -5,7 +5,8 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或�
 
 ## 1.0.0
 
-首个稳定版本。当前仓库生成本地稳定候选；公开 npm、GitHub Release 与生产网站状态以发布报告为准。
+首个稳定版本。`tellplot@1.0.0` 已发布到 npm，GitHub Release 与受保护的 `v1.0.0` tag、发布 artifact
+和 SLSA provenance 保持一致。
 
 ### Added
 
@@ -35,4 +36,4 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或�
 
 - `tellplot` 根入口及文档化子路径的 runtime exports、公共类型、schema、错误码、framework peer 与浏览器
   合同进入 1.x 兼容承诺。
-- npm publish、Git tag、GitHub Release 和生产部署需要独立授权，版本字段不表示已经公开发布。
+- npm `latest` 指向 `1.0.0`；公开版本由 stage-only Trusted Publisher、人类 2FA approval 与受保护 tag 发布。

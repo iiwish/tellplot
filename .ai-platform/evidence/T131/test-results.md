@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: In_Progress
+- Status: Accepted
 - Runtime: Node 22.20.0 release runtime；开发期 focused tests 可使用 workspace runtime
 
 ## Results
@@ -23,4 +23,11 @@
 | Previous browser | Passed | previous release 186/186；WebKit 18.4 62/62 |
 | Isolated source rehearsal | Passed | 376 source files；frozen install 到单包 framework matrix 全部通过 |
 | Reproducible artifact | Passed | `tellplot-1.0.0.tgz` 485325 bytes；SHA-256 `e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e` |
-| Public staged artifact | Pending | 远程执行阶段生成 |
+| GitHub release workflow | Passed | run `30701441776`；verify 23m6s，stage 26s；head `a3e07c9ac9b20183092729cde234322db98f9835` |
+| Public staged artifact | Passed | stage `187969a4-f39a-40e0-b602-8bccb975f9b2`；485325 bytes；SHA-1 `662d0280de22a634c80471e6d16cca2a312cd829`；SHA-256 与 manifest 一致 |
+| npm public registry | Passed | `tellplot@1.0.0` 公开；`latest=1.0.0`；pending stage queue 为空 |
+| SLSA provenance | Passed | workflow、exact tag、commit、run 与 GitHub-hosted builder 全部一致 |
+| Public fresh install | Passed | imperative、React 18.3.1、React 19.2.7、Vue 3.5.27 strict peer + ESM/CJS + Vite build |
+| GitHub Release | Passed | `v1.0.0` latest release；附带 exact `tellplot-1.0.0.tgz` |
+| Scoped bootstrap cleanup | Passed | 四个 `@tellplot/*@0.0.0-bootstrap.0` 均 deprecated 为安装 `tellplot` |
+| Post-release evidence contract | Passed | stable release 与 single-package contract 2 files、19/19；strict artifact validator、Prettier、patch reverse-apply 与 `git diff --check` 通过 |
