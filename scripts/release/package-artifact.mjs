@@ -12,6 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
+import { canonicalizeGzipHeader } from './canonical-gzip.mjs';
 import { fail, repositoryRoot, run } from './release-utils.mjs';
 
 const write = process.argv.slice(2).includes('--write');
@@ -57,6 +58,7 @@ try {
 
     run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
     run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
+    canonicalizeGzipHeader(freshArtifactPath);
     const packManifest = JSON.parse(
       run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),
     );

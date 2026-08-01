@@ -5,8 +5,8 @@
       "name": "@tellplot/core",
       "version": "1.0.0",
       "filename": "tellplot-core-1.0.0.tgz",
-      "sizeBytes": 216934,
-      "sha256": "40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5",
+      "sizeBytes": 216937,
+      "sha256": "4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b",
       "files": [
         {
           "path": "LICENSE"
@@ -41,8 +41,8 @@
       "name": "@tellplot/editor",
       "version": "1.0.0",
       "filename": "tellplot-editor-1.0.0.tgz",
-      "sizeBytes": 255550,
-      "sha256": "3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395",
+      "sizeBytes": 261820,
+      "sha256": "3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2",
       "files": [
         {
           "path": "LICENSE"
@@ -90,7 +90,7 @@
       "version": "1.0.0",
       "filename": "tellplot-react-1.0.0.tgz",
       "sizeBytes": 6481,
-      "sha256": "085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a",
+      "sha256": "c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242",
       "files": [
         {
           "path": "LICENSE"
@@ -138,7 +138,7 @@
       "version": "1.0.0",
       "filename": "tellplot-vue-1.0.0.tgz",
       "sizeBytes": 6127,
-      "sha256": "78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17",
+      "sha256": "a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811",
       "files": [
         {
           "path": "LICENSE"

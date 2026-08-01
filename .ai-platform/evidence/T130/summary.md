@@ -41,24 +41,25 @@ G005 仍因 clean commit、独立远程授权、npm package bootstrap、stage-on
 `TellPlot 1.0.0 stable release checks passed.`：
 
 - 14 个 AntV package / 17 个精确 artifact / 48 个 installed manifest；
-- 49 个 source file / 193 条 import edge / 0 runtime cycle / 4 个 public entry；
-- 4 packages / 25 public files / 19 Markdown files / 434 audited files；
-- 54 files / 446 unit tests，coverage threshold 全部通过；
-- 四包 publint、ATTW、ESM、CJS、types、tarball allowlist、size 与 SHA-256；
+- 50 个 source file / 195 条 import edge / 0 runtime cycle / 4 个 public entry；
+- 4 packages / 25 public files / 19 Markdown files / 440 audited files；
+- 54 files / 449 unit tests，coverage threshold 全部通过；
+- 四包 publint、ATTW、ESM、CJS、types、tarball allowlist、size 与 SHA-256；macOS 与隔离 Linux
+  重建逐字节一致；
 - imperative DOM、React 18.3.1、React 19.2.7、Vue 3.5.27 framework matrix；
-- performance 3/3，waterfall p95 129.5ms、categorical p95 136.3ms，预算 150ms，
+- performance 3/3，waterfall p95 51.3ms、categorical p95 45.1ms，预算 150ms，
   same-target React root commit delta 0；
 - current browser 186/186、a11y 45/45、previous browser 186/186、WebKit 18.4 62/62；
-- 351-file isolated-source rehearsal。
+- 353-file isolated-source rehearsal。
 
 ## Package Evidence
 
 | Package | Size | SHA-256 |
 | --- | ---: | --- |
-| `@tellplot/core` | 216934 bytes | `40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5` |
-| `@tellplot/editor` | 255550 bytes | `3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395` |
-| `@tellplot/react` | 6481 bytes | `085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a` |
-| `@tellplot/vue` | 6127 bytes | `78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17` |
+| `@tellplot/core` | 216937 bytes | `4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b` |
+| `@tellplot/editor` | 261820 bytes | `3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2` |
+| `@tellplot/react` | 6481 bytes | `c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242` |
+| `@tellplot/vue` | 6127 bytes | `a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811` |
 
 ## Source Evidence
 

@@ -110,6 +110,47 @@ describe('1.0 stable release contract', () => {
     expect(artifactScript).toContain("'.ai-platform/evidence/T129'");
   });
 
+  it('normalizes npm tarball gzip headers without changing package contents', () => {
+    const result = runModuleSource(`
+      import { createHash } from 'node:crypto';
+      import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+      import { gzipSync, gunzipSync } from 'node:zlib';
+      import { tmpdir } from 'node:os';
+      import { resolve } from 'node:path';
+      import { canonicalizeGzipHeader } from './scripts/release/canonical-gzip.mjs';
+
+      const directory = mkdtempSync(resolve(tmpdir(), 'tellplot-gzip-header-'));
+      try {
+        const payload = Buffer.from('same npm package bytes');
+        const macos = gzipSync(payload, { mtime: 0 });
+        const linux = Buffer.from(macos);
+        macos[9] = 19;
+        linux[9] = 3;
+        const macosPath = resolve(directory, 'macos.tgz');
+        const linuxPath = resolve(directory, 'linux.tgz');
+        writeFileSync(macosPath, macos);
+        writeFileSync(linuxPath, linux);
+
+        canonicalizeGzipHeader(macosPath);
+        canonicalizeGzipHeader(linuxPath);
+
+        const normalizedMacos = readFileSync(macosPath);
+        const normalizedLinux = readFileSync(linuxPath);
+        const digest = value => createHash('sha256').update(value).digest('hex');
+        if (normalizedMacos[9] !== 255 || normalizedLinux[9] !== 255) process.exit(1);
+        if (digest(normalizedMacos) !== digest(normalizedLinux)) process.exit(1);
+        if (!gunzipSync(normalizedMacos).equals(payload)) process.exit(1);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    `);
+
+    expect(result.status, result.output).toBe(0);
+    expect(text('scripts/release/package-artifact.mjs')).toContain(
+      'canonicalizeGzipHeader(freshArtifactPath)',
+    );
+  });
+
   it('keeps the public release command and browser matrix release-complete', () => {
     const stableCheck = text('scripts/release/check-stable.mjs');
     const ciWorkflow = text('.github/workflows/ci.yml');
@@ -377,10 +418,10 @@ describe('1.0 stable release contract', () => {
     );
 
     for (const sha256 of [
-      '40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5',
-      '3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395',
-      '085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a',
-      '78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17',
+      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
+      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
+      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
+      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
     ]) {
       expect(stageJob).toContain(sha256);
     }
@@ -414,10 +455,10 @@ describe('1.0 stable release contract', () => {
     expect(report).toContain('只重试 pending');
     expect([...report.matchAll(/^set -euo pipefail$/gmu)].length).toBeGreaterThanOrEqual(3);
     for (const sha256 of [
-      '40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5',
-      '3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395',
-      '085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a',
-      '78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17',
+      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
+      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
+      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
+      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
     ]) {
       expect(report).toContain(sha256);
     }

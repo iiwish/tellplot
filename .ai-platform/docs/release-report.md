@@ -323,10 +323,10 @@ printf 'archive staged-artifact evidence from %s\n' "$review_root"
 
 | Package | Candidate SHA-256 |
 | --- | --- |
-| `@tellplot/core@1.0.0` | `40cb7eee0613f0e52e28ba7e9cc67332911cc1b7412de7cd34eedcdd374e48a5` |
-| `@tellplot/editor@1.0.0` | `3123ed9d413802d1c89b3789699d2ba8ce67d83e36bbbd0b4e9cdf5d7c6d6395` |
-| `@tellplot/react@1.0.0` | `085dabeb3fc82a02ddbd095b222b12c16f750e31e3fdab4371b601b2a7904c3a` |
-| `@tellplot/vue@1.0.0` | `78c47e422a549c9880b3d0568f338f74dd2f30c69bae61888881f79c41df0a17` |
+| `@tellplot/core@1.0.0` | `4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b` |
+| `@tellplot/editor@1.0.0` | `3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2` |
+| `@tellplot/react@1.0.0` | `c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242` |
+| `@tellplot/vue@1.0.0` | `a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811` |
 
    任一 metadata、tarball、hash 或 provenance 不一致都必须停止；在尚无 approval 的前提下，按第 10 步
    reject 本次全部 stage。不得批准“未受影响”的单包，也不得原地替换 staged artifact。
