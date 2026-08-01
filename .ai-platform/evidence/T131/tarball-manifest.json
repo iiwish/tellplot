@@ -1,0 +1,137 @@
+{
+  "version": "1.0.0",
+  "packages": [
+    {
+      "name": "tellplot",
+      "version": "1.0.0",
+      "filename": "tellplot-1.0.0.tgz",
+      "sizeBytes": 485325,
+      "sha256": "e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e",
+      "files": [
+        {
+          "path": "LICENSE"
+        },
+        {
+          "path": "README.md"
+        },
+        {
+          "path": "dist/chunk-37B7HD7J.js"
+        },
+        {
+          "path": "dist/chunk-37B7HD7J.js.map"
+        },
+        {
+          "path": "dist/chunk-5VLMQTI5.cjs"
+        },
+        {
+          "path": "dist/chunk-5VLMQTI5.cjs.map"
+        },
+        {
+          "path": "dist/chunk-ETDLDTEO.cjs"
+        },
+        {
+          "path": "dist/chunk-ETDLDTEO.cjs.map"
+        },
+        {
+          "path": "dist/chunk-ZYGDNUG3.js"
+        },
+        {
+          "path": "dist/chunk-ZYGDNUG3.js.map"
+        },
+        {
+          "path": "dist/core.cjs"
+        },
+        {
+          "path": "dist/core.cjs.map"
+        },
+        {
+          "path": "dist/core.d.cts"
+        },
+        {
+          "path": "dist/core.d.ts"
+        },
+        {
+          "path": "dist/core.js"
+        },
+        {
+          "path": "dist/core.js.map"
+        },
+        {
+          "path": "dist/editorStore-BQi3O3_T.d.cts"
+        },
+        {
+          "path": "dist/editorStore-BQi3O3_T.d.ts"
+        },
+        {
+          "path": "dist/index.cjs"
+        },
+        {
+          "path": "dist/index.cjs.map"
+        },
+        {
+          "path": "dist/index.d.cts"
+        },
+        {
+          "path": "dist/index.d.ts"
+        },
+        {
+          "path": "dist/index.js"
+        },
+        {
+          "path": "dist/index.js.map"
+        },
+        {
+          "path": "dist/react.cjs"
+        },
+        {
+          "path": "dist/react.cjs.map"
+        },
+        {
+          "path": "dist/react.d.cts"
+        },
+        {
+          "path": "dist/react.d.ts"
+        },
+        {
+          "path": "dist/react.js"
+        },
+        {
+          "path": "dist/react.js.map"
+        },
+        {
+          "path": "dist/styles.css"
+        },
+        {
+          "path": "dist/styles.css.map"
+        },
+        {
+          "path": "dist/types-CCb9K82W.d.ts"
+        },
+        {
+          "path": "dist/types-CLtPYvZz.d.cts"
+        },
+        {
+          "path": "dist/vue.cjs"
+        },
+        {
+          "path": "dist/vue.cjs.map"
+        },
+        {
+          "path": "dist/vue.d.cts"
+        },
+        {
+          "path": "dist/vue.d.ts"
+        },
+        {
+          "path": "dist/vue.js"
+        },
+        {
+          "path": "dist/vue.js.map"
+        },
+        {
+          "path": "package.json"
+        }
+      ]
+    }
+  ]
+}

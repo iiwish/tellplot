@@ -115,9 +115,7 @@ test('desktop usage code and right panel rail are visible by default', async ({ 
   await expect(guide).toBeVisible();
   await expect(guide.getByRole('textbox', { name: 'TellPlot 图表配置' })).toBeVisible();
   await guide.getByRole('tab', { name: '接入示例' }).click();
-  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText(
-    'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom',
-  );
+  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText('pnpm add tellplot');
 
   const guideBox = await guide.boundingBox();
   const chartBox = await chart.boundingBox();
@@ -128,7 +126,7 @@ test('desktop usage code and right panel rail are visible by default', async ({ 
   await guide.getByRole('tab', { name: 'React' }).click();
   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText('ChartEditor');
   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
-    "import '@tellplot/react/styles.css'",
+    "import 'tellplot/styles.css'",
   );
 
   await guide.getByRole('tab', { name: '配置', exact: true }).click();

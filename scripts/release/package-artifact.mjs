@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { canonicalizeGzipHeader } from './canonical-gzip.mjs';
+import { canonicalizeNpmTarball } from './canonical-gzip.mjs';
 import { fail, repositoryRoot, run } from './release-utils.mjs';
 
 const write = process.argv.slice(2).includes('--write');
@@ -30,8 +30,8 @@ if (process.versions.node !== releaseNodeVersion) {
   );
 }
 
-const packageDirectories = ['core', 'editor', 'react', 'vue'];
-const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T129');
+const packageDirectories = ['tellplot'];
+const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T131');
 const artifactsRoot = resolve(evidenceRoot, 'artifacts');
 const manifestPath = resolve(evidenceRoot, 'tarball-manifest.json');
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'tellplot-release-artifacts-'));
@@ -58,7 +58,7 @@ try {
 
     run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
     run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
-    canonicalizeGzipHeader(freshArtifactPath);
+    canonicalizeNpmTarball(freshArtifactPath);
     const packManifest = JSON.parse(
       run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),
     );

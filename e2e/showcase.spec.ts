@@ -88,8 +88,7 @@ test.describe('TellPlot 开源官网', () => {
     await expect(page.getByRole('heading', { name: '安装' })).toBeVisible();
     await expect(
       page.locator('pre').filter({
-        hasText:
-          'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom',
+        hasText: 'pnpm add tellplot',
       }),
     ).toBeVisible();
     await expect(page.getByRole('heading', { name: 'SourceData 与 ViewSpec' })).toBeVisible();

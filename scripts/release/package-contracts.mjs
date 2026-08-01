@@ -8,6 +8,9 @@ const contractDocument = JSON.parse(
 );
 
 export const packageContracts = contractDocument.packages;
+export const publicPackageContracts = packageContracts.filter(contract => contract.public === true);
+
+const packageContractByName = new Map(packageContracts.map(contract => [contract.name, contract]));
 
 function hasModifier(node, kind) {
   return node.modifiers?.some(modifier => modifier.kind === kind) ?? false;
@@ -233,9 +236,63 @@ function nameDifference(actual, expected) {
     .join('; ');
 }
 
+function inheritedExportNames(contract, field, visiting = new Set()) {
+  const key = `${contract.name ?? contract.path ?? 'subpath'}:${field}`;
+  if (visiting.has(key)) {
+    throw new Error(`Package contract export inheritance cycle: ${key}`);
+  }
+  visiting.add(key);
+  const names = new Set(contract[field] ?? []);
+  for (const inheritedName of contract.inheritExports ?? []) {
+    const inherited = packageContractByName.get(inheritedName);
+    if (inherited === undefined) {
+      throw new Error(`Unknown inherited package contract: ${inheritedName}`);
+    }
+    for (const name of inheritedExportNames(inherited, field, visiting)) {
+      names.add(name);
+    }
+  }
+  visiting.delete(key);
+  return [...names].sort();
+}
+
+export function expectedPackageSurface(contract) {
+  return {
+    runtime: inheritedExportNames(contract, 'runtimeExports'),
+    types: inheritedExportNames(contract, 'typeExports'),
+  };
+}
+
+export function validatePackageSurface(surface, contract, label = contract.name) {
+  const findings = [];
+  const expectedSurface = expectedPackageSurface(contract);
+  if (!sameNames(surface.runtime, expectedSurface.runtime)) {
+    findings.push(
+      `${label} runtime exports do not match the stable allowlist (${nameDifference(
+        surface.runtime,
+        expectedSurface.runtime,
+      )})`,
+    );
+  }
+  if (!sameNames(surface.types, expectedSurface.types)) {
+    findings.push(
+      `${label} type exports do not match the stable allowlist (${nameDifference(
+        surface.types,
+        expectedSurface.types,
+      )})`,
+    );
+  }
+  return findings;
+}
+
 export function validatePackageContract(manifest, surface, contract) {
   const findings = [];
-  for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
+  for (const field of [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'peerDependenciesMeta',
+  ]) {
     if (!sameRecord(manifest[field], contract[field])) {
       findings.push(
         `${contract.name} ${field} do not match the stable allowlist (${recordDifference(
@@ -245,22 +302,7 @@ export function validatePackageContract(manifest, surface, contract) {
       );
     }
   }
-  if (!sameNames(surface.runtime, contract.runtimeExports)) {
-    findings.push(
-      `${contract.name} runtime exports do not match the stable allowlist (${nameDifference(
-        surface.runtime,
-        contract.runtimeExports,
-      )})`,
-    );
-  }
-  if (!sameNames(surface.types, contract.typeExports)) {
-    findings.push(
-      `${contract.name} type exports do not match the stable allowlist (${nameDifference(
-        surface.types,
-        contract.typeExports,
-      )})`,
-    );
-  }
+  findings.push(...validatePackageSurface(surface, contract));
   return findings;
 }
 

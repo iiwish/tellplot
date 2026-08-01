@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "types": ["node", "react"],
+    "paths": {
+      "@tellplot/core": ["../core/src/index.ts"],
+      "@tellplot/editor": ["../editor/src/index.ts"],
+      "@tellplot/react": ["../react/src/index.tsx"],
+      "@tellplot/vue": ["../vue/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests"],
+  "exclude": ["tests/package"]
+}

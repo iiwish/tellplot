@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 import { fail, repositoryRoot } from './release-utils.mjs';
 
-const PACKAGE_DIRECTORIES = ['core', 'editor', 'react', 'vue'];
-const EXPECTED_PACKAGE_NAMES = PACKAGE_DIRECTORIES.map(directory => `@tellplot/${directory}`);
+const PACKAGE_DIRECTORIES = ['tellplot'];
+const EXPECTED_PACKAGE_NAMES = ['tellplot'];
 const EXPECTED_REMOTE =
   /^(?:git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)iiwish\/tellplot(?:\.git)?$/u;
 const CANONICAL_REMOTE_QUERY_URL = 'https://github.com/iiwish/tellplot.git';
@@ -16,8 +16,8 @@ const OFFICIAL_NPM_REGISTRY = 'https://registry.npmjs.org/';
 const MINIMUM_NODE_VERSION = '22.14.0';
 const MINIMUM_NPM_VERSION = '11.15.0';
 const PUBLISH_WORKFLOW = 'iiwish/tellplot/.github/workflows/publish-npm.yml';
-const ARTIFACT_ROOT = '.ai-platform/evidence/T129/artifacts';
-const ARTIFACT_MANIFEST = '.ai-platform/evidence/T129/tarball-manifest.json';
+const ARTIFACT_ROOT = '.ai-platform/evidence/T131/artifacts';
+const ARTIFACT_MANIFEST = '.ai-platform/evidence/T131/tarball-manifest.json';
 const REMOTE_QUERY_ENVIRONMENT_KEYS = [
   'PATH',
   'PATHEXT',
@@ -99,11 +99,11 @@ function artifactFilename(name, version) {
 function validatePackages(packageManifests, findings) {
   const packageNames = packageManifests.map(manifest => manifest?.name);
   if (JSON.stringify(packageNames) !== JSON.stringify(EXPECTED_PACKAGE_NAMES)) {
-    findings.push('release packages must be core, editor, react, and vue in dependency order');
+    findings.push('release packages must contain only tellplot');
   }
   const version = releaseVersion(packageManifests);
   if (version === undefined || !/^\d+\.\d+\.\d+$/u.test(version)) {
-    findings.push('all four public packages must use the same stable semantic version');
+    findings.push('the public tellplot package must use a stable semantic version');
   }
   for (const manifest of packageManifests) {
     if (
@@ -126,14 +126,14 @@ function validateArtifacts(state, packageManifests, version, findings) {
     manifest.version !== version ||
     !Array.isArray(manifest.packages)
   ) {
-    findings.push('T129 release artifact manifest is missing, invalid, or version-mismatched');
+    findings.push('T131 release artifact manifest is missing, invalid, or version-mismatched');
     return;
   }
   if (
     JSON.stringify(manifest.packages.map(entry => entry?.name)) !==
     JSON.stringify(EXPECTED_PACKAGE_NAMES)
   ) {
-    findings.push('T129 release artifact manifest must contain exactly the four public packages');
+    findings.push('T131 release artifact manifest must contain exactly the tellplot package');
   }
 
   const artifactFiles = Array.isArray(state.artifactFiles) ? state.artifactFiles : [];
@@ -151,20 +151,20 @@ function validateArtifacts(state, packageManifests, version, findings) {
       manifestEntry.sizeBytes <= 0 ||
       !/^[0-9a-f]{64}$/u.test(clean(manifestEntry?.sha256))
     ) {
-      findings.push(`T129 release artifact manifest entry is invalid for ${name || filename}`);
+      findings.push(`T131 release artifact manifest entry is invalid for ${name || filename}`);
       continue;
     }
 
     const artifact = artifactFiles.find(candidate => candidate?.filename === filename);
     if (artifact === undefined) {
-      findings.push(`T129 release artifact is missing for ${name}`);
+      findings.push(`T131 release artifact is missing for ${name}`);
       continue;
     }
     if (
       artifact.sizeBytes !== manifestEntry.sizeBytes ||
       artifact.sha256 !== manifestEntry.sha256
     ) {
-      findings.push(`T129 release artifact integrity does not match for ${name}`);
+      findings.push(`T131 release artifact integrity does not match for ${name}`);
     }
   }
 }

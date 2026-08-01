@@ -1,15 +1,19 @@
 # TellPlot 入门与集成
 
 TellPlot 的领域层和包 import 支持 SSR；实际编辑器只在浏览器中调用 `createEditor` 时访问 DOM 和 G2。
-以下命令用于已经创建好的宿主项目；React 与 Vue 示例默认项目本身已安装对应 framework。三个 UI 入口都
-使用经过兼容与安全复核的精确 G2 peer `5.4.8`。
+以下命令用于已经创建好的宿主项目；React 与 Vue 示例默认项目本身已安装对应 framework。`tellplot`
+内部使用经过兼容与安全复核的精确 G2 `5.4.8`。
+
+```bash
+pnpm add tellplot
+```
 
 ## 公共配置
 
 三种接入共用同一个 `ChartConfig`：
 
 ```ts
-import type { ChartConfig } from '@tellplot/core';
+import type { ChartConfig } from 'tellplot';
 
 export const config = {
   type: 'column',
@@ -52,13 +56,9 @@ export const waterfallConfig = {
 
 ## 原生 DOM
 
-```bash
-pnpm add @tellplot/core @tellplot/editor @antv/g2@5.4.8
-```
-
 ```ts
-import { createEditor } from '@tellplot/editor';
-import '@tellplot/editor/styles.css';
+import { createEditor } from 'tellplot';
+import 'tellplot/styles.css';
 import { config } from './config';
 
 const host = document.querySelector<HTMLElement>('#chart');
@@ -79,15 +79,11 @@ export function unmountChart(): void {
 
 ## React
 
-```bash
-pnpm add @tellplot/core @tellplot/react @antv/g2@5.4.8
-```
-
 ```tsx
 import { useState } from 'react';
-import { createInitialViewSpec, type ViewSpec } from '@tellplot/core';
-import { ChartEditor } from '@tellplot/react';
-import '@tellplot/react/styles.css';
+import { createInitialViewSpec, type ViewSpec } from 'tellplot';
+import { ChartEditor } from 'tellplot/react';
+import 'tellplot/styles.css';
 import { config } from './config';
 
 const created = createInitialViewSpec(config.data, { chartType: config.type });
@@ -101,16 +97,12 @@ export function RevenueChart() {
 
 ## Vue 3
 
-```bash
-pnpm add @tellplot/core @tellplot/vue @antv/g2@5.4.8
-```
-
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue';
-import { createInitialViewSpec } from '@tellplot/core';
-import { ChartEditor } from '@tellplot/vue';
-import '@tellplot/vue/styles.css';
+import { createInitialViewSpec } from 'tellplot';
+import { ChartEditor } from 'tellplot/vue';
+import 'tellplot/styles.css';
 import { config } from './config';
 
 const created = createInitialViewSpec(config.data, { chartType: config.type });

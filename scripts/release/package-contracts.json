@@ -5,6 +5,7 @@
       "directory": "core",
       "name": "@tellplot/core",
       "entry": "src/index.ts",
+      "public": false,
       "dependencies": {},
       "devDependencies": {},
       "peerDependencies": {},
@@ -199,6 +200,7 @@
       "directory": "editor",
       "name": "@tellplot/editor",
       "entry": "src/index.ts",
+      "public": false,
       "dependencies": {
         "@antv/g-svg": "2.1.1",
         "@tellplot/core": "workspace:*"
@@ -236,6 +238,7 @@
       "directory": "react",
       "name": "@tellplot/react",
       "entry": "src/index.tsx",
+      "public": false,
       "dependencies": {
         "@tellplot/editor": "workspace:*"
       },
@@ -266,6 +269,7 @@
       "directory": "vue",
       "name": "@tellplot/vue",
       "entry": "src/index.ts",
+      "public": false,
       "dependencies": {
         "@tellplot/editor": "workspace:*"
       },
@@ -287,6 +291,79 @@
         "SelectionState",
         "ValidationIssue",
         "ViewSpec"
+      ]
+    },
+    {
+      "directory": "tellplot",
+      "name": "tellplot",
+      "entry": "src/index.ts",
+      "public": true,
+      "dependencies": {
+        "@antv/g-svg": "2.1.1",
+        "@antv/g2": "5.4.8"
+      },
+      "devDependencies": {
+        "@tellplot/core": "workspace:*",
+        "@tellplot/editor": "workspace:*",
+        "@tellplot/react": "workspace:*",
+        "@tellplot/vue": "workspace:*",
+        "react": "19.2.7",
+        "vue": "3.5.27"
+      },
+      "peerDependencies": {
+        "react": "^18.3.0 || ^19.0.0",
+        "vue": "^3.5.0"
+      },
+      "peerDependenciesMeta": {
+        "react": {
+          "optional": true
+        },
+        "vue": {
+          "optional": true
+        }
+      },
+      "sourceDependencies": [
+        "@tellplot/core",
+        "@tellplot/editor",
+        "@tellplot/react",
+        "@tellplot/vue"
+      ],
+      "inheritExports": ["@tellplot/core"],
+      "runtimeExports": ["createEditor"],
+      "typeExports": [
+        "ChartRenderIssue",
+        "EditorInstance",
+        "EditorOptions",
+        "EditorUpdate",
+        "ExportError",
+        "ExportErrorCode",
+        "ExportOptions",
+        "ExportResult",
+        "TellPlotEditorError",
+        "TellPlotEditorErrorCode"
+      ],
+      "subpaths": [
+        {
+          "path": "./core",
+          "entry": "src/core.ts",
+          "inheritExports": ["@tellplot/core"],
+          "runtimeExports": [],
+          "typeExports": []
+        },
+        {
+          "path": "./react",
+          "entry": "src/react.ts",
+          "inheritExports": ["@tellplot/react"],
+          "runtimeExports": [],
+          "typeExports": []
+        },
+        {
+          "path": "./vue",
+          "entry": "src/vue.ts",
+          "inheritExports": ["@tellplot/vue"],
+          "runtimeExports": [],
+          "typeExports": []
+        }
       ]
     }
   ]

@@ -4,9 +4,9 @@ import { DEMO_WATERFALL_COLORS } from './demoPresentation';
 import { SiteFooter } from './SiteFooter';
 import { SiteLink } from './SiteLink';
 
-const MINIMAL_REACT_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
-import { ChartEditor } from '@tellplot/react';
-import '@tellplot/react/styles.css';
+const MINIMAL_REACT_EXAMPLE = `import type { ChartConfig } from 'tellplot';
+import { ChartEditor } from 'tellplot/react';
+import 'tellplot/styles.css';
 
 const config = {
   type: 'waterfall',
@@ -84,14 +84,11 @@ export function DocsPage({
                 <h2>安装</h2>
               </header>
               <p>
-                <code>@tellplot/core</code> 提供领域能力，<code>@tellplot/editor</code> 提供 DOM/G2
-                runtime，<code>@tellplot/react</code> 只负责 React 生命周期。
+                <code>tellplot</code> 提供完整 DOM/G2 runtime 与领域能力；React 和 Vue
+                分别通过同包子路径接入。
               </p>
               <pre>
-                <code>
-                  pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react
-                  react-dom
-                </code>
+                <code>pnpm add tellplot</code>
               </pre>
             </section>
 

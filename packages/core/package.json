@@ -1,6 +1,7 @@
 {
   "name": "@tellplot/core",
-  "version": "1.0.0",
+  "version": "0.0.0",
+  "private": true,
   "description": "Framework-neutral data, commands and editing state for TellPlot",
   "license": "MIT",
   "homepage": "https://tellplot.com",
@@ -47,9 +48,5 @@
   },
   "engines": {
     "node": ">=22.13.0"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
   }
 }

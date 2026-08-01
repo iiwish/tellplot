@@ -2,10 +2,10 @@
 
 ## Metadata
 
-- Version: 1.1.0
+- Version: 1.2.0
 - Status: Confirmed
-- Last updated: 2026-07-29
-- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构与首个公开稳定版目标
+- Last updated: 2026-08-01
+- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构、单包分发与首个公开稳定版目标
 
 ## Product Positioning
 
@@ -26,13 +26,15 @@ registry、通用 adapter 或公共扩展协议。
 
 ## Delivery Form
 
-项目交付框架无关核心、imperative 编辑器 runtime、React/Vue 薄适配包和参考编辑器：
+项目通过一个公共 `tellplot` 包交付框架无关核心、imperative 编辑器 runtime、React/Vue 薄适配和参考编辑器：
 
-- `@tellplot/core` 拥有数据合同、配置、命令、历史、投影、不变量和持久化，不依赖 DOM 或 UI 框架。
-- `@tellplot/editor` 通过 `createEditor(container, options)` 提供完整编辑器、G2 生命周期、交互、导出和
-  框架无关宿主合同，不依赖 React 或 Vue。
-- `@tellplot/react` 与 `@tellplot/vue` 只映射宿主生命周期、属性、事件和实例方法，不拥有第二套领域状态、
+- `tellplot` 根入口提供数据、配置、命令、历史、投影、不变量、持久化与 `createEditor(container, options)`。
+- `tellplot/core` 提供显式 core-only 入口；内部 core layer 不依赖 DOM、G2 或 UI 框架。
+- `tellplot/react` 与 `tellplot/vue` 只映射宿主生命周期、属性、事件和实例方法，不拥有第二套领域状态、
   图表 runtime 或编辑行为。
+- `tellplot/styles.css` 提供完整编辑器样式。
+- core、editor、React adapter 与 Vue adapter 保持私有 workspace layer，公共分发不要求 npm organization
+  或多个独立版本。
 - 参考编辑器只提供示例数据、功能演示和视觉验收，不复制领域状态或业务逻辑。
 - 开源官网在参考应用中提供品牌首页、真实图表示例目录、开发者文档入口和在线工作台；它只消费公共组件，
   不进入核心包或图表运行时。
@@ -220,8 +222,9 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包�
 
 ### NFR-007 包兼容性
 
-公共包提供 ESM、CJS 和类型声明，验证 imperative DOM、React 18/19、Vue 3、当前及上一发布浏览器，
-并保持 G2 为明确依赖边界。`@tellplot/core` 与 `@tellplot/editor` 的安装和运行合同不得包含 React 或 Vue。
+公共 `tellplot` 包为根、core、React 与 Vue JavaScript 入口提供 ESM、CJS 和类型声明，验证 imperative DOM、
+React 18/19、Vue 3、当前及上一发布浏览器。G2/G SVG 是精确审核的 direct dependencies；React/Vue 是
+optional peer dependencies，根入口和 imperative consumer 不安装框架也可运行。
 
 ## Current Scope
 
@@ -232,7 +235,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包�
 - `createEditor`、React/Vue `ChartEditor`、`ChartConfig`、运行时配置校验，以及标题、颜色、坐标轴、标签、Tooltip、数字格式和动画配置。
 - 展开分组区域配置、上下文分组操作和跨层级语义拖拽。
 - SVG、PNG 和 ViewSpec JSON 导出。
-- 框架无关 core/editor、React/Vue 薄适配包、参考编辑器和发布候选质量门禁。
+- 单个 `tellplot` 公共包、私有框架无关 core/editor layers、React/Vue 薄适配、参考编辑器和发布候选质量门禁。
 - 真实图表驱动的开源官网、示例中心、开发者文档入口和在线工作台。
 
 ## Expansion Policy
@@ -270,7 +273,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包�
 
 ### CD-001 交付形态
 
-交付框架无关 core/editor、React/Vue 薄适配包与参考编辑器，不建设独立 SaaS。
+交付一个 `tellplot` 公共包及其框架无关 core/editor、React/Vue 薄适配与参考编辑器，不建设独立 SaaS。
 
 ### CD-002 导出边界
 
@@ -282,7 +285,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包�
 
 ### CD-004 产品身份
 
-品牌使用 `TellPlot`，仓库使用 `tellplot`，npm scope 使用 `@tellplot`。
+品牌使用 `TellPlot`，仓库使用 `tellplot`，公共 npm 包使用无 scope 名称 `tellplot`。
 
 ### CD-005 编辑模型
 
@@ -300,7 +303,7 @@ breaking API、schema、依赖、远程 Git 和发布仍是独立人工闸门。
 
 ### CD-008 展示网站边界
 
-官网与示例中心是 `apps/playground` 的开发者体验层，只消费 `@tellplot/core` 与 `@tellplot/react` 公共 API。网站内容目录不是
+官网与示例中心是 `apps/playground` 的开发者体验层，只消费 `tellplot` 与 `tellplot/react` 公共 API。网站内容目录不是
 核心图表 registry，不向公共包增加路由、文档、动画或在线执行依赖。
 
 ### CD-009 公共配置入口
@@ -312,5 +315,5 @@ ownership，不提供 raw `G2Spec`。
 
 ### CD-010 稳定版本
 
-四个公共包的首个稳定版本均为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
+公共包 `tellplot` 的首个稳定版本为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
 作为稳定条件。公开发布只允许来自后续授权的干净 commit；本地稳定候选不等于 npm/GitHub/网站已发布。

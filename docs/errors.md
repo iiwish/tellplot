@@ -35,7 +35,7 @@ if (!result.ok) {
 `command-rejected`，三者报告相同的 `CommandError`。
 
 ```tsx
-import { ChartEditor } from '@tellplot/react';
+import { ChartEditor } from 'tellplot/react';
 
 <ChartEditor
   config={config}

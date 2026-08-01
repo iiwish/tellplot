@@ -1,12 +1,12 @@
-name: Stage npm packages (stage-only Trusted Publishing after bootstrap)
+name: Stage npm package (stage-only Trusted Publishing after bootstrap)
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
         description: >-
-          After separately bootstrapping all four package roots and verifying that their Trusted
-          Publishers have allow-stage-publish enabled and allow-publish disabled, type
+          After separately bootstrapping tellplot and verifying that its Trusted Publisher has
+          allow-stage-publish enabled and allow-publish disabled, type
           "stage 1.0.0 stage-only-trusted-publishers-verified" on the exact v1.0.0 tag
         required: true
         type: string
@@ -74,7 +74,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
-          sparse-checkout: .ai-platform/evidence/T129/artifacts
+          sparse-checkout: .ai-platform/evidence/T131/artifacts
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -105,7 +105,7 @@ jobs:
 
           canonical_remote='https://github.com/iiwish/tellplot.git'
           expected_workflow_ref='iiwish/tellplot/.github/workflows/publish-npm.yml@refs/tags/v1.0.0'
-          artifact_root='.ai-platform/evidence/T129/artifacts'
+          artifact_root='.ai-platform/evidence/T131/artifacts'
 
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$GITHUB_ACTIONS" = 'true'
@@ -155,13 +155,7 @@ jobs:
           test "$remote_tag_object" != "$remote_tag_commit"
           test "$remote_tag_commit" = "$GITHUB_SHA"
 
-          expected_tarballs="$(
-            printf '%s\n' \
-              'tellplot-core-1.0.0.tgz' \
-              'tellplot-editor-1.0.0.tgz' \
-              'tellplot-react-1.0.0.tgz' \
-              'tellplot-vue-1.0.0.tgz'
-          )"
+          expected_tarballs='tellplot-1.0.0.tgz'
           actual_tarballs="$(
             find "$artifact_root" -maxdepth 1 -type f -name '*.tgz' -printf '%f\n' |
               LC_ALL=C sort
@@ -169,10 +163,7 @@ jobs:
           test "$actual_tarballs" = "$expected_tarballs"
 
           sha256sum --check --strict <<'SHA256'
-          4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b  .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
-          3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2  .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
-          c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242  .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
-          a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811  .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
+          e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e  .ai-platform/evidence/T131/artifacts/tellplot-1.0.0.tgz
           SHA256
 
           check_registry_status() {
@@ -192,38 +183,11 @@ jobs:
           }
 
           check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Fcore' 200 '@tellplot/core root'
+            'https://registry.npmjs.org/tellplot' 200 'tellplot root'
           check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Fcore/1.0.0' 404 '@tellplot/core@1.0.0'
-          check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Feditor' 200 '@tellplot/editor root'
-          check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Feditor/1.0.0' 404 '@tellplot/editor@1.0.0'
-          check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Freact' 200 '@tellplot/react root'
-          check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Freact/1.0.0' 404 '@tellplot/react@1.0.0'
-          check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Fvue' 200 '@tellplot/vue root'
-          check_registry_status \
-            'https://registry.npmjs.org/%40tellplot%2Fvue/1.0.0' 404 '@tellplot/vue@1.0.0'
-      - name: Stage @tellplot/core
+            'https://registry.npmjs.org/tellplot/1.0.0' 404 'tellplot@1.0.0'
+      - name: Stage tellplot
         run: >-
-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
-          --ignore-scripts --tag=latest --provenance
-          --registry=https://registry.npmjs.org/
-      - name: Stage @tellplot/editor
-        run: >-
-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
-          --ignore-scripts --tag=latest --provenance
-          --registry=https://registry.npmjs.org/
-      - name: Stage @tellplot/react
-        run: >-
-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
-          --ignore-scripts --tag=latest --provenance
-          --registry=https://registry.npmjs.org/
-      - name: Stage @tellplot/vue
-        run: >-
-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
+          npm stage publish .ai-platform/evidence/T131/artifacts/tellplot-1.0.0.tgz
           --ignore-scripts --tag=latest --provenance
           --registry=https://registry.npmjs.org/

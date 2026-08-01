@@ -75,7 +75,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 ## TDR-008 测试分层
 
 - Status: Confirmed
-- Decision: 领域和投影逻辑使用 Vitest TDD；imperative runtime 与 React/Vue adapter 使用各自生命周期测试；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；四个公共包通过 build、publint、类型消费与 framework matrix 验证。
+- Decision: 领域和投影逻辑使用 Vitest TDD；imperative runtime 与 React/Vue adapter 使用各自生命周期测试；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；公共 `tellplot` 包的全部子路径通过 build、publint、类型消费与 framework matrix 验证。
 - Rationale: Mock 无法证明 Canvas 命中、拖拽、导出或真实布局正确，纯 E2E 又无法高效覆盖不变量组合。
 - Alternatives: 只做单元测试、只做 E2E、截图代替行为断言。
 - Consequences: coverage 只作为最低信号；财务不变量、失败路径和浏览器证据是阻断门槛。
@@ -106,9 +106,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 ## TDR-011 品牌与仓库身份
 
 - Status: Confirmed
-- Decision: 产品使用 `TellPlot` 品牌，规范代码仓库为 `iiwish/tellplot`，包命名空间为 `@tellplot`。仓库使用独立根历史，初始提交承载已经验收的瀑布图基础切片与对应 SSOT/evidence。
+- Decision: 产品使用 `TellPlot` 品牌，规范代码仓库为 `iiwish/tellplot`，公共 npm 包为 `tellplot`；
+  `@tellplot/*` 仅用于 private workspace layer 标识。仓库使用独立根历史，初始提交承载已经验收的瀑布图
+  基础切片与对应 SSOT/evidence。公共 package naming 由 TDR-023 固定。
 - Rationale: 产品定位是基于 G2 的轻量可编辑基础图表库，不让底层渲染实例或单一交互实现进入长期品牌与公共 API。独立根历史让仓库只保留当前架构和可验证资产。
-- Public identity: React 包为 `@tellplot/editor`；DOM scope 使用 `[data-tellplot]`；CSS 使用 `.tp-` / `--tp-` 前缀；运行时错误类型使用 `TellPlot*`；环境变量使用 `TELLPLOT_*`。
+- Public identity: npm 包为 `tellplot`，React 入口为 `tellplot/react`；DOM scope 使用 `[data-tellplot]`；
+  CSS 使用 `.tp-` / `--tp-` 前缀；运行时错误类型使用 `TellPlot*`；环境变量使用 `TELLPLOT_*`。
 - Historical boundary: `.ai-platform/evidence/**` 中的既有 patch 是不可变验收记录，可以保留交付时使用的旧标识；当前源码、配置和规范文档不得继续暴露旧命名空间。
 - Consequences: 首次远程提交前必须完成全量品牌残留扫描、包消费测试、浏览器矩阵和干净安装验证。
 
@@ -200,12 +203,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 
 - Status: Confirmed
 - Decision: `apps/playground` 使用现有 React/Vite 单页应用承载品牌首页、示例中心、文档入口和在线工作台。
-  路由使用本地 history API；真实预览直接消费 `@tellplot/react` 的 read-only `ChartEditor`；示例内容目录保持 playground
+  路由使用本地 history API；真实预览直接消费 `tellplot/react` 的 read-only `ChartEditor`；示例内容目录保持 playground
   私有和显式。
 - Visual ownership: G2 继续负责图形过渡；网站导航、hover 和进入反馈只使用 CSS。网站不引入远程字体、
   图片、router、docs、编辑器或 animation dependency。
 - Runtime boundary: 工作台继续使用既有 SourceData/ViewSpec/Command 路径；网站不复制领域状态，不向
-  `@tellplot/editor` 导出示例 registry 或页面组件。
+  `tellplot` 导出示例 registry 或页面组件。
 - Rationale: 以真实产品为展示资产可以同时提升开源发现、示例浏览和手工验收体验，而不增加核心库重量。
 - Rejected alternatives: 独立重型文档站、静态图表截图、通用示例插件协议、第二图表渲染层。
 
@@ -246,12 +249,13 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 ## TDR-021 首个稳定版 1.0
 
 - Status: Confirmed
-- Version: `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 与 `@tellplot/vue` 均使用 `1.0.0`；本地候选和未来公开版本使用相同稳定 metadata。
+- Version: 公共包 `tellplot` 使用 `1.0.0`；本地候选和未来公开版本使用相同稳定 metadata。私有 workspace
+  layers 使用非发布版本，不独立形成兼容承诺。
 - Compatibility: 1.x 遵循 Semantic Versioning；runtime exports、公共类型、schema、错误码和 peer/browser
   合同只允许向后兼容扩展。弃用至少跨一个 minor，并提供迁移说明。
 - Release source: 本地目标使用隔离源码复演；公开 npm/GitHub/网站发布只允许来自独立授权后的干净
   commit、tag 和可追溯 tarball。
-- Quality: architecture import graph/cycle、public files、local links、secret/path、四包 tarball、framework matrix、
+- Quality: architecture import graph/cycle、public files、local links、secret/path、单包 tarball、framework matrix、
   current/previous browser、a11y 和 performance 均为阻断门禁。
 - Scope: 稳定表示当前 waterfall、bar、column 的文档化能力可被兼容承诺，不表示 TellPlot 已覆盖 G2
   的通用图表范围。
@@ -273,8 +277,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
   editor runtime 统一拥有。适配包只渲染一个稳定容器并转发更新、事件与实例方法。
 - Compatibility: 现有候选从未公开发布，本目标不保留旧 `@tellplot/editor` React component API 或旧包布局；
   SourceData、ViewSpec、命令和业务不变量继续作为产品正确性合同。
-- Package strategy: `@tellplot/editor` 保持产品主包身份；新增 `@tellplot/core`、`@tellplot/react` 和
-  `@tellplot/vue`。React/Vue 只作为各自适配包 peer dependency，G2 只存在于 editor 渲染边界。
+- Package strategy: 由 TDR-023 的单包公共分发决策取代；本 TDR 的内部依赖方向和 runtime ownership 保持有效。
 - Quality: 包导入无浏览器全局副作用；create/update/destroy 可重复且资源可释放；imperative、React、Vue
   共享 E2E、a11y、performance 和当前/上一浏览器门禁。
 - Rationale: 框架无关 imperative runtime 让不同宿主共享完整编辑行为，避免在 React/Vue 中复制高风险的
@@ -286,9 +289,36 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 - Rejected alternatives: Vue 内嵌 React root、把 React 打入 editor bundle、两套完整 UI、仅提供 read-only Vue、
   Web Component 作为唯一公共合同、公开旧候选后再迁移。
 
+## TDR-023 单包公共分发
+
+- Status: Confirmed
+- Decision: npm 只发布无 scope 的 `tellplot`。公共入口为 `tellplot`、`tellplot/core`、`tellplot/react`、
+  `tellplot/vue` 和 `tellplot/styles.css`；`@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 与
+  `@tellplot/vue` 只作为 private workspace layers。
+- Root contract: `tellplot` 根入口导出 core 领域 API 与 `createEditor`，且在模块加载时不依赖 React 或 Vue。
+  `tellplot/core` 提供相同 core-only surface；framework 子路径只在消费者显式导入时加载对应 peer。
+- Dependency contract: `@antv/g2@5.4.8` 与 `@antv/g-svg@2.1.1` 是 `tellplot` direct dependencies；React
+  18/19 和 Vue 3 是 optional peer dependencies。精确 AntV 供应链 allowlist 与现有 G2 runtime ownership
+  不变。
+- Build contract: 公共 tarball 可以内联私有 workspace 实现，但不得泄漏无法从 npm 安装的 workspace
+  specifier。根、core、React、Vue 提供 ESM、CJS 与 declarations，CSS 使用独立 export。
+- Release contract: artifact、availability、preflight、Trusted Publisher 和 staging 只处理一个
+  `tellplot-1.0.0.tgz`。未批准的 scoped stage 必须拒绝，scoped bootstrap package 不进入 1.x 发布路线。
+- Compatibility: scoped 四包从未公开稳定发布，不提供兼容 shim 或双发布。1.x 兼容承诺从 `tellplot` 及其
+  文档化子路径开始。
+- Rationale: 用户安装一个包即可使用 DOM、React 或 Vue；内部仍保持可测试、无环、ownership 清晰的长期
+  架构。与 G2/ECharts 一类库相比，这减少 organization、版本同步、Trusted Publisher 和发布原子性的运维
+  成本，同时不牺牲 framework-neutral runtime。
+- Risks: 聚合 tarball 体积增加；可选 framework peers 可能影响类型解析；多入口 bundling 可能重复代码或
+  意外把 framework 带入根入口。
+- Mitigations: shared chunks、optional peer metadata、root no-framework consumer、strict peer matrix、ATTW、
+  publint、pack allowlist、bundle inspection 和完整 browser matrix。
+- Rejected alternatives: 继续发布四包、只发布 imperative 包、把 React/Vue 作为 direct dependencies、
+  使用 `@tellplot/tellplot` organization package、公开四包后再合并。
+
 ## Approval Gate
 
-TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-022 已获得用户明确批准；TDR-004 至 TDR-006
-由 TDR-022 取代，TDR-019 由 TDR-021 取代。后续实现以 approved goal
+TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-023 已获得用户明确批准；TDR-004 至 TDR-006
+由 TDR-022 取代，TDR-019 由 TDR-021 取代，TDR-022 的公共 package strategy 由 TDR-023 取代。后续实现以 approved goal
 为执行单位；内部 task graph 和 execution packet 由执行方维护。任何依赖、schema、breaking public API、
 远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。

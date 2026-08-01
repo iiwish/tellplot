@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { OFFICIAL_NPM_REGISTRY } from './audit-production.mjs';
 import { fail, repositoryRoot } from './release-utils.mjs';
 
-const PACKAGE_DIRECTORIES = ['core', 'editor', 'react', 'vue'];
-const EXPECTED_PACKAGE_NAMES = PACKAGE_DIRECTORIES.map(directory => `@tellplot/${directory}`);
+const PACKAGE_DIRECTORIES = ['tellplot'];
+const EXPECTED_PACKAGE_NAMES = ['tellplot'];
 
 export function packageRootUrl(name) {
   return new URL(encodeURIComponent(name), OFFICIAL_NPM_REGISTRY).toString();
@@ -38,10 +38,10 @@ function validatePackages(packages) {
     JSON.stringify(packages.map(packageMetadata => packageMetadata?.name)) !==
     JSON.stringify(EXPECTED_PACKAGE_NAMES)
   ) {
-    findings.push('trust readiness requires core, editor, react, and vue in dependency order');
+    findings.push('trust readiness requires the single tellplot public package');
   }
   if (releaseVersion(packages) === undefined) {
-    findings.push('trust readiness requires one stable version across all four packages');
+    findings.push('trust readiness requires one stable tellplot version');
   }
   return findings;
 }
@@ -127,7 +127,7 @@ function loadPackages() {
       };
     } catch {
       return {
-        name: `@tellplot/${directory}`,
+        name: directory,
         version: '',
       };
     }

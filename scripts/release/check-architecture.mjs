@@ -21,7 +21,7 @@ const packageSourcePolicies = packageContracts.map(contract => ({
   runtimePackages: Object.keys({
     ...contract.dependencies,
     ...contract.peerDependencies,
-  }),
+  }).concat(contract.sourceDependencies ?? []),
 }));
 const sourceFiles = packageRoots.flatMap(root =>
   walkFiles(root).filter(path => ['.ts', '.tsx'].includes(extname(path))),
@@ -32,12 +32,12 @@ const findings = [];
 let edgeCount = 0;
 
 function resolveLocal(source, specifier) {
-  const publicPackages = {
-    '@tellplot/core': resolve(repositoryRoot, 'packages/core/src/index.ts'),
-    '@tellplot/editor': resolve(repositoryRoot, 'packages/editor/src/index.ts'),
-    '@tellplot/react': resolve(repositoryRoot, 'packages/react/src/index.tsx'),
-    '@tellplot/vue': resolve(repositoryRoot, 'packages/vue/src/index.ts'),
-  };
+  const publicPackages = Object.fromEntries(
+    packageContracts.map(contract => [
+      contract.name,
+      resolve(repositoryRoot, 'packages', contract.directory, contract.entry),
+    ]),
+  );
   const base = publicPackages[specifier]
     ? publicPackages[specifier]
     : specifier.startsWith('.')
@@ -243,12 +243,9 @@ if (findings.length > 0) {
         sourceFiles: sourceFiles.length,
         importEdges: edgeCount,
         runtimeCycles: 0,
-        publicEntries: [
-          repositoryPath(resolve(repositoryRoot, 'packages/core/src/index.ts')),
-          repositoryPath(resolve(repositoryRoot, 'packages/editor/src/index.ts')),
-          repositoryPath(resolve(repositoryRoot, 'packages/react/src/index.tsx')),
-          repositoryPath(resolve(repositoryRoot, 'packages/vue/src/index.ts')),
-        ],
+        publicEntries: packageContracts.map(contract =>
+          repositoryPath(resolve(repositoryRoot, 'packages', contract.directory, contract.entry)),
+        ),
       },
       null,
       2,

@@ -1,5 +1,5 @@
-import type { ChartConfig, SourceData } from '@tellplot/core';
-import { ChartEditor } from '@tellplot/react';
+import type { ChartConfig, SourceData } from 'tellplot';
+import { ChartEditor } from 'tellplot/react';
 
 import { EXAMPLE_CATALOG, type ShowcaseExampleId } from './exampleCatalog';
 import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from './demoPresentation';

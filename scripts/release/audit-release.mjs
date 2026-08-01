@@ -4,7 +4,9 @@ import { dirname, extname, relative, resolve } from 'node:path';
 import {
   collectPublicSurface,
   packageContracts,
+  publicPackageContracts,
   validatePackageContract,
+  validatePackageSurface,
   workspacePackageEntries,
 } from './package-contracts.mjs';
 import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
@@ -45,17 +47,29 @@ for (const contract of packageContracts) {
   if (manifest.name !== contract.name) {
     findings.push(`${contract.directory} package name must be ${contract.name}`);
   }
-  if (manifest.version !== '1.0.0' || !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))) {
-    findings.push(`${contract.name} version must be stable 1.0.0`);
-  }
-  if (publishConfig.access !== 'public') {
-    findings.push(`${contract.name} publishConfig.access must be public`);
-  }
-  if (publishConfig.registry !== 'https://registry.npmjs.org/') {
-    findings.push(`${contract.name} must use the official npm registry`);
-  }
-  if (!Array.isArray(manifest.files) || !manifest.files.includes('dist')) {
-    findings.push(`${contract.name} must publish only its dist allowlist plus npm metadata`);
+  if (contract.public === true) {
+    if (manifest.version !== '1.0.0' || !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))) {
+      findings.push(`${contract.name} version must be stable 1.0.0`);
+    }
+    if (manifest.private === true) {
+      findings.push(`${contract.name} public package must not be private`);
+    }
+    if (publishConfig.access !== 'public') {
+      findings.push(`${contract.name} publishConfig.access must be public`);
+    }
+    if (publishConfig.registry !== 'https://registry.npmjs.org/') {
+      findings.push(`${contract.name} must use the official npm registry`);
+    }
+    if (!Array.isArray(manifest.files) || !manifest.files.includes('dist')) {
+      findings.push(`${contract.name} must publish only its dist allowlist plus npm metadata`);
+    }
+  } else {
+    if (manifest.private !== true || manifest.version !== '0.0.0') {
+      findings.push(`${contract.name} must remain a private 0.0.0 workspace layer`);
+    }
+    if (manifest.publishConfig !== undefined) {
+      findings.push(`${contract.name} private workspace layer must not define publishConfig`);
+    }
   }
 
   const surface = collectPublicSurface(resolve(packageRoot, contract.entry), { packageEntries });
@@ -64,6 +78,22 @@ for (const contract of packageContracts) {
     types: surface.types.length,
   };
   findings.push(...validatePackageContract(manifest, surface, contract));
+  for (const subpath of contract.subpaths ?? []) {
+    const subpathSurface = collectPublicSurface(resolve(packageRoot, subpath.entry), {
+      packageEntries,
+    });
+    publicSurfaceCounts[`${contract.name}${subpath.path.slice(1)}`] = {
+      runtime: subpathSurface.runtime.length,
+      types: subpathSurface.types.length,
+    };
+    findings.push(
+      ...validatePackageSurface(
+        subpathSurface,
+        subpath,
+        `${contract.name}${subpath.path.slice(1)}`,
+      ),
+    );
+  }
 }
 
 for (const path of requiredFiles) {
@@ -139,7 +169,7 @@ if (findings.length > 0) {
       {
         status: 'passed',
         version: '1.0.0',
-        packages: packageContracts.map(({ name }) => name),
+        packages: publicPackageContracts.map(({ name }) => name),
         publicSurface: publicSurfaceCounts,
         publicFiles: requiredFiles.length,
         markdownFiles: markdownFiles.length,

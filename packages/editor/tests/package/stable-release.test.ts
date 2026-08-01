@@ -51,22 +51,27 @@ function runModuleSource(source: string): {
 
 describe('1.0 stable release contract', () => {
   it('uses stable package metadata and release commands', () => {
-    const packageManifests = [
+    const internalPackageManifests = [
       json('packages/core/package.json'),
       json('packages/editor/package.json'),
       json('packages/react/package.json'),
       json('packages/vue/package.json'),
     ];
+    const publicPackageManifest = json('packages/tellplot/package.json');
     const workspaceManifest = json('package.json');
     const artifactScript = text('scripts/release/package-artifact.mjs');
     const scripts = workspaceManifest['scripts'] as Record<string, unknown>;
-    for (const packageManifest of packageManifests) {
-      expect(packageManifest['version']).toBe('1.0.0');
-      expect(packageManifest['publishConfig']).toEqual({
-        access: 'public',
-        registry: 'https://registry.npmjs.org/',
-      });
+    for (const packageManifest of internalPackageManifests) {
+      expect(packageManifest['version']).toBe('0.0.0');
+      expect(packageManifest['private']).toBe(true);
+      expect(packageManifest['publishConfig']).toBeUndefined();
     }
+    expect(publicPackageManifest['name']).toBe('tellplot');
+    expect(publicPackageManifest['version']).toBe('1.0.0');
+    expect(publicPackageManifest['publishConfig']).toEqual({
+      access: 'public',
+      registry: 'https://registry.npmjs.org/',
+    });
     expect(scripts['release:architecture']).toBe('node scripts/release/check-architecture.mjs');
     expect(scripts['release:audit']).toBe('node scripts/release/audit-release.mjs');
     expect(scripts['security:lock']).toBe(
@@ -106,24 +111,33 @@ describe('1.0 stable release contract', () => {
     expect(productionAudit).not.toContain('--ignore-registry-errors');
     expect(artifactScript).toContain("resolve(repositoryRoot, '.nvmrc')");
     expect(artifactScript).toContain('process.versions.node');
-    expect(artifactScript).toContain("['core', 'editor', 'react', 'vue']");
-    expect(artifactScript).toContain("'.ai-platform/evidence/T129'");
+    expect(artifactScript).toContain("const packageDirectories = ['tellplot']");
+    expect(artifactScript).toContain("'.ai-platform/evidence/T131'");
   });
 
-  it('normalizes npm tarball gzip headers without changing package contents', () => {
+  it('normalizes npm tarball compression without changing package contents', () => {
     const result = runModuleSource(`
       import { createHash } from 'node:crypto';
       import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
       import { gzipSync, gunzipSync } from 'node:zlib';
       import { tmpdir } from 'node:os';
       import { resolve } from 'node:path';
-      import { canonicalizeGzipHeader } from './scripts/release/canonical-gzip.mjs';
+      import { canonicalizeNpmTarball } from './scripts/release/canonical-gzip.mjs';
 
       const directory = mkdtempSync(resolve(tmpdir(), 'tellplot-gzip-header-'));
       try {
-        const payload = Buffer.from('same npm package bytes');
-        const macos = gzipSync(payload, { mtime: 0 });
-        const linux = Buffer.from(macos);
+        const tar = manifest => {
+          const payload = Buffer.from(JSON.stringify(manifest, null, 2) + '\\n');
+          const archive = Buffer.alloc(512 + 512 + 1024);
+          archive.write('package/package.json', 0, 'utf8');
+          archive.write(payload.length.toString(8).padStart(11, '0') + '\\0', 124, 'ascii');
+          payload.copy(archive, 512);
+          return archive;
+        };
+        const firstPayload = tar({ name: 'tellplot', devDependencies: { vue: '3', react: '19' } });
+        const secondPayload = tar({ devDependencies: { react: '19', vue: '3' }, name: 'tellplot' });
+        const macos = gzipSync(firstPayload, { level: 1, mtime: 0 });
+        const linux = gzipSync(secondPayload, { level: 9, mtime: 0 });
         macos[9] = 19;
         linux[9] = 3;
         const macosPath = resolve(directory, 'macos.tgz');
@@ -131,15 +145,15 @@ describe('1.0 stable release contract', () => {
         writeFileSync(macosPath, macos);
         writeFileSync(linuxPath, linux);
 
-        canonicalizeGzipHeader(macosPath);
-        canonicalizeGzipHeader(linuxPath);
+        canonicalizeNpmTarball(macosPath);
+        canonicalizeNpmTarball(linuxPath);
 
         const normalizedMacos = readFileSync(macosPath);
         const normalizedLinux = readFileSync(linuxPath);
         const digest = value => createHash('sha256').update(value).digest('hex');
         if (normalizedMacos[9] !== 255 || normalizedLinux[9] !== 255) process.exit(1);
         if (digest(normalizedMacos) !== digest(normalizedLinux)) process.exit(1);
-        if (!gunzipSync(normalizedMacos).equals(payload)) process.exit(1);
+        if (!gunzipSync(normalizedMacos).equals(gunzipSync(normalizedLinux))) process.exit(1);
       } finally {
         rmSync(directory, { recursive: true, force: true });
       }
@@ -147,7 +161,7 @@ describe('1.0 stable release contract', () => {
 
     expect(result.status, result.output).toBe(0);
     expect(text('scripts/release/package-artifact.mjs')).toContain(
-      'canonicalizeGzipHeader(freshArtifactPath)',
+      'canonicalizeNpmTarball(freshArtifactPath)',
     );
   });
 
@@ -300,9 +314,7 @@ describe('1.0 stable release contract', () => {
       sourceRehearsal.indexOf("['pnpm', ['install', '--frozen-lockfile']]"),
     );
     expect(packageTestRunner).toContain('NPM_CONFIG_CACHE');
-    expect(packageTestRunner).toContain(
-      "['@tellplot/core', '@tellplot/editor', '@tellplot/react', '@tellplot/vue']",
-    );
+    expect(packageTestRunner).toContain("const packageNames = ['tellplot']");
   });
 
   it('keeps public npm staging manual, approved, provenance-enabled, minimal, and ordered', () => {
@@ -339,7 +351,7 @@ describe('1.0 stable release contract', () => {
     expect(stageJob).toContain('ref: ${{ github.sha }}');
     expect(stageJob).toContain('persist-credentials: false');
     expect([...workflow.matchAll(/persist-credentials: false/gu)]).toHaveLength(2);
-    expect(stageJob).toContain('sparse-checkout: .ai-platform/evidence/T129/artifacts');
+    expect(stageJob).toContain('sparse-checkout: .ai-platform/evidence/T131/artifacts');
     expect(stageJob).toContain('node-version: 22.20.0');
     expect(stageJob).toContain('npm_config="$RUNNER_TEMP/tellplot-stage.npmrc"');
     expect(stageJob).toContain('NPM_CONFIG_USERCONFIG=%s');
@@ -368,35 +380,29 @@ describe('1.0 stable release contract', () => {
     expect(stageJob).toContain('test "$remote_tag_object" != "$remote_tag_commit"');
     expect(stageJob).toContain('test "$remote_tag_commit" = "$GITHUB_SHA"');
     expect(stageJob).not.toContain('remote_tag_commit="$remote_tag_object"');
-    expect(stageJob).toContain('https://registry.npmjs.org/%40tellplot%2Fcore');
-    expect(stageJob).toContain('https://registry.npmjs.org/%40tellplot%2Fvue/1.0.0');
+    expect(stageJob).toContain('https://registry.npmjs.org/tellplot');
+    expect(stageJob).toContain('https://registry.npmjs.org/tellplot/1.0.0');
     expect(preflight).toContain(
       "gitCommand(['status', '--porcelain=v1', '--untracked-files=all'])",
     );
     expect(preflight).toContain("commandRunner('npm', ['config', 'get', 'registry'])");
     expect(preflight).toContain("gitCommand(['cat-file', '-t', `refs/tags/${tag}`])");
     expect(preflight).toContain("'refs/heads/main'");
-    expect(preflight).toContain("'.ai-platform/evidence/T129/tarball-manifest.json'");
+    expect(preflight).toContain("'.ai-platform/evidence/T131/tarball-manifest.json'");
     expect(preflight).toContain(
       "const CANONICAL_REMOTE_QUERY_URL = 'https://github.com/iiwish/tellplot.git';",
     );
     expect(preflight).toContain("GIT_CONFIG_NOSYSTEM: '1'");
     expect(preflight).not.toMatch(/'ls-remote'[\s\S]{0,160}'origin'/u);
 
-    const stageIndexes = [
-      'tellplot-core-1.0.0.tgz',
-      'tellplot-editor-1.0.0.tgz',
-      'tellplot-react-1.0.0.tgz',
-      'tellplot-vue-1.0.0.tgz',
-    ].map(filename => stageJob.lastIndexOf(filename));
-    expect(stageIndexes.every(index => index >= 0)).toBe(true);
-    expect(stageIndexes).toEqual([...stageIndexes].sort((left, right) => left - right));
+    expect(stageJob).toContain('tellplot-1.0.0.tgz');
+    expect(stageJob).not.toMatch(/tellplot-(?:core|editor|react|vue)-1\.0\.0\.tgz/u);
     const stageCommands = [
       ...stageJob.matchAll(
         /^\s+npm stage publish [^\n]+\n\s+--ignore-scripts [^\n]+\n\s+--registry=[^\n]+$/gmu,
       ),
     ].map(match => match[0]);
-    expect(stageCommands).toHaveLength(4);
+    expect(stageCommands).toHaveLength(1);
     for (const command of stageCommands) {
       expect(command).toContain('--ignore-scripts');
       expect(command).toContain('--tag=latest');
@@ -417,32 +423,27 @@ describe('1.0 stable release contract', () => {
       verifyJob.indexOf('pnpm release:artifact'),
     );
 
-    for (const sha256 of [
-      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
-      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
-      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
-      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
-    ]) {
-      expect(stageJob).toContain(sha256);
-    }
+    expect(stageJob).toMatch(
+      /^\s+[0-9a-f]{64}\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
+    );
   });
 
   it('keeps the canonical first-publish runbook fail-closed and status-aligned', () => {
     const report = text('.ai-platform/docs/release-report.md');
+    const workflow = text('.github/workflows/publish-npm.yml');
     const tasks = text('.ai-platform/docs/tasks.md');
     const roadmap = text('docs/roadmap.md');
     const agentGuide = text('AGENTS.md');
 
-    expect(tasks).toMatch(/\| G005 - 公开稳定版发布 \| Blocked \|/u);
-    expect(tasks).toContain('T130 本地发布准备 Needs_Review');
-    expect(roadmap).toContain('- Status: Blocked');
-    expect(roadmap).toContain('Local readiness: T130');
-    expect(agentGuide).toContain('G005 / T130 本地发布准备为 `Needs_Review`');
+    expect(tasks).toContain('G007');
+    expect(tasks).toContain('T131');
+    expect(roadmap).toContain('T131');
+    expect(agentGuide).toContain('G007 / T131');
     expect(report).toContain('TELLPLOT_FINAL_COMMIT_SHA');
     expect(report).toContain('--force-with-lease="refs/tags/v1.0.0:$old_tag_object"');
     expect(report).toContain('^url\\..*\\.(push)?insteadof$');
     expect(report).toContain('deployment branches/tags policy');
-    expect(report).toContain('prevent self-review');
+    expect(report).toContain('npm-production');
     expect(report).toContain('export GH_HOST=github.com');
     expect(report).toContain('--repo iiwish/tellplot');
     expect(report).toContain('gh run watch "$run_id" --repo iiwish/tellplot --exit-status');
@@ -450,18 +451,15 @@ describe('1.0 stable release contract', () => {
     expect(report).not.toContain('npm stage list @tellplot/{core,editor,react,vue}');
     expect(report).toContain('npm stage reject "$stage_id" --registry=https://registry.npmjs.org/');
     expect(report).toContain('npm stage approve "${stage_ids[$index]}"');
-    expect(report).toContain('.ai-platform/evidence/T129/tarball-manifest.json');
+    expect(report).toContain('.ai-platform/evidence/T131/tarball-manifest.json');
     expect(report).toMatch(/不得声称\s+已原子回滚/u);
     expect(report).toContain('只重试 pending');
     expect([...report.matchAll(/^set -euo pipefail$/gmu)].length).toBeGreaterThanOrEqual(3);
-    for (const sha256 of [
-      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
-      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
-      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
-      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
-    ]) {
-      expect(report).toContain(sha256);
-    }
+    const workflowSha = workflow.match(
+      /^\s+([0-9a-f]{64})\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
+    )?.[1];
+    expect(workflowSha).toMatch(/^[0-9a-f]{64}$/u);
+    expect(report).toContain(String(workflowSha));
   });
 
   it('separates clean public-release source checks from the dirty-capable local RC gate', () => {
@@ -473,19 +471,9 @@ describe('1.0 stable release contract', () => {
       } from './scripts/release/preflight-public.mjs';
 
       const head = 'a'.repeat(40);
-      const packageVersions = [
-        ['@tellplot/core', '1.0.0'],
-        ['@tellplot/editor', '1.0.0'],
-        ['@tellplot/react', '1.0.0'],
-        ['@tellplot/vue', '1.0.0'],
-      ];
+      const packageVersions = [['tellplot', '1.0.0']];
       const artifactSha = 'c'.repeat(64);
-      const filenames = [
-        'tellplot-core-1.0.0.tgz',
-        'tellplot-editor-1.0.0.tgz',
-        'tellplot-react-1.0.0.tgz',
-        'tellplot-vue-1.0.0.tgz',
-      ];
+      const filenames = ['tellplot-1.0.0.tgz'];
       const packageManifests = packageVersions.map(([name, version]) => ({
         name,
         version,
@@ -710,7 +698,7 @@ describe('1.0 stable release contract', () => {
       const missingRemote = resolve(temporaryRoot, 'missing-origin.git');
       const canonicalRemote = 'https://github.com/iiwish/tellplot.git';
       const remoteQueryUrl = pathToFileURL(remote).href;
-      const packages = ['core', 'editor', 'react', 'vue'];
+      const packages = ['tellplot'];
 
       function git(cwd, args) {
         const command = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -728,7 +716,7 @@ describe('1.0 stable release contract', () => {
 
         const artifactsRoot = resolve(
           repository,
-          '.ai-platform/evidence/T129/artifacts',
+          '.ai-platform/evidence/T131/artifacts',
         );
         mkdirSync(artifactsRoot, { recursive: true });
         const artifactEntries = packages.map(directory => {
@@ -737,7 +725,7 @@ describe('1.0 stable release contract', () => {
           writeFileSync(
             resolve(packageRoot, 'package.json'),
             JSON.stringify({
-              name: \`@tellplot/\${directory}\`,
+              name: directory,
               version: '1.0.0',
               publishConfig: {
                 access: 'public',
@@ -745,11 +733,11 @@ describe('1.0 stable release contract', () => {
               },
             }),
           );
-          const filename = \`tellplot-\${directory}-1.0.0.tgz\`;
+          const filename = 'tellplot-1.0.0.tgz';
           const artifactPath = resolve(artifactsRoot, filename);
           writeFileSync(artifactPath, \`artifact:\${directory}\`);
           return {
-            name: \`@tellplot/\${directory}\`,
+            name: directory,
             version: '1.0.0',
             filename,
             sizeBytes: statSync(artifactPath).size,
@@ -759,7 +747,7 @@ describe('1.0 stable release contract', () => {
           };
         });
         writeFileSync(
-          resolve(repository, '.ai-platform/evidence/T129/tarball-manifest.json'),
+          resolve(repository, '.ai-platform/evidence/T131/tarball-manifest.json'),
           JSON.stringify({ version: '1.0.0', packages: artifactEntries }),
         );
 
@@ -868,12 +856,7 @@ describe('1.0 stable release contract', () => {
         validateTrustReadiness,
       } from './scripts/release/check-package-availability.mjs';
 
-      const packages = [
-        { name: '@tellplot/core', version: '1.0.0' },
-        { name: '@tellplot/editor', version: '1.0.0' },
-        { name: '@tellplot/react', version: '1.0.0' },
-        { name: '@tellplot/vue', version: '1.0.0' },
-      ];
+      const packages = [{ name: 'tellplot', version: '1.0.0' }];
       const ready = packages.map(({ name, version }) => ({
         name,
         version,
@@ -883,16 +866,16 @@ describe('1.0 stable release contract', () => {
       const confirmation = 'stage 1.0.0 stage-only-trusted-publishers-verified';
       assert.deepEqual(validateTrustReadiness(packages, ready, confirmation), []);
       assert.equal(
-        packageRootUrl('@tellplot/core'),
-        'https://registry.npmjs.org/%40tellplot%2Fcore',
+        packageRootUrl('tellplot'),
+        'https://registry.npmjs.org/tellplot',
       );
       assert.equal(
-        packageVersionUrl('@tellplot/core', '1.0.0'),
-        'https://registry.npmjs.org/%40tellplot%2Fcore/1.0.0',
+        packageVersionUrl('tellplot', '1.0.0'),
+        'https://registry.npmjs.org/tellplot/1.0.0',
       );
       const bootstrapFindings = validateTrustReadiness(
         packages,
-        [{ ...ready[0], rootStatus: 'bootstrap-required' }, ...ready.slice(1)],
+        [{ ...ready[0], rootStatus: 'bootstrap-required' }],
         confirmation,
       );
       assert.ok(bootstrapFindings.some(finding => finding.includes('bootstrap required')));
@@ -901,14 +884,14 @@ describe('1.0 stable release contract', () => {
       assert.ok(
         validateTrustReadiness(
           packages,
-          [ready[0], { ...ready[1], versionStatus: 'exists' }, ...ready.slice(2)],
+          [{ ...ready[0], versionStatus: 'exists' }],
           confirmation,
         ).some(finding => finding.includes('already exists')),
       );
       assert.ok(
         validateTrustReadiness(
           packages,
-          [ready[0], { ...ready[1], rootStatus: 'query-failed' }, ...ready.slice(2)],
+          [{ ...ready[0], rootStatus: 'query-failed' }],
           confirmation,
         ).some(finding => finding.includes('package root query failed')),
       );
@@ -918,8 +901,8 @@ describe('1.0 stable release contract', () => {
         ),
       );
       assert.ok(
-        validateTrustReadiness(packages, ready.slice(1), confirmation).some(finding =>
-          finding.includes('@tellplot/core@1.0.0'),
+        validateTrustReadiness(packages, [], confirmation).some(finding =>
+          finding.includes('tellplot@1.0.0'),
         ),
       );
     `);
@@ -950,22 +933,17 @@ describe('1.0 stable release contract', () => {
     const gettingStarted = text('docs/getting-started.md');
     const api = text('docs/api.md');
     const errors = text('docs/errors.md');
-    const packageReadmes = {
-      core: text('packages/core/README.md'),
-      editor: text('packages/editor/README.md'),
-      react: text('packages/react/README.md'),
-      vue: text('packages/vue/README.md'),
-    };
+    const packageReadme = text('packages/tellplot/README.md');
+    const internalReadmes = ['core', 'editor', 'react', 'vue'].map(directory =>
+      text(`packages/${directory}/README.md`),
+    );
 
     expect(readme).toContain('## 快速开始');
-    expect(packageReadmes.core).toContain('pnpm add @tellplot/core');
-    expect(packageReadmes.editor).toContain(
-      'pnpm add @tellplot/core @tellplot/editor @antv/g2@5.4.8',
-    );
-    expect(packageReadmes.react).toContain(
-      'pnpm add @tellplot/core @tellplot/react @antv/g2@5.4.8',
-    );
-    expect(packageReadmes.vue).toContain('pnpm add @tellplot/core @tellplot/vue @antv/g2@5.4.8');
+    expect(packageReadme).toContain('pnpm add tellplot');
+    for (const internalReadme of internalReadmes) {
+      expect(internalReadme).toContain('消费者应安装 `tellplot`');
+      expect(internalReadme).not.toContain('pnpm add @tellplot/');
+    }
     expect(gettingStarted).toContain('受控模式不会自行提交候选视图');
     expect(api).toContain('`dispatch(command): CommandResult | null`');
     expect(api).toContain('`getView(): ViewSpec`');
@@ -1160,7 +1138,7 @@ describe('1.0 stable release contract', () => {
           runtime: ['run', 'value'],
           types: ['Alias', 'PublicShape', 'Shape'],
         });
-        assert.equal(packageContracts.length, 4);
+        assert.equal(packageContracts.length, 5);
 
         const contract = {
           name: '@fixture/package',

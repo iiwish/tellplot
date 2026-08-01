@@ -10,10 +10,10 @@
 
 ## 1.x 公共表面
 
-- `@tellplot/core` 的 runtime exports、类型、schema、命令和稳定错误语义。
-- `@tellplot/editor` 的 `createEditor`、`EditorOptions`、`EditorInstance`、export 和 styles subpath。
-- `@tellplot/react` 的 `ChartEditor` props/handle 和 styles subpath。
-- `@tellplot/vue` 的 `ChartEditor` props/emits/expose、`v-model:view` 和 styles subpath。
+- `tellplot` 与 `tellplot/core` 的 runtime exports、类型、schema、命令和稳定错误语义。
+- `tellplot` 的 `createEditor`、`EditorOptions`、`EditorInstance`、export 和 `styles.css` subpath。
+- `tellplot/react` 的 `ChartEditor` props/handle。
+- `tellplot/vue` 的 `ChartEditor` props/emits/expose 与 `v-model:view`。
 - 文档化的 schema generation、error code/reason 和 JSON Pointer path。
 
 内部文件、CSS class、G2Spec、G2 Chart instance、projection implementation、scene context 和 DOM controllers
@@ -30,7 +30,7 @@
 | -------- | ------------------------------------------------------------- |
 | React    | 18.3、19.x                                                    |
 | Vue      | 3.5.x                                                         |
-| AntV G2  | exact reviewed peer `5.4.8`                                   |
+| AntV G2  | TellPlot direct dependency `5.4.8`                            |
 | Node     | 构建与验证 `>=22.13.0`                                        |
 | Browsers | 当前 Chromium、Firefox、WebKit 与项目 previous-browser matrix |
 

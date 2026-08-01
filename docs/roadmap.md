@@ -77,35 +77,39 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
 - Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，并于 2026-07-29 通过目标级验收。
 - Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；不执行远程发布。
 
-## G005 公开稳定版发布
+## G005 四包公开稳定版发布
 
-- Status: Blocked
-- Goal: 从干净 commit 将 1.0.0 公开为 GitHub、生产网站、tag/release 和 npm `latest`。
-- Local readiness: T130 已完成本地发布门禁与 stage-only workflow，状态为 `Needs_Review`。
-- Blocker: 等待独立远程授权、`@tellplot/*` package root bootstrap、stage-only Trusted Publisher、
-  stale `v1.0.0` tag 的受控重建与保护、可用的发布身份、2FA approval 与生产托管条件。
-- Entry condition: remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 获得独立明确
-  授权；scope、2FA 和托管权限可用；最终 clean main commit 与重建后的 annotated `v1.0.0` peeled commit
-  完全一致且 tag protection 已生效；`npm-production` environment 只允许 exact protected `v1.0.0` tag，
-  并启用 required reviewers 与 prevent self-review；四个 package root 已用非 1.0.0 版本完成 bootstrap；
-  Trusted Publisher 只允许 `npm stage publish`，不允许直接 `npm publish`；发布前从干净 commit 重跑的
-  完整 release gate 必须通过。四个 1.0.0 staged artifact 全部复核后，维护者再以 2FA 批准公开。
+- Status: Superseded
+- Outcome: T130 建立的 source preflight、官方 registry audit、protected environment、stage-only Trusted
+  Publishing、provenance、固定 artifact hash 和 2FA approval 继续作为发布安全基线。
+- Superseded scope: 四个 scoped package 的公开发布不再执行；公共分发目标由 G007 的单包合同取代。
 
 ## G006 框架无关编辑器架构
 
 - Status: Accepted
-- Goal: 以 `@tellplot/core` 和 `@tellplot/editor` 作为唯一领域/runtime，实现 React 18/19 与 Vue 3 薄适配。
-- Included outcomes: imperative DOM API、统一 EditorStore、完整工作台迁移、四包类型/构建/消费合同和三种
+- Goal: 以内部 `@tellplot/core` 和 `@tellplot/editor` 作为唯一领域/runtime，实现 React 18/19 与 Vue 3 薄适配。
+- Included outcomes: imperative DOM API、统一 EditorStore、完整工作台迁移、分层类型/构建/消费合同和三种
   quickstart。
-- Outcome: T125-T129 已完成实现、质量矩阵、四包发布候选 evidence 和目标级验收；用户于 2026-07-30
+- Outcome: T125-T129 已完成实现、质量矩阵、内部四层 package evidence 和目标级验收；用户于 2026-07-30
   接受 G006。
 - Boundary: 不增加图表家族、schema、通用 plugin registry、第二渲染引擎或历史兼容层；不执行远程发布。
-- Release relation: G006 验收不等于公开发布；G005 继续因独立远程授权、发布身份和生产托管条件保持
-  `Blocked`。
+- Release relation: G006 固定内部架构，不要求内部 layer 与公共 npm package 一一对应。
+
+## G007 单包分发与公开发布
+
+- Status: In_Progress
+- Goal: 只发布无 scope 的 `tellplot@1.0.0`，通过稳定子路径交付 imperative DOM、core、React、Vue 与 CSS。
+- Public entrypoints: `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue`、`tellplot/styles.css`。
+- Internal architecture: core、editor、React adapter 与 Vue adapter 继续是 private workspace layers，保持
+  G006 的依赖方向、测试隔离和唯一 runtime ownership。
+- Release controls: T131 使用单一可复现 tarball、exact annotated tag、protected `npm-production`
+  environment、stage-only Trusted Publisher、provenance、人类 artifact 复核与 2FA approval。
+- Completion: package/framework/browser/security/isolated-source 门禁、旧 stage 清理、public fresh install、
+  provenance、tag、GitHub Release 和 Registry evidence 全部一致。
 
 ## Decision Gates
 
-- `@tellplot/core` 保持无 DOM/G2/framework 依赖，`@tellplot/editor` 保持无 React/Vue 依赖。
+- 内部 `@tellplot/core` 保持无 DOM/G2/framework 依赖，`@tellplot/editor` 保持无 React/Vue 依赖。
 - 新图表只在 G003 的具体目标获得批准后实现。
 - 原始 G2 options、G2 Chart instance 和内部 runtime handle 不进入公共 API。
 - 项目不规划 Dashboard、通用插件平台或第二渲染引擎。

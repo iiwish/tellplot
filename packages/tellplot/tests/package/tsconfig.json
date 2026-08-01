@@ -1,0 +1,17 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["react"],
+    "baseUrl": "../..",
+    "paths": {
+      "tellplot": ["dist/index.d.ts"],
+      "tellplot/core": ["dist/core.d.ts"],
+      "tellplot/react": ["dist/react.d.ts"],
+      "tellplot/vue": ["dist/vue.d.ts"],
+      "tellplot/styles.css": ["src/styles.css"]
+    }
+  },
+  "include": ["consumer.tsx", "style.d.ts"]
+}

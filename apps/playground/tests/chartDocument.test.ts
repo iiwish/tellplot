@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ChartConfig, ViewSpec } from '@tellplot/core';
+import type { ChartConfig, ViewSpec } from 'tellplot';
 
 import {
   parsePlaygroundChartConfig,

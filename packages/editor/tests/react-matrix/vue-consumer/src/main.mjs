@@ -1,6 +1,6 @@
-import { createInitialViewSpec } from '@tellplot/core';
-import { ChartEditor } from '@tellplot/vue';
-import '@tellplot/vue/styles.css';
+import { createInitialViewSpec } from 'tellplot';
+import { ChartEditor } from 'tellplot/vue';
+import 'tellplot/styles.css';
 import { createApp, h, ref, version } from 'vue';
 
 import './host.css';

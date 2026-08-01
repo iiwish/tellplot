@@ -1,6 +1,6 @@
-import { createInitialViewSpec } from '@tellplot/core';
-import { ChartEditor } from '@tellplot/react';
-import '@tellplot/react/styles.css';
+import { createInitialViewSpec } from 'tellplot';
+import { ChartEditor } from 'tellplot/react';
+import 'tellplot/styles.css';
 import React, { createRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 

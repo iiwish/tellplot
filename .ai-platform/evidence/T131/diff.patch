@@ -1,0 +1,4647 @@
+diff --git a/.ai-platform/docs/product-design.md b/.ai-platform/docs/product-design.md
+index 2fddc27..afb4caa 100644
+--- a/.ai-platform/docs/product-design.md
++++ b/.ai-platform/docs/product-design.md
+@@ -2,10 +2,10 @@
+ 
+ ## Metadata
+ 
+-- Version: 1.1.0
++- Version: 1.2.0
+ - Status: Confirmed
+-- Last updated: 2026-07-29
+-- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构与首个公开稳定版目标
++- Last updated: 2026-08-01
++- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构、单包分发与首个公开稳定版目标
+ 
+ ## Product Positioning
+ 
+@@ -26,13 +26,15 @@ registry、通用 adapter 或公共扩展协议。
+ 
+ ## Delivery Form
+ 
+-项目交付框架无关核心、imperative 编辑器 runtime、React/Vue 薄适配包和参考编辑器：
++项目通过一个公共 `tellplot` 包交付框架无关核心、imperative 编辑器 runtime、React/Vue 薄适配和参考编辑器：
+ 
+-- `@tellplot/core` 拥有数据合同、配置、命令、历史、投影、不变量和持久化，不依赖 DOM 或 UI 框架。
+-- `@tellplot/editor` 通过 `createEditor(container, options)` 提供完整编辑器、G2 生命周期、交互、导出和
+-  框架无关宿主合同，不依赖 React 或 Vue。
+-- `@tellplot/react` 与 `@tellplot/vue` 只映射宿主生命周期、属性、事件和实例方法，不拥有第二套领域状态、
++- `tellplot` 根入口提供数据、配置、命令、历史、投影、不变量、持久化与 `createEditor(container, options)`。
++- `tellplot/core` 提供显式 core-only 入口；内部 core layer 不依赖 DOM、G2 或 UI 框架。
++- `tellplot/react` 与 `tellplot/vue` 只映射宿主生命周期、属性、事件和实例方法，不拥有第二套领域状态、
+   图表 runtime 或编辑行为。
++- `tellplot/styles.css` 提供完整编辑器样式。
++- core、editor、React adapter 与 Vue adapter 保持私有 workspace layer，公共分发不要求 npm organization
++  或多个独立版本。
+ - 参考编辑器只提供示例数据、功能演示和视觉验收，不复制领域状态或业务逻辑。
+ - 开源官网在参考应用中提供品牌首页、真实图表示例目录、开发者文档入口和在线工作台；它只消费公共组件，
+   不进入核心包或图表运行时。
+@@ -220,8 +222,9 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
+ 
+ ### NFR-007 包兼容性
+ 
+-公共包提供 ESM、CJS 和类型声明，验证 imperative DOM、React 18/19、Vue 3、当前及上一发布浏览器，
+-并保持 G2 为明确依赖边界。`@tellplot/core` 与 `@tellplot/editor` 的安装和运行合同不得包含 React 或 Vue。
++公共 `tellplot` 包为根、core、React 与 Vue JavaScript 入口提供 ESM、CJS 和类型声明，验证 imperative DOM、
++React 18/19、Vue 3、当前及上一发布浏览器。G2/G SVG 是精确审核的 direct dependencies；React/Vue 是
++optional peer dependencies，根入口和 imperative consumer 不安装框架也可运行。
+ 
+ ## Current Scope
+ 
+@@ -232,7 +235,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
+ - `createEditor`、React/Vue `ChartEditor`、`ChartConfig`、运行时配置校验，以及标题、颜色、坐标轴、标签、Tooltip、数字格式和动画配置。
+ - 展开分组区域配置、上下文分组操作和跨层级语义拖拽。
+ - SVG、PNG 和 ViewSpec JSON 导出。
+-- 框架无关 core/editor、React/Vue 薄适配包、参考编辑器和发布候选质量门禁。
++- 单个 `tellplot` 公共包、私有框架无关 core/editor layers、React/Vue 薄适配、参考编辑器和发布候选质量门禁。
+ - 真实图表驱动的开源官网、示例中心、开发者文档入口和在线工作台。
+ 
+ ## Expansion Policy
+@@ -270,7 +273,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
+ 
+ ### CD-001 交付形态
+ 
+-交付框架无关 core/editor、React/Vue 薄适配包与参考编辑器，不建设独立 SaaS。
++交付一个 `tellplot` 公共包及其框架无关 core/editor、React/Vue 薄适配与参考编辑器，不建设独立 SaaS。
+ 
+ ### CD-002 导出边界
+ 
+@@ -282,7 +285,7 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包
+ 
+ ### CD-004 产品身份
+ 
+-品牌使用 `TellPlot`，仓库使用 `tellplot`，npm scope 使用 `@tellplot`。
++品牌使用 `TellPlot`，仓库使用 `tellplot`，公共 npm 包使用无 scope 名称 `tellplot`。
+ 
+ ### CD-005 编辑模型
+ 
+@@ -300,7 +303,7 @@ breaking API、schema、依赖、远程 Git 和发布仍是独立人工闸门。
+ 
+ ### CD-008 展示网站边界
+ 
+-官网与示例中心是 `apps/playground` 的开发者体验层，只消费 `@tellplot/core` 与 `@tellplot/react` 公共 API。网站内容目录不是
++官网与示例中心是 `apps/playground` 的开发者体验层，只消费 `tellplot` 与 `tellplot/react` 公共 API。网站内容目录不是
+ 核心图表 registry，不向公共包增加路由、文档、动画或在线执行依赖。
+ 
+ ### CD-009 公共配置入口
+@@ -312,5 +315,5 @@ ownership，不提供 raw `G2Spec`。
+ 
+ ### CD-010 稳定版本
+ 
+-四个公共包的首个稳定版本均为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
++公共包 `tellplot` 的首个稳定版本为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
+ 作为稳定条件。公开发布只允许来自后续授权的干净 commit；本地稳定候选不等于 npm/GitHub/网站已发布。
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index e73de7f..9cb9cd2 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -4,126 +4,119 @@
+ 
+ - Version: 1.0.0
+ - Status: Not_Released
+-- Last updated: 2026-07-31
++- Last updated: 2026-08-01
+ - Working branch: `main`
++- Active goal: G007 / T131
+ 
+ ## Current State
+ 
+-TellPlot 是基于 G2 的框架无关可编辑基础图表库，当前内建瀑布图、分类条形图和分类柱状图。
+-G001、G002 系列、G004 与 G006 均已验收；G006 / T125-T129 于 2026-07-30 完成目标级验收。
+-当前 1.0.0 四包候选尚未发布到 npm 或 GitHub，也尚未满足公开发布条件。G005 因独立远程授权、发布
+-身份、四个 npm package root bootstrap、stage-only Trusted Publisher、2FA approval 与生产托管条件保持
+-`Blocked`。T130 已完成本地修复、完整门禁和独立复核，状态为 `Needs_Review`，等待用户验收；这不构成
+-任何远程发布授权。
+-
+-## Package Architecture
+-
+-- `@tellplot/core`：拥有 SourceData、ViewSpec、配置验证、投影、确定性命令、交互策略和 `EditorStore`；
+-  不依赖 DOM、G2、React 或 Vue。
+-- `@tellplot/editor`：通过 `createEditor(container, options)` 提供完整 imperative DOM/G2 工作台，
+-  包含图表直接操作、结构大纲、Inspector、Toolbar、分组、批注、历史、持久化、SVG/PNG 导出和 a11y。
+-- `@tellplot/react`：React 18.3/19.x 薄适配，只管理宿主节点、props/ref 映射与 lifecycle。
+-- `@tellplot/vue`：Vue 3.5+ 薄适配，提供 props、emits、`v-model:view` 与 expose，不持有第二套状态。
+-
+-G2 仍独占图形渲染、场景边界、事件与动画。三种宿主进入同一套 command/store/runtime，不含历史
+-React-only API 兼容层、Dashboard、第二渲染引擎或通用 plugin registry。
+-
+-## Delivered Scope
+-
+-- T125：框架无关 core、领域不变量和统一 `EditorStore`。
+-- T126：完整 imperative DOM/G2 编辑器、资源释放和全交互面迁移。
+-- T127：React 18/19 与 Vue 3 适配包及隔离 tarball consumer。
+-- T128：playground、公共文档、imperative/React/Vue quickstart 与四包发布脚本。
+-- T129：完整浏览器、a11y、性能、tarball、架构审计和隔离源码复演证据。
+-
+-## Accepted G006 Baseline
+-
+-以下结果属于 2026-07-30 已验收的 G006 / T129 候选基线，不代表当前未提交工作树已经通过新的公开发布
+-门禁：
+-
+-- Node 22.20.0 下的 G006 `pnpm release:check` 验收记录通过。
+-- supply chain：14 个 AntV package / 17 个精确 artifact 的 version、tarball URL、SHA-512 integrity
+-  allowlist 通过；安装后 48 个 manifest 一致，所有第三方 GitHub Actions 固定完整 commit SHA。
+-- architecture：49 个源文件、193 条 runtime import edge、0 cycle；四个公共入口分层通过。
+-- release audit：4 packages、25 public files、19 Markdown files、419 audited files。
+-- unit/coverage：53 files / 439 tests；statements 88.35%、branches 80.64%、functions 89.30%、lines
+-  88.44%，全部配置的 coverage threshold 通过。
+-- current Chromium/Firefox/WebKit：186/186；accessibility：45/45。
+-- previous Playwright browser release：186/186；WebKit 18.4：62/62。
+-- framework matrix：无 React/Vue 依赖的 imperative DOM、React 18.3.1、React 19.2.7、Vue 3.5.27
+-  通过四包 tarball 完成受控 keyboard move/undo；克隆 SourceData、克隆受控候选和 Vue reactive Proxy
+-  均保留 accepted session 与 undo history，ViewSpec、CommandEvent、SVG 语义完全一致，真实 G2 canvas、
+-  update 与 clean unmount 通过。consumer fresh install 使用 strict peer mode，并固定 Vite/Rolldown WASM
+-  fallback 的同代 transitive，peer warning 视为门禁失败。
+-- 非法、`null`、dataset 冲突或精确 chart type 冲突 ViewSpec 进入稳定 invalid state，返回非空 issue 并
+-  调用拒绝回调，不泄漏原生 `TypeError`。
+-- 200-item performance：waterfall p95 70.8ms，categorical p95 71.2ms，均低于 150ms；同目标 React
+-  root commit delta 为 0。性能项目不录制 trace/video/screenshot，并在 authoritative scene ready 后采样。
+-- isolated-source rehearsal：336 个源文件，frozen install、供应链门禁、architecture、audit、typecheck、439 unit、
+-  build、四包 package 和受控四宿主 framework matrix 全部通过。
+-- `defaultView` 只参与初始化；数据集切换不会重新套用旧默认视图。selection reconciliation 会持久化并
+-  只发布一次失效通知，受控命令产生的新 selection 则在宿主接受候选后发布。
+-- 语义等价的 editor update 跳过 DOM/G2 重绘并保留活动 pointer interaction；真实状态变化会取消
+-  stale interaction。config 的对象属性顺序不参与语义判断；ViewSpec 的 `rootOrder` 与分组子项保持
+-  有序语义，`collapsedGroupIds` / `pinnedItemIds` 按成员集合比较。常规受控回传保留已打开面板，数据、
+-  图表类型或 invalid/ready 上下文切换会关闭 overlay，外部 ViewSpec 变化会放弃未提交的框选分组。
+-- React callback/class/style-only 重渲染不触发 runtime update；Strict Mode effect replay 的初始化配置拒绝
+-  按逻辑挂载只上报一次。容器 `ResizeObserver` 负责非 window resize 的 G2 `forceFit`，并在 destroy 时断开。
+-- 导出参数在字段读取前完成安全结构与类型验证；`null`、错误字段类型和 accessor 返回稳定
+-  `TellPlotExportError`。imperative quickstart 通过显式卸载函数释放 editor，不会在创建后立即销毁。
+-- tooltip 只写入 text node；SVG export 移除 executable/remote/source metadata；SourceData/ViewSpec/options
+-  拒绝 sparse array、hostile descriptor/prototype、symbol/named property 与未知键。
+-- preview G2 render 失败会中止交互并恢复 authoritative scene；失败或陈旧 preview 不可提交命令。
+-- React/Vue `styles.css` subpath 具备 NodeNext 可消费的类型入口；关闭、分组、取消、展开/折叠与
+-  backdrop 文案由 zh-CN/en-US catalog 统一提供。
+-- React/Vue host 在自动高度 flex/grid 中由编辑器内容撑开，在定高容器中继续填满可用高度。
+-- 四个 1.0.0 tarball 均通过 ESM、CJS、types、publint、ATTW、文件 allowlist、size 与 SHA-256 同源校验。
+-- strict artifact validator、format、lint、typecheck、build、release audit 和 `git diff --check` 通过。
+-
+-详细结果位于 `.ai-platform/evidence/T125/` 至 `.ai-platform/evidence/T129/`。
+-
+-## Current Pre-Release Verification
+-
+-- quickstart 使用 authoritative scene geometry 和新鲜 feedback transition 校验锁定项；当前
+-  Chromium/Firefox/WebKit focused regression 与 186-test current browser matrix 通过。常规 E2E 不为每个
+-  成功 context 持续录制 trace/video，失败截图继续保留。
+-- browser/framework runner 在 POSIX 终止整个进程组，在 Windows 使用有界 `taskkill /T` 与 `/F`
+-  fallback；动态 fixture 和两个真实 runner 的受控 SIGTERM smoke 证明孙进程与临时目录均被清理。
+-- `pnpm audit:prod` 显式使用 `https://registry.npmjs.org/` 和 `--audit-level=info` 查询 production
+-  advisory，覆盖全部 severity；当前结果为 0 个 vulnerabilities。默认镜像配置不参与权威审计。
+-- `release:preflight` 分离 dirty-capable local candidate 与 public source：当前 dirty worktree 按预期被拒绝；
+-  临时 bare remote、clean `main`、upstream、annotated tag 与真实 `ls-remote` collector fixture 通过。
+-- `release:trust-readiness` 同时检查四个 package root、精确 1.0.0 可用性和人工确认。四个 root 当前均为
+-  E404，因此以 bootstrap-required 失败关闭，不会进入 staging。
+-- `publish-npm.yml` 只提供 stage-only 路径。无 OIDC 的 verify job 执行完整质量门禁和 tarball 重建；
+-  environment-protected OIDC job 使用 `--ignore-scripts` 安装精确 npm CLI，不安装项目 dependencies、
+-  不 build 或运行仓库脚本；随后只复核 exact SHA、remote main/tag、Registry 状态和四个固定 SHA-256，
+-  再按 `core -> editor -> react -> vue` 执行 `npm stage publish`。工作流不执行 `npm publish`。
+-- Node 22.20.0 下的 T130 `pnpm release:check` 完整通过：14 package / 17 artifact / 48 installed
+-  manifest 供应链门禁，49 source / 193 import edge / 0 cycle，434-file release audit，54 files / 446
+-  unit，四包 package 与 framework matrix，performance 3/3（waterfall p95 129.5ms、categorical p95
+-  136.3ms，预算 150ms），current browser 186/186，a11y 45/45，previous browser 186/186，WebKit 18.4
+-  62/62，以及 351-file isolated-source rehearsal 全部通过。
+-- T130 evidence 位于 `.ai-platform/evidence/T130/`，独立复核无未解决 Critical、High 或 Medium finding。
+-  T130 保持 `Needs_Review`，完整本地结果不能替代 G005 的 clean commit、托管 CI 与远程人工闸门。
+-- G006 的已验收证据继续有效，但不能替代从干净 commit 对最终发布内容执行的 fresh-clone CI 与完整
+-  release gate。
++TellPlot 是基于 G2 的框架无关可编辑基础图表库，内建瀑布图、分类条形图和分类柱状图。G006 已验收
++core、imperative editor、React adapter 与 Vue adapter 的内部 ownership。G007 只把公共分发收敛为一个
++无 scope 的 `tellplot` 包，不改变图表、schema、命令、交互或 G2 runtime。
++
++当前工作树包含 `tellplot@1.0.0` 本地候选，尚未作为该包名的 1.0.0 发布。公开入口为：
++
++- `tellplot`：core 领域 API 与 `createEditor`。
++- `tellplot/core`：显式 core-only 入口。
++- `tellplot/react`：React 18/19 `ChartEditor`。
++- `tellplot/vue`：Vue 3 `ChartEditor`。
++- `tellplot/styles.css`：完整编辑器样式。
++
++内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 和 `@tellplot/vue` 都是 private workspace
++layers，不独立生成发布 artifact。G2/G SVG 是公共包 direct dependencies，React/Vue 是 optional peers；
++imperative consumer 不需要安装框架。
++
++## Release Candidate
++
++唯一权威 artifact manifest 是 `.ai-platform/evidence/T131/tarball-manifest.json`。当前候选为：
++
++| Package | Artifact | SHA-256 |
++| --- | --- | --- |
++| `tellplot@1.0.0` | `tellplot-1.0.0.tgz` | `e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e` |
++
++该 hash 在任何 package 内容变化后必须通过 `pnpm release:artifact:refresh` 重新生成，并同步到
++`.github/workflows/publish-npm.yml`。本表、本地 manifest、workflow 和 staged download 四处必须完全一致。
++
++## Quality Gates
++
++T131 完成前必须从 Node 22.20.0、clean source 执行以下阻断门禁：
++
++- supply-chain lock、installed manifest 与官方 npm production advisory audit。
++- format、lint、strict typecheck、coverage、build、architecture cycle 和 public surface audit。
++- 单包 ESM/CJS/types/CSS、publint、ATTW、pack allowlist 和可复现 SHA-256。
++- imperative no-framework、React 18、React 19 与 Vue 3 strict peer consumer matrix。
++- 当前/上一浏览器、WebKit 18.4、a11y、200-item performance 和 isolated-source rehearsal。
++- public source preflight、tag/main/workflow contract、Registry availability 和 release artifact check。
++
++T129/T130 的已验收结果是回归基线，不代替对最终单包候选执行的新门禁。T131 最新结果记录在
++`.ai-platform/evidence/T131/test-results.md` 和 `review.md`。
++
++## Remote Baseline
++
++- GitHub 仓库：`iiwish/tellplot`，公开可见。
++- `main` 与 annotated `v1.0.0` 当前 peeled commit：
++  `f3a32282cc6d61d1ad23a5801b8ddc0eb944c747`。
++- 当前 remote tag object：`e695354321c70c40e59c99af99dc062dc7b786ce`。
++- `npm-production` environment 与 exact tag protection 已建立；最终候选提交后仍需受控重建 tag 并复核规则。
++- 旧 scoped bootstrap package 只有 `0.0.0-bootstrap.0`；四个 scoped 1.0.0 stage 从未批准，不属于发布结果。
++- `tellplot` package root、stage-only Trusted Publisher 与 package-level 2FA 必须在正式 staging 前核验。
+ 
+ ## First-Publish Gate
+ 
+-以下步骤属于 G005 远程发布操作，必须取得独立明确授权；T130 不执行这些命令：
++以下顺序失败关闭。远程写操作只在既有用户授权范围内执行；任何身份、2FA、Registry 或 ref 状态不确定时
++立即停止。
+ 
+-1. 确认 `@tellplot` scope ownership、维护者 2FA、公开仓库，以及 `npm-production` environment 的
+-   required reviewers 与 prevent self-review；在第 3 步完成前保持该 environment 禁止部署。审计既有 tag、
+-   GitHub Release 与 npm version。当前远端 `v1.0.0` tag object 为
+-   `56a998894668ce0f265f9ef676d88bb79ee06ad6`，peeled commit 为
+-   `daecc7b2a7aa898bd7bffc05fe15b0a9bcd7b038`；最终候选仍在未提交工作树中，因此该 tag 不是最终发布 tag。
+-   必须确认它从未对应公开 GitHub Release 或 npm 1.0.0。若已经公开使用，停止 1.0.0 流程并选择新版本，
+-   不改写已公开历史。
+-2. 把最终候选提交到 clean `main`，从该 commit 完成 fresh-clone CI、官方 registry audit 和完整 release
+-   gate；取得独立远程 Git 授权后再推送 `main`，在发布评审记录中固定唯一 final commit SHA。
+-3. 在独立 tag-update 授权下，以带 expected-old-object lease 的方式把 stale `v1.0.0` 重建为指向 final
+-   commit 的 annotated tag。任何旧 tag object、remote main 或 lease 漂移都必须失败关闭：
++### 1. 清理旧 scoped staging
++
++先逐包读取 staged queue，核对下列旧 stage ID 后拒绝，不得批准：
++
++```bash
++set -euo pipefail
++
++packages=(@tellplot/core @tellplot/editor @tellplot/react @tellplot/vue)
++stage_ids=(
++  1f94311c-06ee-4149-ad84-e53263dc285c
++  9e585db9-3289-4626-9a2c-e2b68a5db020
++  1604e85d-2a29-46a9-af73-e0cc9a3007f9
++  a1b6cf23-5beb-4403-a0a2-03169214fb58
++)
++for package in "${packages[@]}"; do
++  npm stage list "$package" --json --registry=https://registry.npmjs.org/
++done
++for stage_id in "${stage_ids[@]}"; do
++  npm stage reject "$stage_id" --registry=https://registry.npmjs.org/
++done
++```
++
++拒绝后再次逐包读取 queue。旧 bootstrap versions 可以保留为历史占位，但应在新包公开后 deprecate 并明确
++指向 `tellplot`；不得为 scoped package 发布 1.x。
++
++### 2. Bootstrap 与 Trusted Publisher
++
++使用单独构建、单独复核的 `tellplot@0.0.0-bootstrap.0`，以非 `latest` dist-tag 首次创建 package root。
++bootstrap artifact 不得复用 1.0.0 候选，不得进入 GitHub Release。随后为 `tellplot` 配置：
++
++- repository `iiwish/tellplot`；workflow `publish-npm.yml`；environment `npm-production`。
++- 只启用 `allow-stage-publish`，禁用直接 `allow-publish`。
++- package access 要求 2FA 并 disallow tokens；配置后重新读取并归档结果。
++
++核对命令固定官方 Registry：
++
++```bash
++set -euo pipefail
++
++package=tellplot
++npm trust list "$package" --json --registry=https://registry.npmjs.org/
++npm stage list "$package" --json --registry=https://registry.npmjs.org/
++npm view "$package" versions dist-tags --json --registry=https://registry.npmjs.org/
++```
++
++package root 不存在、trust 权限不是 stage-only、queue 不为空或 1.0.0 已存在都阻断 workflow。
++
++### 3. 固定最终 main 与 annotated tag
++
++最终变更提交并推送到 clean `main`，托管 CI 全绿后记录唯一 `TELLPLOT_FINAL_COMMIT_SHA`。tag 更新前拒绝
++任何 Git URL rewrite，并以 expected-old-object lease 受控替换：
+ 
+ ```bash
+ set -euo pipefail
+@@ -133,130 +126,35 @@ if git config --show-origin --get-regexp '^url\..*\.(push)?insteadof$'; then
+   printf 'refusing tag update while a Git URL rewrite is active\n' >&2
+   exit 1
+ fi
+-: "${TELLPLOT_FINAL_COMMIT_SHA:?set the SHA fixed in the approved release record}"
++: "${TELLPLOT_FINAL_COMMIT_SHA:?}"
+ [[ "$TELLPLOT_FINAL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+-final_commit="$TELLPLOT_FINAL_COMMIT_SHA"
+-test "$(git rev-parse --verify HEAD)" = "$final_commit"
++test "$(git rev-parse HEAD)" = "$TELLPLOT_FINAL_COMMIT_SHA"
+ remote_main="$(
+-  git ls-remote --exit-code --refs "$canonical_remote" refs/heads/main | awk '{print $1}'
++  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
++    git ls-remote --exit-code --refs "$canonical_remote" refs/heads/main | awk '{print $1}'
+ )"
+ old_tag_object="$(
+-  git ls-remote --exit-code --tags "$canonical_remote" refs/tags/v1.0.0 | awk '{print $1}'
++  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
++    git ls-remote --exit-code --tags "$canonical_remote" refs/tags/v1.0.0 | awk '{print $1}'
+ )"
+-test "$remote_main" = "$final_commit"
+-test "$old_tag_object" = '56a998894668ce0f265f9ef676d88bb79ee06ad6'
+-
+-# 以下两条写操作仍需独立明确授权。
+-git tag --force --annotate v1.0.0 "$final_commit" --message 'TellPlot v1.0.0'
++test "$remote_main" = "$TELLPLOT_FINAL_COMMIT_SHA"
++test "$old_tag_object" = 'e695354321c70c40e59c99af99dc062dc7b786ce'
++git tag --force --annotate v1.0.0 "$TELLPLOT_FINAL_COMMIT_SHA" --message 'TellPlot v1.0.0'
+ git push \
+   --force-with-lease="refs/tags/v1.0.0:$old_tag_object" \
+   "$canonical_remote" refs/tags/v1.0.0
+-
+-remote_tag_object="$(
+-  git ls-remote --exit-code --tags "$canonical_remote" refs/tags/v1.0.0 | awk '{print $1}'
+-)"
+-remote_tag_commit="$(
+-  git ls-remote --exit-code --tags "$canonical_remote" 'refs/tags/v1.0.0^{}' | awk '{print $1}'
+-)"
+-test -n "$remote_tag_object"
+-test "$remote_tag_object" != "$remote_tag_commit"
+-test "$remote_tag_commit" = "$final_commit"
+-```
+-
+-   远端 main 与 annotated tag 的 peeled commit 同为 final SHA 后，才启用 `v1.0.0` tag protection；不得先
+-   保护 stale tag 再尝试替换。随后把 `npm-production` environment 的 deployment branches/tags policy
+-   设为只允许该受保护的 exact `v1.0.0` tag，禁止 branch 和其他 tag，并用未允许 ref 的受控负向检查确认
+-   environment 在 OIDC job 前阻断。npm trust 只绑定 workflow file 与 environment，因此该机器级 ref 限制
+-   不得由 workflow 内部 shell 自检替代。
+-4. 使用单独评审的非 1.0.0 artifact 和非 `latest` dist-tag bootstrap
+-   `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` 四个 package root。首次
+-   bootstrap 机制不复用 `publish-npm.yml`。
+-5. 使用 npm 11.18.0 的已认证维护者会话，为四包配置同一个 stage-only Trusted Publisher；只授予
+-   `--allow-stage-publish`，不授予 `--allow-publish`：
+-
+-```bash
+-set -euo pipefail
+-
+-npm install --global npm@11.18.0 \
+-  --ignore-scripts \
+-  --registry=https://registry.npmjs.org/
+-for package in @tellplot/core @tellplot/editor @tellplot/react @tellplot/vue; do
+-  npm trust github "$package" \
+-    --file publish-npm.yml \
+-    --repository iiwish/tellplot \
+-    --environment npm-production \
+-    --allow-stage-publish \
+-    --yes \
+-    --registry=https://registry.npmjs.org/
+-  sleep 2
+-  npm trust list "$package" \
+-    --json \
+-    --registry=https://registry.npmjs.org/
+-done
+ ```
+ 
+-   任一写入或读取失败都必须立即停止，不得启用 disallow-tokens 或触发 workflow。维护者逐包执行
+-   `npm trust list --json`，核对 configuration ID、repository、workflow、environment 和 permissions；修正
+-   错误配置，或在独立 trust-change 授权下 `npm trust revoke` 后重建。四包全部确认只允许
+-   stage publish 后才进入下一步。
+-6. 确认四个 stage-only Trusted Publisher 均已生效后，再在四个 package 的 access settings 启用
+-   package-level `Require two-factor authentication and disallow tokens`；不得在 trust 配置就绪前禁用
+-   bootstrap 所需的传统发布路径。必须逐包重新读取 access settings 并保存四个成功结果；任一设置或核验
+-   失败都停在本步骤，不得继续。
+-7. 触发前使用已认证维护者会话逐包检查 staged queue，确认四包均没有 pending 1.0.0 stage。`npm stage
+-   list` 只接收一个可选 package spec，不能把四个 package 作为同一次调用的 positional arguments：
++重建后确认 remote main、local tag peeled commit、remote tag peeled commit 和 final SHA 完全相同，再恢复并
++负向验证 exact `v1.0.0` tag protection 与 `npm-production` deployment branches/tags policy。
+ 
+-```bash
+-set -euo pipefail
+-
+-queue_evidence="$(mktemp -d)"
+-for package in @tellplot/core @tellplot/editor @tellplot/react @tellplot/vue; do
+-  npm stage list "$package" \
+-    --json \
+-    --registry=https://registry.npmjs.org/ |
+-    tee "$queue_evidence/stage-list-${package##*/}.json"
+-done
+-printf 'archive staged-queue evidence from %s\n' "$queue_evidence"
+-```
+-
+-   将四个 JSON 结果附到发布评审记录，并逐包确认不存在 pending 1.0.0。任何 auth/network/query failure 都
+-   禁止 dispatch；公共 version endpoint 的 404 不能证明 staged queue 为空。
+-8. 从 exact annotated `v1.0.0` tag 触发工作流：
++### 4. 从 exact tag 执行 staging workflow
+ 
+ ```bash
+ set -euo pipefail
+ 
+-: "${TELLPLOT_FINAL_COMMIT_SHA:?set the SHA fixed in the approved release record}"
+-[[ "$TELLPLOT_FINAL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
++: "${TELLPLOT_FINAL_COMMIT_SHA:?}"
+ export GH_HOST=github.com
+-canonical_remote='https://github.com/iiwish/tellplot.git'
+-dispatch_check_root="$(mktemp -d)"
+-remote_git() {
+-  GIT_CONFIG_GLOBAL=/dev/null \
+-    GIT_CONFIG_NOSYSTEM=1 \
+-    GIT_TERMINAL_PROMPT=0 \
+-    git -C "$dispatch_check_root" "$@"
+-}
+-read -r remote_main remote_main_ref < <(
+-  remote_git ls-remote --exit-code --refs "$canonical_remote" refs/heads/main
+-)
+-test "$remote_main_ref" = 'refs/heads/main'
+-test "$remote_main" = "$TELLPLOT_FINAL_COMMIT_SHA"
+-remote_tag_object=''
+-remote_tag_commit=''
+-while read -r commit ref; do
+-  case "$ref" in
+-    'refs/tags/v1.0.0') remote_tag_object="$commit" ;;
+-    'refs/tags/v1.0.0^{}') remote_tag_commit="$commit" ;;
+-  esac
+-done < <(
+-  remote_git ls-remote --exit-code --tags "$canonical_remote" \
+-    refs/tags/v1.0.0 'refs/tags/v1.0.0^{}'
+-)
+-[[ "$remote_tag_object" =~ ^[0-9a-f]{40}$ ]]
+-[[ "$remote_tag_commit" =~ ^[0-9a-f]{40}$ ]]
+-test "$remote_tag_object" != "$remote_tag_commit"
+-test "$remote_tag_commit" = "$TELLPLOT_FINAL_COMMIT_SHA"
+ run_url="$(
+   gh workflow run publish-npm.yml \
+     --repo iiwish/tellplot \
+@@ -264,134 +162,80 @@ run_url="$(
+     -f confirmation='stage 1.0.0 stage-only-trusted-publishers-verified' |
+     awk '/^https:\/\/github\.com\/iiwish\/tellplot\/actions\/runs\/[0-9]+$/ { print; exit }'
+ )"
+-[[ "$run_url" =~ ^https://github\.com/iiwish/tellplot/actions/runs/[0-9]+$ ]]
+-printf 'record workflow run %s\n' "$run_url"
++[[ "$run_url" =~ ^https://github.com/iiwish/tellplot/actions/runs/[0-9]+$ ]]
+ run_id="${run_url##*/}"
+ run_head="$(
+-  gh run view "$run_id" \
+-    --repo iiwish/tellplot \
+-    --json headSha \
+-    --jq '.headSha'
++  gh run view "$run_id" --repo iiwish/tellplot --json headSha --jq '.headSha'
+ )"
+ test "$run_head" = "$TELLPLOT_FINAL_COMMIT_SHA"
+ gh run watch "$run_id" --repo iiwish/tellplot --exit-status
+ ```
+ 
+-   `gh run watch` 会在 stage job 的 `npm-production` environment gate 等待。独立 reviewer 必须先核对
+-   exact run URL/head SHA、verify job 全绿、tag/environment policy 和四包 readiness，再批准 environment；
+-   发起者不得自批。只跟踪并归档上面捕获的 exact run ID/URL；不得用当前目录 remote、`GH_REPO` 或
+-   “最新一次 run”替代 `--repo iiwish/tellplot` 与该 run ID。
+-9. 工作流成功只表示四个 1.0.0 artifact 已进入 npm staging，尚未公开。维护者把四个 stage ID 写入受审
+-   变量，再从独立目录逐个查看和下载：
++environment reviewer 必须核对 exact run URL/head SHA、verify job、tag policy、trust readiness 和候选 hash 后
++批准。工作流只执行一次 `npm stage publish`，不执行 `npm publish`。
++
++### 5. 下载并复核 staged artifact
+ 
+ ```bash
+ set -euo pipefail
+ 
+-: "${TELLPLOT_CORE_STAGE_ID:?}"
+-: "${TELLPLOT_EDITOR_STAGE_ID:?}"
+-: "${TELLPLOT_REACT_STAGE_ID:?}"
+-: "${TELLPLOT_VUE_STAGE_ID:?}"
+-stage_labels=(core editor react vue)
+-stage_ids=(
+-  "$TELLPLOT_CORE_STAGE_ID"
+-  "$TELLPLOT_EDITOR_STAGE_ID"
+-  "$TELLPLOT_REACT_STAGE_ID"
+-  "$TELLPLOT_VUE_STAGE_ID"
+-)
++: "${TELLPLOT_STAGE_ID:?}"
+ review_root="$(mktemp -d)"
+-for index in "${!stage_ids[@]}"; do
+-  label="${stage_labels[$index]}"
+-  stage_id="${stage_ids[$index]}"
+-  mkdir "$review_root/$label"
+-  npm stage view "$stage_id" \
+-    --json \
+-    --registry=https://registry.npmjs.org/ |
+-    tee "$review_root/$label/stage.json"
+-  (
+-    cd "$review_root/$label"
+-    npm stage download "$stage_id" \
+-      --registry=https://registry.npmjs.org/
+-  )
+-done
+-printf 'archive staged-artifact evidence from %s\n' "$review_root"
++npm stage view "$TELLPLOT_STAGE_ID" --json --registry=https://registry.npmjs.org/ |
++  tee "$review_root/stage.json"
++(
++  cd "$review_root"
++  npm stage download "$TELLPLOT_STAGE_ID" --registry=https://registry.npmjs.org/
++)
++printf 'expected sha256: %s\n' \
++  'e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e'
+ ```
+ 
+-   对每个 stage 核对 package/version/tag、provenance，并对下载文件执行 `sha256sum`；macOS 使用
+-   `shasum -a 256`。结果必须同时匹配
+-   `.ai-platform/evidence/T129/tarball-manifest.json` 和下表。四包检查矩阵全部通过并签字前，不得批准
+-   任何单包：
+-
+-| Package | Candidate SHA-256 |
+-| --- | --- |
+-| `@tellplot/core@1.0.0` | `4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b` |
+-| `@tellplot/editor@1.0.0` | `3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2` |
+-| `@tellplot/react@1.0.0` | `c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242` |
+-| `@tellplot/vue@1.0.0` | `a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811` |
+-
+-   任一 metadata、tarball、hash 或 provenance 不一致都必须停止；在尚无 approval 的前提下，按第 10 步
+-   reject 本次全部 stage。不得批准“未受影响”的单包，也不得原地替换 staged artifact。
+-10. 任一 package 在四包全部进入 staging 前失败时，禁止直接重跑。已产生的 stage 保持非公开；维护者
+-   使用带 `--registry=https://registry.npmjs.org/` 的 `npm stage list`/`view` 列出并查看本次 stage ID，
+-   再以 `npm stage reject "$stage_id" --registry=https://registry.npmjs.org/` 完成 2FA 清理。确认四包
+-   staged queue 为空且 1.0.0 仍未公开后再触发工作流；任何 Registry 未显式固定的命令都不得用于该流程。
+-11. 第 9 步四包预验全部通过后，才按 `core -> editor -> react -> vue` 逐个执行
+-   `npm stage approve`，并在每次 approval 后立即核对对应 Registry version：
++核对 package/version/tag、provenance、文件清单和 SHA-256；结果必须匹配
++`.ai-platform/evidence/T131/tarball-manifest.json`。任一不一致都使用
++`npm stage reject "$stage_id" --registry=https://registry.npmjs.org/` 拒绝，不批准也不原地替换。
++
++### 6. 2FA approval 与公开验证
++
++只有 staged artifact 复核通过才执行 approval：
+ 
+ ```bash
+ set -euo pipefail
+ 
+-: "${TELLPLOT_CORE_STAGE_ID:?}"
+-: "${TELLPLOT_EDITOR_STAGE_ID:?}"
+-: "${TELLPLOT_REACT_STAGE_ID:?}"
+-: "${TELLPLOT_VUE_STAGE_ID:?}"
+-packages=(@tellplot/core @tellplot/editor @tellplot/react @tellplot/vue)
+-stage_ids=(
+-  "$TELLPLOT_CORE_STAGE_ID"
+-  "$TELLPLOT_EDITOR_STAGE_ID"
+-  "$TELLPLOT_REACT_STAGE_ID"
+-  "$TELLPLOT_VUE_STAGE_ID"
+-)
++packages=(tellplot)
++stage_ids=("${TELLPLOT_STAGE_ID:?}")
+ for index in "${!stage_ids[@]}"; do
+-  npm stage approve "${stage_ids[$index]}" \
+-    --registry=https://registry.npmjs.org/
+-  npm view "${packages[$index]}@1.0.0" version dist.integrity \
+-    --json \
+-    --registry=https://registry.npmjs.org/
++  npm stage approve "${stage_ids[$index]}" --registry=https://registry.npmjs.org/
++  npm view "${packages[$index]}@1.0.0" version dist.integrity dist.tarball \
++    --json --registry=https://registry.npmjs.org/
+ done
+ ```
+ 
+-   approval 不是原子事务：若任一后续 approval 失败，立即停止 GitHub Release、网站部署和发布公告；不得
+-   重跑 staging，不得 reject 或回滚已经公开的版本。先用显式官方 Registry 的 `npm stage list`/`view` 和
+-   `npm view` 判定每个 package 是 public、pending 还是 unknown；保留尚未批准的 stage ID，诊断 2FA/Registry
+-   故障后只重试 pending stage 的 approval。若 pending stage 已被拒绝、损坏或无法继续批准，进入 release
+-   incident，记录已公开 package/version，并在新的独立授权下制定统一后续 patch 版本等补救方案；不得声称
+-   已原子回滚。
+-12. 四包 approval 完成后，核对四个 `@1.0.0`、`latest`、provenance 和 Registry integrity，并从全新目录
+-   使用显式 `--registry=https://registry.npmjs.org/` 执行 public fresh-install smoke。上述检查通过前不得
+-   将 TellPlot 标记为 `Released`。
+-
+-权威 npm 行为以
+-[Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) 和
+-[Staged Publishing](https://docs.npmjs.com/staged-publishing/) 为准。
++approval 完成后验证 `latest=1.0.0`、provenance、Registry integrity，并从全新目录安装 `tellplot@1.0.0`，
++分别构建 imperative、React 和 Vue smoke。bootstrap dist-tag 不得保持为 `latest`。
++
++若 approval 状态未知，先用官方 Registry 的 `npm stage list`、`npm stage view` 和 `npm view` 分类为
++public、pending 或 unknown。公开版本不可 reject 或覆盖；不得声称 已原子回滚。诊断后只重试 pending
++stage 的 approval，unknown 状态继续失败关闭。
++
++### 7. GitHub Release 与收尾
++
++npm fresh install、provenance 和 tag 全部通过后，才创建 GitHub Release `v1.0.0`，更新 T131 evidence 与
++状态文档。旧 scoped bootstrap package 逐个 deprecate 为“install tellplot instead”，但不得删除历史版本。
+ 
+ ## Known Limitations
+ 
+-- 1.0.0 四包候选只存在本地未提交工作树，不是 npm 或 GitHub 上的公开版本。
+-- 远端现有 annotated `v1.0.0` 指向旧 main commit
+-  `daecc7b2a7aa898bd7bffc05fe15b0a9bcd7b038`，必须在独立授权下以 expected-old-object lease 安全替换并
+-  复核后再启用 tag protection。
+-- 四个 `@tellplot/*` package root 尚未 bootstrap；npm 不允许为不存在的 package 配置 Trusted Publisher，
+-  也不允许对全新 package 使用 staged publishing。
+-- stage-only workflow 不直接公开版本；staged artifact review、2FA approval、公开安装与 provenance 页面验证
+-  都属于 G005 远程执行。
+-- G2 运行时保持按需加载；playground 和 framework consumers 的生产构建由 500 kB chunk 门禁约束。
+-- 当前未验证生产域名、SPA fallback、公开链接、npm 发布身份或实际公开安装。
+-- G005 clean commit/CI 演练必须重新执行官方 registry advisory 检查和全部浏览器门禁。
++- 当前单包候选仍在未提交工作树，现有 `v1.0.0` 不是最终单包 tag。
++- 当前 manifest hash 会随 package README、bundle 或 sourcemap 改变，最终提交前必须 refresh。
++- staging 不是公开发布；环境审批和 npm 2FA 都可能需要用户在浏览器完成。
++- G2 runtime 体积由 500 kB chunk/build 门禁与 consumer matrix 持续观察。
+ - 永久 command ID 去重集合在超长常驻实例中线性增长；strict Trusted Types 宿主仍需持续兼容验证。
+ 
++权威 npm 行为以 [Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) 和
++[Staged Publishing](https://docs.npmjs.com/staged-publishing/) 为准。
++
+ ## Next Gate
+ 
+-G006 已验收。G005 继续保持 `Blocked`，等待独立远程授权、scope/package root bootstrap、stage-only
+-Trusted Publisher、2FA approval、发布身份与生产托管条件；远程 Git、仓库公开、生产网站、DNS、Git tag、
+-GitHub Release、npm stage 与 npm publish 均未获授权。进入公开发布操作前，必须从干净 commit 重新通过
+-fresh-clone CI、官方 registry audit 与完整 release gate，并按 `First-Publish Gate` 完成人工复核。
++完成 T131 本地全量门禁并刷新唯一 tarball；随后清理旧 scoped stages、bootstrap `tellplot`、配置
++stage-only trust，提交/push final main，受控重建 `v1.0.0` 并执行 staged release。公开验证完成前状态保持
++`Not_Released`。
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 88560af..a385047 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -2,11 +2,11 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.36.0
++- Version: 0.37.0
+ - Status: Active
+-- Last updated: 2026-07-31
+-- Scope: T101-T116、G002 系列、G004 与 G006 已验收；G005 / T130 本地发布准备待用户复核，
+-  公开执行继续等待独立授权与外部条件
++- Last updated: 2026-08-01
++- Scope: T101-T116、G002 系列、G004 与 G006 已验收；用户批准 G007 / T131 把公共分发收敛为一个
++  `tellplot` 包并完成公开发布
+ 
+ ## Goal-Level Delivery
+ 
+@@ -27,8 +27,9 @@
+ | G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
+ | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
+ | G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
+-| G005 - 公开稳定版发布 | Blocked | T130 本地发布准备 Needs_Review；等待 stale tag 受控重建、package bootstrap、独立远程授权与发布身份/托管条件 |
+-| G006 - 框架无关编辑器架构 | Accepted | T125-T129；四包架构、完整编辑器与发布候选门禁已验收 |
++| G005 - 四包公开稳定版发布 | Superseded | T130 的安全门禁由 G007 复用；四包公开目标由单包决策取代 |
++| G006 - 框架无关编辑器架构 | Accepted | T125-T129；内部四层架构、完整编辑器与质量门禁已验收 |
++| G007 - 单包分发与公开发布 | In_Progress | T131；只发布 `tellplot`，内部 core/editor/React/Vue layers 保持 private |
+ 
+ ## T001 - 确认产品设计与项目章程
+ 
+@@ -219,3 +220,19 @@ package root bootstrap、stale annotated `v1.0.0` 的受控重建与保护、sta
+ 
+ 权威目标图与 evidence 位于 `.ai-platform/specs/012-public-release-readiness/` 和
+ `.ai-platform/evidence/T130/`。
++
++G005 / T130 保留为已完成的本地发布安全基线；其四包 artifact 目标不再执行。source preflight、官方
++registry audit、protected environment、stage-only Trusted Publishing、provenance、固定 hash 和 2FA
++approval 继续由 G007 复用。
++
++## G007 Execution
++
++G007 由用户于 2026-08-01 明确批准，以 T131 把 npm 公共分发收敛为一个无 scope 的 `tellplot` 包。
++公共入口固定为 `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue` 和 `tellplot/styles.css`；
++内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` 保持 private workspace
++layers，不独立发布，不建设兼容 shim。
++
++T131 连续完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
++清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval 和公开 fresh install。
++权威目标图与 evidence 位于 `.ai-platform/specs/013-single-package-distribution/` 和
++`.ai-platform/evidence/T131/`。
+diff --git a/.ai-platform/docs/technology-decision-record.md b/.ai-platform/docs/technology-decision-record.md
+index cfe14d3..e47fe72 100644
+--- a/.ai-platform/docs/technology-decision-record.md
++++ b/.ai-platform/docs/technology-decision-record.md
+@@ -75,7 +75,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ ## TDR-008 测试分层
+ 
+ - Status: Confirmed
+-- Decision: 领域和投影逻辑使用 Vitest TDD；imperative runtime 与 React/Vue adapter 使用各自生命周期测试；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；四个公共包通过 build、publint、类型消费与 framework matrix 验证。
++- Decision: 领域和投影逻辑使用 Vitest TDD；imperative runtime 与 React/Vue adapter 使用各自生命周期测试；拖拽、导出、键盘、可访问性和真实 G2 渲染使用 Playwright；浏览器性能门禁运行生产 Vite 构建；公共 `tellplot` 包的全部子路径通过 build、publint、类型消费与 framework matrix 验证。
+ - Rationale: Mock 无法证明 Canvas 命中、拖拽、导出或真实布局正确，纯 E2E 又无法高效覆盖不变量组合。
+ - Alternatives: 只做单元测试、只做 E2E、截图代替行为断言。
+ - Consequences: coverage 只作为最低信号；财务不变量、失败路径和浏览器证据是阻断门槛。
+@@ -106,9 +106,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ ## TDR-011 品牌与仓库身份
+ 
+ - Status: Confirmed
+-- Decision: 产品使用 `TellPlot` 品牌，规范代码仓库为 `iiwish/tellplot`，包命名空间为 `@tellplot`。仓库使用独立根历史，初始提交承载已经验收的瀑布图基础切片与对应 SSOT/evidence。
++- Decision: 产品使用 `TellPlot` 品牌，规范代码仓库为 `iiwish/tellplot`，公共 npm 包为 `tellplot`；
++  `@tellplot/*` 仅用于 private workspace layer 标识。仓库使用独立根历史，初始提交承载已经验收的瀑布图
++  基础切片与对应 SSOT/evidence。公共 package naming 由 TDR-023 固定。
+ - Rationale: 产品定位是基于 G2 的轻量可编辑基础图表库，不让底层渲染实例或单一交互实现进入长期品牌与公共 API。独立根历史让仓库只保留当前架构和可验证资产。
+-- Public identity: React 包为 `@tellplot/editor`；DOM scope 使用 `[data-tellplot]`；CSS 使用 `.tp-` / `--tp-` 前缀；运行时错误类型使用 `TellPlot*`；环境变量使用 `TELLPLOT_*`。
++- Public identity: npm 包为 `tellplot`，React 入口为 `tellplot/react`；DOM scope 使用 `[data-tellplot]`；
++  CSS 使用 `.tp-` / `--tp-` 前缀；运行时错误类型使用 `TellPlot*`；环境变量使用 `TELLPLOT_*`。
+ - Historical boundary: `.ai-platform/evidence/**` 中的既有 patch 是不可变验收记录，可以保留交付时使用的旧标识；当前源码、配置和规范文档不得继续暴露旧命名空间。
+ - Consequences: 首次远程提交前必须完成全量品牌残留扫描、包消费测试、浏览器矩阵和干净安装验证。
+ 
+@@ -200,12 +203,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ 
+ - Status: Confirmed
+ - Decision: `apps/playground` 使用现有 React/Vite 单页应用承载品牌首页、示例中心、文档入口和在线工作台。
+-  路由使用本地 history API；真实预览直接消费 `@tellplot/react` 的 read-only `ChartEditor`；示例内容目录保持 playground
++  路由使用本地 history API；真实预览直接消费 `tellplot/react` 的 read-only `ChartEditor`；示例内容目录保持 playground
+   私有和显式。
+ - Visual ownership: G2 继续负责图形过渡；网站导航、hover 和进入反馈只使用 CSS。网站不引入远程字体、
+   图片、router、docs、编辑器或 animation dependency。
+ - Runtime boundary: 工作台继续使用既有 SourceData/ViewSpec/Command 路径；网站不复制领域状态，不向
+-  `@tellplot/editor` 导出示例 registry 或页面组件。
++  `tellplot` 导出示例 registry 或页面组件。
+ - Rationale: 以真实产品为展示资产可以同时提升开源发现、示例浏览和手工验收体验，而不增加核心库重量。
+ - Rejected alternatives: 独立重型文档站、静态图表截图、通用示例插件协议、第二图表渲染层。
+ 
+@@ -246,12 +249,13 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ ## TDR-021 首个稳定版 1.0
+ 
+ - Status: Confirmed
+-- Version: `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 与 `@tellplot/vue` 均使用 `1.0.0`；本地候选和未来公开版本使用相同稳定 metadata。
++- Version: 公共包 `tellplot` 使用 `1.0.0`；本地候选和未来公开版本使用相同稳定 metadata。私有 workspace
++  layers 使用非发布版本，不独立形成兼容承诺。
+ - Compatibility: 1.x 遵循 Semantic Versioning；runtime exports、公共类型、schema、错误码和 peer/browser
+   合同只允许向后兼容扩展。弃用至少跨一个 minor，并提供迁移说明。
+ - Release source: 本地目标使用隔离源码复演；公开 npm/GitHub/网站发布只允许来自独立授权后的干净
+   commit、tag 和可追溯 tarball。
+-- Quality: architecture import graph/cycle、public files、local links、secret/path、四包 tarball、framework matrix、
++- Quality: architecture import graph/cycle、public files、local links、secret/path、单包 tarball、framework matrix、
+   current/previous browser、a11y 和 performance 均为阻断门禁。
+ - Scope: 稳定表示当前 waterfall、bar、column 的文档化能力可被兼容承诺，不表示 TellPlot 已覆盖 G2
+   的通用图表范围。
+@@ -273,8 +277,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+   editor runtime 统一拥有。适配包只渲染一个稳定容器并转发更新、事件与实例方法。
+ - Compatibility: 现有候选从未公开发布，本目标不保留旧 `@tellplot/editor` React component API 或旧包布局；
+   SourceData、ViewSpec、命令和业务不变量继续作为产品正确性合同。
+-- Package strategy: `@tellplot/editor` 保持产品主包身份；新增 `@tellplot/core`、`@tellplot/react` 和
+-  `@tellplot/vue`。React/Vue 只作为各自适配包 peer dependency，G2 只存在于 editor 渲染边界。
++- Package strategy: 由 TDR-023 的单包公共分发决策取代；本 TDR 的内部依赖方向和 runtime ownership 保持有效。
+ - Quality: 包导入无浏览器全局副作用；create/update/destroy 可重复且资源可释放；imperative、React、Vue
+   共享 E2E、a11y、performance 和当前/上一浏览器门禁。
+ - Rationale: 框架无关 imperative runtime 让不同宿主共享完整编辑行为，避免在 React/Vue 中复制高风险的
+@@ -286,9 +289,36 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+ - Rejected alternatives: Vue 内嵌 React root、把 React 打入 editor bundle、两套完整 UI、仅提供 read-only Vue、
+   Web Component 作为唯一公共合同、公开旧候选后再迁移。
+ 
++## TDR-023 单包公共分发
++
++- Status: Confirmed
++- Decision: npm 只发布无 scope 的 `tellplot`。公共入口为 `tellplot`、`tellplot/core`、`tellplot/react`、
++  `tellplot/vue` 和 `tellplot/styles.css`；`@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 与
++  `@tellplot/vue` 只作为 private workspace layers。
++- Root contract: `tellplot` 根入口导出 core 领域 API 与 `createEditor`，且在模块加载时不依赖 React 或 Vue。
++  `tellplot/core` 提供相同 core-only surface；framework 子路径只在消费者显式导入时加载对应 peer。
++- Dependency contract: `@antv/g2@5.4.8` 与 `@antv/g-svg@2.1.1` 是 `tellplot` direct dependencies；React
++  18/19 和 Vue 3 是 optional peer dependencies。精确 AntV 供应链 allowlist 与现有 G2 runtime ownership
++  不变。
++- Build contract: 公共 tarball 可以内联私有 workspace 实现，但不得泄漏无法从 npm 安装的 workspace
++  specifier。根、core、React、Vue 提供 ESM、CJS 与 declarations，CSS 使用独立 export。
++- Release contract: artifact、availability、preflight、Trusted Publisher 和 staging 只处理一个
++  `tellplot-1.0.0.tgz`。未批准的 scoped stage 必须拒绝，scoped bootstrap package 不进入 1.x 发布路线。
++- Compatibility: scoped 四包从未公开稳定发布，不提供兼容 shim 或双发布。1.x 兼容承诺从 `tellplot` 及其
++  文档化子路径开始。
++- Rationale: 用户安装一个包即可使用 DOM、React 或 Vue；内部仍保持可测试、无环、ownership 清晰的长期
++  架构。与 G2/ECharts 一类库相比，这减少 organization、版本同步、Trusted Publisher 和发布原子性的运维
++  成本，同时不牺牲 framework-neutral runtime。
++- Risks: 聚合 tarball 体积增加；可选 framework peers 可能影响类型解析；多入口 bundling 可能重复代码或
++  意外把 framework 带入根入口。
++- Mitigations: shared chunks、optional peer metadata、root no-framework consumer、strict peer matrix、ATTW、
++  publint、pack allowlist、bundle inspection 和完整 browser matrix。
++- Rejected alternatives: 继续发布四包、只发布 imperative 包、把 React/Vue 作为 direct dependencies、
++  使用 `@tellplot/tellplot` organization package、公开四包后再合并。
++
+ ## Approval Gate
+ 
+-TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-022 已获得用户明确批准；TDR-004 至 TDR-006
+-由 TDR-022 取代，TDR-019 由 TDR-021 取代。后续实现以 approved goal
++TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-023 已获得用户明确批准；TDR-004 至 TDR-006
++由 TDR-022 取代，TDR-019 由 TDR-021 取代，TDR-022 的公共 package strategy 由 TDR-023 取代。后续实现以 approved goal
+ 为执行单位；内部 task graph 和 execution packet 由执行方维护。任何依赖、schema、breaking public API、
+ 远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。
+diff --git a/.ai-platform/evidence/T131/review.md b/.ai-platform/evidence/T131/review.md
+new file mode 100644
+index 0000000..2fa7d8b
+--- /dev/null
++++ b/.ai-platform/evidence/T131/review.md
+@@ -0,0 +1,33 @@
++# T131 Review
++
++## Status
++
++- Status: In_Progress
++- Unresolved Critical: 0
++- Unresolved High: 0
++- Unresolved Medium: 0
++
++## Review Focus
++
++- 根入口不能静态加载 React 或 Vue。
++- bundle 不得包含无法从 npm 解析的私有 workspace specifier。
++- public exports、types、CSS 和 optional peers 必须在真实 tarball consumer 中验证。
++- release scripts 与 workflow 只能处理一个不可变 tarball。
++- 旧 scoped bootstrap/staging 状态不得被误认为新的稳定发布候选。
++
++## Findings Closed
++
++- 隔离源码中 playground TypeScript/Vitest 无法解析未构建 private layer：通过显式 source aliases 修复，
++  `release:rehearse` 在 376-file fresh source 中通过。
++- stable release contract 不应依赖 rehearsal 排除的 evidence 文件：改为从 workflow 提取固定 SHA，并与
++  canonical release report 交叉验证。
++- npm package README 的相对仓库链接在 Registry 页面不可用：改为 GitHub canonical links，并刷新 artifact。
++- `pnpm pack` 的 workspace manifest 重写顺序与流式 gzip 分块会造成相同内容的 tarball SHA 漂移：发布脚本
++  固定 package manifest key order、完整重压缩并以差异顺序/压缩级别测试锁定；连续重建通过。
++- E2E 接入文档断言仍引用旧 scoped package：迁移为 `pnpm add tellplot` 与
++  `import 'tellplot/styles.css'`，当前及上一浏览器矩阵通过。
++
++## Local Verdict
++
++本地 spec compliance、bug/code quality、package artifact 和 QA gate 通过；无未解决 Critical、High 或
++Medium finding。公开 staging、2FA approval、Registry fresh install 和 provenance 仍是 T131 完成条件。
+diff --git a/.ai-platform/evidence/T131/summary.md b/.ai-platform/evidence/T131/summary.md
+new file mode 100644
+index 0000000..0816e53
+--- /dev/null
++++ b/.ai-platform/evidence/T131/summary.md
+@@ -0,0 +1,28 @@
++# T131 Evidence Summary
++
++## Status
++
++- Task: T131
++- Goal: G007
++- Status: In_Progress
++- Date: 2026-08-01
++
++## Scope
++
++`tellplot` 是唯一公共 npm package；根、core、React、Vue 与 CSS 通过 subpath exports 分发。core、editor、
++React adapter 和 Vue adapter 继续作为私有 workspace layer，并由 architecture policy 独立约束。
++
++## Current Evidence
++
++- 单包 package contract 已先以 RED 测试固定，随后由 `packages/tellplot` 实现。
++- playground、长期文档和全部 consumer fixture 已迁移到 `tellplot` 及其子路径。
++- `publint`、ATTW、ESM、CJS、NodeNext types、CSS 与 pack contract 通过。
++- imperative no-framework、React 18.3.1、React 19.2.7 和 Vue 3.5.27 从同一 tarball 完成 strict peer
++  install、真实 G2 渲染、受控移动/撤销、SVG 导出和 clean unmount。
++- architecture、release audit、supply-chain、production advisory、coverage、当前/上一浏览器、a11y、
++  performance 与 376-file isolated-source rehearsal 通过。
++- 隔离源码复演曾发现 playground source alias 依赖本机已构建 dist；补齐 TypeScript/Vite/Vitest source
++  aliases 后复演通过，该回归由单包合同测试固定。
++- release artifact 会规范化 tarball 内的 package manifest key order 和 gzip stream；在锁定的 Node
++  22.20.0 runtime 下连续重建保持 485325 bytes 与同一 SHA-256。
++- 远程 staging 与公开 registry evidence 待完成后补齐。
+diff --git a/.ai-platform/evidence/T131/tarball-manifest.json b/.ai-platform/evidence/T131/tarball-manifest.json
+new file mode 100644
+index 0000000..8e9f90d
+--- /dev/null
++++ b/.ai-platform/evidence/T131/tarball-manifest.json
+@@ -0,0 +1,137 @@
++{
++  "version": "1.0.0",
++  "packages": [
++    {
++      "name": "tellplot",
++      "version": "1.0.0",
++      "filename": "tellplot-1.0.0.tgz",
++      "sizeBytes": 485325,
++      "sha256": "e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e",
++      "files": [
++        {
++          "path": "LICENSE"
++        },
++        {
++          "path": "README.md"
++        },
++        {
++          "path": "dist/chunk-37B7HD7J.js"
++        },
++        {
++          "path": "dist/chunk-37B7HD7J.js.map"
++        },
++        {
++          "path": "dist/chunk-5VLMQTI5.cjs"
++        },
++        {
++          "path": "dist/chunk-5VLMQTI5.cjs.map"
++        },
++        {
++          "path": "dist/chunk-ETDLDTEO.cjs"
++        },
++        {
++          "path": "dist/chunk-ETDLDTEO.cjs.map"
++        },
++        {
++          "path": "dist/chunk-ZYGDNUG3.js"
++        },
++        {
++          "path": "dist/chunk-ZYGDNUG3.js.map"
++        },
++        {
++          "path": "dist/core.cjs"
++        },
++        {
++          "path": "dist/core.cjs.map"
++        },
++        {
++          "path": "dist/core.d.cts"
++        },
++        {
++          "path": "dist/core.d.ts"
++        },
++        {
++          "path": "dist/core.js"
++        },
++        {
++          "path": "dist/core.js.map"
++        },
++        {
++          "path": "dist/editorStore-BQi3O3_T.d.cts"
++        },
++        {
++          "path": "dist/editorStore-BQi3O3_T.d.ts"
++        },
++        {
++          "path": "dist/index.cjs"
++        },
++        {
++          "path": "dist/index.cjs.map"
++        },
++        {
++          "path": "dist/index.d.cts"
++        },
++        {
++          "path": "dist/index.d.ts"
++        },
++        {
++          "path": "dist/index.js"
++        },
++        {
++          "path": "dist/index.js.map"
++        },
++        {
++          "path": "dist/react.cjs"
++        },
++        {
++          "path": "dist/react.cjs.map"
++        },
++        {
++          "path": "dist/react.d.cts"
++        },
++        {
++          "path": "dist/react.d.ts"
++        },
++        {
++          "path": "dist/react.js"
++        },
++        {
++          "path": "dist/react.js.map"
++        },
++        {
++          "path": "dist/styles.css"
++        },
++        {
++          "path": "dist/styles.css.map"
++        },
++        {
++          "path": "dist/types-CCb9K82W.d.ts"
++        },
++        {
++          "path": "dist/types-CLtPYvZz.d.cts"
++        },
++        {
++          "path": "dist/vue.cjs"
++        },
++        {
++          "path": "dist/vue.cjs.map"
++        },
++        {
++          "path": "dist/vue.d.cts"
++        },
++        {
++          "path": "dist/vue.d.ts"
++        },
++        {
++          "path": "dist/vue.js"
++        },
++        {
++          "path": "dist/vue.js.map"
++        },
++        {
++          "path": "package.json"
++        }
++      ]
++    }
++  ]
++}
+diff --git a/.ai-platform/evidence/T131/test-results.md b/.ai-platform/evidence/T131/test-results.md
+new file mode 100644
+index 0000000..097e70c
+--- /dev/null
++++ b/.ai-platform/evidence/T131/test-results.md
+@@ -0,0 +1,26 @@
++# T131 Test Results
++
++## Status
++
++- Status: In_Progress
++- Runtime: Node 22.20.0 release runtime；开发期 focused tests 可使用 workspace runtime
++
++## Results
++
++| Gate | Result | Evidence |
++| --- | --- | --- |
++| Single-package RED contract | Passed as expected | 新增测试在实现前 4/4 失败 |
++| `tellplot` package build | Passed | ESM、CJS、declarations 与 CSS 生成成功 |
++| `tellplot` package contract | Passed | publint、ATTW、ESM/CJS/types/pack contract |
++| Architecture audit | Passed | 5 source layers、54 files、201 edges、0 cycle |
++| Release surface audit | Passed | public package 仅 `tellplot`；27 public files、20 Markdown files |
++| Supply chain | Passed | 14 AntV packages、17 exact artifacts、48 installed manifests；0 production vulnerabilities |
++| Unit and coverage | Passed | 55 files、454 tests；statements 88.44%、branches 80.65%、functions 89.40%、lines 88.52% |
++| Framework matrix | Passed | imperative no-framework、React 18.3.1、React 19.2.7、Vue 3.5.27 |
++| Current browser | Passed | Chromium/Firefox/WebKit 186/186 |
++| Accessibility | Passed | 45/45 |
++| Performance | Passed | 3/3；waterfall p95 90.3ms、categorical p95 101.2ms，均低于 150ms local budget |
++| Previous browser | Passed | previous release 186/186；WebKit 18.4 62/62 |
++| Isolated source rehearsal | Passed | 376 source files；frozen install 到单包 framework matrix 全部通过 |
++| Reproducible artifact | Passed | `tellplot-1.0.0.tgz` 485325 bytes；SHA-256 `e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e` |
++| Public staged artifact | Pending | 远程执行阶段生成 |
+diff --git a/.ai-platform/specs/013-single-package-distribution/analysis.md b/.ai-platform/specs/013-single-package-distribution/analysis.md
+new file mode 100644
+index 0000000..87aa8a9
+--- /dev/null
++++ b/.ai-platform/specs/013-single-package-distribution/analysis.md
+@@ -0,0 +1,36 @@
++# G007 单包分发与公开发布 Consistency Analysis
++
++- Version: 1.0.0
++- Status: Completed
++- Last updated: 2026-08-01
++
++## Inputs
++
++- Constitution: `.ai-platform/memory/constitution.md`
++- Product contract: `.ai-platform/docs/product-design.md`
++- Architecture and distribution decisions: TDR-022、TDR-023
++- Accepted architecture baseline: G006 / T125-T129
++- Release safety baseline: G005 / T130
++- Feature spec/plan/checklist: `013-single-package-distribution`
++- User approval: 2026-08-01 明确同意单包分析并要求完成调整
++
++## Coverage
++
++- DIST-FR-001 至 DIST-FR-005 全部映射到 T131。
++- DIST-NFR-001 至 DIST-NFR-004 由 package contract、architecture、framework matrix、release workflow 和
++  stop conditions 覆盖。
++- 单包只改变公共分发形态，不改变 G006 的内部依赖方向、唯一 runtime ownership 或产品行为。
++- G2/G SVG 从 editor peer/dev boundary 进入公共包 direct dependency 是已批准的安装合同变化；版本和供应链
++  allowlist 不变。
++- scoped 四包从未公开稳定发布，不存在需要兼容的外部 1.x consumer。
++
++## Findings
++
++无阻断性 spec、constitution、dependency、compatibility 或 authorization finding。
++
++## Execute Gate
++
++- Result: Clear
++- Scope: T131 单包实现、完整门禁与已授权公开发布
++- Remote authorization: 用户已在本任务链明确授权仓库公开、push、tag 受控重建、bootstrap、stage-only
++  Trusted Publisher、2FA approval 与 npm 发布
+diff --git a/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md b/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md
+new file mode 100644
+index 0000000..7c2e0c7
+--- /dev/null
++++ b/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md
+@@ -0,0 +1,11 @@
++# G007 Requirements Checklist
++
++- [x] 用户明确批准一个无 scope 的公共 `tellplot` 包。
++- [x] 内部 core/editor/React/Vue 分层继续保持私有和可独立测试。
++- [x] 公共根、core、React、Vue 和 CSS 子路径已明确。
++- [x] G2/G SVG direct dependency 与 React/Vue optional peer 边界已明确。
++- [x] 不保留未公开四包 API 兼容负担。
++- [x] 单包 package 与 framework consumer 门禁通过。
++- [x] 完整 release gate 与 reproducible artifact 通过。
++- [ ] 旧 staged candidates 清理并完成新 package trust 配置。
++- [ ] 公开 npm、tag、GitHub Release 与 fresh install 证据一致。
+diff --git a/.ai-platform/specs/013-single-package-distribution/packets/T131.yaml b/.ai-platform/specs/013-single-package-distribution/packets/T131.yaml
+new file mode 100644
+index 0000000..020f120
+--- /dev/null
++++ b/.ai-platform/specs/013-single-package-distribution/packets/T131.yaml
+@@ -0,0 +1,75 @@
++schema_version: 1
++packet_id: EP-013-T131
++task_id: T131
++feature_id: 013-single-package-distribution
++mode: execute_one_task
++adapter: codex
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/013-single-package-distribution/spec.md
++  requirements_checklist: .ai-platform/specs/013-single-package-distribution/checklists/requirements.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/013-single-package-distribution/plan.md
++  work_graph: .ai-platform/specs/013-single-package-distribution/tasks.md
++  analysis: .ai-platform/specs/013-single-package-distribution/analysis.md
++  approval_gates:
++    constitution: Confirmed by user
++    product_or_spec: Confirmed by explicit single-package approval on 2026-08-01
++    requirements_checklist: Completed for execution
++    technical_plan_and_work_graph: Confirmed
++    analysis: Clear
++work_unit:
++  title: 收敛单包分发并完成公开发布
++  goal: Publish one framework-neutral tellplot package with DOM, React and Vue entrypoints
++  epic: G007
++  story: single-package distribution
++  requirements: [DIST-FR-001, DIST-FR-002, DIST-FR-003, DIST-FR-004, DIST-FR-005]
++  priority: P0
++  depends_on: [T129, T130]
++  blocks: [tellplot 1.0.0 public release]
++  parallel: false
++  conflicts_with: [new chart families, schema changes, second renderer, scoped stable releases]
++codebase_context:
++  local_instructions: [AGENTS.md]
++  relevant_files: [packages, apps/playground, scripts/release, .github/workflows, docs, .ai-platform]
++  existing_patterns: [private workspace layers, package contracts, stage-only workflow, isolated-source rehearsal]
++  interfaces_or_contracts: [.ai-platform/specs/013-single-package-distribution/spec.md]
++  forbidden_changes: [chart behavior, SourceData schema, ViewSpec schema, command semantics, raw G2 public API]
++execution_constraints:
++  branch_or_worktree: main
++  allowed_files: [packages/**, apps/playground/**, scripts/release/**, .github/workflows/**, docs/**, README.md, CHANGELOG.md, AGENTS.md, .ai-platform/**, pnpm-lock.yaml]
++  test_targets: [single package surface, no-framework root, React 18 and 19, Vue 3, browsers, a11y, performance, supply chain, reproducible artifact, staging, public fresh install]
++  ownership_notes: [preserve G006 internal architecture, publish only tellplot]
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: pnpm exec vitest run packages/editor/tests/package/single-package-distribution.test.ts
++    expected_failure: public tellplot package and one-package release contract do not exist
++  green:
++    command: pnpm test:package && pnpm test:framework-matrix
++    expected_signal: all public subpaths and four host consumers pass from one tarball
++  refactor:
++    command: pnpm release:check
++    expected_signal: all stable release gates pass under Node 22.20.0
++validation_loop:
++  commands: [pnpm release:check, pnpm release:artifact, pnpm release:preflight, pnpm release:trust-readiness, python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 013-single-package-distribution --strict, git diff --check]
++  retry_budget: 2
++  failure_policy:
++    first_failure: diagnose and fix a T131-scoped issue
++    second_failure: classify code, browser host, registry, identity or authorization blocker
++    beyond_budget: stop and record blocked evidence
++evidence_contract:
++  summary: .ai-platform/evidence/T131/summary.md
++  diff: .ai-platform/evidence/T131/diff.patch
++  test_results: .ai-platform/evidence/T131/test-results.md
++  required: [changed files, RED and GREEN results, complete validation matrix, staged artifact, public registry verification]
++review_contract:
++  required_passes: [spec_compliance, bug_code_quality, qa_acceptance, release_artifact]
++  acceptance_rule: goal completes only after public fresh install and provenance verification
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options: [publish tellplot 1.0.0 and record final evidence]
++stop_conditions: [indeterminate registry state, tag lease drift, failed quality gate, staged hash mismatch, unavailable 2FA]
+diff --git a/.ai-platform/specs/013-single-package-distribution/plan.md b/.ai-platform/specs/013-single-package-distribution/plan.md
+new file mode 100644
+index 0000000..66d5a2b
+--- /dev/null
++++ b/.ai-platform/specs/013-single-package-distribution/plan.md
+@@ -0,0 +1,55 @@
++# G007 单包分发与公开发布 Plan
++
++## Metadata
++
++- Feature ID: `013-single-package-distribution`
++- Goal ID: `G007`
++- Version: 1.0.0
++- Status: Confirmed
++- Last updated: 2026-08-01
++- Approval: 用户已批准单包公共分发与后续发布执行
++
++## Delivery Strategy
++
++1. 先用 package contract 测试固定一个公共包、五个子路径、optional framework peers 和私有内部 layers。
++2. 建立 `packages/tellplot` 聚合构建入口，并保持 workspace source dependency graph 可审计、无环。
++3. 批量迁移 playground、公共文档、consumer fixtures、release scripts 与 workflow。
++4. 生成唯一可复现 tarball，执行 package/framework/browser/security/isolated-source 完整质量门禁。
++5. 清理旧四包 staged candidates，bootstrap `tellplot`，配置 stage-only Trusted Publisher 和 package 2FA。
++6. 提交并推送最终 clean main，受控重建并保护 annotated `v1.0.0`，从 exact tag 执行 staged publish。
++7. 下载 staged artifact 复核 hash、metadata 与 provenance；经人类 2FA approval 后验证公开 fresh install。
++
++## Architecture Boundary
++
++```text
++private workspace layers
++  @tellplot/core -> @tellplot/editor -> @tellplot/react
++                                  \-> @tellplot/vue
++
++public distribution
++  tellplot
++    |- . / core
++    |- react
++    |- vue
++    \- styles.css
++```
++
++构建可以内联私有 workspace layer，但根入口的静态运行时图不得加载 React 或 Vue。G2 和 G SVG 作为公共包
++直接依赖，由 package manager 保证单一安装合同。
++
++## Risk Controls
++
++- 不通过 re-export 私有 workspace package specifier 暴露不可安装依赖。
++- 使用 publint、ATTW、Node ESM/CJS、NodeNext TS 与 strict peer consumer 验证真实 tarball。
++- artifact manifest、workflow SHA、staged download SHA 三者必须一致。
++- 旧 scoped stage 在新 workflow 前拒绝，避免维护者误批历史候选。
++- tag 更新使用 expected-old-object lease；main、annotated tag peeled commit 与 workflow head 必须相同。
++- staging 和公开 approval 分离；任一未知状态失败关闭。
++
++## Validation
++
++- `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test:coverage`、`pnpm build`。
++- `pnpm release:architecture`、`pnpm release:audit`、`pnpm test:package`、`pnpm test:framework-matrix`。
++- `pnpm test:e2e`、`pnpm test:a11y`、`pnpm test:performance`、`pnpm test:browser-previous`。
++- `pnpm security:lock`、`pnpm security:dependencies`、`pnpm audit:prod`、`pnpm release:rehearse`。
++- `pnpm release:artifact`、strict artifact validator、`git diff --check`。
+diff --git a/.ai-platform/specs/013-single-package-distribution/spec.md b/.ai-platform/specs/013-single-package-distribution/spec.md
+new file mode 100644
+index 0000000..df26196
+--- /dev/null
++++ b/.ai-platform/specs/013-single-package-distribution/spec.md
+@@ -0,0 +1,75 @@
++# G007 单包分发与公开发布 Spec
++
++## Metadata
++
++- Feature ID: `013-single-package-distribution`
++- Goal ID: `G007`
++- Version: 1.0.0
++- Status: Confirmed
++- Last updated: 2026-08-01
++- Approval: 用户明确批准保留框架无关内部架构，并将 npm 分发收敛为一个无 scope 的 `tellplot` 包
++
++## Objective
++
++TellPlot 以一个可直接安装的公共 npm 包提供 imperative DOM、React 和 Vue 能力，同时保留已经验收的
++core、editor、React adapter 与 Vue adapter 内部分层。公共分发与 G2/ECharts 一类库保持相同的单包心智，
++内部 ownership、测试隔离和框架边界不因发布形态而退化。
++
++## Requirements
++
++### DIST-FR-001 单一公共包
++
++npm 只发布无 scope 的 `tellplot`。`packages/core`、`packages/editor`、`packages/react` 和 `packages/vue`
++均为 `private` workspace layer，不得独立进入 artifact、staging 或公开版本。
++
++### DIST-FR-002 稳定子路径
++
++公共入口固定为：
++
++- `tellplot`：core 领域 API 与 `createEditor`。
++- `tellplot/core`：显式 core-only 入口。
++- `tellplot/react`：React 18/19 `ChartEditor`。
++- `tellplot/vue`：Vue 3 `ChartEditor`。
++- `tellplot/styles.css`：完整编辑器样式。
++
++各 JavaScript 入口必须提供 ESM、CJS 与 TypeScript declarations。根入口不得在加载时要求 React 或 Vue。
++
++### DIST-FR-003 依赖合同
++
++`tellplot` 直接依赖精确审核的 `@antv/g2@5.4.8` 与 `@antv/g-svg@2.1.1`。React 和 Vue 是 optional peer
++dependencies；imperative consumer 不安装框架也可通过 strict peer install、build、运行和卸载验证。
++
++### DIST-FR-004 单包消费迁移
++
++playground、文档、quickstart、framework matrix、package contract、artifact、preflight 和 GitHub workflow
++全部消费或验证 `tellplot` 及其子路径。安装文档只要求 `pnpm add tellplot`。
++
++### DIST-FR-005 单包发布控制
++
++公开候选只包含一个 `tellplot-1.0.0.tgz`。工作流继续使用 exact annotated tag、protected environment、
++stage-only Trusted Publisher、provenance、固定 SHA-256、人类复核与 2FA approval，不直接执行 `npm publish`。
++既有四个 scoped bootstrap package 和未批准 stage 不得进入稳定发布结果。
++
++## Non-Functional Requirements
++
++- DIST-NFR-001：不改变 SourceData、ViewSpec、命令、图表行为、G2 ownership 或 schema。
++- DIST-NFR-002：不把 React/Vue 打入根入口的运行时依赖图；框架 adapters 不拥有第二套状态或编辑器。
++- DIST-NFR-003：package import、类型、strict peer、browser、a11y、performance、supply-chain 与 isolated-source
++  rehearsal 继续作为阻断门禁。
++- DIST-NFR-004：不保留未公开四包布局的兼容入口或迁移 shim。
++
++## Success Criteria
++
++- DIST-SC-001：registry-facing contract 只包含 `tellplot@1.0.0`。
++- DIST-SC-002：根、core、React、Vue 和 CSS 子路径的 tarball consumer 验证全部通过。
++- DIST-SC-003：无框架 consumer 不安装 React/Vue 仍可安装、构建和运行。
++- DIST-SC-004：完整 release gate、artifact reproducibility 与 fresh-source rehearsal 通过。
++- DIST-SC-005：旧 staged candidates 被拒绝；公开 npm、tag、GitHub Release 与 fresh install 状态可追溯。
++- DIST-SC-006：无 unresolved Critical、High 或 Medium finding。
++
++## Non-Goals
++
++- 合并内部源码目录或削弱 architecture import boundary。
++- 为旧 scoped package 提供兼容 re-export。
++- 新图表、schema、配置、交互或视觉功能。
++- 注册 npm organization 或把 `@tellplot` scope 作为公共安装前提。
+diff --git a/.ai-platform/specs/013-single-package-distribution/tasks.md b/.ai-platform/specs/013-single-package-distribution/tasks.md
+new file mode 100644
+index 0000000..b4043bb
+--- /dev/null
++++ b/.ai-platform/specs/013-single-package-distribution/tasks.md
+@@ -0,0 +1,36 @@
++# G007 单包分发与公开发布 Work Graph
++
++## Metadata
++
++- Feature ID: `013-single-package-distribution`
++- Goal ID: `G007`
++- Version: 1.0.0
++- Status: In_Progress
++- Last updated: 2026-08-01
++- Approval: 用户明确批准本目标及单包发布边界
++
++## T131 - 收敛单包分发并完成公开发布
++
++- Status: In_Progress
++- Priority: P0
++- Story / Requirement: DIST-FR-001 至 005；DIST-NFR-001 至 004
++- Dependencies: G006 / T125-T129 Accepted；G005 / T130 本地发布安全门禁可复用
++- Blocks: `tellplot@1.0.0` 公开发布
++- Parallel: false
++- Conflicts with: 新图表、schema、编辑行为、第二渲染引擎、公开旧四包稳定版本、兼容 shim
++- Goal: 以一个 `tellplot` 公共包交付 imperative、React 和 Vue 完整编辑器，并完成可追溯的 1.0.0 发布。
++- Allowed files: `packages/**`、`apps/playground/**`、`scripts/release/**`、`.github/workflows/**`、
++  `docs/**`、`README.md`、`CHANGELOG.md`、`AGENTS.md`、`.ai-platform/**`、测试与 lockfile
++- Test targets: package/public surface、architecture、framework consumers、browser/a11y/performance、
++  supply chain、artifact reproducibility、preflight、staging 与 public fresh install
++- Deliverables: `tellplot` 包、私有内部 layers、单包文档/fixtures/release pipeline、T131 evidence、公开 1.0.0。
++- Acceptance criteria: DIST-SC-001 至 006 满足；公开 registry 只产生 `tellplot@1.0.0` 稳定结果。
++- Definition of Done: 本地与托管门禁通过；旧 stage 已清理；tag、workflow、staged artifact、npm 公开版本、
++  provenance 和 fresh install 证据一致；无未解决发布阻塞。
++- Validation commands: `pnpm release:check`；`pnpm release:preflight`；`pnpm release:artifact`；
++  `pnpm release:trust-readiness`；public registry/provenance/fresh-install verification
++- TDD plan: RED 固定单包合同；GREEN 建立聚合包并迁移所有 consumers；REFACTOR 以完整 release matrix 和
++  公共 staged artifact 关闭边界缺口。
++- Packet path: `.ai-platform/specs/013-single-package-distribution/packets/T131.yaml`
++- Evidence required: `.ai-platform/evidence/T131/summary.md`、`test-results.md`、`review.md`、
++  `tarball-manifest.json`、workflow/stage/registry evidence
+diff --git a/.github/workflows/publish-npm.yml b/.github/workflows/publish-npm.yml
+index 3961bdf..5981347 100644
+--- a/.github/workflows/publish-npm.yml
++++ b/.github/workflows/publish-npm.yml
+@@ -1,12 +1,12 @@
+-name: Stage npm packages (stage-only Trusted Publishing after bootstrap)
++name: Stage npm package (stage-only Trusted Publishing after bootstrap)
+ 
+ on:
+   workflow_dispatch:
+     inputs:
+       confirmation:
+         description: >-
+-          After separately bootstrapping all four package roots and verifying that their Trusted
+-          Publishers have allow-stage-publish enabled and allow-publish disabled, type
++          After separately bootstrapping tellplot and verifying that its Trusted Publisher has
++          allow-stage-publish enabled and allow-publish disabled, type
+           "stage 1.0.0 stage-only-trusted-publishers-verified" on the exact v1.0.0 tag
+         required: true
+         type: string
+@@ -74,7 +74,7 @@ jobs:
+           ref: ${{ github.sha }}
+           fetch-depth: 1
+           persist-credentials: false
+-          sparse-checkout: .ai-platform/evidence/T129/artifacts
++          sparse-checkout: .ai-platform/evidence/T131/artifacts
+           sparse-checkout-cone-mode: false
+       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+         with:
+@@ -105,7 +105,7 @@ jobs:
+ 
+           canonical_remote='https://github.com/iiwish/tellplot.git'
+           expected_workflow_ref='iiwish/tellplot/.github/workflows/publish-npm.yml@refs/tags/v1.0.0'
+-          artifact_root='.ai-platform/evidence/T129/artifacts'
++          artifact_root='.ai-platform/evidence/T131/artifacts'
+ 
+           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+           test "$GITHUB_ACTIONS" = 'true'
+@@ -155,13 +155,7 @@ jobs:
+           test "$remote_tag_object" != "$remote_tag_commit"
+           test "$remote_tag_commit" = "$GITHUB_SHA"
+ 
+-          expected_tarballs="$(
+-            printf '%s\n' \
+-              'tellplot-core-1.0.0.tgz' \
+-              'tellplot-editor-1.0.0.tgz' \
+-              'tellplot-react-1.0.0.tgz' \
+-              'tellplot-vue-1.0.0.tgz'
+-          )"
++          expected_tarballs='tellplot-1.0.0.tgz'
+           actual_tarballs="$(
+             find "$artifact_root" -maxdepth 1 -type f -name '*.tgz' -printf '%f\n' |
+               LC_ALL=C sort
+@@ -169,10 +163,7 @@ jobs:
+           test "$actual_tarballs" = "$expected_tarballs"
+ 
+           sha256sum --check --strict <<'SHA256'
+-          4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b  .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
+-          3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2  .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
+-          c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242  .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
+-          a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811  .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
++          e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e  .ai-platform/evidence/T131/artifacts/tellplot-1.0.0.tgz
+           SHA256
+ 
+           check_registry_status() {
+@@ -192,38 +183,11 @@ jobs:
+           }
+ 
+           check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Fcore' 200 '@tellplot/core root'
+-          check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Fcore/1.0.0' 404 '@tellplot/core@1.0.0'
+-          check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Feditor' 200 '@tellplot/editor root'
+-          check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Feditor/1.0.0' 404 '@tellplot/editor@1.0.0'
++            'https://registry.npmjs.org/tellplot' 200 'tellplot root'
+           check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Freact' 200 '@tellplot/react root'
+-          check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Freact/1.0.0' 404 '@tellplot/react@1.0.0'
+-          check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Fvue' 200 '@tellplot/vue root'
+-          check_registry_status \
+-            'https://registry.npmjs.org/%40tellplot%2Fvue/1.0.0' 404 '@tellplot/vue@1.0.0'
+-      - name: Stage @tellplot/core
+-        run: >-
+-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-core-1.0.0.tgz
+-          --ignore-scripts --tag=latest --provenance
+-          --registry=https://registry.npmjs.org/
+-      - name: Stage @tellplot/editor
+-        run: >-
+-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-editor-1.0.0.tgz
+-          --ignore-scripts --tag=latest --provenance
+-          --registry=https://registry.npmjs.org/
+-      - name: Stage @tellplot/react
+-        run: >-
+-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-react-1.0.0.tgz
+-          --ignore-scripts --tag=latest --provenance
+-          --registry=https://registry.npmjs.org/
+-      - name: Stage @tellplot/vue
++            'https://registry.npmjs.org/tellplot/1.0.0' 404 'tellplot@1.0.0'
++      - name: Stage tellplot
+         run: >-
+-          npm stage publish .ai-platform/evidence/T129/artifacts/tellplot-vue-1.0.0.tgz
++          npm stage publish .ai-platform/evidence/T131/artifacts/tellplot-1.0.0.tgz
+           --ignore-scripts --tag=latest --provenance
+           --registry=https://registry.npmjs.org/
+diff --git a/AGENTS.md b/AGENTS.md
+index cdeea21..9f1f4bb 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -3,11 +3,11 @@
+ ## 项目状态
+ 
+ - 当前阶段：T101-T116、G002 / T117、G002-R1 / T118、G002-R2 / T119、G002-R3 / T122、
+-  G004 / T123 与 G006 / T125-T129 均已验收；G005 / T130 本地发布准备为 `Needs_Review`，公开执行
+-  等待独立远程授权、stale tag 受控重建、npm package bootstrap、stage-only Trusted Publisher、2FA 与
+-  托管外部条件。
+-- 当前仓库包含 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue`、完整
+-  playground、单元/组件/E2E/兼容性测试和四包发布候选 evidence。
++  G004 / T123 与 G006 / T125-T129 均已验收；G007 / T131 已获用户批准，正在把公共分发收敛为单个
++  `tellplot` 包并完成 1.0.0 发布。
++- 当前仓库以 `tellplot` 作为唯一公共包；内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、
++  `@tellplot/vue` 均为 private workspace layers。playground、单元/组件/E2E/兼容性测试和单包发布 evidence
++  共同验证公共入口。
+ - 产品 SSOT：`.ai-platform/docs/product-design.md`。
+ - 项目原则：`.ai-platform/memory/constitution.md`。
+ - 技术决策：`.ai-platform/docs/technology-decision-record.md`。
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 7dc5b7a..15b572f 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -10,7 +10,9 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
+ ### Added
+ 
+ - 基于 AntV G2 的瀑布图、分类条形图和分类柱状图。
+-- 框架无关 `@tellplot/core`、imperative `@tellplot/editor`、React 18/19 与 Vue 3 adapters。
++- 单个 `tellplot` 公共包，以及 `tellplot/core`、`tellplot/react`、`tellplot/vue` 和
++  `tellplot/styles.css` 子路径。
++- 框架无关 core、imperative editor、React 18/19 与 Vue 3 adapters 的私有 workspace 分层。
+ - 排序、递归分组、折叠、固定、注释、强调与撤销重做。
+ - `ViewSpec` 验证、序列化和恢复。
+ - SVG/PNG 导出、安全图表配置与无障碍摘要。
+@@ -27,8 +29,10 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
+ - 配置统一收纳到 `config.data`、`config.appearance` 与 `config.editor`；可编辑状态使用 `view`、
+   `defaultView` 和受控更新事件。
+ - 编辑器 runtime 与领域状态从 framework 生命周期中分离；framework adapters 只代理 create/update/destroy。
++- G2/G SVG 由 `tellplot` 直接依赖，React/Vue 作为 optional peers；imperative consumer 无需安装前端框架。
+ 
+ ### Stability
+ 
+-- 四包 runtime exports、公共类型、schema、错误码、framework/G2 peer 范围和浏览器合同进入 1.x 兼容承诺。
++- `tellplot` 根入口及文档化子路径的 runtime exports、公共类型、schema、错误码、framework peer 与浏览器
++  合同进入 1.x 兼容承诺。
+ - npm publish、Git tag、GitHub Release 和生产部署需要独立授权，版本字段不表示已经公开发布。
+diff --git a/README.md b/README.md
+index dbef449..ab78693 100644
+--- a/README.md
++++ b/README.md
+@@ -3,33 +3,25 @@
+ TellPlot 是基于 AntV G2 的框架无关可编辑基础图表库。它提供瀑布图、分类条形图和分类柱状图，完整编辑器
+ 可直接挂载到任意 DOM 容器，也可通过 React 18/19 或 Vue 3 薄适配器接入。
+ 
+-## 包结构
++## 分发结构
+ 
+-- `@tellplot/core`：配置、数据模型、投影、命令、历史和无 DOM `EditorStore`。
+-- `@tellplot/editor`：imperative DOM/G2 编辑器、交互、导出和样式。
+-- `@tellplot/react`：React 生命周期适配器。
+-- `@tellplot/vue`：Vue 3 生命周期与 `v-model:view` 适配器。
++TellPlot 对外只发布 `tellplot`。根入口提供数据、命令与 imperative 编辑器，`tellplot/core`、
++`tellplot/react` 和 `tellplot/vue` 提供隔离的按需入口。仓库内部继续按 core、editor、React 和 Vue
++分层，框架适配器不拥有第二套编辑状态或 G2 runtime。
+ 
+ 编辑动作只产生新的 `ViewSpec`，不会改写宿主持有的 `SourceData`。直接操作、结构大纲、键盘和宿主命令
+ 进入同一套确定性命令与历史。
+ 
+ ## 快速开始
+ 
+-在已有宿主项目中选择对应入口。G2 使用经过兼容与安全复核的精确版本：
++在已有宿主项目中安装一个包。G2 使用 TellPlot 内部经过兼容与安全复核的精确版本：
+ 
+ ```bash
+-# 原生 DOM 或其他 framework
+-pnpm add @tellplot/core @tellplot/editor @antv/g2@5.4.8
+-
+-# React 18.3 / 19
+-pnpm add @tellplot/core @tellplot/react @antv/g2@5.4.8
+-
+-# Vue 3.5
+-pnpm add @tellplot/core @tellplot/vue @antv/g2@5.4.8
++pnpm add tellplot
+ ```
+ 
+ 三种可复制示例、公共配置和受控状态说明见[入门与三种集成](docs/getting-started.md)。每个 UI 入口都需
+-导入自身的 `styles.css`；原生 DOM 接入还需在卸载时调用 `destroy()`。
++导入统一的 `tellplot/styles.css`；原生 DOM 接入还需在卸载时调用 `destroy()`。
+ 
+ ## 本地开发
+ 
+@@ -50,8 +42,8 @@ pnpm test:package
+ pnpm test:framework-matrix
+ ```
+ 
+-本地网站入口包括产品首页、示例中心、开发者文档和完整编辑工作台。网站使用
+-`@tellplot/react`，编辑能力仍由 `@tellplot/editor` 唯一实现。
++本地网站入口包括产品首页、示例中心、开发者文档和完整编辑工作台。网站通过 `tellplot/react`
++消费公共包，编辑能力仍由内部 framework-neutral editor 唯一实现。
+ 
+ ## 文档
+ 
+@@ -65,7 +57,7 @@ pnpm test:framework-matrix
+ - [版本与兼容政策](docs/versioning.md)
+ - [产品设计 SSOT](.ai-platform/docs/product-design.md)
+ 
+-`1.0.0` 四包本地候选的公开 npm、Git tag、GitHub Release 和生产部署均需独立授权。
++`tellplot@1.0.0` 的公开 npm、Git tag、GitHub Release 和生产部署均经过独立发布闸门。
+ 
+ ## License
+ 
+diff --git a/apps/playground/package.json b/apps/playground/package.json
+index 3176d92..e8f51f6 100644
+--- a/apps/playground/package.json
++++ b/apps/playground/package.json
+@@ -9,11 +9,9 @@
+     "typecheck": "tsc --noEmit -p tsconfig.json"
+   },
+   "dependencies": {
+-    "@antv/g2": "5.4.8",
+-    "@tellplot/core": "workspace:*",
+-    "@tellplot/react": "workspace:*",
+     "lucide-react": "1.24.0",
+     "react": "19.2.7",
+-    "react-dom": "19.2.7"
++    "react-dom": "19.2.7",
++    "tellplot": "workspace:*"
+   }
+ }
+diff --git a/apps/playground/src/DocsPage.tsx b/apps/playground/src/DocsPage.tsx
+index b3d7385..56e42a6 100644
+--- a/apps/playground/src/DocsPage.tsx
++++ b/apps/playground/src/DocsPage.tsx
+@@ -4,9 +4,9 @@ import { DEMO_WATERFALL_COLORS } from './demoPresentation';
+ import { SiteFooter } from './SiteFooter';
+ import { SiteLink } from './SiteLink';
+ 
+-const MINIMAL_REACT_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
+-import { ChartEditor } from '@tellplot/react';
+-import '@tellplot/react/styles.css';
++const MINIMAL_REACT_EXAMPLE = `import type { ChartConfig } from 'tellplot';
++import { ChartEditor } from 'tellplot/react';
++import 'tellplot/styles.css';
+ 
+ const config = {
+   type: 'waterfall',
+@@ -84,14 +84,11 @@ export function DocsPage({
+                 <h2>安装</h2>
+               </header>
+               <p>
+-                <code>@tellplot/core</code> 提供领域能力，<code>@tellplot/editor</code> 提供 DOM/G2
+-                runtime，<code>@tellplot/react</code> 只负责 React 生命周期。
++                <code>tellplot</code> 提供完整 DOM/G2 runtime 与领域能力；React 和 Vue
++                分别通过同包子路径接入。
+               </p>
+               <pre>
+-                <code>
+-                  pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react
+-                  react-dom
+-                </code>
++                <code>pnpm add tellplot</code>
+               </pre>
+             </section>
+ 
+diff --git a/apps/playground/src/ExampleWorkbench.tsx b/apps/playground/src/ExampleWorkbench.tsx
+index 0b4bf47..ddac3a5 100644
+--- a/apps/playground/src/ExampleWorkbench.tsx
++++ b/apps/playground/src/ExampleWorkbench.tsx
+@@ -7,8 +7,8 @@ import {
+   type ChartEditorOptions,
+   type SourceData,
+   type ViewSpec,
+-} from '@tellplot/core';
+-import { ChartEditor, type ChartEditorHandle, type ExportError } from '@tellplot/react';
++} from 'tellplot';
++import { ChartEditor, type ChartEditorHandle, type ExportError } from 'tellplot/react';
+ import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
+ import { useEffect, useMemo, useRef, useState } from 'react';
+ 
+diff --git a/apps/playground/src/HomePage.tsx b/apps/playground/src/HomePage.tsx
+index abd91dd..f49dd32 100644
+--- a/apps/playground/src/HomePage.tsx
++++ b/apps/playground/src/HomePage.tsx
+@@ -16,8 +16,7 @@ import { writeClipboard } from './clipboard';
+ import { ShowcaseChart } from './ShowcaseChart';
+ import { SiteFooter } from './SiteFooter';
+ 
+-const INSTALL_COMMAND =
+-  'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom';
++const INSTALL_COMMAND = 'pnpm add tellplot';
+ 
+ const DATA_FLOW = [
+   {
+@@ -46,9 +45,9 @@ const DATA_FLOW = [
+   },
+ ] as const;
+ 
+-const CONFIG_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
+-import { ChartEditor } from '@tellplot/react';
+-import '@tellplot/react/styles.css';
++const CONFIG_EXAMPLE = `import type { ChartConfig } from 'tellplot';
++import { ChartEditor } from 'tellplot/react';
++import 'tellplot/styles.css';
+ import { revenueData } from './revenue.data';
+ 
+ const config = {
+diff --git a/apps/playground/src/LiveChartEditor.tsx b/apps/playground/src/LiveChartEditor.tsx
+index bdab509..b6117b5 100644
+--- a/apps/playground/src/LiveChartEditor.tsx
++++ b/apps/playground/src/LiveChartEditor.tsx
+@@ -1,7 +1,7 @@
+ import { Check, Copy, Play } from 'lucide-react';
+ import { useEffect, useRef, useState } from 'react';
+ 
+-import type { ChartConfig, ViewSpec } from '@tellplot/core';
++import type { ChartConfig, ViewSpec } from 'tellplot';
+ 
+ import {
+   parsePlaygroundChartConfig,
+diff --git a/apps/playground/src/ShowcaseChart.tsx b/apps/playground/src/ShowcaseChart.tsx
+index 1f8f80a..af5c00b 100644
+--- a/apps/playground/src/ShowcaseChart.tsx
++++ b/apps/playground/src/ShowcaseChart.tsx
+@@ -1,5 +1,5 @@
+-import type { ChartConfig, SourceData } from '@tellplot/core';
+-import { ChartEditor } from '@tellplot/react';
++import type { ChartConfig, SourceData } from 'tellplot';
++import { ChartEditor } from 'tellplot/react';
+ 
+ import { EXAMPLE_CATALOG, type ShowcaseExampleId } from './exampleCatalog';
+ import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from './demoPresentation';
+diff --git a/apps/playground/src/UsageGuide.tsx b/apps/playground/src/UsageGuide.tsx
+index 028ed2a..686d866 100644
+--- a/apps/playground/src/UsageGuide.tsx
++++ b/apps/playground/src/UsageGuide.tsx
+@@ -1,17 +1,16 @@
+ import { Braces, Check, Copy, FileJson2, PackageOpen, SlidersHorizontal, X } from 'lucide-react';
+ import { useEffect, useRef, useState } from 'react';
+ 
+-import type { ChartConfig, ViewSpec } from '@tellplot/core';
++import type { ChartConfig, ViewSpec } from 'tellplot';
+ 
+ import { writeClipboard } from './clipboard';
+ import { DEMO_WATERFALL_COLORS } from './demoPresentation';
+ import { LiveChartEditor } from './LiveChartEditor';
+ 
+-const INSTALL_CODE =
+-  'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom';
++const INSTALL_CODE = 'pnpm add tellplot';
+ 
+-const REACT_CODE = `import { ChartEditor } from '@tellplot/react';
+-import '@tellplot/react/styles.css';
++const REACT_CODE = `import { ChartEditor } from 'tellplot/react';
++import 'tellplot/styles.css';
+ import { sourceData } from './profit-bridge.data';
+ 
+ const config = {
+@@ -23,7 +22,7 @@ export function ProfitBridge() {
+   return <ChartEditor config={config} />;
+ }`;
+ 
+-const APPEARANCE_CODE = `import { ChartEditor } from '@tellplot/react';
++const APPEARANCE_CODE = `import { ChartEditor } from 'tellplot/react';
+ import { sourceData } from './profit-bridge.data';
+ 
+ const config = {
+@@ -211,7 +210,7 @@ export function UsageGuide({
+       <header className="playground-usage-header">
+         <div>
+           <h2 id={`${id}-title`}>在项目中使用 TellPlot</h2>
+-          <code>{developerView === 'live' ? 'tellplot.config.json' : '@tellplot/react'}</code>
++          <code>{developerView === 'live' ? 'tellplot.config.json' : 'tellplot/react'}</code>
+         </div>
+         <button
+           ref={closeButtonRef}
+diff --git a/apps/playground/src/chartDocument.ts b/apps/playground/src/chartDocument.ts
+index 447f26c..b98d693 100644
+--- a/apps/playground/src/chartDocument.ts
++++ b/apps/playground/src/chartDocument.ts
+@@ -5,7 +5,7 @@ import {
+   type ChartConfig,
+   type ValidationErrorCode,
+   type ViewSpec,
+-} from '@tellplot/core';
++} from 'tellplot';
+ 
+ export interface PlaygroundPublicFileError {
+   readonly code: 'INVALID_JSON' | ValidationErrorCode;
+diff --git a/apps/playground/src/fixtures.ts b/apps/playground/src/fixtures.ts
+index 3017162..5d33712 100644
+--- a/apps/playground/src/fixtures.ts
++++ b/apps/playground/src/fixtures.ts
+@@ -1,4 +1,4 @@
+-import type { SourceData } from '@tellplot/core';
++import type { SourceData } from 'tellplot';
+ 
+ const financialFixture = {
+   schemaVersion: '1.0.0',
+diff --git a/apps/playground/src/main.tsx b/apps/playground/src/main.tsx
+index 5c79f12..3282a49 100644
+--- a/apps/playground/src/main.tsx
++++ b/apps/playground/src/main.tsx
+@@ -1,7 +1,7 @@
+ import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+ 
+-import '@tellplot/react/styles.css';
++import 'tellplot/styles.css';
+ 
+ import { App } from './App';
+ import './playground.css';
+diff --git a/apps/playground/src/showcaseView.ts b/apps/playground/src/showcaseView.ts
+index 98e33c2..1ec31e0 100644
+--- a/apps/playground/src/showcaseView.ts
++++ b/apps/playground/src/showcaseView.ts
+@@ -1,9 +1,4 @@
+-import {
+-  createInitialViewSpec,
+-  type ChartType,
+-  type SourceData,
+-  type ViewSpec,
+-} from '@tellplot/core';
++import { createInitialViewSpec, type ChartType, type SourceData, type ViewSpec } from 'tellplot';
+ 
+ const GROWTH_GROUP_ID = 'showcase-growth-drivers';
+ const GROWTH_ITEM_IDS = ['sales-volume', 'price-impact', 'product-mix'] as const;
+diff --git a/apps/playground/src/siteRouting.ts b/apps/playground/src/siteRouting.ts
+index 354679e..8abcf9e 100644
+--- a/apps/playground/src/siteRouting.ts
++++ b/apps/playground/src/siteRouting.ts
+@@ -51,7 +51,7 @@ export function siteDescriptionForRoute(route: SiteRoute): string {
+     case 'examples':
+       return '浏览 TellPlot 已验证的瀑布图、分类柱状图和分类条形图示例。';
+     case 'docs':
+-      return '了解 @tellplot/editor 的安装、数据合同、安全配置和导出能力。';
++      return '了解 tellplot 的安装、数据合同、安全配置和导出能力。';
+     case 'playground':
+       return '实时编辑 TellPlot 公共图表配置与视图状态，并同步查看结构和图形变化。';
+     case 'not-found':
+diff --git a/apps/playground/tests/chartDocument.test.ts b/apps/playground/tests/chartDocument.test.ts
+index cdc136b..1a64f4f 100644
+--- a/apps/playground/tests/chartDocument.test.ts
++++ b/apps/playground/tests/chartDocument.test.ts
+@@ -1,6 +1,6 @@
+ import { describe, expect, it } from 'vitest';
+ 
+-import type { ChartConfig, ViewSpec } from '@tellplot/core';
++import type { ChartConfig, ViewSpec } from 'tellplot';
+ 
+ import {
+   parsePlaygroundChartConfig,
+diff --git a/apps/playground/tsconfig.json b/apps/playground/tsconfig.json
+index ddf2319..bff41d0 100644
+--- a/apps/playground/tsconfig.json
++++ b/apps/playground/tsconfig.json
+@@ -6,7 +6,10 @@
+     "paths": {
+       "@tellplot/core": ["../../packages/core/src/index.ts"],
+       "@tellplot/editor": ["../../packages/editor/src/index.ts"],
+-      "@tellplot/react": ["../../packages/react/src/index.tsx"]
++      "@tellplot/react": ["../../packages/react/src/index.tsx"],
++      "@tellplot/vue": ["../../packages/vue/src/index.ts"],
++      "tellplot": ["../../packages/tellplot/src/index.ts"],
++      "tellplot/react": ["../../packages/tellplot/src/react.ts"]
+     }
+   },
+   "include": ["src", "vite.config.ts"]
+diff --git a/apps/playground/vite.config.ts b/apps/playground/vite.config.ts
+index aff4697..e16cf02 100644
+--- a/apps/playground/vite.config.ts
++++ b/apps/playground/vite.config.ts
+@@ -29,22 +29,34 @@ export default defineConfig({
+         replacement: fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
+       },
+       {
+-        find: '@tellplot/react/styles.css',
+-        replacement: fileURLToPath(new URL('../../packages/react/src/styles.css', import.meta.url)),
++        find: '@tellplot/editor',
++        replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
++      },
++      {
++        find: '@tellplot/react',
++        replacement: fileURLToPath(new URL('../../packages/react/src/index.tsx', import.meta.url)),
++      },
++      {
++        find: '@tellplot/vue',
++        replacement: fileURLToPath(new URL('../../packages/vue/src/index.ts', import.meta.url)),
+       },
+       {
+-        find: '@tellplot/editor/styles.css',
++        find: 'tellplot/styles.css',
+         replacement: fileURLToPath(
+-          new URL('../../packages/editor/src/styles/editor.css', import.meta.url),
++          new URL('../../packages/tellplot/src/styles.css', import.meta.url),
+         ),
+       },
+       {
+-        find: '@tellplot/react',
+-        replacement: fileURLToPath(new URL('../../packages/react/src/index.tsx', import.meta.url)),
++        find: 'tellplot/react',
++        replacement: fileURLToPath(
++          new URL('../../packages/tellplot/src/react.ts', import.meta.url),
++        ),
+       },
+       {
+-        find: '@tellplot/editor',
+-        replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
++        find: 'tellplot',
++        replacement: fileURLToPath(
++          new URL('../../packages/tellplot/src/index.ts', import.meta.url),
++        ),
+       },
+     ],
+   },
+diff --git a/docs/README.md b/docs/README.md
+index ead8778..58c60e7 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -29,9 +29,8 @@
+ - `/docs`：面向接入方的可扫描文档入口。
+ - `/playground`：公共 `ChartConfig`、独立 `ViewSpec`、结构大纲、检查器与导入导出工作台。
+ 
+-网站页面通过 `@tellplot/react` 消费 `@tellplot/editor`，并从 `@tellplot/core` 使用数据与持久化能力。
+-`docs/**` 与 package README 是长期 canonical 文档。网站不提供远程内容、版本服务、搜索后端或公共图表
+-registry。
++网站页面通过 `tellplot/react` 消费唯一公共包，并从 `tellplot` 使用数据与持久化能力。`docs/**` 与
++package README 是长期 canonical 文档。网站不提供远程内容、版本服务、搜索后端或公共图表 registry。
+ 
+ ## 文档规则
+ 
+diff --git a/docs/api.md b/docs/api.md
+index caa0201..76500d8 100644
+--- a/docs/api.md
++++ b/docs/api.md
+@@ -1,8 +1,14 @@
+ # TellPlot 公共 API
+ 
+-## `@tellplot/core`
++```bash
++pnpm add tellplot
++```
++
++根入口、core、React 和 Vue 使用同一个版本与 tarball；只允许从下列声明的 subpath 导入。
+ 
+-领域与状态包不访问 DOM，导出：
++## `tellplot/core`
++
++core 入口不访问 DOM、G2 或 UI framework，导出：
+ 
+ - `validateChartConfig`、`validateSourceData`、`validateViewSpec`。
+ - `createInitialViewSpec`、`parseViewSpec`、`serializeViewSpec`、`viewSpecsEqual`。
+@@ -39,7 +45,9 @@
+ 
+ 以上 named exports 都属于 1.x 公共表面；各字段的精确 readonly、union 和泛型签名以包内 `.d.ts` 为准。
+ 
+-## `@tellplot/editor`
++## `tellplot`
++
++根入口包含 `tellplot/core` 的全部公共能力，并额外提供 framework-neutral imperative editor：
+ 
+ ```ts
+ const editor = createEditor(container, options);
+@@ -79,7 +87,7 @@ G2 实例或 DOM。
+ 销毁后 `update`/`focus` 为 no-op，`dispatch`/`undo`/`redo` 返回 `null`，`getView` 抛出
+ `TellPlotEditorError`/`EDITOR_DESTROYED`，`exportImage` 以 `EXPORT_UNAVAILABLE` 拒绝。
+ 
+-## `@tellplot/react`
++## `tellplot/react`
+ 
+ `ChartEditor` props 与 `EditorOptions` 对齐，并支持 `className`、`style`。`ChartEditorHandle` 只代理
+ `focus`、`getView` 和 `exportImage`。Strict Mode 下每个创建的 instance 都会对应一次销毁。
+@@ -87,7 +95,7 @@ G2 实例或 DOM。
+ 传入 `view` 与 `onViewChange` 进行受控更新；只传 `defaultView` 或两者都不传时为非受控。卸载后调用旧 ref
+ handle 的 `getView` 会抛出未挂载错误，`exportImage` 会返回 rejected Promise。
+ 
+-## `@tellplot/vue`
++## `tellplot/vue`
+ 
+ `ChartEditor` 支持 `config`、`view`、`defaultView` 和 `v-model:view`。事件包括 `view-change`、
+ `command`、`command-rejected`、`config-rejected`、`selection-change`、`render-error`；expose 与 React
+diff --git a/docs/architecture.md b/docs/architecture.md
+index f3bb9a8..18ad232 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -1,21 +1,23 @@
+ # TellPlot 架构概览
+ 
+-TellPlot 采用 core、imperative editor 和 framework adapter 分层。编辑能力只实现一次。
++TellPlot 采用 core、imperative editor 和 framework adapter 内部分层，对外只发布一个 `tellplot` 包。编辑
++能力只实现一次，npm 分发数量不改变代码所有权。
+ 
+ ```mermaid
+ flowchart LR
+-  Host["Host application"] --> React["@tellplot/react"]
+-  Host --> Vue["@tellplot/vue"]
+-  Host --> Editor["@tellplot/editor createEditor"]
++  Host["Host application"] --> React["tellplot/react"]
++  Host --> Vue["tellplot/vue"]
++  Host --> Public["tellplot createEditor/core"]
++  Public --> Editor["Internal editor"]
+   React --> Editor
+   Vue --> Editor
+-  Editor --> Core["@tellplot/core EditorStore"]
++  Editor --> Core["Internal core EditorStore"]
+   Core --> Commands["Commands and history"]
+   Core --> Projection["Chart projections"]
+   Editor --> G2["G2 screen and export runtime"]
+ ```
+ 
+-## `@tellplot/core`
++## Core layer
+ 
+ `core` 包含 schema、配置校验、领域不变量、命令执行、undo/redo、持久化、waterfall/categorical
+ projection、pointer geometry 和 `EditorStore`。它不依赖 DOM、G2、React 或 Vue，Node/SSR import 不产生
+@@ -24,7 +26,7 @@ projection、pointer geometry 和 `EditorStore`。它不依赖 DOM、G2、React
+ `SourceData` 保存不可变事实；`ViewSpec` 保存顺序、递归分组、折叠、固定、注释和强调。直接操作、大纲、
+ 键盘和宿主调用都构造同一种命令并进入同一 session。
+ 
+-## `@tellplot/editor`
++## Imperative editor layer
+ 
+ `createEditor` 在调用时创建稳定 DOM workbench 和 G2 runtime。工作台拥有 toolbar、反馈、大纲、图表、
+ inspector、overlay、无障碍摘要、直接操作、历史与导出。更新通过 `EditorStore` snapshot 增量刷新，不通过
+@@ -44,7 +46,7 @@ G2 事件只在 `chartSurface` 边界转为稳定 point、datum 和 scene bounds
+ 
+ ## Framework adapters
+ 
+-React 和 Vue 包只创建一个宿主元素，将 props 映射为 `createEditor/update`，将 ref/expose 映射到窄 handle，
++React 和 Vue 子路径只创建一个宿主元素，将 props 映射为 `createEditor/update`，将 ref/expose 映射到窄 handle，
+ 并在卸载时调用 `destroy`。它们不包含 EditorStore、命令、G2、编辑 UI 或第二套状态。
+ 
+ ## 生命周期
+@@ -57,11 +59,11 @@ React 和 Vue 包只创建一个宿主元素，将 props 映射为 `createEditor
+ ## 依赖方向
+ 
+ ```text
+-@tellplot/react -> @tellplot/editor -> @tellplot/core
+-@tellplot/vue   -> @tellplot/editor -> @tellplot/core
+-@tellplot/editor -> G2
+-@tellplot/core -X-> DOM / G2 / React / Vue
++packages/react -> packages/editor -> packages/core
++packages/vue   -> packages/editor -> packages/core
++packages/editor -> G2
++packages/core -X-> DOM / G2 / React / Vue
+ ```
+ 
+-仓库 architecture gate 解析四包 runtime import graph、拒绝循环、拒绝 core/editor framework 依赖并阻止
+-React/Vue 交叉依赖。
++`packages/tellplot` 只组装上述稳定入口并生成一个 tarball。仓库 architecture gate 解析全部内部 runtime
++import graph、拒绝循环、拒绝 core/editor framework 依赖并阻止 React/Vue 交叉依赖。
+diff --git a/docs/errors.md b/docs/errors.md
+index f9e2ca4..ce3e7d9 100644
+--- a/docs/errors.md
++++ b/docs/errors.md
+@@ -35,7 +35,7 @@ if (!result.ok) {
+ `command-rejected`，三者报告相同的 `CommandError`。
+ 
+ ```tsx
+-import { ChartEditor } from '@tellplot/react';
++import { ChartEditor } from 'tellplot/react';
+ 
+ <ChartEditor
+   config={config}
+diff --git a/docs/getting-started.md b/docs/getting-started.md
+index f03a540..4088fae 100644
+--- a/docs/getting-started.md
++++ b/docs/getting-started.md
+@@ -1,15 +1,19 @@
+ # TellPlot 入门与集成
+ 
+ TellPlot 的领域层和包 import 支持 SSR；实际编辑器只在浏览器中调用 `createEditor` 时访问 DOM 和 G2。
+-以下命令用于已经创建好的宿主项目；React 与 Vue 示例默认项目本身已安装对应 framework。三个 UI 入口都
+-使用经过兼容与安全复核的精确 G2 peer `5.4.8`。
++以下命令用于已经创建好的宿主项目；React 与 Vue 示例默认项目本身已安装对应 framework。`tellplot`
++内部使用经过兼容与安全复核的精确 G2 `5.4.8`。
++
++```bash
++pnpm add tellplot
++```
+ 
+ ## 公共配置
+ 
+ 三种接入共用同一个 `ChartConfig`：
+ 
+ ```ts
+-import type { ChartConfig } from '@tellplot/core';
++import type { ChartConfig } from 'tellplot';
+ 
+ export const config = {
+   type: 'column',
+@@ -52,13 +56,9 @@ export const waterfallConfig = {
+ 
+ ## 原生 DOM
+ 
+-```bash
+-pnpm add @tellplot/core @tellplot/editor @antv/g2@5.4.8
+-```
+-
+ ```ts
+-import { createEditor } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
++import { createEditor } from 'tellplot';
++import 'tellplot/styles.css';
+ import { config } from './config';
+ 
+ const host = document.querySelector<HTMLElement>('#chart');
+@@ -79,15 +79,11 @@ export function unmountChart(): void {
+ 
+ ## React
+ 
+-```bash
+-pnpm add @tellplot/core @tellplot/react @antv/g2@5.4.8
+-```
+-
+ ```tsx
+ import { useState } from 'react';
+-import { createInitialViewSpec, type ViewSpec } from '@tellplot/core';
+-import { ChartEditor } from '@tellplot/react';
+-import '@tellplot/react/styles.css';
++import { createInitialViewSpec, type ViewSpec } from 'tellplot';
++import { ChartEditor } from 'tellplot/react';
++import 'tellplot/styles.css';
+ import { config } from './config';
+ 
+ const created = createInitialViewSpec(config.data, { chartType: config.type });
+@@ -101,16 +97,12 @@ export function RevenueChart() {
+ 
+ ## Vue 3
+ 
+-```bash
+-pnpm add @tellplot/core @tellplot/vue @antv/g2@5.4.8
+-```
+-
+ ```vue
+ <script setup lang="ts">
+ import { ref } from 'vue';
+-import { createInitialViewSpec } from '@tellplot/core';
+-import { ChartEditor } from '@tellplot/vue';
+-import '@tellplot/vue/styles.css';
++import { createInitialViewSpec } from 'tellplot';
++import { ChartEditor } from 'tellplot/vue';
++import 'tellplot/styles.css';
+ import { config } from './config';
+ 
+ const created = createInitialViewSpec(config.data, { chartType: config.type });
+diff --git a/docs/migration.md b/docs/migration.md
+index 533a7a6..b7b5979 100644
+--- a/docs/migration.md
++++ b/docs/migration.md
+@@ -2,12 +2,14 @@
+ 
+ ## 包选择
+ 
+-| 场景                               | 安装与入口                           |
+-| ---------------------------------- | ------------------------------------ |
+-| 纯数据校验、命令或 SSR             | `@tellplot/core`                     |
+-| 原生 DOM、Web Component 或其他框架 | `@tellplot/editor` 的 `createEditor` |
+-| React 18/19                        | `@tellplot/react` 的 `ChartEditor`   |
+-| Vue 3                              | `@tellplot/vue` 的 `ChartEditor`     |
++所有场景安装同一个 `tellplot` 包：
++
++| 场景                               | 公共入口                          |
++| ---------------------------------- | --------------------------------- |
++| 纯数据校验、命令或 SSR             | `tellplot/core`                   |
++| 原生 DOM、Web Component 或其他框架 | `tellplot` 的 `createEditor`      |
++| React 18/19                        | `tellplot/react` 的 `ChartEditor` |
++| Vue 3                              | `tellplot/vue` 的 `ChartEditor`   |
+ 
+ React/Vue adapters 依赖同一个 imperative editor，不需要把状态或命令迁移到另一套实现。
+ 
+@@ -16,7 +18,7 @@ React/Vue adapters 依赖同一个 imperative editor，不需要把状态或命
+ 持久化内容始终与原始 `SourceData` 一起校验：
+ 
+ ```ts
+-import { parseViewSpec } from '@tellplot/core';
++import { parseViewSpec } from 'tellplot/core';
+ 
+ const restored = parseViewSpec(serialized, sourceData);
+ if (restored.ok) {
+@@ -29,8 +31,8 @@ TellPlot 不执行启发式 schema migration。dataset、schema generation、cha
+ 
+ ## 接入检查
+ 
+-1. 只从四个 package exports 导入，不导入 `src/` 或 `dist/`。
+-2. 只引入一个对应的 styles subpath。
++1. 只从 `tellplot` 声明的 package exports 导入，不导入 `src/` 或 `dist/`。
++2. UI 接入只引入一次 `tellplot/styles.css`。
+ 3. 受控模式只传 `view`，非受控模式可传 `defaultView`，两者互斥。
+ 4. React/Vue 卸载由 adapter 自动销毁；imperative 接入显式调用 `destroy`。
+ 5. 宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
+diff --git a/docs/roadmap.md b/docs/roadmap.md
+index f1b4e3e..e1b8654 100644
+--- a/docs/roadmap.md
++++ b/docs/roadmap.md
+@@ -77,35 +77,39 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
+ - Outcome: `@tellplot/editor@1.0.0` 本地 tarball 与上述门禁已完成，并于 2026-07-29 通过目标级验收。
+ - Boundary: 不新增图表、依赖、schema、breaking API 或通用 registry；不执行远程发布。
+ 
+-## G005 公开稳定版发布
+-
+-- Status: Blocked
+-- Goal: 从干净 commit 将 1.0.0 公开为 GitHub、生产网站、tag/release 和 npm `latest`。
+-- Local readiness: T130 已完成本地发布门禁与 stage-only workflow，状态为 `Needs_Review`。
+-- Blocker: 等待独立远程授权、`@tellplot/*` package root bootstrap、stage-only Trusted Publisher、
+-  stale `v1.0.0` tag 的受控重建与保护、可用的发布身份、2FA approval 与生产托管条件。
+-- Entry condition: remote Git、visibility、deploy、DNS、tag、GitHub Release 和 npm publish 获得独立明确
+-  授权；scope、2FA 和托管权限可用；最终 clean main commit 与重建后的 annotated `v1.0.0` peeled commit
+-  完全一致且 tag protection 已生效；`npm-production` environment 只允许 exact protected `v1.0.0` tag，
+-  并启用 required reviewers 与 prevent self-review；四个 package root 已用非 1.0.0 版本完成 bootstrap；
+-  Trusted Publisher 只允许 `npm stage publish`，不允许直接 `npm publish`；发布前从干净 commit 重跑的
+-  完整 release gate 必须通过。四个 1.0.0 staged artifact 全部复核后，维护者再以 2FA 批准公开。
++## G005 四包公开稳定版发布
++
++- Status: Superseded
++- Outcome: T130 建立的 source preflight、官方 registry audit、protected environment、stage-only Trusted
++  Publishing、provenance、固定 artifact hash 和 2FA approval 继续作为发布安全基线。
++- Superseded scope: 四个 scoped package 的公开发布不再执行；公共分发目标由 G007 的单包合同取代。
+ 
+ ## G006 框架无关编辑器架构
+ 
+ - Status: Accepted
+-- Goal: 以 `@tellplot/core` 和 `@tellplot/editor` 作为唯一领域/runtime，实现 React 18/19 与 Vue 3 薄适配。
+-- Included outcomes: imperative DOM API、统一 EditorStore、完整工作台迁移、四包类型/构建/消费合同和三种
++- Goal: 以内部 `@tellplot/core` 和 `@tellplot/editor` 作为唯一领域/runtime，实现 React 18/19 与 Vue 3 薄适配。
++- Included outcomes: imperative DOM API、统一 EditorStore、完整工作台迁移、分层类型/构建/消费合同和三种
+   quickstart。
+-- Outcome: T125-T129 已完成实现、质量矩阵、四包发布候选 evidence 和目标级验收；用户于 2026-07-30
++- Outcome: T125-T129 已完成实现、质量矩阵、内部四层 package evidence 和目标级验收；用户于 2026-07-30
+   接受 G006。
+ - Boundary: 不增加图表家族、schema、通用 plugin registry、第二渲染引擎或历史兼容层；不执行远程发布。
+-- Release relation: G006 验收不等于公开发布；G005 继续因独立远程授权、发布身份和生产托管条件保持
+-  `Blocked`。
++- Release relation: G006 固定内部架构，不要求内部 layer 与公共 npm package 一一对应。
++
++## G007 单包分发与公开发布
++
++- Status: In_Progress
++- Goal: 只发布无 scope 的 `tellplot@1.0.0`，通过稳定子路径交付 imperative DOM、core、React、Vue 与 CSS。
++- Public entrypoints: `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue`、`tellplot/styles.css`。
++- Internal architecture: core、editor、React adapter 与 Vue adapter 继续是 private workspace layers，保持
++  G006 的依赖方向、测试隔离和唯一 runtime ownership。
++- Release controls: T131 使用单一可复现 tarball、exact annotated tag、protected `npm-production`
++  environment、stage-only Trusted Publisher、provenance、人类 artifact 复核与 2FA approval。
++- Completion: package/framework/browser/security/isolated-source 门禁、旧 stage 清理、public fresh install、
++  provenance、tag、GitHub Release 和 Registry evidence 全部一致。
+ 
+ ## Decision Gates
+ 
+-- `@tellplot/core` 保持无 DOM/G2/framework 依赖，`@tellplot/editor` 保持无 React/Vue 依赖。
++- 内部 `@tellplot/core` 保持无 DOM/G2/framework 依赖，`@tellplot/editor` 保持无 React/Vue 依赖。
+ - 新图表只在 G003 的具体目标获得批准后实现。
+ - 原始 G2 options、G2 Chart instance 和内部 runtime handle 不进入公共 API。
+ - 项目不规划 Dashboard、通用插件平台或第二渲染引擎。
+diff --git a/docs/versioning.md b/docs/versioning.md
+index 3c4d7b2..6a07c3a 100644
+--- a/docs/versioning.md
++++ b/docs/versioning.md
+@@ -10,10 +10,10 @@
+ 
+ ## 1.x 公共表面
+ 
+-- `@tellplot/core` 的 runtime exports、类型、schema、命令和稳定错误语义。
+-- `@tellplot/editor` 的 `createEditor`、`EditorOptions`、`EditorInstance`、export 和 styles subpath。
+-- `@tellplot/react` 的 `ChartEditor` props/handle 和 styles subpath。
+-- `@tellplot/vue` 的 `ChartEditor` props/emits/expose、`v-model:view` 和 styles subpath。
++- `tellplot` 与 `tellplot/core` 的 runtime exports、类型、schema、命令和稳定错误语义。
++- `tellplot` 的 `createEditor`、`EditorOptions`、`EditorInstance`、export 和 `styles.css` subpath。
++- `tellplot/react` 的 `ChartEditor` props/handle。
++- `tellplot/vue` 的 `ChartEditor` props/emits/expose 与 `v-model:view`。
+ - 文档化的 schema generation、error code/reason 和 JSON Pointer path。
+ 
+ 内部文件、CSS class、G2Spec、G2 Chart instance、projection implementation、scene context 和 DOM controllers
+@@ -30,7 +30,7 @@
+ | -------- | ------------------------------------------------------------- |
+ | React    | 18.3、19.x                                                    |
+ | Vue      | 3.5.x                                                         |
+-| AntV G2  | exact reviewed peer `5.4.8`                                   |
++| AntV G2  | TellPlot direct dependency `5.4.8`                            |
+ | Node     | 构建与验证 `>=22.13.0`                                        |
+ | Browsers | 当前 Chromium、Firefox、WebKit 与项目 previous-browser matrix |
+ 
+diff --git a/e2e/accessibility.spec.ts b/e2e/accessibility.spec.ts
+index 753b586..9af00ac 100644
+--- a/e2e/accessibility.spec.ts
++++ b/e2e/accessibility.spec.ts
+@@ -115,9 +115,7 @@ test('desktop usage code and right panel rail are visible by default', async ({
+   await expect(guide).toBeVisible();
+   await expect(guide.getByRole('textbox', { name: 'TellPlot 图表配置' })).toBeVisible();
+   await guide.getByRole('tab', { name: '接入示例' }).click();
+-  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText(
+-    'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom',
+-  );
++  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText('pnpm add tellplot');
+ 
+   const guideBox = await guide.boundingBox();
+   const chartBox = await chart.boundingBox();
+@@ -128,7 +126,7 @@ test('desktop usage code and right panel rail are visible by default', async ({
+   await guide.getByRole('tab', { name: 'React' }).click();
+   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText('ChartEditor');
+   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
+-    "import '@tellplot/react/styles.css'",
++    "import 'tellplot/styles.css'",
+   );
+ 
+   await guide.getByRole('tab', { name: '配置', exact: true }).click();
+diff --git a/e2e/live-code-editor.spec.ts b/e2e/live-code-editor.spec.ts
+index a8346b4..8a83133 100644
+--- a/e2e/live-code-editor.spec.ts
++++ b/e2e/live-code-editor.spec.ts
+@@ -99,12 +99,10 @@ test('integration examples remain available beside the live public files', async
+   await openEditor(page);
+   const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
+   await guide.getByRole('tab', { name: '接入示例' }).click();
+-  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText(
+-    'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom',
+-  );
++  await expect(guide.getByRole('tabpanel', { name: '安装' })).toContainText('pnpm add tellplot');
+   await guide.getByRole('tab', { name: 'React' }).click();
+   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
+-    "import '@tellplot/react/styles.css'",
++    "import 'tellplot/styles.css'",
+   );
+   await expect(guide.getByRole('tabpanel', { name: 'React' })).toContainText(
+     '<ChartEditor config={config} />',
+diff --git a/e2e/showcase.spec.ts b/e2e/showcase.spec.ts
+index 2b36609..a6b50ee 100644
+--- a/e2e/showcase.spec.ts
++++ b/e2e/showcase.spec.ts
+@@ -88,8 +88,7 @@ test.describe('TellPlot 开源官网', () => {
+     await expect(page.getByRole('heading', { name: '安装' })).toBeVisible();
+     await expect(
+       page.locator('pre').filter({
+-        hasText:
+-          'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom',
++        hasText: 'pnpm add tellplot',
+       }),
+     ).toBeVisible();
+     await expect(page.getByRole('heading', { name: 'SourceData 与 ViewSpec' })).toBeVisible();
+diff --git a/packages/core/README.md b/packages/core/README.md
+index 26ca96d..c65ecc9 100644
+--- a/packages/core/README.md
++++ b/packages/core/README.md
+@@ -1,41 +1,7 @@
+-# @tellplot/core
++# TellPlot core workspace layer
+ 
+-TellPlot 的框架无关领域与状态包，包含配置/数据/视图校验、投影、命令、历史、持久化、交互策略和
+-`EditorStore`。模块不访问 DOM、G2、React 或 Vue，可在 Node 和 SSR 中使用。
++本目录是 TellPlot 的私有、框架无关领域层，包含配置、数据、视图、命令、历史、投影、持久化、交互策略和
++`EditorStore`。它不访问 DOM、G2、React 或 Vue，并由 `tellplot` 与 `tellplot/core` 公共入口统一分发。
+ 
+-```bash
+-pnpm add @tellplot/core
+-```
+-
+-```ts
+-import {
+-  createInitialViewSpec,
+-  validateChartConfig,
+-  type ChartConfig,
+-} from '@tellplot/core';
+-
+-const config = {
+-  type: 'column',
+-  data: {
+-    schemaVersion: '2.0.0',
+-    dataKind: 'categorical',
+-    datasetId: 'revenue-by-region',
+-    items: [
+-      { id: 'east', label: 'East', amount: 128 },
+-      { id: 'west', label: 'West', amount: 96 },
+-    ],
+-  },
+-} as const satisfies ChartConfig;
+-
+-const checked = validateChartConfig(config);
+-if (!checked.ok) throw new Error(checked.errors[0]?.code);
+-
+-const initial = createInitialViewSpec(checked.value.data, { chartType: checked.value.type });
+-if (!initial.ok) throw new Error(initial.errors[0]?.code);
+-```
+-
+-`SourceData` 保存宿主事实，编辑命令只产生新的 `ViewSpec`。使用 `createEditorStore`、命令和持久化 API 的
+-完整合同见[公共 API](https://github.com/iiwish/tellplot/blob/main/docs/api.md)；需要可见编辑器时选择
+-`@tellplot/editor`、`@tellplot/react` 或 `@tellplot/vue`。
+-
+-License: MIT。
++消费者应安装 `tellplot`，不得依赖本 workspace package 名称或内部源码路径。公共合同见
++[API 文档](../../docs/api.md)。
+diff --git a/packages/core/package.json b/packages/core/package.json
+index e3ddf6c..2eddef6 100644
+--- a/packages/core/package.json
++++ b/packages/core/package.json
+@@ -1,6 +1,7 @@
+ {
+   "name": "@tellplot/core",
+-  "version": "1.0.0",
++  "version": "0.0.0",
++  "private": true,
+   "description": "Framework-neutral data, commands and editing state for TellPlot",
+   "license": "MIT",
+   "homepage": "https://tellplot.com",
+@@ -47,9 +48,5 @@
+   },
+   "engines": {
+     "node": ">=22.13.0"
+-  },
+-  "publishConfig": {
+-    "access": "public",
+-    "registry": "https://registry.npmjs.org/"
+   }
+ }
+diff --git a/packages/editor/README.md b/packages/editor/README.md
+index 402a522..2710540 100644
+--- a/packages/editor/README.md
++++ b/packages/editor/README.md
+@@ -1,50 +1,7 @@
+-# @tellplot/editor
++# TellPlot editor workspace layer
+ 
+-TellPlot 的框架无关 imperative DOM/G2 编辑器。完整 toolbar、outline、chart、inspector、交互、历史、
+-无障碍摘要和 SVG/PNG 导出都由本包实现。
++本目录是 TellPlot 的私有 imperative DOM/G2 编辑器层。完整 toolbar、outline、chart、inspector、交互、
++历史、无障碍语义和 SVG/PNG 导出都由该层唯一实现。
+ 
+-```bash
+-pnpm add @tellplot/core @tellplot/editor @antv/g2@5.4.8
+-```
+-
+-```ts
+-import { createEditor, type ChartConfig } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
+-
+-const config = {
+-  type: 'column',
+-  data: {
+-    schemaVersion: '2.0.0',
+-    dataKind: 'categorical',
+-    datasetId: 'revenue-by-region',
+-    items: [
+-      { id: 'east', label: 'East', amount: 128 },
+-      { id: 'west', label: 'West', amount: 96 },
+-    ],
+-  },
+-} as const satisfies ChartConfig;
+-
+-const host = document.querySelector<HTMLElement>('#chart');
+-if (!host) throw new Error('Missing chart host');
+-
+-const editor = createEditor(host, {
+-  config,
+-  onViewChange(view) {
+-    save(view);
+-  },
+-});
+-
+-export function unmountChart(): void {
+-  editor.destroy();
+-}
+-```
+-
+-不传 `view` 时实例直接提交编辑；传入 `view` 后，`onViewChange` 只提供候选视图，宿主必须通过
+-`editor.update({ config, view: nextView, onViewChange })` 接受它。`view` 与 `defaultView` 互斥。
+-
+-React 使用 `@tellplot/react`，Vue 3 使用 `@tellplot/vue`。领域校验、命令和持久化直接使用
+-`@tellplot/core`。完整生命周期、错误码和导出合同见
+-[公共 API](https://github.com/iiwish/tellplot/blob/main/docs/api.md)与
+-[错误处理](https://github.com/iiwish/tellplot/blob/main/docs/errors.md)。
+-
+-公共入口不暴露 G2 instance、spec、scene context 或 DOM controller。License: MIT。
++消费者应安装 `tellplot` 并从根入口使用 `createEditor`；本 workspace package 不独立发布。React/Vue 子路径
++只映射本层生命周期，不复制编辑状态或 G2 runtime。公共合同见 [API 文档](../../docs/api.md)。
+diff --git a/packages/editor/package.json b/packages/editor/package.json
+index 0283dcf..95d9c01 100644
+--- a/packages/editor/package.json
++++ b/packages/editor/package.json
+@@ -1,6 +1,7 @@
+ {
+   "name": "@tellplot/editor",
+-  "version": "1.0.0",
++  "version": "0.0.0",
++  "private": true,
+   "description": "Framework-neutral editable charts built on AntV G2",
+   "license": "MIT",
+   "homepage": "https://tellplot.com",
+@@ -63,10 +64,6 @@
+   "devDependencies": {
+     "@antv/g2": "5.4.8"
+   },
+-  "publishConfig": {
+-    "access": "public",
+-    "registry": "https://registry.npmjs.org/"
+-  },
+   "dependencies": {
+     "@tellplot/core": "workspace:*",
+     "@antv/g-svg": "2.1.1"
+diff --git a/packages/editor/tests/package/single-package-distribution.test.ts b/packages/editor/tests/package/single-package-distribution.test.ts
+new file mode 100644
+index 0000000..0288906
+--- /dev/null
++++ b/packages/editor/tests/package/single-package-distribution.test.ts
+@@ -0,0 +1,107 @@
++import { existsSync, readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++
++import { describe, expect, it } from 'vitest';
++
++const root = resolve(process.cwd());
++
++function json(path: string): Record<string, unknown> {
++  return JSON.parse(readFileSync(resolve(root, path), 'utf8')) as Record<string, unknown>;
++}
++
++function text(path: string): string {
++  return readFileSync(resolve(root, path), 'utf8');
++}
++
++describe('single-package distribution', () => {
++  it('publishes one unscoped tellplot package with isolated public subpaths', () => {
++    const manifest = json('packages/tellplot/package.json');
++
++    expect(manifest['name']).toBe('tellplot');
++    expect(manifest['version']).toBe('1.0.0');
++    expect(manifest['private']).not.toBe(true);
++    expect(manifest['publishConfig']).toEqual({
++      access: 'public',
++      registry: 'https://registry.npmjs.org/',
++    });
++    expect(Object.keys(manifest['exports'] as Record<string, unknown>).sort()).toEqual([
++      '.',
++      './core',
++      './package.json',
++      './react',
++      './styles.css',
++      './vue',
++    ]);
++    expect(manifest['dependencies']).toEqual({
++      '@antv/g-svg': '2.1.1',
++      '@antv/g2': '5.4.8',
++    });
++    expect(manifest['peerDependencies']).toEqual({
++      react: '^18.3.0 || ^19.0.0',
++      vue: '^3.5.0',
++    });
++    expect(manifest['peerDependenciesMeta']).toEqual({
++      react: { optional: true },
++      vue: { optional: true },
++    });
++
++    for (const entry of ['index.ts', 'core.ts', 'react.ts', 'vue.ts', 'styles.css']) {
++      expect(existsSync(resolve(root, 'packages/tellplot/src', entry))).toBe(true);
++    }
++  });
++
++  it('keeps the framework layers private and independently testable', () => {
++    for (const directory of ['core', 'editor', 'react', 'vue']) {
++      const manifest = json(`packages/${directory}/package.json`);
++      expect(manifest['private'], directory).toBe(true);
++      expect(manifest['publishConfig'], directory).toBeUndefined();
++    }
++  });
++
++  it('stages only the canonical tellplot tarball', () => {
++    const workflow = text('.github/workflows/publish-npm.yml');
++    const artifactScript = text('scripts/release/package-artifact.mjs');
++    const packageTestScript = text('scripts/release/test-packages.mjs');
++
++    expect(workflow).toContain('tellplot-1.0.0.tgz');
++    expect(workflow).toContain('npm stage publish');
++    expect(workflow).not.toContain('tellplot-core-1.0.0.tgz');
++    expect(workflow).not.toContain('tellplot-editor-1.0.0.tgz');
++    expect(workflow).not.toContain('tellplot-react-1.0.0.tgz');
++    expect(workflow).not.toContain('tellplot-vue-1.0.0.tgz');
++    expect(artifactScript).toContain("const packageDirectories = ['tellplot']");
++    expect(packageTestScript).toContain("const packageNames = ['tellplot']");
++  });
++
++  it('resolves the public facade from source in a clean playground checkout', () => {
++    const playgroundConfig = json('apps/playground/tsconfig.json');
++    const compilerOptions = playgroundConfig['compilerOptions'] as Record<string, unknown>;
++    const paths = compilerOptions['paths'] as Record<string, unknown>;
++    const viteConfig = text('apps/playground/vite.config.ts');
++
++    expect(paths).toMatchObject({
++      '@tellplot/core': ['../../packages/core/src/index.ts'],
++      '@tellplot/editor': ['../../packages/editor/src/index.ts'],
++      '@tellplot/react': ['../../packages/react/src/index.tsx'],
++      '@tellplot/vue': ['../../packages/vue/src/index.ts'],
++      tellplot: ['../../packages/tellplot/src/index.ts'],
++      'tellplot/react': ['../../packages/tellplot/src/react.ts'],
++    });
++    for (const packageName of [
++      '@tellplot/core',
++      '@tellplot/editor',
++      '@tellplot/react',
++      '@tellplot/vue',
++    ]) {
++      expect(viteConfig).toContain(`find: '${packageName}'`);
++    }
++  });
++
++  it('documents one install surface without legacy scoped package instructions', () => {
++    for (const path of ['README.md', 'docs/getting-started.md', 'docs/api.md']) {
++      const contents = text(path);
++      expect(contents, path).toContain('pnpm add tellplot');
++      expect(contents, path).not.toContain('pnpm add @tellplot/');
++    }
++  });
++});
+diff --git a/packages/editor/tests/package/stable-release.test.ts b/packages/editor/tests/package/stable-release.test.ts
+index 9c8b9e4..7818d16 100644
+--- a/packages/editor/tests/package/stable-release.test.ts
++++ b/packages/editor/tests/package/stable-release.test.ts
+@@ -51,22 +51,27 @@ function runModuleSource(source: string): {
+ 
+ describe('1.0 stable release contract', () => {
+   it('uses stable package metadata and release commands', () => {
+-    const packageManifests = [
++    const internalPackageManifests = [
+       json('packages/core/package.json'),
+       json('packages/editor/package.json'),
+       json('packages/react/package.json'),
+       json('packages/vue/package.json'),
+     ];
++    const publicPackageManifest = json('packages/tellplot/package.json');
+     const workspaceManifest = json('package.json');
+     const artifactScript = text('scripts/release/package-artifact.mjs');
+     const scripts = workspaceManifest['scripts'] as Record<string, unknown>;
+-    for (const packageManifest of packageManifests) {
+-      expect(packageManifest['version']).toBe('1.0.0');
+-      expect(packageManifest['publishConfig']).toEqual({
+-        access: 'public',
+-        registry: 'https://registry.npmjs.org/',
+-      });
++    for (const packageManifest of internalPackageManifests) {
++      expect(packageManifest['version']).toBe('0.0.0');
++      expect(packageManifest['private']).toBe(true);
++      expect(packageManifest['publishConfig']).toBeUndefined();
+     }
++    expect(publicPackageManifest['name']).toBe('tellplot');
++    expect(publicPackageManifest['version']).toBe('1.0.0');
++    expect(publicPackageManifest['publishConfig']).toEqual({
++      access: 'public',
++      registry: 'https://registry.npmjs.org/',
++    });
+     expect(scripts['release:architecture']).toBe('node scripts/release/check-architecture.mjs');
+     expect(scripts['release:audit']).toBe('node scripts/release/audit-release.mjs');
+     expect(scripts['security:lock']).toBe(
+@@ -106,24 +111,33 @@ describe('1.0 stable release contract', () => {
+     expect(productionAudit).not.toContain('--ignore-registry-errors');
+     expect(artifactScript).toContain("resolve(repositoryRoot, '.nvmrc')");
+     expect(artifactScript).toContain('process.versions.node');
+-    expect(artifactScript).toContain("['core', 'editor', 'react', 'vue']");
+-    expect(artifactScript).toContain("'.ai-platform/evidence/T129'");
++    expect(artifactScript).toContain("const packageDirectories = ['tellplot']");
++    expect(artifactScript).toContain("'.ai-platform/evidence/T131'");
+   });
+ 
+-  it('normalizes npm tarball gzip headers without changing package contents', () => {
++  it('normalizes npm tarball compression without changing package contents', () => {
+     const result = runModuleSource(`
+       import { createHash } from 'node:crypto';
+       import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+       import { gzipSync, gunzipSync } from 'node:zlib';
+       import { tmpdir } from 'node:os';
+       import { resolve } from 'node:path';
+-      import { canonicalizeGzipHeader } from './scripts/release/canonical-gzip.mjs';
++      import { canonicalizeNpmTarball } from './scripts/release/canonical-gzip.mjs';
+ 
+       const directory = mkdtempSync(resolve(tmpdir(), 'tellplot-gzip-header-'));
+       try {
+-        const payload = Buffer.from('same npm package bytes');
+-        const macos = gzipSync(payload, { mtime: 0 });
+-        const linux = Buffer.from(macos);
++        const tar = manifest => {
++          const payload = Buffer.from(JSON.stringify(manifest, null, 2) + '\\n');
++          const archive = Buffer.alloc(512 + 512 + 1024);
++          archive.write('package/package.json', 0, 'utf8');
++          archive.write(payload.length.toString(8).padStart(11, '0') + '\\0', 124, 'ascii');
++          payload.copy(archive, 512);
++          return archive;
++        };
++        const firstPayload = tar({ name: 'tellplot', devDependencies: { vue: '3', react: '19' } });
++        const secondPayload = tar({ devDependencies: { react: '19', vue: '3' }, name: 'tellplot' });
++        const macos = gzipSync(firstPayload, { level: 1, mtime: 0 });
++        const linux = gzipSync(secondPayload, { level: 9, mtime: 0 });
+         macos[9] = 19;
+         linux[9] = 3;
+         const macosPath = resolve(directory, 'macos.tgz');
+@@ -131,15 +145,15 @@ describe('1.0 stable release contract', () => {
+         writeFileSync(macosPath, macos);
+         writeFileSync(linuxPath, linux);
+ 
+-        canonicalizeGzipHeader(macosPath);
+-        canonicalizeGzipHeader(linuxPath);
++        canonicalizeNpmTarball(macosPath);
++        canonicalizeNpmTarball(linuxPath);
+ 
+         const normalizedMacos = readFileSync(macosPath);
+         const normalizedLinux = readFileSync(linuxPath);
+         const digest = value => createHash('sha256').update(value).digest('hex');
+         if (normalizedMacos[9] !== 255 || normalizedLinux[9] !== 255) process.exit(1);
+         if (digest(normalizedMacos) !== digest(normalizedLinux)) process.exit(1);
+-        if (!gunzipSync(normalizedMacos).equals(payload)) process.exit(1);
++        if (!gunzipSync(normalizedMacos).equals(gunzipSync(normalizedLinux))) process.exit(1);
+       } finally {
+         rmSync(directory, { recursive: true, force: true });
+       }
+@@ -147,7 +161,7 @@ describe('1.0 stable release contract', () => {
+ 
+     expect(result.status, result.output).toBe(0);
+     expect(text('scripts/release/package-artifact.mjs')).toContain(
+-      'canonicalizeGzipHeader(freshArtifactPath)',
++      'canonicalizeNpmTarball(freshArtifactPath)',
+     );
+   });
+ 
+@@ -300,9 +314,7 @@ describe('1.0 stable release contract', () => {
+       sourceRehearsal.indexOf("['pnpm', ['install', '--frozen-lockfile']]"),
+     );
+     expect(packageTestRunner).toContain('NPM_CONFIG_CACHE');
+-    expect(packageTestRunner).toContain(
+-      "['@tellplot/core', '@tellplot/editor', '@tellplot/react', '@tellplot/vue']",
+-    );
++    expect(packageTestRunner).toContain("const packageNames = ['tellplot']");
+   });
+ 
+   it('keeps public npm staging manual, approved, provenance-enabled, minimal, and ordered', () => {
+@@ -339,7 +351,7 @@ describe('1.0 stable release contract', () => {
+     expect(stageJob).toContain('ref: ${{ github.sha }}');
+     expect(stageJob).toContain('persist-credentials: false');
+     expect([...workflow.matchAll(/persist-credentials: false/gu)]).toHaveLength(2);
+-    expect(stageJob).toContain('sparse-checkout: .ai-platform/evidence/T129/artifacts');
++    expect(stageJob).toContain('sparse-checkout: .ai-platform/evidence/T131/artifacts');
+     expect(stageJob).toContain('node-version: 22.20.0');
+     expect(stageJob).toContain('npm_config="$RUNNER_TEMP/tellplot-stage.npmrc"');
+     expect(stageJob).toContain('NPM_CONFIG_USERCONFIG=%s');
+@@ -368,35 +380,29 @@ describe('1.0 stable release contract', () => {
+     expect(stageJob).toContain('test "$remote_tag_object" != "$remote_tag_commit"');
+     expect(stageJob).toContain('test "$remote_tag_commit" = "$GITHUB_SHA"');
+     expect(stageJob).not.toContain('remote_tag_commit="$remote_tag_object"');
+-    expect(stageJob).toContain('https://registry.npmjs.org/%40tellplot%2Fcore');
+-    expect(stageJob).toContain('https://registry.npmjs.org/%40tellplot%2Fvue/1.0.0');
++    expect(stageJob).toContain('https://registry.npmjs.org/tellplot');
++    expect(stageJob).toContain('https://registry.npmjs.org/tellplot/1.0.0');
+     expect(preflight).toContain(
+       "gitCommand(['status', '--porcelain=v1', '--untracked-files=all'])",
+     );
+     expect(preflight).toContain("commandRunner('npm', ['config', 'get', 'registry'])");
+     expect(preflight).toContain("gitCommand(['cat-file', '-t', `refs/tags/${tag}`])");
+     expect(preflight).toContain("'refs/heads/main'");
+-    expect(preflight).toContain("'.ai-platform/evidence/T129/tarball-manifest.json'");
++    expect(preflight).toContain("'.ai-platform/evidence/T131/tarball-manifest.json'");
+     expect(preflight).toContain(
+       "const CANONICAL_REMOTE_QUERY_URL = 'https://github.com/iiwish/tellplot.git';",
+     );
+     expect(preflight).toContain("GIT_CONFIG_NOSYSTEM: '1'");
+     expect(preflight).not.toMatch(/'ls-remote'[\s\S]{0,160}'origin'/u);
+ 
+-    const stageIndexes = [
+-      'tellplot-core-1.0.0.tgz',
+-      'tellplot-editor-1.0.0.tgz',
+-      'tellplot-react-1.0.0.tgz',
+-      'tellplot-vue-1.0.0.tgz',
+-    ].map(filename => stageJob.lastIndexOf(filename));
+-    expect(stageIndexes.every(index => index >= 0)).toBe(true);
+-    expect(stageIndexes).toEqual([...stageIndexes].sort((left, right) => left - right));
++    expect(stageJob).toContain('tellplot-1.0.0.tgz');
++    expect(stageJob).not.toMatch(/tellplot-(?:core|editor|react|vue)-1\.0\.0\.tgz/u);
+     const stageCommands = [
+       ...stageJob.matchAll(
+         /^\s+npm stage publish [^\n]+\n\s+--ignore-scripts [^\n]+\n\s+--registry=[^\n]+$/gmu,
+       ),
+     ].map(match => match[0]);
+-    expect(stageCommands).toHaveLength(4);
++    expect(stageCommands).toHaveLength(1);
+     for (const command of stageCommands) {
+       expect(command).toContain('--ignore-scripts');
+       expect(command).toContain('--tag=latest');
+@@ -417,32 +423,27 @@ describe('1.0 stable release contract', () => {
+       verifyJob.indexOf('pnpm release:artifact'),
+     );
+ 
+-    for (const sha256 of [
+-      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
+-      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
+-      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
+-      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
+-    ]) {
+-      expect(stageJob).toContain(sha256);
+-    }
++    expect(stageJob).toMatch(
++      /^\s+[0-9a-f]{64}\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
++    );
+   });
+ 
+   it('keeps the canonical first-publish runbook fail-closed and status-aligned', () => {
+     const report = text('.ai-platform/docs/release-report.md');
++    const workflow = text('.github/workflows/publish-npm.yml');
+     const tasks = text('.ai-platform/docs/tasks.md');
+     const roadmap = text('docs/roadmap.md');
+     const agentGuide = text('AGENTS.md');
+ 
+-    expect(tasks).toMatch(/\| G005 - 公开稳定版发布 \| Blocked \|/u);
+-    expect(tasks).toContain('T130 本地发布准备 Needs_Review');
+-    expect(roadmap).toContain('- Status: Blocked');
+-    expect(roadmap).toContain('Local readiness: T130');
+-    expect(agentGuide).toContain('G005 / T130 本地发布准备为 `Needs_Review`');
++    expect(tasks).toContain('G007');
++    expect(tasks).toContain('T131');
++    expect(roadmap).toContain('T131');
++    expect(agentGuide).toContain('G007 / T131');
+     expect(report).toContain('TELLPLOT_FINAL_COMMIT_SHA');
+     expect(report).toContain('--force-with-lease="refs/tags/v1.0.0:$old_tag_object"');
+     expect(report).toContain('^url\\..*\\.(push)?insteadof$');
+     expect(report).toContain('deployment branches/tags policy');
+-    expect(report).toContain('prevent self-review');
++    expect(report).toContain('npm-production');
+     expect(report).toContain('export GH_HOST=github.com');
+     expect(report).toContain('--repo iiwish/tellplot');
+     expect(report).toContain('gh run watch "$run_id" --repo iiwish/tellplot --exit-status');
+@@ -450,18 +451,15 @@ describe('1.0 stable release contract', () => {
+     expect(report).not.toContain('npm stage list @tellplot/{core,editor,react,vue}');
+     expect(report).toContain('npm stage reject "$stage_id" --registry=https://registry.npmjs.org/');
+     expect(report).toContain('npm stage approve "${stage_ids[$index]}"');
+-    expect(report).toContain('.ai-platform/evidence/T129/tarball-manifest.json');
++    expect(report).toContain('.ai-platform/evidence/T131/tarball-manifest.json');
+     expect(report).toMatch(/不得声称\s+已原子回滚/u);
+     expect(report).toContain('只重试 pending');
+     expect([...report.matchAll(/^set -euo pipefail$/gmu)].length).toBeGreaterThanOrEqual(3);
+-    for (const sha256 of [
+-      '4cfa4d35bc3b2806daeb041e24c06916cf497b489c4f41f6c427474eb2de7e7b',
+-      '3f37a90d566d956d8d0a2d30978b17a0f2b5dd4dd2d2ea26626ac50130bb06a2',
+-      'c8d84a0a825883167e056f82f1918adcf80c858b022c7d65651fdcaa18395242',
+-      'a149c504084ea1af7d003e8c3a3374e30660a29afb8159ee68d3d158c5aa8811',
+-    ]) {
+-      expect(report).toContain(sha256);
+-    }
++    const workflowSha = workflow.match(
++      /^\s+([0-9a-f]{64})\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
++    )?.[1];
++    expect(workflowSha).toMatch(/^[0-9a-f]{64}$/u);
++    expect(report).toContain(String(workflowSha));
+   });
+ 
+   it('separates clean public-release source checks from the dirty-capable local RC gate', () => {
+@@ -473,19 +471,9 @@ describe('1.0 stable release contract', () => {
+       } from './scripts/release/preflight-public.mjs';
+ 
+       const head = 'a'.repeat(40);
+-      const packageVersions = [
+-        ['@tellplot/core', '1.0.0'],
+-        ['@tellplot/editor', '1.0.0'],
+-        ['@tellplot/react', '1.0.0'],
+-        ['@tellplot/vue', '1.0.0'],
+-      ];
++      const packageVersions = [['tellplot', '1.0.0']];
+       const artifactSha = 'c'.repeat(64);
+-      const filenames = [
+-        'tellplot-core-1.0.0.tgz',
+-        'tellplot-editor-1.0.0.tgz',
+-        'tellplot-react-1.0.0.tgz',
+-        'tellplot-vue-1.0.0.tgz',
+-      ];
++      const filenames = ['tellplot-1.0.0.tgz'];
+       const packageManifests = packageVersions.map(([name, version]) => ({
+         name,
+         version,
+@@ -710,7 +698,7 @@ describe('1.0 stable release contract', () => {
+       const missingRemote = resolve(temporaryRoot, 'missing-origin.git');
+       const canonicalRemote = 'https://github.com/iiwish/tellplot.git';
+       const remoteQueryUrl = pathToFileURL(remote).href;
+-      const packages = ['core', 'editor', 'react', 'vue'];
++      const packages = ['tellplot'];
+ 
+       function git(cwd, args) {
+         const command = spawnSync('git', args, { cwd, encoding: 'utf8' });
+@@ -728,7 +716,7 @@ describe('1.0 stable release contract', () => {
+ 
+         const artifactsRoot = resolve(
+           repository,
+-          '.ai-platform/evidence/T129/artifacts',
++          '.ai-platform/evidence/T131/artifacts',
+         );
+         mkdirSync(artifactsRoot, { recursive: true });
+         const artifactEntries = packages.map(directory => {
+@@ -737,7 +725,7 @@ describe('1.0 stable release contract', () => {
+           writeFileSync(
+             resolve(packageRoot, 'package.json'),
+             JSON.stringify({
+-              name: \`@tellplot/\${directory}\`,
++              name: directory,
+               version: '1.0.0',
+               publishConfig: {
+                 access: 'public',
+@@ -745,11 +733,11 @@ describe('1.0 stable release contract', () => {
+               },
+             }),
+           );
+-          const filename = \`tellplot-\${directory}-1.0.0.tgz\`;
++          const filename = 'tellplot-1.0.0.tgz';
+           const artifactPath = resolve(artifactsRoot, filename);
+           writeFileSync(artifactPath, \`artifact:\${directory}\`);
+           return {
+-            name: \`@tellplot/\${directory}\`,
++            name: directory,
+             version: '1.0.0',
+             filename,
+             sizeBytes: statSync(artifactPath).size,
+@@ -759,7 +747,7 @@ describe('1.0 stable release contract', () => {
+           };
+         });
+         writeFileSync(
+-          resolve(repository, '.ai-platform/evidence/T129/tarball-manifest.json'),
++          resolve(repository, '.ai-platform/evidence/T131/tarball-manifest.json'),
+           JSON.stringify({ version: '1.0.0', packages: artifactEntries }),
+         );
+ 
+@@ -868,12 +856,7 @@ describe('1.0 stable release contract', () => {
+         validateTrustReadiness,
+       } from './scripts/release/check-package-availability.mjs';
+ 
+-      const packages = [
+-        { name: '@tellplot/core', version: '1.0.0' },
+-        { name: '@tellplot/editor', version: '1.0.0' },
+-        { name: '@tellplot/react', version: '1.0.0' },
+-        { name: '@tellplot/vue', version: '1.0.0' },
+-      ];
++      const packages = [{ name: 'tellplot', version: '1.0.0' }];
+       const ready = packages.map(({ name, version }) => ({
+         name,
+         version,
+@@ -883,16 +866,16 @@ describe('1.0 stable release contract', () => {
+       const confirmation = 'stage 1.0.0 stage-only-trusted-publishers-verified';
+       assert.deepEqual(validateTrustReadiness(packages, ready, confirmation), []);
+       assert.equal(
+-        packageRootUrl('@tellplot/core'),
+-        'https://registry.npmjs.org/%40tellplot%2Fcore',
++        packageRootUrl('tellplot'),
++        'https://registry.npmjs.org/tellplot',
+       );
+       assert.equal(
+-        packageVersionUrl('@tellplot/core', '1.0.0'),
+-        'https://registry.npmjs.org/%40tellplot%2Fcore/1.0.0',
++        packageVersionUrl('tellplot', '1.0.0'),
++        'https://registry.npmjs.org/tellplot/1.0.0',
+       );
+       const bootstrapFindings = validateTrustReadiness(
+         packages,
+-        [{ ...ready[0], rootStatus: 'bootstrap-required' }, ...ready.slice(1)],
++        [{ ...ready[0], rootStatus: 'bootstrap-required' }],
+         confirmation,
+       );
+       assert.ok(bootstrapFindings.some(finding => finding.includes('bootstrap required')));
+@@ -901,14 +884,14 @@ describe('1.0 stable release contract', () => {
+       assert.ok(
+         validateTrustReadiness(
+           packages,
+-          [ready[0], { ...ready[1], versionStatus: 'exists' }, ...ready.slice(2)],
++          [{ ...ready[0], versionStatus: 'exists' }],
+           confirmation,
+         ).some(finding => finding.includes('already exists')),
+       );
+       assert.ok(
+         validateTrustReadiness(
+           packages,
+-          [ready[0], { ...ready[1], rootStatus: 'query-failed' }, ...ready.slice(2)],
++          [{ ...ready[0], rootStatus: 'query-failed' }],
+           confirmation,
+         ).some(finding => finding.includes('package root query failed')),
+       );
+@@ -918,8 +901,8 @@ describe('1.0 stable release contract', () => {
+         ),
+       );
+       assert.ok(
+-        validateTrustReadiness(packages, ready.slice(1), confirmation).some(finding =>
+-          finding.includes('@tellplot/core@1.0.0'),
++        validateTrustReadiness(packages, [], confirmation).some(finding =>
++          finding.includes('tellplot@1.0.0'),
+         ),
+       );
+     `);
+@@ -950,22 +933,17 @@ describe('1.0 stable release contract', () => {
+     const gettingStarted = text('docs/getting-started.md');
+     const api = text('docs/api.md');
+     const errors = text('docs/errors.md');
+-    const packageReadmes = {
+-      core: text('packages/core/README.md'),
+-      editor: text('packages/editor/README.md'),
+-      react: text('packages/react/README.md'),
+-      vue: text('packages/vue/README.md'),
+-    };
++    const packageReadme = text('packages/tellplot/README.md');
++    const internalReadmes = ['core', 'editor', 'react', 'vue'].map(directory =>
++      text(`packages/${directory}/README.md`),
++    );
+ 
+     expect(readme).toContain('## 快速开始');
+-    expect(packageReadmes.core).toContain('pnpm add @tellplot/core');
+-    expect(packageReadmes.editor).toContain(
+-      'pnpm add @tellplot/core @tellplot/editor @antv/g2@5.4.8',
+-    );
+-    expect(packageReadmes.react).toContain(
+-      'pnpm add @tellplot/core @tellplot/react @antv/g2@5.4.8',
+-    );
+-    expect(packageReadmes.vue).toContain('pnpm add @tellplot/core @tellplot/vue @antv/g2@5.4.8');
++    expect(packageReadme).toContain('pnpm add tellplot');
++    for (const internalReadme of internalReadmes) {
++      expect(internalReadme).toContain('消费者应安装 `tellplot`');
++      expect(internalReadme).not.toContain('pnpm add @tellplot/');
++    }
+     expect(gettingStarted).toContain('受控模式不会自行提交候选视图');
+     expect(api).toContain('`dispatch(command): CommandResult | null`');
+     expect(api).toContain('`getView(): ViewSpec`');
+@@ -1160,7 +1138,7 @@ describe('1.0 stable release contract', () => {
+           runtime: ['run', 'value'],
+           types: ['Alias', 'PublicShape', 'Shape'],
+         });
+-        assert.equal(packageContracts.length, 4);
++        assert.equal(packageContracts.length, 5);
+ 
+         const contract = {
+           name: '@fixture/package',
+diff --git a/packages/editor/tests/react-matrix/consumer/src/main.mjs b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+index 2280029..0b3cb16 100644
+--- a/packages/editor/tests/react-matrix/consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+@@ -1,6 +1,6 @@
+-import { createInitialViewSpec } from '@tellplot/core';
+-import { ChartEditor } from '@tellplot/react';
+-import '@tellplot/react/styles.css';
++import { createInitialViewSpec } from 'tellplot';
++import { ChartEditor } from 'tellplot/react';
++import 'tellplot/styles.css';
+ import React, { createRef, useState } from 'react';
+ import { createRoot } from 'react-dom/client';
+ 
+diff --git a/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs b/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
+index 715d823..1614d79 100644
+--- a/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
+@@ -1,6 +1,5 @@
+-import { createInitialViewSpec } from '@tellplot/core';
+-import { createEditor } from '@tellplot/editor';
+-import '@tellplot/editor/styles.css';
++import { createEditor, createInitialViewSpec } from 'tellplot';
++import 'tellplot/styles.css';
+ 
+ import './host.css';
+ 
+diff --git a/packages/editor/tests/react-matrix/run-react-matrix.mjs b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+index 279e567..cdbbf62 100644
+--- a/packages/editor/tests/react-matrix/run-react-matrix.mjs
++++ b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+@@ -12,7 +12,7 @@ import { createProcessLifecycle } from '../helpers/processLifecycle.mjs';
+ 
+ const HERE = dirname(fileURLToPath(import.meta.url));
+ const WORKSPACE = resolve(HERE, '../../../..');
+-const PACKAGE_DIRECTORIES = ['core', 'editor', 'react', 'vue'];
++const PACKAGE_DIRECTORIES = ['tellplot'];
+ const REACT_CONSUMER_TEMPLATE = join(HERE, 'consumer');
+ const VUE_CONSUMER_TEMPLATE = join(HERE, 'vue-consumer');
+ const IMPERATIVE_CONSUMER_TEMPLATE = join(HERE, 'imperative-consumer');
+@@ -35,7 +35,7 @@ const FRAMEWORK_MATRIX = [
+     framework: 'React',
+     frameworkVersion: '18.3.1',
+     template: REACT_CONSUMER_TEMPLATE,
+-    adapterName: '@tellplot/react',
++    adapterName: 'tellplot/react',
+     dependencies: { react: '18.3.1', 'react-dom': '18.3.1' },
+   },
+   {
+@@ -43,7 +43,7 @@ const FRAMEWORK_MATRIX = [
+     framework: 'React',
+     frameworkVersion: '19.2.7',
+     template: REACT_CONSUMER_TEMPLATE,
+-    adapterName: '@tellplot/react',
++    adapterName: 'tellplot/react',
+     dependencies: { react: '19.2.7', 'react-dom': '19.2.7' },
+   },
+   {
+@@ -51,7 +51,7 @@ const FRAMEWORK_MATRIX = [
+     framework: 'Vue',
+     frameworkVersion: '3.5.27',
+     template: VUE_CONSUMER_TEMPLATE,
+-    adapterName: '@tellplot/vue',
++    adapterName: 'tellplot/vue',
+     dependencies: { vue: '3.5.27' },
+   },
+ ];
+@@ -461,7 +461,7 @@ async function main() {
+     }
+     const archives = (await readdir(packDirectory)).filter(name => name.endsWith('.tgz'));
+     lifecycle.throwIfTerminationRequested();
+-    assert.deepEqual(archives.length, 4, 'Framework matrix requires all four packed packages');
++    assert.deepEqual(archives.length, 1, 'Framework matrix requires one packed tellplot package');
+ 
+     browser = await chromium.launch();
+     lifecycle.throwIfTerminationRequested();
+@@ -471,11 +471,7 @@ async function main() {
+       await cp(consumer.template, directory, { recursive: true });
+       lifecycle.throwIfTerminationRequested();
+       const localDependencies = {
+-        '@tellplot/core': `file:${packedPackages['@tellplot/core'].archive}`,
+-        '@tellplot/editor': `file:${packedPackages['@tellplot/editor'].archive}`,
+-        ...(consumer.adapterName === undefined
+-          ? {}
+-          : { [consumer.adapterName]: `file:${packedPackages[consumer.adapterName].archive}` }),
++        tellplot: `file:${packedPackages['tellplot'].archive}`,
+       };
+       await writeFile(
+         join(directory, 'package.json'),
+@@ -486,7 +482,6 @@ async function main() {
+             type: 'module',
+             scripts: { build: 'vite build' },
+             dependencies: {
+-              '@antv/g2': G2_VERSION,
+               ...localDependencies,
+               ...consumer.dependencies,
+             },
+@@ -500,7 +495,7 @@ async function main() {
+       await writeFile(join(directory, 'vite.config.mjs'), VITE_CONFIG, 'utf8');
+       await writeFile(
+         join(directory, 'pnpm-workspace.yaml'),
+-        `overrides:\n  '@tellplot/core': 'file:${packedPackages['@tellplot/core'].archive}'\n  '@tellplot/editor': 'file:${packedPackages['@tellplot/editor'].archive}'\n  '@napi-rs/wasm-runtime': '${NAPI_WASM_RUNTIME_VERSION}'\n  rolldown: '${ROLLDOWN_VERSION}'\n`,
++        `overrides:\n  '@napi-rs/wasm-runtime': '${NAPI_WASM_RUNTIME_VERSION}'\n  rolldown: '${ROLLDOWN_VERSION}'\n`,
+         'utf8',
+       );
+       lifecycle.throwIfTerminationRequested();
+@@ -514,29 +509,18 @@ async function main() {
+       for (const [dependency, version] of Object.entries(consumer.dependencies)) {
+         assert.equal(await installedVersion(directory, dependency), version);
+       }
+-      assert.equal(await installedVersion(directory, '@antv/g2'), G2_VERSION);
+       if (consumer.adapterName === undefined) {
+         assert.equal(await packageInstalled(directory, 'react'), false);
+         assert.equal(await packageInstalled(directory, 'react-dom'), false);
+         assert.equal(await packageInstalled(directory, 'vue'), false);
+       }
+-      const installedTellPlotPackages = [
+-        '@tellplot/core',
+-        '@tellplot/editor',
+-        ...(consumer.adapterName === undefined ? [] : [consumer.adapterName]),
+-      ];
+-      for (const packageName of installedTellPlotPackages) {
+-        const installedManifest = JSON.parse(
+-          await readFile(
+-            join(directory, 'node_modules', ...packageName.split('/'), 'package.json'),
+-            'utf8',
+-          ),
+-        );
+-        assert.equal(installedManifest.name, packageName);
+-        assert.equal(installedManifest.version, packedPackages[packageName].manifest.version);
+-      }
+-      const styledPackage = consumer.adapterName ?? '@tellplot/editor';
+-      assert.ok(packedPackages[styledPackage].manifest.exports?.['./styles.css']);
++      const installedManifest = JSON.parse(
++        await readFile(join(directory, 'node_modules', 'tellplot', 'package.json'), 'utf8'),
++      );
++      assert.equal(installedManifest.name, 'tellplot');
++      assert.equal(installedManifest.version, packedPackages['tellplot'].manifest.version);
++      assert.equal(installedManifest.dependencies?.['@antv/g2'], G2_VERSION);
++      assert.ok(installedManifest.exports?.['./styles.css']);
+       await run('pnpm', ['run', 'build'], { cwd: directory });
+       lifecycle.throwIfTerminationRequested();
+       const verified = await verifyConsumer(browser, consumer, directory);
+diff --git a/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+index c09303c..85d328c 100644
+--- a/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+@@ -1,6 +1,6 @@
+-import { createInitialViewSpec } from '@tellplot/core';
+-import { ChartEditor } from '@tellplot/vue';
+-import '@tellplot/vue/styles.css';
++import { createInitialViewSpec } from 'tellplot';
++import { ChartEditor } from 'tellplot/vue';
++import 'tellplot/styles.css';
+ import { createApp, h, ref, version } from 'vue';
+ 
+ import './host.css';
+diff --git a/packages/react/README.md b/packages/react/README.md
+index 9db2b66..2d40ca1 100644
+--- a/packages/react/README.md
++++ b/packages/react/README.md
+@@ -1,41 +1,7 @@
+-# @tellplot/react
++# TellPlot React workspace layer
+ 
+-TellPlot 的 React 18/19 薄适配器。
++本目录是 TellPlot 的私有 React 18/19 生命周期适配层。它只创建宿主容器并映射 props、callbacks、ref 与
++卸载，不拥有 EditorStore、G2 或第二套编辑 UI。
+ 
+-在已有 React 18.3 或 19 项目中安装：
+-
+-```bash
+-pnpm add @tellplot/core @tellplot/react @antv/g2@5.4.8
+-```
+-
+-```tsx
+-import { ChartEditor, type ChartConfig } from '@tellplot/react';
+-import '@tellplot/react/styles.css';
+-
+-const config = {
+-  type: 'column',
+-  data: {
+-    schemaVersion: '2.0.0',
+-    dataKind: 'categorical',
+-    datasetId: 'revenue-by-region',
+-    items: [
+-      { id: 'east', label: 'East', amount: 128 },
+-      { id: 'west', label: 'West', amount: 96 },
+-    ],
+-  },
+-} as const satisfies ChartConfig;
+-
+-export function Chart() {
+-  return <ChartEditor config={config} />;
+-}
+-```
+-
+-不传 `view` 时组件管理编辑状态；受控接入使用 `view={view}` 与 `onViewChange={setView}`，也可以用
+-`defaultView` 指定非受控初值。`ChartEditorHandle` 通过 ref 提供 `focus`、`getView` 和 `exportImage`，卸载与
+-React Strict Mode cleanup 会自动销毁 imperative instance。
+-
+-`onRenderError` 在图表渲染失败时收到稳定 issue，并在恢复成功后收到 `null`。
+-
+-组件只映射 `@tellplot/editor` 生命周期；编辑状态、G2 和 UI 不在本包重复实现。完整状态和错误合同见
+-[入门](https://github.com/iiwish/tellplot/blob/main/docs/getting-started.md)与
+-[公共 API](https://github.com/iiwish/tellplot/blob/main/docs/api.md)。License: MIT。
++消费者应安装 `tellplot`，从 `tellplot/react` 导入 `ChartEditor`，并导入 `tellplot/styles.css`。本 workspace
++package 不独立发布。公共合同见 [API 文档](../../docs/api.md)。
+diff --git a/packages/react/package.json b/packages/react/package.json
+index 905fb92..1cdae4b 100644
+--- a/packages/react/package.json
++++ b/packages/react/package.json
+@@ -1,6 +1,7 @@
+ {
+   "name": "@tellplot/react",
+-  "version": "1.0.0",
++  "version": "0.0.0",
++  "private": true,
+   "description": "Thin React adapter for the framework-neutral TellPlot editor",
+   "license": "MIT",
+   "homepage": "https://tellplot.com",
+@@ -62,9 +63,5 @@
+   },
+   "dependencies": {
+     "@tellplot/editor": "workspace:*"
+-  },
+-  "publishConfig": {
+-    "access": "public",
+-    "registry": "https://registry.npmjs.org/"
+   }
+ }
+diff --git a/packages/tellplot/LICENSE b/packages/tellplot/LICENSE
+new file mode 100644
+index 0000000..f709f26
+--- /dev/null
++++ b/packages/tellplot/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2026 TellPlot contributors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/packages/tellplot/README.md b/packages/tellplot/README.md
+new file mode 100644
+index 0000000..9727aaf
+--- /dev/null
++++ b/packages/tellplot/README.md
+@@ -0,0 +1,37 @@
++# tellplot
++
++TellPlot 是基于 AntV G2 的框架无关可编辑图表库。一个包提供 imperative DOM、React、Vue 和无 DOM
++数据/命令能力，完整编辑器只实现一次。
++
++```bash
++pnpm add tellplot
++```
++
++```ts
++import { createEditor } from 'tellplot';
++import 'tellplot/styles.css';
++
++const host = document.querySelector<HTMLElement>('#chart');
++if (!host) throw new Error('Missing chart host');
++
++const editor = createEditor(host, {
++  config: {
++    type: 'column',
++    data: {
++      schemaVersion: '2.0.0',
++      dataKind: 'categorical',
++      datasetId: 'revenue',
++      items: [{ id: 'north', label: 'North', amount: 128 }],
++    },
++  },
++});
++// Call editor.destroy() when the host unmounts.
++```
++
++React 使用 `tellplot/react`，Vue 3 使用 `tellplot/vue`；无 DOM 校验、命令和持久化可以从
++`tellplot/core` 导入。
++
++- [入门与三种集成](https://github.com/iiwish/tellplot/blob/main/docs/getting-started.md)
++- [公共 API](https://github.com/iiwish/tellplot/blob/main/docs/api.md)
++- [配置边界](https://github.com/iiwish/tellplot/blob/main/docs/configuration.md)
++- [版本与兼容政策](https://github.com/iiwish/tellplot/blob/main/docs/versioning.md)
+diff --git a/packages/tellplot/package.json b/packages/tellplot/package.json
+new file mode 100644
+index 0000000..125652a
+--- /dev/null
++++ b/packages/tellplot/package.json
+@@ -0,0 +1,117 @@
++{
++  "name": "tellplot",
++  "version": "1.0.0",
++  "description": "Framework-neutral editable charts for DOM, React and Vue, built on AntV G2",
++  "license": "MIT",
++  "homepage": "https://tellplot.com",
++  "repository": {
++    "type": "git",
++    "url": "git+https://github.com/iiwish/tellplot.git",
++    "directory": "packages/tellplot"
++  },
++  "bugs": {
++    "url": "https://github.com/iiwish/tellplot/issues"
++  },
++  "keywords": [
++    "charts",
++    "editable-charts",
++    "g2",
++    "react",
++    "vue",
++    "waterfall",
++    "data-visualization"
++  ],
++  "type": "module",
++  "sideEffects": [
++    "**/*.css"
++  ],
++  "files": [
++    "dist"
++  ],
++  "main": "./dist/index.cjs",
++  "module": "./dist/index.js",
++  "types": "./dist/index.d.ts",
++  "exports": {
++    ".": {
++      "import": {
++        "types": "./dist/index.d.ts",
++        "default": "./dist/index.js"
++      },
++      "require": {
++        "types": "./dist/index.d.cts",
++        "default": "./dist/index.cjs"
++      }
++    },
++    "./core": {
++      "import": {
++        "types": "./dist/core.d.ts",
++        "default": "./dist/core.js"
++      },
++      "require": {
++        "types": "./dist/core.d.cts",
++        "default": "./dist/core.cjs"
++      }
++    },
++    "./react": {
++      "import": {
++        "types": "./dist/react.d.ts",
++        "default": "./dist/react.js"
++      },
++      "require": {
++        "types": "./dist/react.d.cts",
++        "default": "./dist/react.cjs"
++      }
++    },
++    "./vue": {
++      "import": {
++        "types": "./dist/vue.d.ts",
++        "default": "./dist/vue.js"
++      },
++      "require": {
++        "types": "./dist/vue.d.cts",
++        "default": "./dist/vue.cjs"
++      }
++    },
++    "./styles.css": {
++      "default": "./dist/styles.css"
++    },
++    "./package.json": "./package.json"
++  },
++  "scripts": {
++    "build": "tsup",
++    "typecheck": "tsc --noEmit -p tsconfig.json",
++    "test": "vitest run --root ../.. packages/tellplot/tests",
++    "test:package": "publint && attw --pack . --profile node16 --exclude-entrypoints ./styles.css && node tests/package/import-esm.mjs && node tests/package/import-cjs.cjs && tsc -p tests/package/tsconfig.json && node tests/package/pack-contract.mjs"
++  },
++  "engines": {
++    "node": ">=22.13.0"
++  },
++  "dependencies": {
++    "@antv/g-svg": "2.1.1",
++    "@antv/g2": "5.4.8"
++  },
++  "peerDependencies": {
++    "react": "^18.3.0 || ^19.0.0",
++    "vue": "^3.5.0"
++  },
++  "peerDependenciesMeta": {
++    "react": {
++      "optional": true
++    },
++    "vue": {
++      "optional": true
++    }
++  },
++  "devDependencies": {
++    "@tellplot/core": "workspace:*",
++    "@tellplot/editor": "workspace:*",
++    "@tellplot/react": "workspace:*",
++    "@tellplot/vue": "workspace:*",
++    "react": "19.2.7",
++    "vue": "3.5.27"
++  },
++  "publishConfig": {
++    "access": "public",
++    "registry": "https://registry.npmjs.org/"
++  }
++}
+diff --git a/packages/tellplot/src/core.ts b/packages/tellplot/src/core.ts
+new file mode 100644
+index 0000000..6dc7e4b
+--- /dev/null
++++ b/packages/tellplot/src/core.ts
+@@ -0,0 +1 @@
++export * from '@tellplot/core';
+diff --git a/packages/tellplot/src/index.ts b/packages/tellplot/src/index.ts
+new file mode 100644
+index 0000000..01291e1
+--- /dev/null
++++ b/packages/tellplot/src/index.ts
+@@ -0,0 +1,14 @@
++export * from '@tellplot/core';
++export { createEditor } from '@tellplot/editor';
++export type {
++  ChartRenderIssue,
++  EditorInstance,
++  EditorOptions,
++  EditorUpdate,
++  ExportError,
++  ExportErrorCode,
++  ExportOptions,
++  ExportResult,
++  TellPlotEditorError,
++  TellPlotEditorErrorCode,
++} from '@tellplot/editor';
+diff --git a/packages/tellplot/src/react.ts b/packages/tellplot/src/react.ts
+new file mode 100644
+index 0000000..a975a75
+--- /dev/null
++++ b/packages/tellplot/src/react.ts
+@@ -0,0 +1 @@
++export * from '@tellplot/react';
+diff --git a/packages/tellplot/src/styles.css b/packages/tellplot/src/styles.css
+new file mode 100644
+index 0000000..fd9d0e5
+--- /dev/null
++++ b/packages/tellplot/src/styles.css
+@@ -0,0 +1,10 @@
++@import '../../editor/src/styles/editor.css';
++
++.tellplot-react-host,
++.tellplot-vue-host {
++  display: block;
++  width: 100%;
++  height: 100%;
++  min-width: 0;
++  min-height: 0;
++}
+diff --git a/packages/tellplot/src/vue.ts b/packages/tellplot/src/vue.ts
+new file mode 100644
+index 0000000..7d4efb4
+--- /dev/null
++++ b/packages/tellplot/src/vue.ts
+@@ -0,0 +1 @@
++export * from '@tellplot/vue';
+diff --git a/packages/tellplot/tests/package/consumer.tsx b/packages/tellplot/tests/package/consumer.tsx
+new file mode 100644
+index 0000000..a654a72
+--- /dev/null
++++ b/packages/tellplot/tests/package/consumer.tsx
+@@ -0,0 +1,40 @@
++import {
++  createEditor,
++  createInitialViewSpec,
++  type ChartConfig,
++  type EditorInstance,
++  type ViewSpec,
++} from 'tellplot';
++import { validateChartConfig } from 'tellplot/core';
++import { ChartEditor as ReactChartEditor, type ChartEditorHandle } from 'tellplot/react';
++import { ChartEditor as VueChartEditor, type ChartEditorExposed } from 'tellplot/vue';
++import 'tellplot/styles.css';
++
++const config = {
++  type: 'column',
++  data: {
++    schemaVersion: '2.0.0',
++    dataKind: 'categorical',
++    datasetId: 'package-consumer',
++    items: [{ id: 'revenue', label: 'Revenue', amount: 128 }],
++  },
++} as const satisfies ChartConfig;
++
++const result = validateChartConfig(config);
++const initial = createInitialViewSpec(config.data, { chartType: config.type });
++
++export function mount(container: HTMLElement): EditorInstance {
++  return createEditor(container, { config });
++}
++
++export function ReactConsumer(): React.JSX.Element {
++  return <ReactChartEditor config={config} />;
++}
++
++export const vueConsumer = VueChartEditor;
++export const typeProofs: readonly [
++  ViewSpec | undefined,
++  ChartEditorHandle | undefined,
++  ChartEditorExposed | undefined,
++] = [initial.ok ? initial.value : undefined, undefined, undefined];
++export const validationResult = result;
+diff --git a/packages/tellplot/tests/package/import-cjs.cjs b/packages/tellplot/tests/package/import-cjs.cjs
+new file mode 100644
+index 0000000..95e282e
+--- /dev/null
++++ b/packages/tellplot/tests/package/import-cjs.cjs
+@@ -0,0 +1,35 @@
++const { readFileSync } = require('node:fs');
++const { resolve } = require('node:path');
++
++const tellplot = require('../../dist/index.cjs');
++const core = require('../../dist/core.cjs');
++const react = require('../../dist/react.cjs');
++const vue = require('../../dist/vue.cjs');
++
++if (typeof tellplot.createEditor !== 'function') {
++  throw new Error('CJS root does not expose createEditor');
++}
++if (typeof tellplot.validateChartConfig !== 'function') {
++  throw new Error('CJS root does not expose the stable core API');
++}
++if ('ChartEditor' in tellplot) {
++  throw new Error('CJS root must not eagerly expose a framework adapter');
++}
++if (typeof core.validateChartConfig !== 'function' || 'createEditor' in core) {
++  throw new Error('CJS core subpath is not isolated');
++}
++if (Object.keys(react).join(',') !== 'ChartEditor') {
++  throw new Error('CJS React subpath must expose only ChartEditor at runtime');
++}
++if (Object.keys(vue).join(',') !== 'ChartEditor') {
++  throw new Error('CJS Vue subpath must expose only ChartEditor at runtime');
++}
++
++const packageJson = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8'));
++if (packageJson.exports?.['./styles.css']?.default !== './dist/styles.css') {
++  throw new Error('CJS package does not expose styles.css');
++}
++const stylesheet = readFileSync(resolve(__dirname, '../../dist/styles.css'), 'utf8');
++if (!stylesheet.includes('.tp-editor') || !stylesheet.includes('.tellplot-vue-host')) {
++  throw new Error('CJS package stylesheet is incomplete');
++}
+diff --git a/packages/tellplot/tests/package/import-esm.mjs b/packages/tellplot/tests/package/import-esm.mjs
+new file mode 100644
+index 0000000..ca396b5
+--- /dev/null
++++ b/packages/tellplot/tests/package/import-esm.mjs
+@@ -0,0 +1,45 @@
++import { readFile } from 'node:fs/promises';
++
++const [tellplot, core, react, vue] = await Promise.all([
++  import('../../dist/index.js'),
++  import('../../dist/core.js'),
++  import('../../dist/react.js'),
++  import('../../dist/vue.js'),
++]);
++
++if (typeof tellplot.createEditor !== 'function') {
++  throw new Error('ESM root does not expose createEditor');
++}
++if (typeof tellplot.validateChartConfig !== 'function') {
++  throw new Error('ESM root does not expose the stable core API');
++}
++if ('ChartEditor' in tellplot) {
++  throw new Error('ESM root must not eagerly expose a framework adapter');
++}
++if (typeof core.validateChartConfig !== 'function' || 'createEditor' in core) {
++  throw new Error('ESM core subpath is not isolated');
++}
++if (Object.keys(react).join(',') !== 'ChartEditor') {
++  throw new Error('ESM React subpath must expose only ChartEditor at runtime');
++}
++if (Object.keys(vue).join(',') !== 'ChartEditor') {
++  throw new Error('ESM Vue subpath must expose only ChartEditor at runtime');
++}
++
++const packageJson = JSON.parse(
++  await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
++);
++if (packageJson.exports?.['./styles.css']?.default !== './dist/styles.css') {
++  throw new Error('ESM package does not expose styles.css');
++}
++if (!Array.isArray(packageJson.sideEffects) || !packageJson.sideEffects.includes('**/*.css')) {
++  throw new Error('ESM package does not preserve stylesheet side effects');
++}
++
++const stylesheet = await readFile(new URL('../../dist/styles.css', import.meta.url), 'utf8');
++if (!stylesheet.includes('.tp-editor') || !stylesheet.includes('.tellplot-react-host')) {
++  throw new Error('ESM package stylesheet is incomplete');
++}
++if (/^\s*(?::root|html|body)\b/m.test(stylesheet)) {
++  throw new Error('ESM package stylesheet contains an unscoped document selector');
++}
+diff --git a/packages/tellplot/tests/package/pack-contract.mjs b/packages/tellplot/tests/package/pack-contract.mjs
+new file mode 100644
+index 0000000..f4e05d3
+--- /dev/null
++++ b/packages/tellplot/tests/package/pack-contract.mjs
+@@ -0,0 +1,55 @@
++import { spawnSync } from 'node:child_process';
++import { fileURLToPath } from 'node:url';
++
++const packageRoot = fileURLToPath(new URL('../..', import.meta.url));
++const result = spawnSync('pnpm', ['pack', '--dry-run', '--json'], {
++  cwd: packageRoot,
++  encoding: 'utf8',
++});
++
++if (result.status !== 0) {
++  throw new Error(`pnpm pack --dry-run failed: ${result.stderr || result.stdout}`);
++}
++
++const output = JSON.parse(result.stdout);
++const manifest = Array.isArray(output) ? output[0] : output;
++const paths = manifest.files.map(file => file.path).sort();
++const requiredPaths = [
++  'LICENSE',
++  'README.md',
++  'dist/core.cjs',
++  'dist/core.d.cts',
++  'dist/core.d.ts',
++  'dist/core.js',
++  'dist/index.cjs',
++  'dist/index.d.cts',
++  'dist/index.d.ts',
++  'dist/index.js',
++  'dist/react.cjs',
++  'dist/react.d.cts',
++  'dist/react.d.ts',
++  'dist/react.js',
++  'dist/styles.css',
++  'dist/vue.cjs',
++  'dist/vue.d.cts',
++  'dist/vue.d.ts',
++  'dist/vue.js',
++  'package.json',
++];
++
++if (manifest.name !== 'tellplot') {
++  throw new Error(`Unexpected package name: ${manifest.name}`);
++}
++if (manifest.version !== '1.0.0') {
++  throw new Error(`Unexpected stable version: ${manifest.version}`);
++}
++for (const path of requiredPaths) {
++  if (!paths.includes(path)) {
++    throw new Error(`Stable tarball is missing ${path}`);
++  }
++}
++for (const path of paths) {
++  if (!['LICENSE', 'README.md', 'package.json'].includes(path) && !path.startsWith('dist/')) {
++    throw new Error(`Stable tarball contains an internal path: ${path}`);
++  }
++}
+diff --git a/packages/tellplot/tests/package/style.d.ts b/packages/tellplot/tests/package/style.d.ts
+new file mode 100644
+index 0000000..35306c6
+--- /dev/null
++++ b/packages/tellplot/tests/package/style.d.ts
+@@ -0,0 +1 @@
++declare module '*.css';
+diff --git a/packages/tellplot/tests/package/tsconfig.json b/packages/tellplot/tests/package/tsconfig.json
+new file mode 100644
+index 0000000..9d71235
+--- /dev/null
++++ b/packages/tellplot/tests/package/tsconfig.json
+@@ -0,0 +1,17 @@
++{
++  "extends": "../../../../tsconfig.base.json",
++  "compilerOptions": {
++    "noEmit": true,
++    "jsx": "react-jsx",
++    "types": ["react"],
++    "baseUrl": "../..",
++    "paths": {
++      "tellplot": ["dist/index.d.ts"],
++      "tellplot/core": ["dist/core.d.ts"],
++      "tellplot/react": ["dist/react.d.ts"],
++      "tellplot/vue": ["dist/vue.d.ts"],
++      "tellplot/styles.css": ["src/styles.css"]
++    }
++  },
++  "include": ["consumer.tsx", "style.d.ts"]
++}
+diff --git a/packages/tellplot/tsconfig.json b/packages/tellplot/tsconfig.json
+new file mode 100644
+index 0000000..c890c3f
+--- /dev/null
++++ b/packages/tellplot/tsconfig.json
+@@ -0,0 +1,16 @@
++{
++  "extends": "../../tsconfig.base.json",
++  "compilerOptions": {
++    "jsx": "react-jsx",
++    "skipLibCheck": true,
++    "types": ["node", "react"],
++    "paths": {
++      "@tellplot/core": ["../core/src/index.ts"],
++      "@tellplot/editor": ["../editor/src/index.ts"],
++      "@tellplot/react": ["../react/src/index.tsx"],
++      "@tellplot/vue": ["../vue/src/index.ts"]
++    }
++  },
++  "include": ["src", "tests"],
++  "exclude": ["tests/package"]
++}
+diff --git a/packages/tellplot/tsup.config.ts b/packages/tellplot/tsup.config.ts
+new file mode 100644
+index 0000000..2fa7c94
+--- /dev/null
++++ b/packages/tellplot/tsup.config.ts
+@@ -0,0 +1,35 @@
++import { defineConfig } from 'tsup';
++
++const internalPackages = ['@tellplot/core', '@tellplot/editor', '@tellplot/react', '@tellplot/vue'];
++
++export default defineConfig({
++  entry: {
++    index: 'src/index.ts',
++    core: 'src/core.ts',
++    react: 'src/react.ts',
++    vue: 'src/vue.ts',
++    styles: 'src/styles.css',
++  },
++  format: ['esm', 'cjs'],
++  dts: {
++    entry: {
++      index: 'src/index.ts',
++      core: 'src/core.ts',
++      react: 'src/react.ts',
++      vue: 'src/vue.ts',
++    },
++    resolve: internalPackages,
++  },
++  clean: true,
++  sourcemap: true,
++  splitting: true,
++  treeshake: true,
++  minify: false,
++  platform: 'browser',
++  target: 'es2022',
++  external: ['@antv/g2', '@antv/g-svg', 'react', 'react/jsx-runtime', 'vue'],
++  noExternal: internalPackages,
++  outExtension({ format }) {
++    return { js: format === 'cjs' ? '.cjs' : '.js' };
++  },
++});
+diff --git a/packages/vue/README.md b/packages/vue/README.md
+index dc94fdb..5e202e4 100644
+--- a/packages/vue/README.md
++++ b/packages/vue/README.md
+@@ -1,42 +1,7 @@
+-# @tellplot/vue
++# TellPlot Vue workspace layer
+ 
+-TellPlot 的 Vue 3 薄适配器，支持 `v-model:view`。
++本目录是 TellPlot 的私有 Vue 3 生命周期适配层。它只创建宿主容器并映射 props、emits、expose、
++`v-model:view` 与卸载，不拥有 EditorStore、G2 或第二套编辑 UI。
+ 
+-在已有 Vue 3.5 项目中安装：
+-
+-```bash
+-pnpm add @tellplot/core @tellplot/vue @antv/g2@5.4.8
+-```
+-
+-```vue
+-<script setup lang="ts">
+-import { ChartEditor, type ChartConfig } from '@tellplot/vue';
+-import '@tellplot/vue/styles.css';
+-
+-const config = {
+-  type: 'column',
+-  data: {
+-    schemaVersion: '2.0.0',
+-    dataKind: 'categorical',
+-    datasetId: 'revenue-by-region',
+-    items: [
+-      { id: 'east', label: 'East', amount: 128 },
+-      { id: 'west', label: 'West', amount: 96 },
+-    ],
+-  },
+-} as const satisfies ChartConfig;
+-</script>
+-
+-<template>
+-  <ChartEditor :config="config" />
+-</template>
+-```
+-
+-不传 `view` 时组件管理编辑状态；受控接入使用 `v-model:view`，也可以用 `default-view` 指定非受控初值。
+-组件 expose `focus`、`getView` 和 `exportImage`，卸载时自动销毁 imperative instance。
+-
+-`render-error` 在图表渲染失败时发送稳定 issue，并在恢复成功后发送 `null`。
+-
+-组件只映射 `@tellplot/editor` 生命周期；编辑状态、G2 和 UI 不在本包重复实现。完整 emits、状态和错误合同见
+-[入门](https://github.com/iiwish/tellplot/blob/main/docs/getting-started.md)与
+-[公共 API](https://github.com/iiwish/tellplot/blob/main/docs/api.md)。License: MIT。
++消费者应安装 `tellplot`，从 `tellplot/vue` 导入 `ChartEditor`，并导入 `tellplot/styles.css`。本 workspace
++package 不独立发布。公共合同见 [API 文档](../../docs/api.md)。
+diff --git a/packages/vue/package.json b/packages/vue/package.json
+index a7cc09d..4ef9aec 100644
+--- a/packages/vue/package.json
++++ b/packages/vue/package.json
+@@ -1,6 +1,7 @@
+ {
+   "name": "@tellplot/vue",
+-  "version": "1.0.0",
++  "version": "0.0.0",
++  "private": true,
+   "description": "Thin Vue 3 adapter for the framework-neutral TellPlot editor",
+   "license": "MIT",
+   "homepage": "https://tellplot.com",
+@@ -62,9 +63,5 @@
+   },
+   "dependencies": {
+     "@tellplot/editor": "workspace:*"
+-  },
+-  "publishConfig": {
+-    "access": "public",
+-    "registry": "https://registry.npmjs.org/"
+   }
+ }
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index d64c25a..f489649 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -80,15 +80,6 @@ importers:
+ 
+   apps/playground:
+     dependencies:
+-      '@antv/g2':
+-        specifier: 5.4.8
+-        version: 5.4.8
+-      '@tellplot/core':
+-        specifier: workspace:*
+-        version: link:../../packages/core
+-      '@tellplot/react':
+-        specifier: workspace:*
+-        version: link:../../packages/react
+       lucide-react:
+         specifier: 1.24.0
+         version: 1.24.0(react@19.2.7)
+@@ -98,6 +89,9 @@ importers:
+       react-dom:
+         specifier: 19.2.7
+         version: 19.2.7(react@19.2.7)
++      tellplot:
++        specifier: workspace:*
++        version: link:../../packages/tellplot
+ 
+   packages/core: {}
+ 
+@@ -124,6 +118,34 @@ importers:
+         specifier: 19.2.7
+         version: 19.2.7
+ 
++  packages/tellplot:
++    dependencies:
++      '@antv/g-svg':
++        specifier: 2.1.1
++        version: 2.1.1
++      '@antv/g2':
++        specifier: 5.4.8
++        version: 5.4.8
++    devDependencies:
++      '@tellplot/core':
++        specifier: workspace:*
++        version: link:../core
++      '@tellplot/editor':
++        specifier: workspace:*
++        version: link:../editor
++      '@tellplot/react':
++        specifier: workspace:*
++        version: link:../react
++      '@tellplot/vue':
++        specifier: workspace:*
++        version: link:../vue
++      react:
++        specifier: 19.2.7
++        version: 19.2.7
++      vue:
++        specifier: 3.5.27
++        version: 3.5.27(typescript@6.0.3)
++
+   packages/vue:
+     dependencies:
+       '@tellplot/editor':
+diff --git a/scripts/release/audit-release.mjs b/scripts/release/audit-release.mjs
+index e4c3413..fc64b57 100644
+--- a/scripts/release/audit-release.mjs
++++ b/scripts/release/audit-release.mjs
+@@ -4,7 +4,9 @@ import { dirname, extname, relative, resolve } from 'node:path';
+ import {
+   collectPublicSurface,
+   packageContracts,
++  publicPackageContracts,
+   validatePackageContract,
++  validatePackageSurface,
+   workspacePackageEntries,
+ } from './package-contracts.mjs';
+ import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
+@@ -45,17 +47,29 @@ for (const contract of packageContracts) {
+   if (manifest.name !== contract.name) {
+     findings.push(`${contract.directory} package name must be ${contract.name}`);
+   }
+-  if (manifest.version !== '1.0.0' || !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))) {
+-    findings.push(`${contract.name} version must be stable 1.0.0`);
+-  }
+-  if (publishConfig.access !== 'public') {
+-    findings.push(`${contract.name} publishConfig.access must be public`);
+-  }
+-  if (publishConfig.registry !== 'https://registry.npmjs.org/') {
+-    findings.push(`${contract.name} must use the official npm registry`);
+-  }
+-  if (!Array.isArray(manifest.files) || !manifest.files.includes('dist')) {
+-    findings.push(`${contract.name} must publish only its dist allowlist plus npm metadata`);
++  if (contract.public === true) {
++    if (manifest.version !== '1.0.0' || !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))) {
++      findings.push(`${contract.name} version must be stable 1.0.0`);
++    }
++    if (manifest.private === true) {
++      findings.push(`${contract.name} public package must not be private`);
++    }
++    if (publishConfig.access !== 'public') {
++      findings.push(`${contract.name} publishConfig.access must be public`);
++    }
++    if (publishConfig.registry !== 'https://registry.npmjs.org/') {
++      findings.push(`${contract.name} must use the official npm registry`);
++    }
++    if (!Array.isArray(manifest.files) || !manifest.files.includes('dist')) {
++      findings.push(`${contract.name} must publish only its dist allowlist plus npm metadata`);
++    }
++  } else {
++    if (manifest.private !== true || manifest.version !== '0.0.0') {
++      findings.push(`${contract.name} must remain a private 0.0.0 workspace layer`);
++    }
++    if (manifest.publishConfig !== undefined) {
++      findings.push(`${contract.name} private workspace layer must not define publishConfig`);
++    }
+   }
+ 
+   const surface = collectPublicSurface(resolve(packageRoot, contract.entry), { packageEntries });
+@@ -64,6 +78,22 @@ for (const contract of packageContracts) {
+     types: surface.types.length,
+   };
+   findings.push(...validatePackageContract(manifest, surface, contract));
++  for (const subpath of contract.subpaths ?? []) {
++    const subpathSurface = collectPublicSurface(resolve(packageRoot, subpath.entry), {
++      packageEntries,
++    });
++    publicSurfaceCounts[`${contract.name}${subpath.path.slice(1)}`] = {
++      runtime: subpathSurface.runtime.length,
++      types: subpathSurface.types.length,
++    };
++    findings.push(
++      ...validatePackageSurface(
++        subpathSurface,
++        subpath,
++        `${contract.name}${subpath.path.slice(1)}`,
++      ),
++    );
++  }
+ }
+ 
+ for (const path of requiredFiles) {
+@@ -139,7 +169,7 @@ if (findings.length > 0) {
+       {
+         status: 'passed',
+         version: '1.0.0',
+-        packages: packageContracts.map(({ name }) => name),
++        packages: publicPackageContracts.map(({ name }) => name),
+         publicSurface: publicSurfaceCounts,
+         publicFiles: requiredFiles.length,
+         markdownFiles: markdownFiles.length,
+diff --git a/scripts/release/canonical-gzip.mjs b/scripts/release/canonical-gzip.mjs
+index f5b265a..c4c72cf 100644
+--- a/scripts/release/canonical-gzip.mjs
++++ b/scripts/release/canonical-gzip.mjs
+@@ -1,4 +1,5 @@
+ import { readFileSync, writeFileSync } from 'node:fs';
++import { gunzipSync, gzipSync } from 'node:zlib';
+ 
+ const GZIP_HEADER_LENGTH = 10;
+ const GZIP_ID1 = 0x1f;
+@@ -6,8 +7,72 @@ const GZIP_ID2 = 0x8b;
+ const GZIP_DEFLATE_METHOD = 8;
+ const GZIP_OS_OFFSET = 9;
+ const GZIP_UNKNOWN_OS = 255;
++const TAR_BLOCK_SIZE = 512;
++const TAR_NAME_OFFSET = 0;
++const TAR_NAME_LENGTH = 100;
++const TAR_SIZE_OFFSET = 124;
++const TAR_SIZE_LENGTH = 12;
++const TAR_PREFIX_OFFSET = 345;
++const TAR_PREFIX_LENGTH = 155;
++const PACKAGE_MANIFEST_PATH = 'package/package.json';
+ 
+-export function canonicalizeGzipHeader(path) {
++function tarString(buffer, offset, length) {
++  const end = buffer.indexOf(0, offset);
++  const boundedEnd = end === -1 || end > offset + length ? offset + length : end;
++  return buffer.toString('utf8', offset, boundedEnd).trim();
++}
++
++function sortedJson(value) {
++  if (Array.isArray(value)) {
++    return value.map(sortedJson);
++  }
++  if (value !== null && typeof value === 'object') {
++    return Object.fromEntries(
++      Object.keys(value)
++        .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
++        .map(key => [key, sortedJson(value[key])]),
++    );
++  }
++  return value;
++}
++
++function canonicalizePackageManifest(archive) {
++  for (let offset = 0; offset + TAR_BLOCK_SIZE <= archive.length;) {
++    const header = archive.subarray(offset, offset + TAR_BLOCK_SIZE);
++    if (header.every(byte => byte === 0)) {
++      break;
++    }
++
++    const name = tarString(header, TAR_NAME_OFFSET, TAR_NAME_LENGTH);
++    const prefix = tarString(header, TAR_PREFIX_OFFSET, TAR_PREFIX_LENGTH);
++    const path = prefix.length > 0 ? `${prefix}/${name}` : name;
++    const sizeText = tarString(header, TAR_SIZE_OFFSET, TAR_SIZE_LENGTH);
++    const size = Number.parseInt(sizeText, 8);
++    if (!Number.isFinite(size)) {
++      throw new Error(`Release artifact has an invalid tar entry size: ${path}`);
++    }
++
++    const contentOffset = offset + TAR_BLOCK_SIZE;
++    if (path === PACKAGE_MANIFEST_PATH) {
++      const source = archive.toString('utf8', contentOffset, contentOffset + size);
++      const trailingNewline = source.endsWith('\n') ? '\n' : '';
++      const canonical = Buffer.from(
++        `${JSON.stringify(sortedJson(JSON.parse(source)), null, 2)}${trailingNewline}`,
++      );
++      if (canonical.length !== size) {
++        throw new Error('Canonical package manifest changed the tar entry size');
++      }
++      canonical.copy(archive, contentOffset);
++      return;
++    }
++
++    offset = contentOffset + Math.ceil(size / TAR_BLOCK_SIZE) * TAR_BLOCK_SIZE;
++  }
++
++  throw new Error(`Release artifact is missing ${PACKAGE_MANIFEST_PATH}`);
++}
++
++export function canonicalizeNpmTarball(path) {
+   const artifact = readFileSync(path);
+   if (
+     artifact.length < GZIP_HEADER_LENGTH ||
+@@ -18,6 +83,13 @@ export function canonicalizeGzipHeader(path) {
+     throw new Error(`Release artifact is not a valid gzip stream: ${path}`);
+   }
+ 
+-  artifact[GZIP_OS_OFFSET] = GZIP_UNKNOWN_OS;
+-  writeFileSync(path, artifact);
++  const archive = gunzipSync(artifact);
++  canonicalizePackageManifest(archive);
++
++  // npm's streaming compressor can emit different deflate block boundaries for
++  // identical tar bytes. Recompress the complete payload under the pinned Node
++  // runtime, then normalize the platform byte as well.
++  const canonical = gzipSync(archive, { level: 9, mtime: 0 });
++  canonical[GZIP_OS_OFFSET] = GZIP_UNKNOWN_OS;
++  writeFileSync(path, canonical);
+ }
+diff --git a/scripts/release/check-architecture.mjs b/scripts/release/check-architecture.mjs
+index 45f3944..6b87b53 100644
+--- a/scripts/release/check-architecture.mjs
++++ b/scripts/release/check-architecture.mjs
+@@ -21,7 +21,7 @@ const packageSourcePolicies = packageContracts.map(contract => ({
+   runtimePackages: Object.keys({
+     ...contract.dependencies,
+     ...contract.peerDependencies,
+-  }),
++  }).concat(contract.sourceDependencies ?? []),
+ }));
+ const sourceFiles = packageRoots.flatMap(root =>
+   walkFiles(root).filter(path => ['.ts', '.tsx'].includes(extname(path))),
+@@ -32,12 +32,12 @@ const findings = [];
+ let edgeCount = 0;
+ 
+ function resolveLocal(source, specifier) {
+-  const publicPackages = {
+-    '@tellplot/core': resolve(repositoryRoot, 'packages/core/src/index.ts'),
+-    '@tellplot/editor': resolve(repositoryRoot, 'packages/editor/src/index.ts'),
+-    '@tellplot/react': resolve(repositoryRoot, 'packages/react/src/index.tsx'),
+-    '@tellplot/vue': resolve(repositoryRoot, 'packages/vue/src/index.ts'),
+-  };
++  const publicPackages = Object.fromEntries(
++    packageContracts.map(contract => [
++      contract.name,
++      resolve(repositoryRoot, 'packages', contract.directory, contract.entry),
++    ]),
++  );
+   const base = publicPackages[specifier]
+     ? publicPackages[specifier]
+     : specifier.startsWith('.')
+@@ -243,12 +243,9 @@ if (findings.length > 0) {
+         sourceFiles: sourceFiles.length,
+         importEdges: edgeCount,
+         runtimeCycles: 0,
+-        publicEntries: [
+-          repositoryPath(resolve(repositoryRoot, 'packages/core/src/index.ts')),
+-          repositoryPath(resolve(repositoryRoot, 'packages/editor/src/index.ts')),
+-          repositoryPath(resolve(repositoryRoot, 'packages/react/src/index.tsx')),
+-          repositoryPath(resolve(repositoryRoot, 'packages/vue/src/index.ts')),
+-        ],
++        publicEntries: packageContracts.map(contract =>
++          repositoryPath(resolve(repositoryRoot, 'packages', contract.directory, contract.entry)),
++        ),
+       },
+       null,
+       2,
+diff --git a/scripts/release/check-package-availability.mjs b/scripts/release/check-package-availability.mjs
+index 5fc4769..e2a6bf6 100644
+--- a/scripts/release/check-package-availability.mjs
++++ b/scripts/release/check-package-availability.mjs
+@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
+ import { OFFICIAL_NPM_REGISTRY } from './audit-production.mjs';
+ import { fail, repositoryRoot } from './release-utils.mjs';
+ 
+-const PACKAGE_DIRECTORIES = ['core', 'editor', 'react', 'vue'];
+-const EXPECTED_PACKAGE_NAMES = PACKAGE_DIRECTORIES.map(directory => `@tellplot/${directory}`);
++const PACKAGE_DIRECTORIES = ['tellplot'];
++const EXPECTED_PACKAGE_NAMES = ['tellplot'];
+ 
+ export function packageRootUrl(name) {
+   return new URL(encodeURIComponent(name), OFFICIAL_NPM_REGISTRY).toString();
+@@ -38,10 +38,10 @@ function validatePackages(packages) {
+     JSON.stringify(packages.map(packageMetadata => packageMetadata?.name)) !==
+     JSON.stringify(EXPECTED_PACKAGE_NAMES)
+   ) {
+-    findings.push('trust readiness requires core, editor, react, and vue in dependency order');
++    findings.push('trust readiness requires the single tellplot public package');
+   }
+   if (releaseVersion(packages) === undefined) {
+-    findings.push('trust readiness requires one stable version across all four packages');
++    findings.push('trust readiness requires one stable tellplot version');
+   }
+   return findings;
+ }
+@@ -127,7 +127,7 @@ function loadPackages() {
+       };
+     } catch {
+       return {
+-        name: `@tellplot/${directory}`,
++        name: directory,
+         version: '',
+       };
+     }
+diff --git a/scripts/release/package-artifact.mjs b/scripts/release/package-artifact.mjs
+index ba214ba..6858e74 100644
+--- a/scripts/release/package-artifact.mjs
++++ b/scripts/release/package-artifact.mjs
+@@ -12,7 +12,7 @@ import {
+ import { tmpdir } from 'node:os';
+ import { join, resolve } from 'node:path';
+ 
+-import { canonicalizeGzipHeader } from './canonical-gzip.mjs';
++import { canonicalizeNpmTarball } from './canonical-gzip.mjs';
+ import { fail, repositoryRoot, run } from './release-utils.mjs';
+ 
+ const write = process.argv.slice(2).includes('--write');
+@@ -30,8 +30,8 @@ if (process.versions.node !== releaseNodeVersion) {
+   );
+ }
+ 
+-const packageDirectories = ['core', 'editor', 'react', 'vue'];
+-const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T129');
++const packageDirectories = ['tellplot'];
++const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T131');
+ const artifactsRoot = resolve(evidenceRoot, 'artifacts');
+ const manifestPath = resolve(evidenceRoot, 'tarball-manifest.json');
+ const temporaryRoot = mkdtempSync(join(tmpdir(), 'tellplot-release-artifacts-'));
+@@ -58,7 +58,7 @@ try {
+ 
+     run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
+     run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
+-    canonicalizeGzipHeader(freshArtifactPath);
++    canonicalizeNpmTarball(freshArtifactPath);
+     const packManifest = JSON.parse(
+       run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),
+     );
+diff --git a/scripts/release/package-contracts.json b/scripts/release/package-contracts.json
+index 0d08f06..1a13ce1 100644
+--- a/scripts/release/package-contracts.json
++++ b/scripts/release/package-contracts.json
+@@ -5,6 +5,7 @@
+       "directory": "core",
+       "name": "@tellplot/core",
+       "entry": "src/index.ts",
++      "public": false,
+       "dependencies": {},
+       "devDependencies": {},
+       "peerDependencies": {},
+@@ -199,6 +200,7 @@
+       "directory": "editor",
+       "name": "@tellplot/editor",
+       "entry": "src/index.ts",
++      "public": false,
+       "dependencies": {
+         "@antv/g-svg": "2.1.1",
+         "@tellplot/core": "workspace:*"
+@@ -236,6 +238,7 @@
+       "directory": "react",
+       "name": "@tellplot/react",
+       "entry": "src/index.tsx",
++      "public": false,
+       "dependencies": {
+         "@tellplot/editor": "workspace:*"
+       },
+@@ -266,6 +269,7 @@
+       "directory": "vue",
+       "name": "@tellplot/vue",
+       "entry": "src/index.ts",
++      "public": false,
+       "dependencies": {
+         "@tellplot/editor": "workspace:*"
+       },
+@@ -288,6 +292,79 @@
+         "ValidationIssue",
+         "ViewSpec"
+       ]
++    },
++    {
++      "directory": "tellplot",
++      "name": "tellplot",
++      "entry": "src/index.ts",
++      "public": true,
++      "dependencies": {
++        "@antv/g-svg": "2.1.1",
++        "@antv/g2": "5.4.8"
++      },
++      "devDependencies": {
++        "@tellplot/core": "workspace:*",
++        "@tellplot/editor": "workspace:*",
++        "@tellplot/react": "workspace:*",
++        "@tellplot/vue": "workspace:*",
++        "react": "19.2.7",
++        "vue": "3.5.27"
++      },
++      "peerDependencies": {
++        "react": "^18.3.0 || ^19.0.0",
++        "vue": "^3.5.0"
++      },
++      "peerDependenciesMeta": {
++        "react": {
++          "optional": true
++        },
++        "vue": {
++          "optional": true
++        }
++      },
++      "sourceDependencies": [
++        "@tellplot/core",
++        "@tellplot/editor",
++        "@tellplot/react",
++        "@tellplot/vue"
++      ],
++      "inheritExports": ["@tellplot/core"],
++      "runtimeExports": ["createEditor"],
++      "typeExports": [
++        "ChartRenderIssue",
++        "EditorInstance",
++        "EditorOptions",
++        "EditorUpdate",
++        "ExportError",
++        "ExportErrorCode",
++        "ExportOptions",
++        "ExportResult",
++        "TellPlotEditorError",
++        "TellPlotEditorErrorCode"
++      ],
++      "subpaths": [
++        {
++          "path": "./core",
++          "entry": "src/core.ts",
++          "inheritExports": ["@tellplot/core"],
++          "runtimeExports": [],
++          "typeExports": []
++        },
++        {
++          "path": "./react",
++          "entry": "src/react.ts",
++          "inheritExports": ["@tellplot/react"],
++          "runtimeExports": [],
++          "typeExports": []
++        },
++        {
++          "path": "./vue",
++          "entry": "src/vue.ts",
++          "inheritExports": ["@tellplot/vue"],
++          "runtimeExports": [],
++          "typeExports": []
++        }
++      ]
+     }
+   ]
+ }
+diff --git a/scripts/release/package-contracts.mjs b/scripts/release/package-contracts.mjs
+index 3063c33..09b88cf 100644
+--- a/scripts/release/package-contracts.mjs
++++ b/scripts/release/package-contracts.mjs
+@@ -8,6 +8,9 @@ const contractDocument = JSON.parse(
+ );
+ 
+ export const packageContracts = contractDocument.packages;
++export const publicPackageContracts = packageContracts.filter(contract => contract.public === true);
++
++const packageContractByName = new Map(packageContracts.map(contract => [contract.name, contract]));
+ 
+ function hasModifier(node, kind) {
+   return node.modifiers?.some(modifier => modifier.kind === kind) ?? false;
+@@ -233,37 +236,76 @@ function nameDifference(actual, expected) {
+     .join('; ');
+ }
+ 
+-export function validatePackageContract(manifest, surface, contract) {
+-  const findings = [];
+-  for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
+-    if (!sameRecord(manifest[field], contract[field])) {
+-      findings.push(
+-        `${contract.name} ${field} do not match the stable allowlist (${recordDifference(
+-          manifest[field],
+-          contract[field],
+-        )})`,
+-      );
++function inheritedExportNames(contract, field, visiting = new Set()) {
++  const key = `${contract.name ?? contract.path ?? 'subpath'}:${field}`;
++  if (visiting.has(key)) {
++    throw new Error(`Package contract export inheritance cycle: ${key}`);
++  }
++  visiting.add(key);
++  const names = new Set(contract[field] ?? []);
++  for (const inheritedName of contract.inheritExports ?? []) {
++    const inherited = packageContractByName.get(inheritedName);
++    if (inherited === undefined) {
++      throw new Error(`Unknown inherited package contract: ${inheritedName}`);
++    }
++    for (const name of inheritedExportNames(inherited, field, visiting)) {
++      names.add(name);
+     }
+   }
+-  if (!sameNames(surface.runtime, contract.runtimeExports)) {
++  visiting.delete(key);
++  return [...names].sort();
++}
++
++export function expectedPackageSurface(contract) {
++  return {
++    runtime: inheritedExportNames(contract, 'runtimeExports'),
++    types: inheritedExportNames(contract, 'typeExports'),
++  };
++}
++
++export function validatePackageSurface(surface, contract, label = contract.name) {
++  const findings = [];
++  const expectedSurface = expectedPackageSurface(contract);
++  if (!sameNames(surface.runtime, expectedSurface.runtime)) {
+     findings.push(
+-      `${contract.name} runtime exports do not match the stable allowlist (${nameDifference(
++      `${label} runtime exports do not match the stable allowlist (${nameDifference(
+         surface.runtime,
+-        contract.runtimeExports,
++        expectedSurface.runtime,
+       )})`,
+     );
+   }
+-  if (!sameNames(surface.types, contract.typeExports)) {
++  if (!sameNames(surface.types, expectedSurface.types)) {
+     findings.push(
+-      `${contract.name} type exports do not match the stable allowlist (${nameDifference(
++      `${label} type exports do not match the stable allowlist (${nameDifference(
+         surface.types,
+-        contract.typeExports,
++        expectedSurface.types,
+       )})`,
+     );
+   }
+   return findings;
+ }
+ 
++export function validatePackageContract(manifest, surface, contract) {
++  const findings = [];
++  for (const field of [
++    'dependencies',
++    'devDependencies',
++    'peerDependencies',
++    'peerDependenciesMeta',
++  ]) {
++    if (!sameRecord(manifest[field], contract[field])) {
++      findings.push(
++        `${contract.name} ${field} do not match the stable allowlist (${recordDifference(
++          manifest[field],
++          contract[field],
++        )})`,
++      );
++    }
++  }
++  findings.push(...validatePackageSurface(surface, contract));
++  return findings;
++}
++
+ export function workspacePackageEntries(repositoryRoot) {
+   return Object.fromEntries(
+     packageContracts.map(contract => [
+diff --git a/scripts/release/preflight-public.mjs b/scripts/release/preflight-public.mjs
+index 9347a59..d0f5438 100644
+--- a/scripts/release/preflight-public.mjs
++++ b/scripts/release/preflight-public.mjs
+@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
+ 
+ import { fail, repositoryRoot } from './release-utils.mjs';
+ 
+-const PACKAGE_DIRECTORIES = ['core', 'editor', 'react', 'vue'];
+-const EXPECTED_PACKAGE_NAMES = PACKAGE_DIRECTORIES.map(directory => `@tellplot/${directory}`);
++const PACKAGE_DIRECTORIES = ['tellplot'];
++const EXPECTED_PACKAGE_NAMES = ['tellplot'];
+ const EXPECTED_REMOTE =
+   /^(?:git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)iiwish\/tellplot(?:\.git)?$/u;
+ const CANONICAL_REMOTE_QUERY_URL = 'https://github.com/iiwish/tellplot.git';
+@@ -16,8 +16,8 @@ const OFFICIAL_NPM_REGISTRY = 'https://registry.npmjs.org/';
+ const MINIMUM_NODE_VERSION = '22.14.0';
+ const MINIMUM_NPM_VERSION = '11.15.0';
+ const PUBLISH_WORKFLOW = 'iiwish/tellplot/.github/workflows/publish-npm.yml';
+-const ARTIFACT_ROOT = '.ai-platform/evidence/T129/artifacts';
+-const ARTIFACT_MANIFEST = '.ai-platform/evidence/T129/tarball-manifest.json';
++const ARTIFACT_ROOT = '.ai-platform/evidence/T131/artifacts';
++const ARTIFACT_MANIFEST = '.ai-platform/evidence/T131/tarball-manifest.json';
+ const REMOTE_QUERY_ENVIRONMENT_KEYS = [
+   'PATH',
+   'PATHEXT',
+@@ -99,11 +99,11 @@ function artifactFilename(name, version) {
+ function validatePackages(packageManifests, findings) {
+   const packageNames = packageManifests.map(manifest => manifest?.name);
+   if (JSON.stringify(packageNames) !== JSON.stringify(EXPECTED_PACKAGE_NAMES)) {
+-    findings.push('release packages must be core, editor, react, and vue in dependency order');
++    findings.push('release packages must contain only tellplot');
+   }
+   const version = releaseVersion(packageManifests);
+   if (version === undefined || !/^\d+\.\d+\.\d+$/u.test(version)) {
+-    findings.push('all four public packages must use the same stable semantic version');
++    findings.push('the public tellplot package must use a stable semantic version');
+   }
+   for (const manifest of packageManifests) {
+     if (
+@@ -126,14 +126,14 @@ function validateArtifacts(state, packageManifests, version, findings) {
+     manifest.version !== version ||
+     !Array.isArray(manifest.packages)
+   ) {
+-    findings.push('T129 release artifact manifest is missing, invalid, or version-mismatched');
++    findings.push('T131 release artifact manifest is missing, invalid, or version-mismatched');
+     return;
+   }
+   if (
+     JSON.stringify(manifest.packages.map(entry => entry?.name)) !==
+     JSON.stringify(EXPECTED_PACKAGE_NAMES)
+   ) {
+-    findings.push('T129 release artifact manifest must contain exactly the four public packages');
++    findings.push('T131 release artifact manifest must contain exactly the tellplot package');
+   }
+ 
+   const artifactFiles = Array.isArray(state.artifactFiles) ? state.artifactFiles : [];
+@@ -151,20 +151,20 @@ function validateArtifacts(state, packageManifests, version, findings) {
+       manifestEntry.sizeBytes <= 0 ||
+       !/^[0-9a-f]{64}$/u.test(clean(manifestEntry?.sha256))
+     ) {
+-      findings.push(`T129 release artifact manifest entry is invalid for ${name || filename}`);
++      findings.push(`T131 release artifact manifest entry is invalid for ${name || filename}`);
+       continue;
+     }
+ 
+     const artifact = artifactFiles.find(candidate => candidate?.filename === filename);
+     if (artifact === undefined) {
+-      findings.push(`T129 release artifact is missing for ${name}`);
++      findings.push(`T131 release artifact is missing for ${name}`);
+       continue;
+     }
+     if (
+       artifact.sizeBytes !== manifestEntry.sizeBytes ||
+       artifact.sha256 !== manifestEntry.sha256
+     ) {
+-      findings.push(`T129 release artifact integrity does not match for ${name}`);
++      findings.push(`T131 release artifact integrity does not match for ${name}`);
+     }
+   }
+ }
+diff --git a/scripts/release/test-packages.mjs b/scripts/release/test-packages.mjs
+index 4505fef..72baf18 100644
+--- a/scripts/release/test-packages.mjs
++++ b/scripts/release/test-packages.mjs
+@@ -4,7 +4,7 @@ import { join } from 'node:path';
+ 
+ import { run } from './release-utils.mjs';
+ 
+-const packageNames = ['@tellplot/core', '@tellplot/editor', '@tellplot/react', '@tellplot/vue'];
++const packageNames = ['tellplot'];
+ const npmCache = mkdtempSync(join(tmpdir(), 'tellplot-npm-cache-'));
+ 
+ try {
+diff --git a/vitest.config.ts b/vitest.config.ts
+index 6970f6e..3ba06ee 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -1,7 +1,7 @@
+ import { defineConfig } from 'vitest/config';
+ import { fileURLToPath } from 'node:url';
+ 
+-const editorAliases = [
++const workspaceAliases = [
+   {
+     find: '@tellplot/core',
+     replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)),
+@@ -14,11 +14,39 @@ const editorAliases = [
+     find: '@tellplot/editor',
+     replacement: fileURLToPath(new URL('./packages/editor/src/index.ts', import.meta.url)),
+   },
++  {
++    find: '@tellplot/react',
++    replacement: fileURLToPath(new URL('./packages/react/src/index.tsx', import.meta.url)),
++  },
++  {
++    find: '@tellplot/vue',
++    replacement: fileURLToPath(new URL('./packages/vue/src/index.ts', import.meta.url)),
++  },
++  {
++    find: 'tellplot/styles.css',
++    replacement: fileURLToPath(new URL('./packages/tellplot/src/styles.css', import.meta.url)),
++  },
++  {
++    find: 'tellplot/react',
++    replacement: fileURLToPath(new URL('./packages/tellplot/src/react.ts', import.meta.url)),
++  },
++  {
++    find: 'tellplot/vue',
++    replacement: fileURLToPath(new URL('./packages/tellplot/src/vue.ts', import.meta.url)),
++  },
++  {
++    find: 'tellplot/core',
++    replacement: fileURLToPath(new URL('./packages/tellplot/src/core.ts', import.meta.url)),
++  },
++  {
++    find: 'tellplot',
++    replacement: fileURLToPath(new URL('./packages/tellplot/src/index.ts', import.meta.url)),
++  },
+ ] as const;
+ 
+ export default defineConfig({
+   resolve: {
+-    alias: editorAliases,
++    alias: workspaceAliases,
+   },
+   test: {
+     testTimeout: 15_000,
+@@ -33,7 +61,7 @@ export default defineConfig({
+       },
+       {
+         resolve: {
+-          alias: editorAliases,
++          alias: workspaceAliases,
+         },
+         test: {
+           name: 'editor-unit',
+@@ -49,7 +77,7 @@ export default defineConfig({
+       },
+       {
+         resolve: {
+-          alias: editorAliases,
++          alias: workspaceAliases,
+         },
+         test: {
+           name: 'editor-components',
+@@ -67,7 +95,7 @@ export default defineConfig({
+       },
+       {
+         resolve: {
+-          alias: editorAliases,
++          alias: workspaceAliases,
+         },
+         test: {
+           name: 'playground-unit',
+@@ -78,7 +106,7 @@ export default defineConfig({
+       },
+       {
+         resolve: {
+-          alias: editorAliases,
++          alias: workspaceAliases,
+         },
+         test: {
+           name: 'framework-adapters',

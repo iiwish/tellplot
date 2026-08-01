@@ -29,22 +29,34 @@ export default defineConfig({
         replacement: fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
       },
       {
-        find: '@tellplot/react/styles.css',
-        replacement: fileURLToPath(new URL('../../packages/react/src/styles.css', import.meta.url)),
-      },
-      {
-        find: '@tellplot/editor/styles.css',
-        replacement: fileURLToPath(
-          new URL('../../packages/editor/src/styles/editor.css', import.meta.url),
-        ),
+        find: '@tellplot/editor',
+        replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
       },
       {
         find: '@tellplot/react',
         replacement: fileURLToPath(new URL('../../packages/react/src/index.tsx', import.meta.url)),
       },
       {
-        find: '@tellplot/editor',
-        replacement: fileURLToPath(new URL('../../packages/editor/src/index.ts', import.meta.url)),
+        find: '@tellplot/vue',
+        replacement: fileURLToPath(new URL('../../packages/vue/src/index.ts', import.meta.url)),
+      },
+      {
+        find: 'tellplot/styles.css',
+        replacement: fileURLToPath(
+          new URL('../../packages/tellplot/src/styles.css', import.meta.url),
+        ),
+      },
+      {
+        find: 'tellplot/react',
+        replacement: fileURLToPath(
+          new URL('../../packages/tellplot/src/react.ts', import.meta.url),
+        ),
+      },
+      {
+        find: 'tellplot',
+        replacement: fileURLToPath(
+          new URL('../../packages/tellplot/src/index.ts', import.meta.url),
+        ),
       },
     ],
   },

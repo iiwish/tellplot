@@ -12,7 +12,7 @@ import { createProcessLifecycle } from '../helpers/processLifecycle.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE = resolve(HERE, '../../../..');
-const PACKAGE_DIRECTORIES = ['core', 'editor', 'react', 'vue'];
+const PACKAGE_DIRECTORIES = ['tellplot'];
 const REACT_CONSUMER_TEMPLATE = join(HERE, 'consumer');
 const VUE_CONSUMER_TEMPLATE = join(HERE, 'vue-consumer');
 const IMPERATIVE_CONSUMER_TEMPLATE = join(HERE, 'imperative-consumer');
@@ -35,7 +35,7 @@ const FRAMEWORK_MATRIX = [
     framework: 'React',
     frameworkVersion: '18.3.1',
     template: REACT_CONSUMER_TEMPLATE,
-    adapterName: '@tellplot/react',
+    adapterName: 'tellplot/react',
     dependencies: { react: '18.3.1', 'react-dom': '18.3.1' },
   },
   {
@@ -43,7 +43,7 @@ const FRAMEWORK_MATRIX = [
     framework: 'React',
     frameworkVersion: '19.2.7',
     template: REACT_CONSUMER_TEMPLATE,
-    adapterName: '@tellplot/react',
+    adapterName: 'tellplot/react',
     dependencies: { react: '19.2.7', 'react-dom': '19.2.7' },
   },
   {
@@ -51,7 +51,7 @@ const FRAMEWORK_MATRIX = [
     framework: 'Vue',
     frameworkVersion: '3.5.27',
     template: VUE_CONSUMER_TEMPLATE,
-    adapterName: '@tellplot/vue',
+    adapterName: 'tellplot/vue',
     dependencies: { vue: '3.5.27' },
   },
 ];
@@ -461,7 +461,7 @@ async function main() {
     }
     const archives = (await readdir(packDirectory)).filter(name => name.endsWith('.tgz'));
     lifecycle.throwIfTerminationRequested();
-    assert.deepEqual(archives.length, 4, 'Framework matrix requires all four packed packages');
+    assert.deepEqual(archives.length, 1, 'Framework matrix requires one packed tellplot package');
 
     browser = await chromium.launch();
     lifecycle.throwIfTerminationRequested();
@@ -471,11 +471,7 @@ async function main() {
       await cp(consumer.template, directory, { recursive: true });
       lifecycle.throwIfTerminationRequested();
       const localDependencies = {
-        '@tellplot/core': `file:${packedPackages['@tellplot/core'].archive}`,
-        '@tellplot/editor': `file:${packedPackages['@tellplot/editor'].archive}`,
-        ...(consumer.adapterName === undefined
-          ? {}
-          : { [consumer.adapterName]: `file:${packedPackages[consumer.adapterName].archive}` }),
+        tellplot: `file:${packedPackages['tellplot'].archive}`,
       };
       await writeFile(
         join(directory, 'package.json'),
@@ -486,7 +482,6 @@ async function main() {
             type: 'module',
             scripts: { build: 'vite build' },
             dependencies: {
-              '@antv/g2': G2_VERSION,
               ...localDependencies,
               ...consumer.dependencies,
             },
@@ -500,7 +495,7 @@ async function main() {
       await writeFile(join(directory, 'vite.config.mjs'), VITE_CONFIG, 'utf8');
       await writeFile(
         join(directory, 'pnpm-workspace.yaml'),
-        `overrides:\n  '@tellplot/core': 'file:${packedPackages['@tellplot/core'].archive}'\n  '@tellplot/editor': 'file:${packedPackages['@tellplot/editor'].archive}'\n  '@napi-rs/wasm-runtime': '${NAPI_WASM_RUNTIME_VERSION}'\n  rolldown: '${ROLLDOWN_VERSION}'\n`,
+        `overrides:\n  '@napi-rs/wasm-runtime': '${NAPI_WASM_RUNTIME_VERSION}'\n  rolldown: '${ROLLDOWN_VERSION}'\n`,
         'utf8',
       );
       lifecycle.throwIfTerminationRequested();
@@ -514,29 +509,18 @@ async function main() {
       for (const [dependency, version] of Object.entries(consumer.dependencies)) {
         assert.equal(await installedVersion(directory, dependency), version);
       }
-      assert.equal(await installedVersion(directory, '@antv/g2'), G2_VERSION);
       if (consumer.adapterName === undefined) {
         assert.equal(await packageInstalled(directory, 'react'), false);
         assert.equal(await packageInstalled(directory, 'react-dom'), false);
         assert.equal(await packageInstalled(directory, 'vue'), false);
       }
-      const installedTellPlotPackages = [
-        '@tellplot/core',
-        '@tellplot/editor',
-        ...(consumer.adapterName === undefined ? [] : [consumer.adapterName]),
-      ];
-      for (const packageName of installedTellPlotPackages) {
-        const installedManifest = JSON.parse(
-          await readFile(
-            join(directory, 'node_modules', ...packageName.split('/'), 'package.json'),
-            'utf8',
-          ),
-        );
-        assert.equal(installedManifest.name, packageName);
-        assert.equal(installedManifest.version, packedPackages[packageName].manifest.version);
-      }
-      const styledPackage = consumer.adapterName ?? '@tellplot/editor';
-      assert.ok(packedPackages[styledPackage].manifest.exports?.['./styles.css']);
+      const installedManifest = JSON.parse(
+        await readFile(join(directory, 'node_modules', 'tellplot', 'package.json'), 'utf8'),
+      );
+      assert.equal(installedManifest.name, 'tellplot');
+      assert.equal(installedManifest.version, packedPackages['tellplot'].manifest.version);
+      assert.equal(installedManifest.dependencies?.['@antv/g2'], G2_VERSION);
+      assert.ok(installedManifest.exports?.['./styles.css']);
       await run('pnpm', ['run', 'build'], { cwd: directory });
       lifecycle.throwIfTerminationRequested();
       const verified = await verifyConsumer(browser, consumer, directory);

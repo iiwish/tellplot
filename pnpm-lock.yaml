@@ -80,15 +80,6 @@ importers:
 
   apps/playground:
     dependencies:
-      '@antv/g2':
-        specifier: 5.4.8
-        version: 5.4.8
-      '@tellplot/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@tellplot/react':
-        specifier: workspace:*
-        version: link:../../packages/react
       lucide-react:
         specifier: 1.24.0
         version: 1.24.0(react@19.2.7)
@@ -98,6 +89,9 @@ importers:
       react-dom:
         specifier: 19.2.7
         version: 19.2.7(react@19.2.7)
+      tellplot:
+        specifier: workspace:*
+        version: link:../../packages/tellplot
 
   packages/core: {}
 
@@ -123,6 +117,34 @@ importers:
       react:
         specifier: 19.2.7
         version: 19.2.7
+
+  packages/tellplot:
+    dependencies:
+      '@antv/g-svg':
+        specifier: 2.1.1
+        version: 2.1.1
+      '@antv/g2':
+        specifier: 5.4.8
+        version: 5.4.8
+    devDependencies:
+      '@tellplot/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tellplot/editor':
+        specifier: workspace:*
+        version: link:../editor
+      '@tellplot/react':
+        specifier: workspace:*
+        version: link:../react
+      '@tellplot/vue':
+        specifier: workspace:*
+        version: link:../vue
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+      vue:
+        specifier: 3.5.27
+        version: 3.5.27(typescript@6.0.3)
 
   packages/vue:
     dependencies:

@@ -1,17 +1,16 @@
 import { Braces, Check, Copy, FileJson2, PackageOpen, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import type { ChartConfig, ViewSpec } from '@tellplot/core';
+import type { ChartConfig, ViewSpec } from 'tellplot';
 
 import { writeClipboard } from './clipboard';
 import { DEMO_WATERFALL_COLORS } from './demoPresentation';
 import { LiveChartEditor } from './LiveChartEditor';
 
-const INSTALL_CODE =
-  'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom';
+const INSTALL_CODE = 'pnpm add tellplot';
 
-const REACT_CODE = `import { ChartEditor } from '@tellplot/react';
-import '@tellplot/react/styles.css';
+const REACT_CODE = `import { ChartEditor } from 'tellplot/react';
+import 'tellplot/styles.css';
 import { sourceData } from './profit-bridge.data';
 
 const config = {
@@ -23,7 +22,7 @@ export function ProfitBridge() {
   return <ChartEditor config={config} />;
 }`;
 
-const APPEARANCE_CODE = `import { ChartEditor } from '@tellplot/react';
+const APPEARANCE_CODE = `import { ChartEditor } from 'tellplot/react';
 import { sourceData } from './profit-bridge.data';
 
 const config = {
@@ -211,7 +210,7 @@ export function UsageGuide({
       <header className="playground-usage-header">
         <div>
           <h2 id={`${id}-title`}>在项目中使用 TellPlot</h2>
-          <code>{developerView === 'live' ? 'tellplot.config.json' : '@tellplot/react'}</code>
+          <code>{developerView === 'live' ? 'tellplot.config.json' : 'tellplot/react'}</code>
         </div>
         <button
           ref={closeButtonRef}

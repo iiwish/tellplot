@@ -1,6 +1,5 @@
-import { createInitialViewSpec } from '@tellplot/core';
-import { createEditor } from '@tellplot/editor';
-import '@tellplot/editor/styles.css';
+import { createEditor, createInitialViewSpec } from 'tellplot';
+import 'tellplot/styles.css';
 
 import './host.css';
 

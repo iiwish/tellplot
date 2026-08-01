@@ -7,8 +7,8 @@ import {
   type ChartEditorOptions,
   type SourceData,
   type ViewSpec,
-} from '@tellplot/core';
-import { ChartEditor, type ChartEditorHandle, type ExportError } from '@tellplot/react';
+} from 'tellplot';
+import { ChartEditor, type ChartEditorHandle, type ExportError } from 'tellplot/react';
 import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 

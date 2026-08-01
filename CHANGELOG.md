@@ -10,7 +10,9 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或�
 ### Added
 
 - 基于 AntV G2 的瀑布图、分类条形图和分类柱状图。
-- 框架无关 `@tellplot/core`、imperative `@tellplot/editor`、React 18/19 与 Vue 3 adapters。
+- 单个 `tellplot` 公共包，以及 `tellplot/core`、`tellplot/react`、`tellplot/vue` 和
+  `tellplot/styles.css` 子路径。
+- 框架无关 core、imperative editor、React 18/19 与 Vue 3 adapters 的私有 workspace 分层。
 - 排序、递归分组、折叠、固定、注释、强调与撤销重做。
 - `ViewSpec` 验证、序列化和恢复。
 - SVG/PNG 导出、安全图表配置与无障碍摘要。
@@ -27,8 +29,10 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或�
 - 配置统一收纳到 `config.data`、`config.appearance` 与 `config.editor`；可编辑状态使用 `view`、
   `defaultView` 和受控更新事件。
 - 编辑器 runtime 与领域状态从 framework 生命周期中分离；framework adapters 只代理 create/update/destroy。
+- G2/G SVG 由 `tellplot` 直接依赖，React/Vue 作为 optional peers；imperative consumer 无需安装前端框架。
 
 ### Stability
 
-- 四包 runtime exports、公共类型、schema、错误码、framework/G2 peer 范围和浏览器合同进入 1.x 兼容承诺。
+- `tellplot` 根入口及文档化子路径的 runtime exports、公共类型、schema、错误码、framework peer 与浏览器
+  合同进入 1.x 兼容承诺。
 - npm publish、Git tag、GitHub Release 和生产部署需要独立授权，版本字段不表示已经公开发布。

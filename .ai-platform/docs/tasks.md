@@ -2,11 +2,11 @@
 
 ## Metadata
 
-- Version: 0.36.0
+- Version: 0.37.0
 - Status: Active
-- Last updated: 2026-07-31
-- Scope: T101-T116、G002 系列、G004 与 G006 已验收；G005 / T130 本地发布准备待用户复核，
-  公开执行继续等待独立授权与外部条件
+- Last updated: 2026-08-01
+- Scope: T101-T116、G002 系列、G004 与 G006 已验收；用户批准 G007 / T131 把公共分发收敛为一个
+  `tellplot` 包并完成公开发布
 
 ## Goal-Level Delivery
 
@@ -27,8 +27,9 @@
 | G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
 | G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
 | G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
-| G005 - 公开稳定版发布 | Blocked | T130 本地发布准备 Needs_Review；等待 stale tag 受控重建、package bootstrap、独立远程授权与发布身份/托管条件 |
-| G006 - 框架无关编辑器架构 | Accepted | T125-T129；四包架构、完整编辑器与发布候选门禁已验收 |
+| G005 - 四包公开稳定版发布 | Superseded | T130 的安全门禁由 G007 复用；四包公开目标由单包决策取代 |
+| G006 - 框架无关编辑器架构 | Accepted | T125-T129；内部四层架构、完整编辑器与质量门禁已验收 |
+| G007 - 单包分发与公开发布 | In_Progress | T131；只发布 `tellplot`，内部 core/editor/React/Vue layers 保持 private |
 
 ## T001 - 确认产品设计与项目章程
 
@@ -219,3 +220,19 @@ package root bootstrap、stale annotated `v1.0.0` 的受控重建与保护、sta
 
 权威目标图与 evidence 位于 `.ai-platform/specs/012-public-release-readiness/` 和
 `.ai-platform/evidence/T130/`。
+
+G005 / T130 保留为已完成的本地发布安全基线；其四包 artifact 目标不再执行。source preflight、官方
+registry audit、protected environment、stage-only Trusted Publishing、provenance、固定 hash 和 2FA
+approval 继续由 G007 复用。
+
+## G007 Execution
+
+G007 由用户于 2026-08-01 明确批准，以 T131 把 npm 公共分发收敛为一个无 scope 的 `tellplot` 包。
+公共入口固定为 `tellplot`、`tellplot/core`、`tellplot/react`、`tellplot/vue` 和 `tellplot/styles.css`；
+内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` 保持 private workspace
+layers，不独立发布，不建设兼容 shim。
+
+T131 连续完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
+清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval 和公开 fresh install。
+权威目标图与 evidence 位于 `.ai-platform/specs/013-single-package-distribution/` 和
+`.ai-platform/evidence/T131/`。

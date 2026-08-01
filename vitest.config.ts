@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
-const editorAliases = [
+const workspaceAliases = [
   {
     find: '@tellplot/core',
     replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)),
@@ -14,11 +14,39 @@ const editorAliases = [
     find: '@tellplot/editor',
     replacement: fileURLToPath(new URL('./packages/editor/src/index.ts', import.meta.url)),
   },
+  {
+    find: '@tellplot/react',
+    replacement: fileURLToPath(new URL('./packages/react/src/index.tsx', import.meta.url)),
+  },
+  {
+    find: '@tellplot/vue',
+    replacement: fileURLToPath(new URL('./packages/vue/src/index.ts', import.meta.url)),
+  },
+  {
+    find: 'tellplot/styles.css',
+    replacement: fileURLToPath(new URL('./packages/tellplot/src/styles.css', import.meta.url)),
+  },
+  {
+    find: 'tellplot/react',
+    replacement: fileURLToPath(new URL('./packages/tellplot/src/react.ts', import.meta.url)),
+  },
+  {
+    find: 'tellplot/vue',
+    replacement: fileURLToPath(new URL('./packages/tellplot/src/vue.ts', import.meta.url)),
+  },
+  {
+    find: 'tellplot/core',
+    replacement: fileURLToPath(new URL('./packages/tellplot/src/core.ts', import.meta.url)),
+  },
+  {
+    find: 'tellplot',
+    replacement: fileURLToPath(new URL('./packages/tellplot/src/index.ts', import.meta.url)),
+  },
 ] as const;
 
 export default defineConfig({
   resolve: {
-    alias: editorAliases,
+    alias: workspaceAliases,
   },
   test: {
     testTimeout: 15_000,
@@ -33,7 +61,7 @@ export default defineConfig({
       },
       {
         resolve: {
-          alias: editorAliases,
+          alias: workspaceAliases,
         },
         test: {
           name: 'editor-unit',
@@ -49,7 +77,7 @@ export default defineConfig({
       },
       {
         resolve: {
-          alias: editorAliases,
+          alias: workspaceAliases,
         },
         test: {
           name: 'editor-components',
@@ -67,7 +95,7 @@ export default defineConfig({
       },
       {
         resolve: {
-          alias: editorAliases,
+          alias: workspaceAliases,
         },
         test: {
           name: 'playground-unit',
@@ -78,7 +106,7 @@ export default defineConfig({
       },
       {
         resolve: {
-          alias: editorAliases,
+          alias: workspaceAliases,
         },
         test: {
           name: 'framework-adapters',

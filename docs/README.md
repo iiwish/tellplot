@@ -29,9 +29,8 @@
 - `/docs`：面向接入方的可扫描文档入口。
 - `/playground`：公共 `ChartConfig`、独立 `ViewSpec`、结构大纲、检查器与导入导出工作台。
 
-网站页面通过 `@tellplot/react` 消费 `@tellplot/editor`，并从 `@tellplot/core` 使用数据与持久化能力。
-`docs/**` 与 package README 是长期 canonical 文档。网站不提供远程内容、版本服务、搜索后端或公共图表
-registry。
+网站页面通过 `tellplot/react` 消费唯一公共包，并从 `tellplot` 使用数据与持久化能力。`docs/**` 与
+package README 是长期 canonical 文档。网站不提供远程内容、版本服务、搜索后端或公共图表 registry。
 
 ## 文档规则
 

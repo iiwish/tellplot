@@ -1,6 +1,7 @@
 {
   "name": "@tellplot/editor",
-  "version": "1.0.0",
+  "version": "0.0.0",
+  "private": true,
   "description": "Framework-neutral editable charts built on AntV G2",
   "license": "MIT",
   "homepage": "https://tellplot.com",
@@ -62,10 +63,6 @@
   },
   "devDependencies": {
     "@antv/g2": "5.4.8"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@tellplot/core": "workspace:*",

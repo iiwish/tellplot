@@ -1,6 +1,7 @@
 {
   "name": "@tellplot/vue",
-  "version": "1.0.0",
+  "version": "0.0.0",
+  "private": true,
   "description": "Thin Vue 3 adapter for the framework-neutral TellPlot editor",
   "license": "MIT",
   "homepage": "https://tellplot.com",
@@ -62,9 +63,5 @@
   },
   "dependencies": {
     "@tellplot/editor": "workspace:*"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
   }
 }

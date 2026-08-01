@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { run } from './release-utils.mjs';
 
-const packageNames = ['@tellplot/core', '@tellplot/editor', '@tellplot/react', '@tellplot/vue'];
+const packageNames = ['tellplot'];
 const npmCache = mkdtempSync(join(tmpdir(), 'tellplot-npm-cache-'));
 
 try {

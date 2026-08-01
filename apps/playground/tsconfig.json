@@ -6,7 +6,10 @@
     "paths": {
       "@tellplot/core": ["../../packages/core/src/index.ts"],
       "@tellplot/editor": ["../../packages/editor/src/index.ts"],
-      "@tellplot/react": ["../../packages/react/src/index.tsx"]
+      "@tellplot/react": ["../../packages/react/src/index.tsx"],
+      "@tellplot/vue": ["../../packages/vue/src/index.ts"],
+      "tellplot": ["../../packages/tellplot/src/index.ts"],
+      "tellplot/react": ["../../packages/tellplot/src/react.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

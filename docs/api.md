@@ -1,8 +1,14 @@
 # TellPlot 公共 API
 
-## `@tellplot/core`
+```bash
+pnpm add tellplot
+```
 
-领域与状态包不访问 DOM，导出：
+根入口、core、React 和 Vue 使用同一个版本与 tarball；只允许从下列声明的 subpath 导入。
+
+## `tellplot/core`
+
+core 入口不访问 DOM、G2 或 UI framework，导出：
 
 - `validateChartConfig`、`validateSourceData`、`validateViewSpec`。
 - `createInitialViewSpec`、`parseViewSpec`、`serializeViewSpec`、`viewSpecsEqual`。
@@ -39,7 +45,9 @@
 
 以上 named exports 都属于 1.x 公共表面；各字段的精确 readonly、union 和泛型签名以包内 `.d.ts` 为准。
 
-## `@tellplot/editor`
+## `tellplot`
+
+根入口包含 `tellplot/core` 的全部公共能力，并额外提供 framework-neutral imperative editor：
 
 ```ts
 const editor = createEditor(container, options);
@@ -79,7 +87,7 @@ G2 实例或 DOM。
 销毁后 `update`/`focus` 为 no-op，`dispatch`/`undo`/`redo` 返回 `null`，`getView` 抛出
 `TellPlotEditorError`/`EDITOR_DESTROYED`，`exportImage` 以 `EXPORT_UNAVAILABLE` 拒绝。
 
-## `@tellplot/react`
+## `tellplot/react`
 
 `ChartEditor` props 与 `EditorOptions` 对齐，并支持 `className`、`style`。`ChartEditorHandle` 只代理
 `focus`、`getView` 和 `exportImage`。Strict Mode 下每个创建的 instance 都会对应一次销毁。
@@ -87,7 +95,7 @@ G2 实例或 DOM。
 传入 `view` 与 `onViewChange` 进行受控更新；只传 `defaultView` 或两者都不传时为非受控。卸载后调用旧 ref
 handle 的 `getView` 会抛出未挂载错误，`exportImage` 会返回 rejected Promise。
 
-## `@tellplot/vue`
+## `tellplot/vue`
 
 `ChartEditor` 支持 `config`、`view`、`defaultView` 和 `v-model:view`。事件包括 `view-change`、
 `command`、`command-rejected`、`config-rejected`、`selection-change`、`render-error`；expose 与 React

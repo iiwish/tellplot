@@ -1,7 +1,7 @@
 import { Check, Copy, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import type { ChartConfig, ViewSpec } from '@tellplot/core';
+import type { ChartConfig, ViewSpec } from 'tellplot';
 
 import {
   parsePlaygroundChartConfig,

@@ -16,8 +16,7 @@ import { writeClipboard } from './clipboard';
 import { ShowcaseChart } from './ShowcaseChart';
 import { SiteFooter } from './SiteFooter';
 
-const INSTALL_COMMAND =
-  'pnpm add @tellplot/core @tellplot/editor @tellplot/react @antv/g2@5.4.8 react react-dom';
+const INSTALL_COMMAND = 'pnpm add tellplot';
 
 const DATA_FLOW = [
   {
@@ -46,9 +45,9 @@ const DATA_FLOW = [
   },
 ] as const;
 
-const CONFIG_EXAMPLE = `import type { ChartConfig } from '@tellplot/core';
-import { ChartEditor } from '@tellplot/react';
-import '@tellplot/react/styles.css';
+const CONFIG_EXAMPLE = `import type { ChartConfig } from 'tellplot';
+import { ChartEditor } from 'tellplot/react';
+import 'tellplot/styles.css';
 import { revenueData } from './revenue.data';
 
 const config = {

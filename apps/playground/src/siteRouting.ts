@@ -51,7 +51,7 @@ export function siteDescriptionForRoute(route: SiteRoute): string {
     case 'examples':
       return '浏览 TellPlot 已验证的瀑布图、分类柱状图和分类条形图示例。';
     case 'docs':
-      return '了解 @tellplot/editor 的安装、数据合同、安全配置和导出能力。';
+      return '了解 tellplot 的安装、数据合同、安全配置和导出能力。';
     case 'playground':
       return '实时编辑 TellPlot 公共图表配置与视图状态，并同步查看结构和图形变化。';
     case 'not-found':
