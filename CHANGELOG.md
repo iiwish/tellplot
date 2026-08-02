@@ -3,6 +3,12 @@
 TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或错误码变化只进入新的 major；
 弃用遵循 [版本与兼容政策](docs/versioning.md)。
 
+## Unreleased
+
+### Fixed
+
+- 图表框选拖到绘图区外松开时仍会完成当前选区并打开分组命名弹窗；元素拖拽在图外松开仍保持取消语义。
+
 ## 1.0.0
 
 首个稳定版本。`tellplot@1.0.0` 已发布到 npm，GitHub Release 与受保护的 `v1.0.0` tag、发布 artifact

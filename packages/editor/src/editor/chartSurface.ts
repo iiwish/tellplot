@@ -810,8 +810,12 @@ export function createChartSurface(
             typeof record.canvas.y === 'number'
           ) {
             completePointer(
-              { pointerId: record.pointerId, x: record.canvas.x, y: record.canvas.y },
-              true,
+              {
+                pointerId: record.pointerId,
+                x: record.canvas.x,
+                y: record.canvas.y,
+              },
+              drag !== null,
             );
           }
         },

@@ -313,6 +313,112 @@ describe('chart surface render recovery', () => {
     surface.destroy();
   });
 
+  it('commits an outside marquee while cancelling an outside item drag', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    const selectionState: ChartSurfaceState = {
+      config: {
+        type: 'column',
+        data: {
+          schemaVersion: '2.0.0',
+          dataKind: 'categorical',
+          datasetId: 'outside-marquee-fixture',
+          items: [
+            { id: 'a', label: 'Alpha', amount: 10 },
+            { id: 'b', label: 'Beta', amount: -20 },
+          ],
+        },
+      },
+      view: {
+        schemaVersion: '2.0.0',
+        chartType: 'column',
+        datasetId: 'outside-marquee-fixture',
+        revision: 0,
+        rootOrder: ['a', 'b'],
+        groups: {},
+        collapsedGroupIds: [],
+        pinnedItemIds: [],
+        annotations: {},
+        emphasis: {},
+      },
+      chart: {
+        family: 'categorical',
+        chartType: 'column',
+        projection: [
+          {
+            nodeId: 'a',
+            label: 'Alpha',
+            amount: 10,
+            kind: 'positive',
+            sourceIds: ['a'],
+            locked: false,
+            order: 0,
+          },
+          {
+            nodeId: 'b',
+            label: 'Beta',
+            amount: -20,
+            kind: 'negative',
+            sourceIds: ['b'],
+            locked: false,
+            order: 1,
+          },
+        ],
+      },
+      messages: editorMessages('en-US'),
+    };
+    surface.update(selectionState);
+    const runtime = latestRuntime();
+    runtime.context = {
+      canvas: {
+        document: {
+          getElementsByClassName: () => [
+            {
+              __data__: { data: { nodeId: 'a' } },
+              getBounds: () => ({ min: [10, 10], max: [30, 80] }),
+            },
+            {
+              __data__: { data: { nodeId: 'b' } },
+              getBounds: () => ({ min: [40, 10], max: [60, 80] }),
+            },
+          ],
+        },
+      },
+    };
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+    });
+    const pointerDown = runtime.options.events.find(event => event.name === 'plot:pointerdown');
+    const pointerUpOutside = runtime.options.events.find(
+      event => event.name === 'plot:pointerupoutside',
+    );
+
+    pointerDown?.listener({ pointerId: 12, canvas: { x: 5, y: 5 } });
+    pointerUpOutside?.listener({ pointerId: 12, canvas: { x: 65, y: 100 } });
+
+    expect(callbacks.onMarqueeSelection).toHaveBeenCalledWith(['a', 'b']);
+    expect(callbacks.onCancel).not.toHaveBeenCalled();
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+
+    callbacks.onMarqueeSelection.mockClear();
+    const elementPointerDown = runtime.options.events.find(
+      event => event.name === 'element:pointerdown',
+    );
+    elementPointerDown?.listener({
+      pointerId: 13,
+      canvas: { x: 20, y: 20 },
+      data: { data: { nodeId: 'a' } },
+      target: { getBounds: () => ({ min: [10, 10], max: [30, 80] }) },
+    });
+    pointerUpOutside?.listener({ pointerId: 13, canvas: { x: 65, y: 100 } });
+
+    expect(callbacks.onMarqueeSelection).not.toHaveBeenCalled();
+    expect(callbacks.onCancel).toHaveBeenCalledWith('cancelled');
+    surface.destroy();
+  });
+
   it('aborts an active interaction when the authoritative render fails', () => {
     const callbacks = createCallbacks();
     const surface = createChartSurface(document, callbacks);

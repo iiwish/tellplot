@@ -625,6 +625,39 @@ test('blank-chart marquee creates one initially collapsed direct group', async (
   await expect(page.locator(COMMAND_FEEDBACK)).toContainText('已恢复上一项修改');
 });
 
+test('blank-chart marquee completes when the pointer is released outside the plot', async ({
+  page,
+}) => {
+  await openEditor(page);
+  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+  await expect.poll(() => waterfallBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+  const points = await waterfallBarPoints(canvas);
+  const box = await canvas.boundingBox();
+  const first = points[4];
+  const second = points[6];
+  expect(box).not.toBeNull();
+  expect(first).toBeDefined();
+  expect(second).toBeDefined();
+  if (box === null || first === undefined || second === undefined) {
+    return;
+  }
+
+  await page.mouse.move(first.minX - 4, box.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(second.maxX + 4, box.y + box.height + 24, { steps: 8 });
+  await expect(page.getByTestId('chart-marquee')).toBeVisible();
+  await page.mouse.up();
+
+  const dialog = page.getByRole('dialog', { name: '创建折叠分组' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('textbox', { name: '分组名称' }).fill('成本压力');
+  await dialog.getByRole('button', { name: '创建分组' }).click();
+
+  await expect(page.getByRole('button', { name: '展开 成本压力' })).toBeVisible();
+  await expect(page.getByRole('treeitem', { name: /原材料成本/ })).toBeHidden();
+  await expect(page.getByRole('treeitem', { name: /人工成本/ })).toBeHidden();
+});
+
 test('keeps target information while reduced motion removes the 80/160ms transitions', async ({
   page,
 }) => {
