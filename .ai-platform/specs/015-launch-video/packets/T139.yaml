@@ -1,0 +1,60 @@
+schema_version: 1
+packet_id: EP-015-T139
+task_id: T139
+feature_id: 015-launch-video
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-launch-video/spec.md
+  requirements_checklist: .ai-platform/specs/015-launch-video/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/015-launch-video/plan.md
+  work_graph: .ai-platform/specs/015-launch-video/tasks.md
+  analysis: .ai-platform/specs/015-launch-video/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 4K 横版、水印与封面终版
+  goal: Deliver one native 4K landscape master with a fixed TellPlot.com watermark and a real-product 4K cover
+  epic: G009-R2
+  requirements: [VIDEO-FR-005, VIDEO-FR-011, VIDEO-NFR-009, VIDEO-SC-003, VIDEO-SC-010]
+  priority: P0
+  depends_on: [T138]
+  blocks: [G009-R2]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [apps/video, .ai-platform/specs/015-launch-video]
+  existing_patterns: [Playwright deterministic capture, Remotion composition, typed deliverables, media audit]
+  interfaces_or_contracts: [.ai-platform/specs/015-launch-video/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [apps/video/**, .ai-platform/**, .gitignore, pnpm-lock.yaml]
+  test_targets: [4K capture manifest, single landscape deliverable, watermark contract, 4K cover, media audit]
+  forbidden_changes: [vertical deliverable, fake product UI, public API or schema, package layout, remote publishing]
+tdd_plan:
+  required: true
+  red:
+    command: pnpm --filter @tellplot/video test
+    expected_failure: native 4K capture, single landscape output, watermark and 4K cover contracts are absent
+  green:
+    command: pnpm --filter @tellplot/video capture && pnpm --filter @tellplot/video render:all
+    expected_signal: native 4K recording, landscape master and cover are generated
+  refactor:
+    command: pnpm --filter @tellplot/video render:review && pnpm --filter @tellplot/video media:audit
+    expected_signal: the product fills the frame, watermark remains readable and no vertical output is audited
+validation_loop:
+  commands: [focused tests, production capture, full render, cover render, review frames, media audit, full repository gates, artifact validator, git diff --check]
+  retry_budget: 3
+evidence_contract:
+  summary: .ai-platform/evidence/T139/summary.md
+  test_results: .ai-platform/evidence/T139/test-results.md
+  required: [capture manifest, 4K media probes, key frames, motion review, full validation]
+review_contract:
+  required_passes: [spec_compliance, motion_craft, bug_code_quality, qa_acceptance]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [user goal review]
+stop_conditions: [partial-frame recording, pointer drift, watermark occlusion, codec failure, unresolved review finding]

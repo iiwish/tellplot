@@ -3,6 +3,8 @@ node_modules/
 
 # Build output
 dist/
+apps/video/out/
+apps/video/public/captures/
 *.tsbuildinfo
 
 # Test coverage

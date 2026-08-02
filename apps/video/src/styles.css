@@ -1,0 +1,365 @@
+@font-face {
+  font-family: 'TellPlot Sans';
+  src: local('PingFang SC');
+  font-weight: 400 800;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.video-root,
+.video-poster {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f7f9fc;
+  color: #111827;
+  font-family: 'TellPlot Sans', 'Noto Sans CJK SC', Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.video-media {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  background: #f7f9fc;
+}
+
+.video-media--family-proof {
+  z-index: 8;
+}
+
+.video-media__asset {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform;
+}
+
+.video-media__asset--family {
+  position: absolute;
+  inset: 0;
+  will-change: opacity;
+}
+
+.video-watermark {
+  position: absolute;
+  z-index: 100;
+  top: 22px;
+  left: 26px;
+  display: flex;
+  height: 46px;
+  align-items: center;
+  padding: 7px 12px 7px 8px;
+  color: #111827;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+}
+
+.video-watermark .video-logo {
+  gap: 8px;
+  font-size: 16px;
+}
+
+.video-watermark .video-logo__mark {
+  width: 30px;
+  height: 30px;
+  gap: 2px;
+  padding: 7px;
+  border-radius: 4px;
+}
+
+.video-watermark .video-logo__mark i {
+  width: 3px;
+}
+
+.video-watermark .video-logo__mark i:nth-child(1) {
+  height: 7px;
+}
+
+.video-watermark .video-logo__mark i:nth-child(2) {
+  height: 14px;
+}
+
+.video-watermark .video-logo__mark i:nth-child(3) {
+  height: 10px;
+}
+
+.video-future__content > p {
+  margin: 0 0 18px;
+  color: #2f7cf6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.video-caption {
+  position: absolute;
+  z-index: 90;
+  right: 6%;
+  bottom: 34px;
+  left: 6%;
+  display: flex;
+  min-height: 90px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  color: #111827;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.38;
+  text-align: center;
+  text-shadow:
+    0 2px 0 #fff,
+    0 0 22px #fff,
+    0 0 22px #fff;
+}
+
+.video-caption::before {
+  position: absolute;
+  z-index: -1;
+  inset: -34px -8vw -34px;
+  background: linear-gradient(
+    0deg,
+    rgba(247, 249, 252, 0.98) 0%,
+    rgba(247, 249, 252, 0.82) 54%,
+    rgba(247, 249, 252, 0) 100%
+  );
+  content: '';
+}
+
+.video-caption span {
+  display: block;
+}
+
+.video-caption--dark {
+  color: #fff;
+  text-shadow:
+    0 2px 0 rgba(10, 21, 39, 0.9),
+    0 0 22px rgba(10, 21, 39, 0.9);
+}
+
+.video-caption--dark::before {
+  background: linear-gradient(
+    0deg,
+    rgba(10, 21, 39, 0.96) 0%,
+    rgba(10, 21, 39, 0.72) 56%,
+    rgba(10, 21, 39, 0) 100%
+  );
+}
+
+.video-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: inherit;
+  font-size: 30px;
+}
+
+.video-logo__mark {
+  display: flex;
+  width: 46px;
+  height: 46px;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding: 11px;
+  border-radius: 7px;
+  background: #2f7cf6;
+}
+
+.video-logo__mark i {
+  display: block;
+  width: 5px;
+  border-radius: 1px;
+  background: #fff;
+}
+
+.video-logo__mark i:nth-child(1) {
+  height: 11px;
+}
+.video-logo__mark i:nth-child(2) {
+  height: 22px;
+}
+.video-logo__mark i:nth-child(3) {
+  height: 16px;
+}
+
+.video-future {
+  z-index: 80;
+  color: #fff;
+}
+
+.video-future__wash {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 21, 39, 0.9);
+}
+
+.video-future__content {
+  position: absolute;
+  inset: 112px 110px 180px;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  will-change: transform;
+}
+
+.video-future__content > p {
+  margin-top: 52px;
+}
+
+.video-future__content h1 {
+  margin: 0;
+  font-size: 74px;
+  line-height: 1.12;
+}
+
+.video-future__links {
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  margin-top: 42px;
+}
+
+.video-future__links strong {
+  color: #6aa9ff;
+  font-size: 34px;
+}
+
+.video-future__links span {
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 20px;
+}
+
+.video-poster__header {
+  position: absolute;
+  top: 48px;
+  right: 64px;
+  left: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.video-poster__header .video-logo {
+  gap: 10px;
+  font-size: 24px;
+}
+
+.video-poster__header .video-logo__mark {
+  width: 38px;
+  height: 38px;
+  gap: 3px;
+  padding: 9px;
+  border-radius: 6px;
+}
+
+.video-poster__header .video-logo__mark i {
+  width: 4px;
+}
+
+.video-poster__header .video-logo__mark i:nth-child(1) {
+  height: 9px;
+}
+
+.video-poster__header .video-logo__mark i:nth-child(2) {
+  height: 18px;
+}
+
+.video-poster__header .video-logo__mark i:nth-child(3) {
+  height: 13px;
+}
+
+.video-poster__header > strong {
+  color: #475467;
+  font-size: 21px;
+}
+
+.video-poster__headline {
+  position: absolute;
+  top: 112px;
+  left: 64px;
+  margin: 0;
+  font-size: 78px;
+  line-height: 1.08;
+}
+
+.video-poster__chart {
+  position: absolute;
+  right: 48px;
+  bottom: 44px;
+  left: 48px;
+  height: 776px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 24px 64px rgba(17, 24, 39, 0.14);
+}
+
+.video-poster__chart-media {
+  position: absolute;
+  top: -396px;
+  left: -527px;
+  width: 2868px;
+  height: 1613px;
+  max-width: none;
+}
+
+.video-poster__drop-indicator {
+  position: absolute;
+  z-index: 2;
+  top: 88px;
+  bottom: 104px;
+  left: 704px;
+  width: 3px;
+  background: #1677ff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+.video-poster__drag-preview {
+  position: absolute;
+  z-index: 3;
+  top: 228px;
+  left: 556px;
+  display: flex;
+  width: 248px;
+  height: 62px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 18px;
+  color: #18211d;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #aab5af;
+  border-radius: 5px;
+  box-shadow: 0 14px 34px rgba(17, 24, 39, 0.18);
+}
+
+.video-poster__drag-preview span {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.video-poster__cursor {
+  position: absolute;
+  z-index: 4;
+  top: 274px;
+  left: 682px;
+  width: 29px;
+  height: 39px;
+  background: #111827;
+  clip-path: polygon(0 0, 0 31px, 8px 24px, 14px 38px, 20px 35px, 14px 21px, 28px 21px);
+  filter: drop-shadow(0 2px 1px rgba(255, 255, 255, 0.9));
+}

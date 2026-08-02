@@ -1,0 +1,60 @@
+schema_version: 1
+packet_id: EP-015-T138
+task_id: T138
+feature_id: 015-launch-video
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-launch-video/spec.md
+  requirements_checklist: .ai-platform/specs/015-launch-video/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/015-launch-video/plan.md
+  work_graph: .ai-platform/specs/015-launch-video/tasks.md
+  analysis: .ai-platform/specs/015-launch-video/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 事件同步指针与连续编辑二剪
+  goal: Recut both launch masters around a real event-driven cursor, audio cues, and product-led editorial motion
+  epic: G009-R1
+  requirements: [VIDEO-FR-007, VIDEO-FR-008, VIDEO-FR-009, VIDEO-FR-010, VIDEO-NFR-007, VIDEO-NFR-008, VIDEO-SC-007, VIDEO-SC-008, VIDEO-SC-009]
+  priority: P0
+  depends_on: [T135, T136, T137]
+  blocks: [G009-R1]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [apps/video, .ai-platform/specs/015-launch-video]
+  existing_patterns: [Playwright deterministic capture, Remotion sequences, typed timing contracts, media audit]
+  interfaces_or_contracts: [.ai-platform/specs/015-launch-video/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [apps/video/**, packages/editor/src/editor/chartSurface.ts, packages/editor/src/styles/editor.css, packages/editor/tests/runtime/chart-surface.test.ts, .ai-platform/**, .gitignore, pnpm-lock.yaml]
+  test_targets: [renderer-sized drag ghost, pointer capture, grouping pacing, action cue alignment, transition continuity, landscape and portrait review frames]
+  forbidden_changes: [public API or schema, package layout, guessed cursor paths, fake UI, remote publishing]
+tdd_plan:
+  required: true
+  red:
+    command: pnpm --filter @tellplot/video test
+    expected_failure: pointer metadata, renderer-sized drag ghost, grouping pacing and action cue alignment contracts are absent
+  green:
+    command: pnpm --filter @tellplot/video capture && pnpm --filter @tellplot/video render:smoke
+    expected_signal: real cursor clips and cue-aligned product-led composition render
+  refactor:
+    command: pnpm --filter @tellplot/video render:review && pnpm --filter @tellplot/video media:audit
+    expected_signal: no PPT sequence, empty frame, occlusion, or timing finding remains
+validation_loop:
+  commands: [focused tests, capture, render smoke, render full, render review, media audit, motion review, pnpm lint, pnpm typecheck, pnpm test:unit, pnpm build, artifact validator, git diff --check]
+  retry_budget: 3
+evidence_contract:
+  summary: .ai-platform/evidence/T138/summary.md
+  test_results: .ai-platform/evidence/T138/test-results.md
+  required: [capture manifest, audio/action cue report, key frames, motion review, full validation]
+review_contract:
+  required_passes: [spec_compliance, motion_craft, bug_code_quality, qa_acceptance]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [user goal review]
+stop_conditions: [cursor drift, cue error above 0.12 seconds, PPT-like sequence, codec failure, unresolved review finding]

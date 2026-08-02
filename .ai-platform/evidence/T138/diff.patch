@@ -1,0 +1,51 @@
+diff --git a/packages/editor/src/editor/chartSurface.ts b/packages/editor/src/editor/chartSurface.ts
+--- a/packages/editor/src/editor/chartSurface.ts
++++ b/packages/editor/src/editor/chartSurface.ts
+@@
++    const sceneBounds = readChartElementBounds(runtime.getContext());
++    drag = {
++      markBounds: sceneBounds.find(bounds => bounds.nodeId === nodeId),
++    };
+@@
++    const datum = active.chart.projection.find(candidate => candidate.nodeId === nodeId);
++    const mark = element(document, 'span', { className: 'tp-chart-drag-overlay__mark' });
++    const label = element(document, 'span', {
++      className: 'tp-chart-drag-overlay__label',
++      text: datum.label,
++    });
++    dragOverlay.append(mark, label);
++    dragOverlay.style.width = `${markBounds.maxX - markBounds.minX}px`;
++    dragOverlay.style.height = `${markBounds.maxY - markBounds.minY}px`;
++    dragOverlay.style.setProperty('--tp-chart-drag-fill', palette[datum.kind]);
++    const x = markBounds.minX + point.x - session.start.x;
++    const y = markBounds.minY + point.y - session.start.y;
++    dragOverlay.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+diff --git a/apps/video/src/storyContract.ts b/apps/video/src/storyContract.ts
+--- a/apps/video/src/storyContract.ts
++++ b/apps/video/src/storyContract.ts
+@@
++export const STORY_PACING_SECONDS = Object.freeze({
++  directDragRelease: 4.9,
++  marqueeRelease: 10.35,
++  groupNameStart: 10.72,
++  groupCreate: 11.9,
++} as const);
+diff --git a/apps/video/scripts/capture.ts b/apps/video/scripts/capture.ts
+--- a/apps/video/scripts/capture.ts
++++ b/apps/video/scripts/capture.ts
+@@
++      await smoothMove(page, dragSource, dragDestination, 1_050, 18);
++      await waitUntilStoryTime(storyStartedAt, STORY_PACING_SECONDS.directDragRelease);
++      await page.mouse.up();
+@@
++      await waitUntilStoryTime(storyStartedAt, STORY_PACING_SECONDS.marqueeRelease);
++      await page.mouse.up();
++      await waitUntilStoryTime(storyStartedAt, STORY_PACING_SECONDS.groupNameStart);
++      await groupName.pressSequentially('增长驱动', { delay: 140 });
++      await waitUntilStoryTime(storyStartedAt, STORY_PACING_SECONDS.groupCreate);
+diff --git a/apps/video/src/captures.ts b/apps/video/src/captures.ts
+--- a/apps/video/src/captures.ts
++++ b/apps/video/src/captures.ts
+@@
+-    portraitFocus: '24% 51%',
++    portraitFocus: '31% 51%',

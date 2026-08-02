@@ -1,0 +1,27 @@
+{
+  "name": "@tellplot/video",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config vitest.config.ts",
+    "test:capture": "vitest run --config vitest.config.ts tests/capture.test.ts",
+    "test:deliverables": "vitest run --config vitest.config.ts tests/deliverables.test.ts",
+    "media:audit": "node --experimental-strip-types scripts/audit.ts",
+    "capture": "pnpm --dir ../.. build:site && node --experimental-strip-types scripts/capture.ts",
+    "render:smoke": "remotion render src/index.ts TellPlotLaunch16x9 out/smoke.mp4 --codec=h264 --frames=0-119 --crf=20 --concurrency=1 --browser-executable=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\"",
+    "render:main": "remotion render src/index.ts TellPlotLaunch16x9 out/tellplot-launch-4k.mp4 --codec=h264 --crf=16 --scale=2 --concurrency=1 --browser-executable=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\"",
+    "render:cover": "remotion still src/index.ts TellPlotLaunchCover out/tellplot-launch-cover-4k.png --frame=0 --scale=2 --browser-executable=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\"",
+    "render:review": "node --experimental-strip-types scripts/render-review.ts",
+    "render:all": "pnpm render:main && pnpm render:cover"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.503",
+    "@remotion/media-utils": "4.0.503",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.503"
+  }
+}

@@ -1,0 +1,60 @@
+schema_version: 1
+packet_id: EP-015-T136
+task_id: T136
+feature_id: 015-launch-video
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-launch-video/spec.md
+  requirements_checklist: .ai-platform/specs/015-launch-video/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/015-launch-video/plan.md
+  work_graph: .ai-platform/specs/015-launch-video/tasks.md
+  analysis: .ai-platform/specs/015-launch-video/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 录制真实产品交互并完成主片
+  goal: Capture deterministic real TellPlot interactions and assemble the 16:9 master
+  epic: G009
+  requirements: [VIDEO-FR-001, VIDEO-FR-002, VIDEO-FR-006]
+  priority: P0
+  depends_on: [T135]
+  blocks: [T137]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [apps/playground, e2e, apps/video, .ai-platform]
+  existing_patterns: [Playwright real-browser fixtures, production Vite build, Remotion shared timeline]
+  interfaces_or_contracts: [.ai-platform/specs/015-launch-video/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [apps/video/**, apps/playground/tests/**, .ai-platform/**]
+  test_targets: [capture assertions, recording manifest, main composition, frame review, audio sync]
+  forbidden_changes: [product runtime changes, fake product UI, public package changes, remote git]
+tdd_plan:
+  required: true
+  red:
+    command: pnpm --filter @tellplot/video test:capture
+    expected_failure: required real interaction clips and terminal state assertions are absent
+  green:
+    command: pnpm --filter @tellplot/video capture && pnpm --filter @tellplot/video render:main
+    expected_signal: deterministic clips and a complete 16:9 master are generated
+  refactor:
+    command: pnpm --filter @tellplot/video audit:frames
+    expected_signal: key frames have no black output, sensitive UI or caption occlusion
+validation_loop:
+  commands: [pnpm build:site, pnpm --filter @tellplot/video test:capture, pnpm --filter @tellplot/video capture, pnpm --filter @tellplot/video render:main, pnpm --filter @tellplot/video audit:frames, artifact validator, git diff --check]
+  retry_budget: 2
+evidence_contract:
+  summary: .ai-platform/evidence/T136/summary.md
+  test_results: .ai-platform/evidence/T136/test-results.md
+  required: [recording manifest, capture assertions, render output, frame audit, review]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [continue to T137 after internal review]
+stop_conditions: [product behavior modification required, recording contains credentials, real interaction assertion failure]

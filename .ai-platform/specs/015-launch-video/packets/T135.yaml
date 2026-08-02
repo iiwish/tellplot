@@ -1,0 +1,60 @@
+schema_version: 1
+packet_id: EP-015-T135
+task_id: T135
+feature_id: 015-launch-video
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-launch-video/spec.md
+  requirements_checklist: .ai-platform/specs/015-launch-video/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/015-launch-video/plan.md
+  work_graph: .ai-platform/specs/015-launch-video/tasks.md
+  analysis: .ai-platform/specs/015-launch-video/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 固化旁白、时间线与 Remotion 制作工程
+  goal: Build a private reproducible Remotion baseline aligned to the approved narration
+  epic: G009
+  requirements: [VIDEO-FR-001, VIDEO-FR-003, VIDEO-FR-004, VIDEO-FR-006]
+  priority: P0
+  depends_on: [G008]
+  blocks: [T136]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [package.json, pnpm-workspace.yaml, apps/playground, apps/video, .ai-platform]
+  existing_patterns: [pnpm private workspace, React 19, strict TypeScript, exact dependencies]
+  interfaces_or_contracts: [.ai-platform/specs/015-launch-video/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [package.json, pnpm-lock.yaml, .gitignore, apps/video/**, .ai-platform/**, AGENTS.md]
+  test_targets: [timeline invariants, composition metadata, audio duration, caption coverage, render smoke]
+  forbidden_changes: [public package API, schema, product behavior, website production content, npm release, remote git]
+tdd_plan:
+  required: true
+  red:
+    command: pnpm --filter @tellplot/video test
+    expected_failure: video workspace and timeline contracts do not exist
+  green:
+    command: pnpm --filter @tellplot/video render:smoke
+    expected_signal: a short H.264 composition range renders with narration and captions
+  refactor:
+    command: pnpm --filter @tellplot/video typecheck && pnpm --filter @tellplot/video test
+    expected_signal: shared timeline and layouts are typed and invariant tests pass
+validation_loop:
+  commands: [pnpm format:check, pnpm lint, pnpm --filter @tellplot/video typecheck, pnpm --filter @tellplot/video test, pnpm --filter @tellplot/video render:smoke, python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 015-launch-video --strict, git diff --check]
+  retry_budget: 2
+evidence_contract:
+  summary: .ai-platform/evidence/T135/summary.md
+  test_results: .ai-platform/evidence/T135/test-results.md
+  required: [changed files, RED receipt, GREEN render, validation results, review]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [continue to T136 after internal review]
+stop_conditions: [public package dependency, narration unavailable, Remotion license mismatch, render smoke failure]

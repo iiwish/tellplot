@@ -1,0 +1,100 @@
+diff --git a/apps/video/src/captureContract.ts b/apps/video/src/captureContract.ts
+--- a/apps/video/src/captureContract.ts
++++ b/apps/video/src/captureContract.ts
+@@
++  viewport: { width: 3840, height: 2160 },
++  logicalViewport: { width: 1920, height: 1080 },
++  contentScale: 2,
++  recordSize: { width: 3840, height: 2160 },
+diff --git a/apps/video/src/deliverables.ts b/apps/video/src/deliverables.ts
+--- a/apps/video/src/deliverables.ts
++++ b/apps/video/src/deliverables.ts
+@@
++  file: 'tellplot-launch-4k.mp4',
++  width: 3840,
++  height: 2160,
++  cover: 'tellplot-launch-cover-4k.png',
+diff --git a/apps/video/src/LaunchVideo.tsx b/apps/video/src/LaunchVideo.tsx
+--- a/apps/video/src/LaunchVideo.tsx
++++ b/apps/video/src/LaunchVideo.tsx
+@@
++function WebsiteWatermark(): React.JSX.Element {
++  return (
++    <div className="video-watermark" aria-hidden="true">
++      <Logo label={VIDEO_BRAND.watermark} />
++    </div>
++  );
++}
+@@
++  <WebsiteWatermark />
++
++export function LaunchCover(): React.JSX.Element {
++  const capture = CAPTURE_ASSETS[COVER_CONTRACT.captureId];
++  return (
++    <div className="video-poster">
++      <header className="video-poster__header">
++        <Logo />
++        <strong>{VIDEO_BRAND.watermark}</strong>
++      </header>
++      <h1 className="video-poster__headline">{VIDEO_BRAND.coverHeadline}</h1>
++      <div className="video-poster__chart">
++        <Img src={staticFile(`captures/${capture.startStill}`)} />
++        <div className="video-poster__drop-indicator" />
++        <div className="video-poster__drag-preview"><span>价格提升</span></div>
++        <div className="video-poster__cursor" />
++      </div>
++    </div>
++  );
++}
+diff --git a/apps/video/src/storyContract.ts b/apps/video/src/storyContract.ts
+--- a/apps/video/src/storyContract.ts
++++ b/apps/video/src/storyContract.ts
+@@
++  groupNameHoldSeconds: 1,
++  watermark: 'TellPlot.com',
++  coverHeadline: '图表，应该可以直接编辑。',
++
++export const STORY_CAPTURE_PRESENTATION = Object.freeze({
++  marqueePadding: 8,
++  groupDialogPlacement: 'editor-center',
++  pointerTargetsGroupInput: true,
++  suppressTooltipWhileSelecting: true,
++} as const);
++
++export const COVER_CONTRACT = Object.freeze({
++  captureId: 'chart-families',
++  showStructureOutline: false,
++  showGroupRegion: true,
++  showDragPreview: true,
++} as const);
+diff --git a/apps/video/scripts/capture.ts b/apps/video/scripts/capture.ts
+--- a/apps/video/scripts/capture.ts
++++ b/apps/video/scripts/capture.ts
+@@
++await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
++const { from: marqueeFrom, to: marqueeTo } = marqueeAroundMarks(
++  [groupFirst, groupSecond],
++  STORY_CAPTURE_PRESENTATION.marqueePadding,
++);
++await assertEditorCenteredDialog(editor, dialog);
++await smoothMove(page, marqueeTo, inputPointer, 280, 12);
++await groupName.pressSequentially('增长驱动', { delay: 140 });
++await page.waitForTimeout(STORY_PACING_SECONDS.groupNameHoldSeconds * 1000);
++await groupName.press('Enter');
+diff --git a/apps/video/src/captureGeometry.ts b/apps/video/src/captureGeometry.ts
+new file mode 100644
+--- /dev/null
++++ b/apps/video/src/captureGeometry.ts
+@@
++export function marqueeAroundMarks(marks: readonly MarkBounds[], padding: number) {
++  return {
++    from: {
++      x: Math.min(...marks.map(mark => mark.minX)) - padding,
++      y: Math.min(...marks.map(mark => mark.minY)) - padding,
++    },
++    to: {
++      x: Math.max(...marks.map(mark => mark.maxX)) + padding,
++      y: Math.max(...marks.map(mark => mark.maxY)) + padding,
++    },
++  };
++}

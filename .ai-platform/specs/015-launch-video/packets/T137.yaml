@@ -1,0 +1,60 @@
+schema_version: 1
+packet_id: EP-015-T137
+task_id: T137
+feature_id: 015-launch-video
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-launch-video/spec.md
+  requirements_checklist: .ai-platform/specs/015-launch-video/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/015-launch-video/plan.md
+  work_graph: .ai-platform/specs/015-launch-video/tasks.md
+  analysis: .ai-platform/specs/015-launch-video/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 封面与最终媒体验收
+  goal: Deliver a validated landscape master, subtitles and cover
+  epic: G009
+  requirements: [VIDEO-FR-004, VIDEO-FR-005, VIDEO-NFR-001, VIDEO-NFR-002, VIDEO-NFR-003, VIDEO-NFR-004, VIDEO-NFR-005, VIDEO-NFR-006]
+  priority: P0
+  depends_on: [T136]
+  blocks: [G009]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [apps/video, .gitignore, docs, .ai-platform]
+  existing_patterns: [responsive Remotion compositions, typed delivery manifest, local media audit]
+  interfaces_or_contracts: [.ai-platform/specs/015-launch-video/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [apps/video/**, .gitignore, docs/**, AGENTS.md, .ai-platform/**]
+  test_targets: [landscape composition, subtitle safe area, codec duration resolution, black frames, cover]
+  forbidden_changes: [social publishing, git push, npm release, cloud rendering, public package changes]
+tdd_plan:
+  required: true
+  red:
+    command: pnpm --filter @tellplot/video test:deliverables
+    expected_failure: required delivery manifest and media outputs are absent
+  green:
+    command: pnpm --filter @tellplot/video render:all
+    expected_signal: landscape and cover outputs are generated
+  refactor:
+    command: pnpm --filter @tellplot/video audit
+    expected_signal: all media and visual checks pass with shared responsive layouts
+validation_loop:
+  commands: [pnpm format:check, pnpm lint, pnpm typecheck, pnpm --filter @tellplot/video test, pnpm --filter @tellplot/video render:all, pnpm --filter @tellplot/video audit, artifact validator, secret scan, git diff --check]
+  retry_budget: 2
+evidence_contract:
+  summary: .ai-platform/evidence/T137/summary.md
+  test_results: .ai-platform/evidence/T137/test-results.md
+  required: [delivery manifest, media probes, key frames, full validation, final review]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [user goal review]
+stop_conditions: [codec failure, audio mismatch, black frame, subtitle occlusion, unresolved review finding]

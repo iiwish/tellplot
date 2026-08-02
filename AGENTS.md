@@ -7,6 +7,9 @@
 - G008 / T132-T134 已完成并处于 `Needs_Review`；官网由 Vercel 从 clean Git source 部署到
   `https://tellplot.com`，Cloudflare 保持权威 DNS，Preview/Production、HTTPS、静态可发现性与部署 evidence
   均已验收；该目标不包含 npm publish、tag 或公共包变更。
+- G009 / T135-T139 已完成并处于 `Needs_Review`；开源介绍视频使用 Qwen3-TTS 旁白、production capture 与
+  private Remotion 工程，当前交付为 3840x2160 横版主片、SRT 和 4K 封面，包含固定 `TellPlot.com` 水印；
+  视频制作工程不进入公共包或官网 production bundle。
 - 当前仓库以 `tellplot` 作为唯一公共包；内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、
   `@tellplot/vue` 均为 private workspace layers。playground、单元/组件/E2E/兼容性测试和单包发布 evidence
   共同验证公共入口；npm Registry 不保留 scoped 可安装版本，发布使用 stage-only Trusted Publisher、人类

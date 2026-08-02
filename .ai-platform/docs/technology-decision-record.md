@@ -341,9 +341,27 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 - Rejected alternatives: 继续只提供 localhost、把官网并入 npm tarball、为静态页面引入 Next.js/SSR、
   迁移 Cloudflare nameserver、直接从 dirty worktree 部署、为 Vercel 降低整个仓库 pnpm 主版本。
 
+## TDR-025 开源介绍视频制作工具链
+
+- Status: Confirmed
+- Production boundary: 仓库使用 private `@tellplot/video` workspace 制作开源介绍视频。Remotion 只负责离线
+  合成、镜头、字幕、品牌排版和本地编码；核心产品交互必须来自当前 TellPlot production build 的真实浏览器
+  录制，G2 继续拥有图形和画布动画。
+- Toolchain: 使用精确 `remotion@4.0.503` 及同版本官方包、现有 React 19 和 Playwright。旁白使用用户批准的
+  Qwen3-TTS WAV；最终 MP4/WebM/PNG 放在 gitignored 本地输出目录，不进入 npm tarball 或生产网站 bundle。
+- Outputs: 生成 3840x2160 横版主片、UTF-8 SRT 和 3840x2160 封面。真实录制使用 3840x2160 物理画布、
+  1920x1080 逻辑布局与 Chromium 2x page scale；时间线、字幕、录制脚本与轻量源资产可复现，媒体规格、
+  黑帧、关键抽帧、字幕安全区、固定 `TellPlot.com` 水印和音画同步必须验证。竖版视频不属于当前交付。
+- License: 当前个人/不超过三人的开源制作符合 Remotion 免费使用范围；团队规模、自动化产品化或许可条件
+  变化时停止渲染并重新审计。
+- Rationale: 真实录屏保证产品可信度，Remotion 提供可重复、多比例、逐帧可测的后期合成；二者结合比手工
+  屏幕录制或在视频中重画产品 UI 更稳定，也不污染产品运行时依赖。
+- Rejected alternatives: 纯手工不可复现录屏、用 Remotion 伪造核心交互、云端批量渲染、把视频工具加入
+  公共包、来源不明的音乐或素材。
+
 ## Approval Gate
 
-TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-024 已获得用户明确批准；TDR-004 至 TDR-006
+TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-025 已获得用户明确批准；TDR-004 至 TDR-006
 由 TDR-022 取代，TDR-019 由 TDR-021 取代，TDR-022 的公共 package strategy 由 TDR-023 取代。后续实现以 approved goal
 为执行单位；内部 task graph 和 execution packet 由执行方维护。任何依赖、schema、breaking public API、
 远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。

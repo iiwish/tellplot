@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Version: 0.39.0
+- Version: 0.40.0
 - Status: Active
 - Last updated: 2026-08-02
 - Scope: T101-T116、G002 系列、G004、G006 与 G007 已验收；`tellplot@1.0.0` 已完成公开发布
@@ -248,3 +248,23 @@ Cloudflare 继续提供权威 DNS，`https://tellplot.com` 是 canonical product
 T132-T134 状态均为 `Needs_Review`，无 unresolved Critical、High 或 Medium finding。权威目标图位于
 `.ai-platform/specs/014-website-production-deployment/tasks.md`，evidence 位于 `.ai-platform/evidence/T132/`、
 `.ai-platform/evidence/T133/` 和 `.ai-platform/evidence/T134/`。
+
+## G009 Execution
+
+G009 由用户于 2026-08-02 明确批准，使用用户提供的 Qwen3-TTS 旁白、TellPlot 真实产品录制和 private
+Remotion 工程完成开源介绍视频。T135-T137 均处于 `Needs_Review`，交付旁白时间线、可重复录制、
+4K 16:9 主片、SRT、4K 封面和媒体验收；不改变公共包、产品行为、官网生产内容或 npm release。
+
+权威目标图、技术方案和执行 packet 位于 `.ai-platform/specs/015-launch-video/`。最终媒体只保存在本地
+gitignored 输出目录，制作源码与 evidence 进入版本控制。未解决 Critical、High 或 Medium finding 为 0。
+
+G009-R1 / T138 由用户于 2026-08-02 根据验片反馈批准，使用事件同步的可见指针、真实语音/动作 cue 和
+50.4 秒单次编辑器长镜头完成产品叙事。产品段不叠加额外说明标题；图表家族保持单一静态画面；全片只有
+两个主视觉切点。验片反馈继续补齐按 G2 scene bounds 与真实指针位移渲染的柱形拖拽预览，并为框选完成、
+对话框、逐字命名和创建结果保留独立节拍。T138 处于 `Needs_Review`；变更不影响公共 API、schema、包布局、
+官网或 release，横版媒体、封面、字幕和 evidence 均按当前合同输出并验收。
+
+G009-R2 / T139 由用户于 2026-08-02 批准，使用 3840x2160 浏览器画布、1920x1080 逻辑布局和 Chromium
+2x page scale 完成原生 4K 横版录制与终片；全片左上角固定显示 `TellPlot.com` 水印，4K 封面使用真实
+产品画面和项目定位标题。最终交付只包含横版 MP4、SRT、封面与媒体审计，不制作或保留竖版终片。
+T139 处于 `Needs_Review`，不改变公共 API、schema、包布局、官网或 release。
