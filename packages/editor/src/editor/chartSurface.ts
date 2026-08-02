@@ -7,6 +7,7 @@ import {
   resolveChartCategoryDropTarget,
   resolveChartCategoryMinimumTargetHit,
   resolveChartCategorySourceGroupExitTarget,
+  resolveFinancialChartAppearance,
   resolvePointerDropPlacement,
   resolvePointerMoveTarget,
   toFinancialChartAppearance,
@@ -28,6 +29,7 @@ import { createG2ChartRuntime, type G2ChartRuntime } from '../rendering/g2/chart
 import {
   readChartCategoryElementPointer,
   readChartElementBounds,
+  type ChartSceneElementBounds,
   type ChartPointerPoint,
 } from '../rendering/g2/chartPointer';
 import { button, element, setOptionalAttribute } from './dom';
@@ -89,6 +91,7 @@ interface DragSession {
   readonly start: ChartPointerPoint;
   readonly orderedBounds: readonly ChartCategoryBounds[];
   readonly sourceGroupBounds: readonly ChartCategoryGroupBounds[];
+  readonly markBounds: ChartSceneElementBounds | undefined;
   readonly revision: number;
   current: ChartPointerPoint;
   moved: boolean;
@@ -384,16 +387,47 @@ export function createChartSurface(
   };
 
   const updateDragOverlay = (point: ChartPointerPoint, nodeId: ViewNodeId): void => {
+    const session = drag;
+    const active = current;
+    if (session === null || active === undefined) {
+      return;
+    }
+    const datum = active.chart.projection.find(candidate => candidate.nodeId === nodeId);
+    if (datum === undefined) {
+      return;
+    }
     if (dragOverlay === null) {
       dragOverlay = element(document, 'div', {
         className: 'tp-chart-drag-overlay',
-        attributes: { 'data-testid': 'chart-drag-overlay' },
+        attributes: {
+          'aria-hidden': 'true',
+          'data-testid': 'chart-drag-overlay',
+          'data-axis': session.axis,
+          'data-kind': datum.kind,
+        },
       });
+      const mark = element(document, 'span', { className: 'tp-chart-drag-overlay__mark' });
+      const label = element(document, 'span', {
+        className: 'tp-chart-drag-overlay__label',
+        text: datum.label,
+      });
+      dragOverlay.append(mark, label);
+      const markBounds = session.markBounds;
+      if (markBounds !== undefined) {
+        dragOverlay.style.width = `${markBounds.maxX - markBounds.minX}px`;
+        dragOverlay.style.height = `${markBounds.maxY - markBounds.minY}px`;
+      }
+      const palette = resolveFinancialChartAppearance(
+        toFinancialChartAppearance(active.config),
+        '',
+      ).palette;
+      dragOverlay.style.setProperty('--tp-chart-drag-fill', palette[datum.kind]);
       shell.insertBefore(dragOverlay, actions);
     }
-    dragOverlay.textContent =
-      current?.chart.projection.find(datum => datum.nodeId === nodeId)?.label ?? '';
-    dragOverlay.style.transform = `translate3d(${point.x}px, ${point.y}px, 0)`;
+    const markBounds = session.markBounds;
+    const x = markBounds === undefined ? point.x : markBounds.minX + point.x - session.start.x;
+    const y = markBounds === undefined ? point.y : markBounds.minY + point.y - session.start.y;
+    dragOverlay.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   };
 
   const updateMarquee = (): void => {
@@ -658,8 +692,9 @@ export function createChartSurface(
       callbacks.onCancel('item-locked');
       return;
     }
+    const sceneBounds = readChartElementBounds(runtime.getContext());
     const boundsByNode = new Map(
-      readChartElementBounds(runtime.getContext())
+      sceneBounds
         .map(bounds => {
           const projected = projectChartCategoryBounds(bounds, axis);
           return projected === undefined ? undefined : ([bounds.nodeId, projected] as const);
@@ -680,6 +715,7 @@ export function createChartSurface(
       current: point,
       orderedBounds,
       sourceGroupBounds: projectChartCategorySourceGroupBounds(current.view, nodeId, orderedBounds),
+      markBounds: sceneBounds.find(bounds => bounds.nodeId === nodeId),
       revision: current.view.revision,
       moved: false,
       target: null,

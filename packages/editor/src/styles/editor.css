@@ -1000,24 +1000,41 @@
   z-index: 4;
   top: 0;
   left: 0;
-  width: 156px;
-  height: 32px;
-  margin-top: -16px;
-  margin-left: -78px;
-  padding: 6px 9px;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 14px rgb(24 33 29 / 20%));
+  opacity: 0.82;
+  will-change: transform;
+}
+
+.tp-chart-drag-overlay__mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--tp-chart-drag-fill, var(--tp-accent));
+  border: 2px solid rgb(255 255 255 / 92%);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tp-chart-drag-fill) 72%, #18211d) inset;
+}
+
+.tp-chart-drag-overlay__label {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: 156px;
+  padding: 5px 8px;
   overflow: hidden;
   color: var(--tp-text);
-  pointer-events: none;
   background: rgb(255 255 255 / 96%);
   border: 1px solid var(--tp-border-strong);
   border-radius: 4px;
-  box-shadow: 0 8px 20px rgb(24 33 29 / 16%);
+  box-shadow: 0 5px 14px rgb(24 33 29 / 14%);
   font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
+  font-weight: 650;
+  line-height: 16px;
   text-overflow: ellipsis;
+  transform: translateX(-50%);
   white-space: nowrap;
-  will-change: transform;
 }
 
 .tp-chart-stage__plot canvas,

@@ -115,6 +115,111 @@ beforeEach(() => {
 });
 
 describe('chart surface render recovery', () => {
+  it('moves a renderer-sized mark ghost with the active chart pointer', () => {
+    const callbacks = createCallbacks();
+    const dragState: ChartSurfaceState = {
+      config: {
+        type: 'column',
+        data: {
+          schemaVersion: '2.0.0',
+          dataKind: 'categorical',
+          datasetId: 'drag-ghost-fixture',
+          items: [
+            { id: 'a', label: 'Alpha', amount: 10 },
+            { id: 'b', label: 'Beta', amount: 20 },
+          ],
+        },
+      },
+      view: {
+        schemaVersion: '2.0.0',
+        chartType: 'column',
+        datasetId: 'drag-ghost-fixture',
+        revision: 0,
+        rootOrder: ['a', 'b'],
+        groups: {},
+        collapsedGroupIds: [],
+        pinnedItemIds: [],
+        annotations: {},
+        emphasis: {},
+      },
+      chart: {
+        family: 'categorical',
+        chartType: 'column',
+        projection: [
+          {
+            nodeId: 'a',
+            label: 'Alpha',
+            amount: 10,
+            kind: 'positive',
+            sourceIds: ['a'],
+            locked: false,
+            order: 0,
+          },
+          {
+            nodeId: 'b',
+            label: 'Beta',
+            amount: 20,
+            kind: 'positive',
+            sourceIds: ['b'],
+            locked: false,
+            order: 1,
+          },
+        ],
+      },
+      messages: editorMessages('en-US'),
+    };
+    const surface = createChartSurface(document, callbacks);
+    surface.update(dragState);
+    const runtime = latestRuntime();
+    runtime.context = {
+      canvas: {
+        document: {
+          getElementsByClassName: () => [
+            {
+              __data__: { data: { nodeId: 'a' } },
+              getBounds: () => ({ min: [10, 20], max: [30, 80] }),
+            },
+            {
+              __data__: { data: { nodeId: 'b' } },
+              getBounds: () => ({ min: [40, 20], max: [60, 80] }),
+            },
+          ],
+        },
+      },
+    };
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+    });
+    runtime.options.events
+      .find(event => event.name === 'element:pointerdown')
+      ?.listener({
+        pointerId: 14,
+        canvas: { x: 20, y: 50 },
+        data: { data: { nodeId: 'a' } },
+        target: { getBounds: () => ({ min: [10, 20], max: [30, 80] }) },
+      });
+    runtime.options.events
+      .find(event => event.name === 'plot:pointermove')
+      ?.listener({
+        pointerId: 14,
+        canvas: { x: 50, y: 60 },
+      });
+
+    const overlay = surface.element.querySelector<HTMLElement>(
+      '[data-testid="chart-drag-overlay"]',
+    );
+    expect(overlay?.dataset['axis']).toBe('x');
+    expect(overlay?.dataset['kind']).toBe('positive');
+    expect(overlay?.style.width).toBe('20px');
+    expect(overlay?.style.height).toBe('60px');
+    expect(overlay?.style.transform).toBe('translate3d(40px, 30px, 0)');
+    expect(overlay?.style.getPropertyValue('--tp-chart-drag-fill')).toBe('#168363');
+    expect(overlay?.querySelector('.tp-chart-drag-overlay__label')?.textContent).toBe('Alpha');
+    surface.destroy();
+  });
+
   it('clears stale inline actions when interaction state is cancelled or updated', () => {
     const callbacks = createCallbacks();
     const surface = createChartSurface(document, callbacks);
