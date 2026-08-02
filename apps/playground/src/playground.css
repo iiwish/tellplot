@@ -1604,6 +1604,36 @@ a {
   color: var(--site-primary);
 }
 
+.site-header__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+}
+
+.site-header__github {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #4e5969;
+  background: transparent;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.site-header__github:hover {
+  border-color: var(--site-rule);
+  color: var(--site-ink);
+  background: #f2f3f5;
+}
+
 .site-header__workbench {
   min-height: 36px;
   gap: 7px;
@@ -2492,7 +2522,7 @@ a {
 
 @media (max-width: 1120px) {
   .site-header__inner {
-    grid-template-columns: 180px minmax(0, 1fr) 170px;
+    grid-template-columns: 180px minmax(0, 1fr) 190px;
     padding-right: 24px;
     padding-left: 24px;
   }
@@ -2550,8 +2580,13 @@ a {
   }
 
   .site-header__inner {
-    grid-template-columns: minmax(0, 1fr) 38px;
+    grid-template-columns: minmax(0, 1fr) 36px 38px;
+    gap: 8px;
     padding: 0 18px;
+  }
+
+  .site-header__actions {
+    gap: 0;
   }
 
   .site-mobile-menu-button {
