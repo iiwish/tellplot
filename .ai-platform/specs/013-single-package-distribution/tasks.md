@@ -6,7 +6,7 @@
 - Goal ID: `G007`
 - Version: 1.0.0
 - Status: Accepted
-- Last updated: 2026-08-01
+- Last updated: 2026-08-02
 - Approval: 用户明确批准本目标及单包发布边界
 
 ## T131 - 收敛单包分发并完成公开发布
@@ -24,9 +24,10 @@
 - Test targets: package/public surface、architecture、framework consumers、browser/a11y/performance、
   supply chain、artifact reproducibility、preflight、staging 与 public fresh install
 - Deliverables: `tellplot` 包、私有内部 layers、单包文档/fixtures/release pipeline、T131 evidence、公开 1.0.0。
-- Acceptance criteria: DIST-SC-001 至 006 满足；公开 registry 只产生 `tellplot@1.0.0` 稳定结果。
-- Definition of Done: 本地与托管门禁通过；旧 stage 已清理；tag、workflow、staged artifact、npm 公开版本、
-  provenance 和 fresh install 证据一致；无未解决发布阻塞。
+- Acceptance criteria: DIST-SC-001 至 006 满足；公开 registry 只保留 `tellplot` 可安装结果，四个 scoped
+  bootstrap packages 无可安装版本。
+- Definition of Done: 本地与托管门禁通过；旧 stage 与 scoped bootstrap packages 已清理；tag、workflow、
+  staged artifact、npm 公开版本、provenance 和 fresh install 证据一致；无未解决发布阻塞。
 - Validation commands: `pnpm release:check`；`pnpm release:preflight`；`pnpm release:artifact`；
   `pnpm release:trust-readiness`；public registry/provenance/fresh-install verification
 - TDD plan: RED 固定单包合同；GREEN 建立聚合包并迁移所有 consumers；REFACTOR 以完整 release matrix 和

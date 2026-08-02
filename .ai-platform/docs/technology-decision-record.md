@@ -2,11 +2,12 @@
 
 ## Metadata
 
-- Version: 0.11.0
+- Version: 0.12.0
 - Status: Confirmed
-- Last updated: 2026-07-23
-- Approval: 用户于 2026-07-20 明确确认轻量基础图表库边界、G2 ownership 和目标级交付方式，并于
-  2026-07-23 批准首个公开 Beta 发布决策
+- Last updated: 2026-08-02
+- Approval: 用户于 2026-07-20 明确确认轻量基础图表库边界、G2 ownership 和目标级交付方式，于
+  2026-07-23 批准首个公开 Beta 发布决策，于 2026-08-01 批准单包分发，并于 2026-08-02 批准删除
+  scoped bootstrap packages
 
 ## Decision Context
 
@@ -304,7 +305,8 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 - Build contract: 公共 tarball 可以内联私有 workspace 实现，但不得泄漏无法从 npm 安装的 workspace
   specifier。根、core、React、Vue 提供 ESM、CJS 与 declarations，CSS 使用独立 export。
 - Release contract: artifact、availability、preflight、Trusted Publisher 和 staging 只处理一个
-  `tellplot-1.0.0.tgz`。未批准的 scoped stage 必须拒绝，scoped bootstrap package 不进入 1.x 发布路线。
+  `tellplot-1.0.0.tgz`。未批准的 scoped stage 必须拒绝，scoped bootstrap package 不保留可安装版本；
+  `@tellplot` 只作为保留的 organization namespace。
 - Compatibility: scoped 四包从未公开稳定发布，不提供兼容 shim 或双发布。1.x 兼容承诺从 `tellplot` 及其
   文档化子路径开始。
 - Rationale: 用户安装一个包即可使用 DOM、React 或 Vue；内部仍保持可测试、无环、ownership 清晰的长期

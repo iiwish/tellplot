@@ -5,6 +5,7 @@
 - Version: 1.0.0
 - Status: Released
 - Released: 2026-08-01
+- Registry cleanup: 2026-08-02
 - Repository: `iiwish/tellplot`
 - Package: `tellplot@1.0.0`
 - GitHub Release: `https://github.com/iiwish/tellplot/releases/tag/v1.0.0`
@@ -67,6 +68,7 @@ ruleset 拒绝。
 - Bootstrap：`tellplot@0.0.0-bootstrap.0` 保留在 `bootstrap` dist-tag。
 - Stable：`latest` 指向 `tellplot@1.0.0`。
 - Stage queue：公开批准后为空。
+- Scoped packages：`@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 与 `@tellplot/vue` 无可安装版本。
 
 workflow 从 exact `v1.0.0` tag 执行完整 release gate，verify job 在 23m6s 内通过，stage job 在 environment
 审批后 26s 内完成。npm stage `187969a4-f39a-40e0-b602-8bccb975f9b2` 的 actor 为 GitHub Actions trusted
@@ -96,8 +98,9 @@ automation；下载复核通过后由维护者完成 WebAuthn 2FA approval。
 - 官方 Registry fresh consumers：imperative no-framework、React 18.3.1、React 19.2.7、Vue 3.5.27 的
   strict peer install、ESM/CJS import 与 Vite production build；无框架 consumer 未安装 React/Vue。
 
-旧 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 和 `@tellplot/vue` 的
-`0.0.0-bootstrap.0` 仅保留历史占位，均已 deprecated 并指向 `tellplot`。四个 scoped `1.0.0` stage 已拒绝，
+四个 scoped bootstrap package 已全部 unpublished，删除顺序为 `@tellplot/react`、`@tellplot/vue`、
+`@tellplot/editor`、`@tellplot/core`。Registry API 与 fresh npm cache 均返回 404，`@tellplot` organization
+只保留 namespace，`npm access list packages tellplot` 返回空对象。四个 scoped `1.0.0` stage 已拒绝，
 没有进入公开稳定结果。
 
 ## Evidence

@@ -29,5 +29,5 @@
 | SLSA provenance | Passed | workflow、exact tag、commit、run 与 GitHub-hosted builder 全部一致 |
 | Public fresh install | Passed | imperative、React 18.3.1、React 19.2.7、Vue 3.5.27 strict peer + ESM/CJS + Vite build |
 | GitHub Release | Passed | `v1.0.0` latest release；附带 exact `tellplot-1.0.0.tgz` |
-| Scoped bootstrap cleanup | Passed | 四个 `@tellplot/*@0.0.0-bootstrap.0` 均 deprecated 为安装 `tellplot` |
+| Scoped bootstrap cleanup | Passed | 反向依赖顺序 unpublish；四个 `@tellplot/*` 的 Registry API 与 fresh-cache `npm view` 均返回 404；organization package list 为空；`tellplot@1.0.0` integrity/provenance 不变 |
 | Post-release evidence contract | Passed | stable release 与 single-package contract 2 files、19/19；strict artifact validator、Prettier、patch reverse-apply 与 `git diff --check` 通过 |

@@ -6,7 +6,8 @@
   G004 / T123、G006 / T125-T129 与 G007 / T131 均已验收；`tellplot@1.0.0` 已发布到 npm 和 GitHub。
 - 当前仓库以 `tellplot` 作为唯一公共包；内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、
   `@tellplot/vue` 均为 private workspace layers。playground、单元/组件/E2E/兼容性测试和单包发布 evidence
-  共同验证公共入口；npm 发布使用 stage-only Trusted Publisher、人类 2FA approval 与 SLSA provenance。
+  共同验证公共入口；npm Registry 不保留 scoped 可安装版本，发布使用 stage-only Trusted Publisher、人类
+  2FA approval 与 SLSA provenance。
 - 产品 SSOT：`.ai-platform/docs/product-design.md`。
 - 项目原则：`.ai-platform/memory/constitution.md`。
 - 技术决策：`.ai-platform/docs/technology-decision-record.md`。

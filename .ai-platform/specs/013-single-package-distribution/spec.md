@@ -6,8 +6,9 @@
 - Goal ID: `G007`
 - Version: 1.0.0
 - Status: Confirmed
-- Last updated: 2026-08-01
-- Approval: 用户明确批准保留框架无关内部架构，并将 npm 分发收敛为一个无 scope 的 `tellplot` 包
+- Last updated: 2026-08-02
+- Approval: 用户明确批准保留框架无关内部架构，将 npm 分发收敛为一个无 scope 的 `tellplot` 包，并删除
+  旧 scoped bootstrap packages
 
 ## Objective
 
@@ -48,7 +49,7 @@ playground、文档、quickstart、framework matrix、package contract、artifac
 
 公开候选只包含一个 `tellplot-1.0.0.tgz`。工作流继续使用 exact annotated tag、protected environment、
 stage-only Trusted Publisher、provenance、固定 SHA-256、人类复核与 2FA approval，不直接执行 `npm publish`。
-既有四个 scoped bootstrap package 和未批准 stage 不得进入稳定发布结果。
+四个旧 scoped bootstrap package 不保留可安装版本，未批准 stage 不得进入稳定发布结果。
 
 ## Non-Functional Requirements
 
@@ -64,7 +65,8 @@ stage-only Trusted Publisher、provenance、固定 SHA-256、人类复核与 2FA
 - DIST-SC-002：根、core、React、Vue 和 CSS 子路径的 tarball consumer 验证全部通过。
 - DIST-SC-003：无框架 consumer 不安装 React/Vue 仍可安装、构建和运行。
 - DIST-SC-004：完整 release gate、artifact reproducibility 与 fresh-source rehearsal 通过。
-- DIST-SC-005：旧 staged candidates 被拒绝；公开 npm、tag、GitHub Release 与 fresh install 状态可追溯。
+- DIST-SC-005：旧 staged candidates 被拒绝，旧 scoped bootstrap packages 无可安装版本；公开 npm、tag、
+  GitHub Release 与 fresh install 状态可追溯。
 - DIST-SC-006：无 unresolved Critical、High 或 Medium finding。
 
 ## Non-Goals

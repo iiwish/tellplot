@@ -106,7 +106,7 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
   environment、stage-only Trusted Publisher、provenance、人类 artifact 复核与 2FA approval。
 - Outcome: `tellplot@1.0.0` 已从受保护的 `v1.0.0` tag 完成 stage-only Trusted Publishing、人类 2FA
   approval 和公开发布；package/framework/browser/security/isolated-source 门禁、fresh install、provenance、
-  GitHub Release 与 Registry evidence 全部一致。
+  GitHub Release 与 Registry evidence 全部一致，四个 scoped bootstrap packages 无可安装版本。
 
 ## Decision Gates
 

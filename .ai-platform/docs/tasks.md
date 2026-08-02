@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- Version: 0.38.0
+- Version: 0.39.0
 - Status: Active
-- Last updated: 2026-08-01
+- Last updated: 2026-08-02
 - Scope: T101-T116、G002 系列、G004、G006 与 G007 已验收；`tellplot@1.0.0` 已完成公开发布
 
 ## Goal-Level Delivery
@@ -234,5 +234,6 @@ layers，不独立发布，不建设兼容 shim。
 T131 已完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
 清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval、公开 fresh install
 和 GitHub Release。npm `latest` 指向 `1.0.0`，provenance 解析到受保护的 `v1.0.0` 与发布提交
-`a3e07c9ac9b20183092729cde234322db98f9835`；状态为 `Accepted`。权威目标图与 evidence 位于
+`a3e07c9ac9b20183092729cde234322db98f9835`；四个 scoped bootstrap package 无可安装版本，状态为
+`Accepted`。权威目标图与 evidence 位于
 `.ai-platform/specs/013-single-package-distribution/` 和 `.ai-platform/evidence/T131/`。

@@ -36,5 +36,8 @@ React adapter 和 Vue adapter 继续作为私有 workspace layer，并由 archit
   GitHub-hosted runner；GitHub Release 为 `https://github.com/iiwish/tellplot/releases/tag/v1.0.0`。
 - 官方 Registry 的 imperative no-framework、React 18.3.1、React 19.2.7 与 Vue 3.5.27 fresh consumer
   均通过 strict peer install、ESM/CJS import 和 Vite production build；无框架 consumer 未安装 React/Vue。
-- 旧 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` bootstrap versions 均已
-  deprecate，并明确指向 `tellplot`。
+- `@tellplot/react`、`@tellplot/vue`、`@tellplot/editor`、`@tellplot/core` 的 bootstrap versions 已按反向
+  依赖顺序 unpublish；原始 Registry API 与独立 npm cache 的 `npm view` 均确认四个包返回 404，
+  `npm access list packages tellplot` 返回空对象。
+- cleanup 后 `tellplot@1.0.0` 的 `latest`、integrity 与 SLSA provenance 保持不变，`bootstrap` dist-tag 继续
+  只指向无 scope 的 `tellplot@0.0.0-bootstrap.0`。

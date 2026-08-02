@@ -26,10 +26,12 @@
   固定 package manifest key order、完整重压缩并以差异顺序/压缩级别测试锁定；连续重建通过。
 - E2E 接入文档断言仍引用旧 scoped package：迁移为 `pnpm add tellplot` 与
   `import 'tellplot/styles.css'`，当前及上一浏览器矩阵通过。
+- scoped bootstrap packages 会在 Registry 搜索和默认安装中增加错误心智：在 72 小时窗口内按反向依赖
+  顺序 unpublish，四个名称均通过 Registry API 与 fresh npm cache 验证为 404。
 
 ## Final Verdict
 
 spec compliance、bug/code quality、package artifact、QA、托管 workflow、stage download、2FA approval、
 Registry fresh install、SLSA provenance 与 GitHub Release 全部通过；无未解决 Critical、High 或 Medium
-finding。`tellplot@1.0.0`、受保护 tag、workflow head、公开 tarball 和 provenance 指向同一发布提交，T131
-满足 Definition of Done 并验收为 `Accepted`。
+finding。`tellplot@1.0.0`、受保护 tag、workflow head、公开 tarball 和 provenance 指向同一发布提交；
+Registry 不保留 scoped 可安装版本，T131 满足 Definition of Done 并验收为 `Accepted`。

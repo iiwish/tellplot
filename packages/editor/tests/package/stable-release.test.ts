@@ -457,7 +457,9 @@ describe('1.0 stable release contract', () => {
     expect(report).toContain('SLSA provenance v1');
     expect(report).toContain('refs/tags/v1.0.0');
     expect(report).toContain('React 18.3.1、React 19.2.7、Vue 3.5.27');
-    expect(report).toContain('`0.0.0-bootstrap.0` 仅保留历史占位');
+    expect(report).toContain('四个 scoped bootstrap package 已全部 unpublished');
+    expect(report).toContain('Registry API 与 fresh npm cache 均返回 404');
+    expect(report).not.toContain('仅保留历史占位');
     expect(report).toContain('.ai-platform/evidence/T131/tarball-manifest.json');
     expect(report).toContain('没有已知发布阻塞');
     expect(report).not.toContain('TELLPLOT_FINAL_COMMIT_SHA');

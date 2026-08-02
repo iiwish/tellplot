@@ -103,10 +103,10 @@ index 2fddc27..232e70a 100644
 +作为稳定条件。`1.0.0` 从受保护的 annotated tag、stage-only Trusted Publisher 和人类 2FA approval 发布；
 +后续公开版本继续只允许来自明确授权的干净 commit、受保护 tag 和可追溯 artifact。
 diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
-index 703a434..3ae5ea3 100644
+index 703a434..d91b0e4 100644
 --- a/.ai-platform/docs/release-report.md
 +++ b/.ai-platform/docs/release-report.md
-@@ -1,397 +1,116 @@
+@@ -1,397 +1,119 @@
 -# TellPlot 交付状态报告
 +# TellPlot 1.0.0 发布报告
  
@@ -118,6 +118,7 @@ index 703a434..3ae5ea3 100644
 -- Working branch: `main`
 +- Status: Released
 +- Released: 2026-08-01
++- Registry cleanup: 2026-08-02
 +- Repository: `iiwish/tellplot`
 +- Package: `tellplot@1.0.0`
 +- GitHub Release: `https://github.com/iiwish/tellplot/releases/tag/v1.0.0`
@@ -443,6 +444,7 @@ index 703a434..3ae5ea3 100644
 +- Bootstrap：`tellplot@0.0.0-bootstrap.0` 保留在 `bootstrap` dist-tag。
 +- Stable：`latest` 指向 `tellplot@1.0.0`。
 +- Stage queue：公开批准后为空。
++- Scoped packages：`@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 与 `@tellplot/vue` 无可安装版本。
  
 -```bash
 -set -euo pipefail
@@ -550,8 +552,9 @@ index 703a434..3ae5ea3 100644
 -12. 四包 approval 完成后，核对四个 `@1.0.0`、`latest`、provenance 和 Registry integrity，并从全新目录
 -   使用显式 `--registry=https://registry.npmjs.org/` 执行 public fresh-install smoke。上述检查通过前不得
 -   将 TellPlot 标记为 `Released`。
-+旧 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react` 和 `@tellplot/vue` 的
-+`0.0.0-bootstrap.0` 仅保留历史占位，均已 deprecated 并指向 `tellplot`。四个 scoped `1.0.0` stage 已拒绝，
++四个 scoped bootstrap package 已全部 unpublished，删除顺序为 `@tellplot/react`、`@tellplot/vue`、
++`@tellplot/editor`、`@tellplot/core`。Registry API 与 fresh npm cache 均返回 404，`@tellplot` organization
++只保留 namespace，`npm access list packages tellplot` 返回空对象。四个 scoped `1.0.0` stage 已拒绝，
 +没有进入公开稳定结果。
  
 -权威 npm 行为以
@@ -590,7 +593,7 @@ index 703a434..3ae5ea3 100644
 -fresh-clone CI、官方 registry audit 与完整 release gate，并按 `First-Publish Gate` 完成人工复核。
 +T131 无未解决 Critical、High 或 Medium finding，G007 状态为 `Accepted`。
 diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
-index 88560af..b570c14 100644
+index 88560af..98f7f81 100644
 --- a/.ai-platform/docs/tasks.md
 +++ b/.ai-platform/docs/tasks.md
 @@ -2,11 +2,10 @@
@@ -598,12 +601,12 @@ index 88560af..b570c14 100644
  ## Metadata
  
 -- Version: 0.36.0
-+- Version: 0.38.0
++- Version: 0.39.0
  - Status: Active
 -- Last updated: 2026-07-31
 -- Scope: T101-T116、G002 系列、G004 与 G006 已验收；G005 / T130 本地发布准备待用户复核，
 -  公开执行继续等待独立授权与外部条件
-+- Last updated: 2026-08-01
++- Last updated: 2026-08-02
 +- Scope: T101-T116、G002 系列、G004、G006 与 G007 已验收；`tellplot@1.0.0` 已完成公开发布
  
  ## Goal-Level Delivery
@@ -620,7 +623,7 @@ index 88560af..b570c14 100644
  
  ## T001 - 确认产品设计与项目章程
  
-@@ -219,3 +219,20 @@ package root bootstrap、stale annotated `v1.0.0` 的受控重建与保护、sta
+@@ -219,3 +219,21 @@ package root bootstrap、stale annotated `v1.0.0` 的受控重建与保护、sta
  
  权威目标图与 evidence 位于 `.ai-platform/specs/012-public-release-readiness/` 和
  `.ai-platform/evidence/T130/`。
@@ -639,13 +642,31 @@ index 88560af..b570c14 100644
 +T131 已完成 package 聚合、playground/文档/consumer/release pipeline 迁移、完整质量门禁、旧 stage
 +清理、单 package bootstrap/trust、受控 tag 重建、staged artifact 复核、2FA approval、公开 fresh install
 +和 GitHub Release。npm `latest` 指向 `1.0.0`，provenance 解析到受保护的 `v1.0.0` 与发布提交
-+`a3e07c9ac9b20183092729cde234322db98f9835`；状态为 `Accepted`。权威目标图与 evidence 位于
++`a3e07c9ac9b20183092729cde234322db98f9835`；四个 scoped bootstrap package 无可安装版本，状态为
++`Accepted`。权威目标图与 evidence 位于
 +`.ai-platform/specs/013-single-package-distribution/` 和 `.ai-platform/evidence/T131/`。
 diff --git a/.ai-platform/docs/technology-decision-record.md b/.ai-platform/docs/technology-decision-record.md
-index cfe14d3..805ac13 100644
+index cfe14d3..2a4fb4a 100644
 --- a/.ai-platform/docs/technology-decision-record.md
 +++ b/.ai-platform/docs/technology-decision-record.md
-@@ -75,7 +75,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -2,11 +2,12 @@
+ 
+ ## Metadata
+ 
+-- Version: 0.11.0
++- Version: 0.12.0
+ - Status: Confirmed
+-- Last updated: 2026-07-23
+-- Approval: 用户于 2026-07-20 明确确认轻量基础图表库边界、G2 ownership 和目标级交付方式，并于
+-  2026-07-23 批准首个公开 Beta 发布决策
++- Last updated: 2026-08-02
++- Approval: 用户于 2026-07-20 明确确认轻量基础图表库边界、G2 ownership 和目标级交付方式，于
++  2026-07-23 批准首个公开 Beta 发布决策，于 2026-08-01 批准单包分发，并于 2026-08-02 批准删除
++  scoped bootstrap packages
+ 
+ ## Decision Context
+ 
+@@ -75,7 +76,7 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
  ## TDR-008 测试分层
  
  - Status: Confirmed
@@ -654,7 +675,7 @@ index cfe14d3..805ac13 100644
  - Rationale: Mock 无法证明 Canvas 命中、拖拽、导出或真实布局正确，纯 E2E 又无法高效覆盖不变量组合。
  - Alternatives: 只做单元测试、只做 E2E、截图代替行为断言。
  - Consequences: coverage 只作为最低信号；财务不变量、失败路径和浏览器证据是阻断门槛。
-@@ -106,9 +106,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -106,9 +107,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
  ## TDR-011 品牌与仓库身份
  
  - Status: Confirmed
@@ -669,7 +690,7 @@ index cfe14d3..805ac13 100644
  - Historical boundary: `.ai-platform/evidence/**` 中的既有 patch 是不可变验收记录，可以保留交付时使用的旧标识；当前源码、配置和规范文档不得继续暴露旧命名空间。
  - Consequences: 首次远程提交前必须完成全量品牌残留扫描、包消费测试、浏览器矩阵和干净安装验证。
  
-@@ -200,12 +203,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -200,12 +204,12 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
  
  - Status: Confirmed
  - Decision: `apps/playground` 使用现有 React/Vite 单页应用承载品牌首页、示例中心、文档入口和在线工作台。
@@ -684,7 +705,7 @@ index cfe14d3..805ac13 100644
  - Rationale: 以真实产品为展示资产可以同时提升开源发现、示例浏览和手工验收体验，而不增加核心库重量。
  - Rejected alternatives: 独立重型文档站、静态图表截图、通用示例插件协议、第二图表渲染层。
  
-@@ -246,12 +249,13 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -246,12 +250,13 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
  ## TDR-021 首个稳定版 1.0
  
  - Status: Confirmed
@@ -700,7 +721,7 @@ index cfe14d3..805ac13 100644
    current/previous browser、a11y 和 performance 均为阻断门禁。
  - Scope: 稳定表示当前 waterfall、bar、column 的文档化能力可被兼容承诺，不表示 TellPlot 已覆盖 G2
    的通用图表范围。
-@@ -271,10 +275,10 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -271,10 +276,10 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
    drag-and-drop 库；适配包不得拥有第二套 session、projection、G2 runtime 或交互状态机。
  - UI ownership: 完整工具栏、图表直接操作、结构大纲、Inspector、弹层、键盘与无障碍语义由 framework-neutral
    editor runtime 统一拥有。适配包只渲染一个稳定容器并转发更新、事件与实例方法。
@@ -715,7 +736,7 @@ index cfe14d3..805ac13 100644
  - Quality: 包导入无浏览器全局副作用；create/update/destroy 可重复且资源可释放；imperative、React、Vue
    共享 E2E、a11y、performance 和当前/上一浏览器门禁。
  - Rationale: 框架无关 imperative runtime 让不同宿主共享完整编辑行为，避免在 React/Vue 中复制高风险的
-@@ -286,9 +290,36 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
+@@ -286,9 +291,37 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取
  - Rejected alternatives: Vue 内嵌 React root、把 React 打入 editor bundle、两套完整 UI、仅提供 read-only Vue、
    Web Component 作为唯一公共合同、公开旧候选后再迁移。
  
@@ -733,7 +754,8 @@ index cfe14d3..805ac13 100644
 +- Build contract: 公共 tarball 可以内联私有 workspace 实现，但不得泄漏无法从 npm 安装的 workspace
 +  specifier。根、core、React、Vue 提供 ESM、CJS 与 declarations，CSS 使用独立 export。
 +- Release contract: artifact、availability、preflight、Trusted Publisher 和 staging 只处理一个
-+  `tellplot-1.0.0.tgz`。未批准的 scoped stage 必须拒绝，scoped bootstrap package 不进入 1.x 发布路线。
++  `tellplot-1.0.0.tgz`。未批准的 scoped stage 必须拒绝，scoped bootstrap package 不保留可安装版本；
++  `@tellplot` 只作为保留的 organization namespace。
 +- Compatibility: scoped 四包从未公开稳定发布，不提供兼容 shim 或双发布。1.x 兼容承诺从 `tellplot` 及其
 +  文档化子路径开始。
 +- Rationale: 用户安装一个包即可使用 DOM、React 或 Vue；内部仍保持可测试、无环、ownership 清晰的长期
@@ -756,10 +778,10 @@ index cfe14d3..805ac13 100644
  远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。
 diff --git a/.ai-platform/evidence/T131/review.md b/.ai-platform/evidence/T131/review.md
 new file mode 100644
-index 0000000..26d6fa5
+index 0000000..2cbfc09
 --- /dev/null
 +++ b/.ai-platform/evidence/T131/review.md
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,37 @@
 +# T131 Review
 +
 +## Status
@@ -788,19 +810,21 @@ index 0000000..26d6fa5
 +  固定 package manifest key order、完整重压缩并以差异顺序/压缩级别测试锁定；连续重建通过。
 +- E2E 接入文档断言仍引用旧 scoped package：迁移为 `pnpm add tellplot` 与
 +  `import 'tellplot/styles.css'`，当前及上一浏览器矩阵通过。
++- scoped bootstrap packages 会在 Registry 搜索和默认安装中增加错误心智：在 72 小时窗口内按反向依赖
++  顺序 unpublish，四个名称均通过 Registry API 与 fresh npm cache 验证为 404。
 +
 +## Final Verdict
 +
 +spec compliance、bug/code quality、package artifact、QA、托管 workflow、stage download、2FA approval、
 +Registry fresh install、SLSA provenance 与 GitHub Release 全部通过；无未解决 Critical、High 或 Medium
-+finding。`tellplot@1.0.0`、受保护 tag、workflow head、公开 tarball 和 provenance 指向同一发布提交，T131
-+满足 Definition of Done 并验收为 `Accepted`。
++finding。`tellplot@1.0.0`、受保护 tag、workflow head、公开 tarball 和 provenance 指向同一发布提交；
++Registry 不保留 scoped 可安装版本，T131 满足 Definition of Done 并验收为 `Accepted`。
 diff --git a/.ai-platform/evidence/T131/summary.md b/.ai-platform/evidence/T131/summary.md
 new file mode 100644
-index 0000000..395de83
+index 0000000..a0e4044
 --- /dev/null
 +++ b/.ai-platform/evidence/T131/summary.md
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,43 @@
 +# T131 Evidence Summary
 +
 +## Status
@@ -839,8 +863,11 @@ index 0000000..395de83
 +  GitHub-hosted runner；GitHub Release 为 `https://github.com/iiwish/tellplot/releases/tag/v1.0.0`。
 +- 官方 Registry 的 imperative no-framework、React 18.3.1、React 19.2.7 与 Vue 3.5.27 fresh consumer
 +  均通过 strict peer install、ESM/CJS import 和 Vite production build；无框架 consumer 未安装 React/Vue。
-+- 旧 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、`@tellplot/vue` bootstrap versions 均已
-+  deprecate，并明确指向 `tellplot`。
++- `@tellplot/react`、`@tellplot/vue`、`@tellplot/editor`、`@tellplot/core` 的 bootstrap versions 已按反向
++  依赖顺序 unpublish；原始 Registry API 与独立 npm cache 的 `npm view` 均确认四个包返回 404，
++  `npm access list packages tellplot` 返回空对象。
++- cleanup 后 `tellplot@1.0.0` 的 `latest`、integrity 与 SLSA provenance 保持不变，`bootstrap` dist-tag 继续
++  只指向无 scope 的 `tellplot@0.0.0-bootstrap.0`。
 diff --git a/.ai-platform/evidence/T131/tarball-manifest.json b/.ai-platform/evidence/T131/tarball-manifest.json
 new file mode 100644
 index 0000000..8e9f90d
@@ -986,7 +1013,7 @@ index 0000000..8e9f90d
 +}
 diff --git a/.ai-platform/evidence/T131/test-results.md b/.ai-platform/evidence/T131/test-results.md
 new file mode 100644
-index 0000000..e226302
+index 0000000..7724c53
 --- /dev/null
 +++ b/.ai-platform/evidence/T131/test-results.md
 @@ -0,0 +1,33 @@
@@ -1021,7 +1048,7 @@ index 0000000..e226302
 +| SLSA provenance | Passed | workflow、exact tag、commit、run 与 GitHub-hosted builder 全部一致 |
 +| Public fresh install | Passed | imperative、React 18.3.1、React 19.2.7、Vue 3.5.27 strict peer + ESM/CJS + Vite build |
 +| GitHub Release | Passed | `v1.0.0` latest release；附带 exact `tellplot-1.0.0.tgz` |
-+| Scoped bootstrap cleanup | Passed | 四个 `@tellplot/*@0.0.0-bootstrap.0` 均 deprecated 为安装 `tellplot` |
++| Scoped bootstrap cleanup | Passed | 反向依赖顺序 unpublish；四个 `@tellplot/*` 的 Registry API 与 fresh-cache `npm view` 均返回 404；organization package list 为空；`tellplot@1.0.0` integrity/provenance 不变 |
 +| Post-release evidence contract | Passed | stable release 与 single-package contract 2 files、19/19；strict artifact validator、Prettier、patch reverse-apply 与 `git diff --check` 通过 |
 diff --git a/.ai-platform/specs/013-single-package-distribution/analysis.md b/.ai-platform/specs/013-single-package-distribution/analysis.md
 new file mode 100644
@@ -1067,7 +1094,7 @@ index 0000000..87aa8a9
 +  Trusted Publisher、2FA approval 与 npm 发布
 diff --git a/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md b/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md
 new file mode 100644
-index 0000000..14cf160
+index 0000000..9e7528e
 --- /dev/null
 +++ b/.ai-platform/specs/013-single-package-distribution/checklists/requirements.md
 @@ -0,0 +1,11 @@
@@ -1080,7 +1107,7 @@ index 0000000..14cf160
 +- [x] 不保留未公开四包 API 兼容负担。
 +- [x] 单包 package 与 framework consumer 门禁通过。
 +- [x] 完整 release gate 与 reproducible artifact 通过。
-+- [x] 旧 staged candidates 清理并完成新 package trust 配置。
++- [x] 旧 staged candidates 与 scoped bootstrap packages 清理并完成新 package trust 配置。
 +- [x] 公开 npm、tag、GitHub Release 与 fresh install 证据一致。
 diff --git a/.ai-platform/specs/013-single-package-distribution/packets/T131.yaml b/.ai-platform/specs/013-single-package-distribution/packets/T131.yaml
 new file mode 100644
@@ -1226,10 +1253,10 @@ index 0000000..66d5a2b
 +- `pnpm release:artifact`、strict artifact validator、`git diff --check`。
 diff --git a/.ai-platform/specs/013-single-package-distribution/spec.md b/.ai-platform/specs/013-single-package-distribution/spec.md
 new file mode 100644
-index 0000000..df26196
+index 0000000..abd6af2
 --- /dev/null
 +++ b/.ai-platform/specs/013-single-package-distribution/spec.md
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,77 @@
 +# G007 单包分发与公开发布 Spec
 +
 +## Metadata
@@ -1238,8 +1265,9 @@ index 0000000..df26196
 +- Goal ID: `G007`
 +- Version: 1.0.0
 +- Status: Confirmed
-+- Last updated: 2026-08-01
-+- Approval: 用户明确批准保留框架无关内部架构，并将 npm 分发收敛为一个无 scope 的 `tellplot` 包
++- Last updated: 2026-08-02
++- Approval: 用户明确批准保留框架无关内部架构，将 npm 分发收敛为一个无 scope 的 `tellplot` 包，并删除
++  旧 scoped bootstrap packages
 +
 +## Objective
 +
@@ -1280,7 +1308,7 @@ index 0000000..df26196
 +
 +公开候选只包含一个 `tellplot-1.0.0.tgz`。工作流继续使用 exact annotated tag、protected environment、
 +stage-only Trusted Publisher、provenance、固定 SHA-256、人类复核与 2FA approval，不直接执行 `npm publish`。
-+既有四个 scoped bootstrap package 和未批准 stage 不得进入稳定发布结果。
++四个旧 scoped bootstrap package 不保留可安装版本，未批准 stage 不得进入稳定发布结果。
 +
 +## Non-Functional Requirements
 +
@@ -1296,7 +1324,8 @@ index 0000000..df26196
 +- DIST-SC-002：根、core、React、Vue 和 CSS 子路径的 tarball consumer 验证全部通过。
 +- DIST-SC-003：无框架 consumer 不安装 React/Vue 仍可安装、构建和运行。
 +- DIST-SC-004：完整 release gate、artifact reproducibility 与 fresh-source rehearsal 通过。
-+- DIST-SC-005：旧 staged candidates 被拒绝；公开 npm、tag、GitHub Release 与 fresh install 状态可追溯。
++- DIST-SC-005：旧 staged candidates 被拒绝，旧 scoped bootstrap packages 无可安装版本；公开 npm、tag、
++  GitHub Release 与 fresh install 状态可追溯。
 +- DIST-SC-006：无 unresolved Critical、High 或 Medium finding。
 +
 +## Non-Goals
@@ -1307,10 +1336,10 @@ index 0000000..df26196
 +- 注册 npm organization 或把 `@tellplot` scope 作为公共安装前提。
 diff --git a/.ai-platform/specs/013-single-package-distribution/tasks.md b/.ai-platform/specs/013-single-package-distribution/tasks.md
 new file mode 100644
-index 0000000..f30bb64
+index 0000000..af75ced
 --- /dev/null
 +++ b/.ai-platform/specs/013-single-package-distribution/tasks.md
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,37 @@
 +# G007 单包分发与公开发布 Work Graph
 +
 +## Metadata
@@ -1319,7 +1348,7 @@ index 0000000..f30bb64
 +- Goal ID: `G007`
 +- Version: 1.0.0
 +- Status: Accepted
-+- Last updated: 2026-08-01
++- Last updated: 2026-08-02
 +- Approval: 用户明确批准本目标及单包发布边界
 +
 +## T131 - 收敛单包分发并完成公开发布
@@ -1337,9 +1366,10 @@ index 0000000..f30bb64
 +- Test targets: package/public surface、architecture、framework consumers、browser/a11y/performance、
 +  supply chain、artifact reproducibility、preflight、staging 与 public fresh install
 +- Deliverables: `tellplot` 包、私有内部 layers、单包文档/fixtures/release pipeline、T131 evidence、公开 1.0.0。
-+- Acceptance criteria: DIST-SC-001 至 006 满足；公开 registry 只产生 `tellplot@1.0.0` 稳定结果。
-+- Definition of Done: 本地与托管门禁通过；旧 stage 已清理；tag、workflow、staged artifact、npm 公开版本、
-+  provenance 和 fresh install 证据一致；无未解决发布阻塞。
++- Acceptance criteria: DIST-SC-001 至 006 满足；公开 registry 只保留 `tellplot` 可安装结果，四个 scoped
++  bootstrap packages 无可安装版本。
++- Definition of Done: 本地与托管门禁通过；旧 stage 与 scoped bootstrap packages 已清理；tag、workflow、
++  staged artifact、npm 公开版本、provenance 和 fresh install 证据一致；无未解决发布阻塞。
 +- Validation commands: `pnpm release:check`；`pnpm release:preflight`；`pnpm release:artifact`；
 +  `pnpm release:trust-readiness`；public registry/provenance/fresh-install verification
 +- TDD plan: RED 固定单包合同；GREEN 建立聚合包并迁移所有 consumers；REFACTOR 以完整 release matrix 和
@@ -1456,10 +1486,10 @@ index 5fec9f0..5981347 100644
            --ignore-scripts --tag=latest --provenance
            --registry=https://registry.npmjs.org/
 diff --git a/AGENTS.md b/AGENTS.md
-index cdeea21..cf14031 100644
+index cdeea21..7be0ad3 100644
 --- a/AGENTS.md
 +++ b/AGENTS.md
-@@ -3,11 +3,10 @@
+@@ -3,11 +3,11 @@
  ## 项目状态
  
  - 当前阶段：T101-T116、G002 / T117、G002-R1 / T118、G002-R2 / T119、G002-R3 / T122、
@@ -1471,7 +1501,8 @@ index cdeea21..cf14031 100644
 +  G004 / T123、G006 / T125-T129 与 G007 / T131 均已验收；`tellplot@1.0.0` 已发布到 npm 和 GitHub。
 +- 当前仓库以 `tellplot` 作为唯一公共包；内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、
 +  `@tellplot/vue` 均为 private workspace layers。playground、单元/组件/E2E/兼容性测试和单包发布 evidence
-+  共同验证公共入口；npm 发布使用 stage-only Trusted Publisher、人类 2FA approval 与 SLSA provenance。
++  共同验证公共入口；npm Registry 不保留 scoped 可安装版本，发布使用 stage-only Trusted Publisher、人类
++  2FA approval 与 SLSA provenance。
  - 产品 SSOT：`.ai-platform/docs/product-design.md`。
  - 项目原则：`.ai-platform/memory/constitution.md`。
  - 技术决策：`.ai-platform/docs/technology-decision-record.md`。
@@ -2155,7 +2186,7 @@ index 533a7a6..b7b5979 100644
  4. React/Vue 卸载由 adapter 自动销毁；imperative 接入显式调用 `destroy`。
  5. 宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
 diff --git a/docs/roadmap.md b/docs/roadmap.md
-index f1b4e3e..ba9ffd5 100644
+index f1b4e3e..c970561 100644
 --- a/docs/roadmap.md
 +++ b/docs/roadmap.md
 @@ -77,35 +77,40 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
@@ -2209,7 +2240,7 @@ index f1b4e3e..ba9ffd5 100644
 +  environment、stage-only Trusted Publisher、provenance、人类 artifact 复核与 2FA approval。
 +- Outcome: `tellplot@1.0.0` 已从受保护的 `v1.0.0` tag 完成 stage-only Trusted Publishing、人类 2FA
 +  approval 和公开发布；package/framework/browser/security/isolated-source 门禁、fresh install、provenance、
-+  GitHub Release 与 Registry evidence 全部一致。
++  GitHub Release 与 Registry evidence 全部一致，四个 scoped bootstrap packages 无可安装版本。
  
  ## Decision Gates
  
@@ -2575,7 +2606,7 @@ index 0000000..0288906
 +  });
 +});
 diff --git a/packages/editor/tests/package/stable-release.test.ts b/packages/editor/tests/package/stable-release.test.ts
-index 05478cc..932bdd2 100644
+index 05478cc..15f3e02 100644
 --- a/packages/editor/tests/package/stable-release.test.ts
 +++ b/packages/editor/tests/package/stable-release.test.ts
 @@ -51,22 +51,27 @@ function runModuleSource(source: string): {
@@ -2736,7 +2767,7 @@ index 05478cc..932bdd2 100644
      for (const command of stageCommands) {
        expect(command).toContain('--ignore-scripts');
        expect(command).toContain('--tag=latest');
-@@ -376,51 +423,50 @@ describe('1.0 stable release contract', () => {
+@@ -376,51 +423,52 @@ describe('1.0 stable release contract', () => {
        verifyJob.indexOf('pnpm release:artifact'),
      );
  
@@ -2812,7 +2843,9 @@ index 05478cc..932bdd2 100644
 +    expect(report).toContain('SLSA provenance v1');
 +    expect(report).toContain('refs/tags/v1.0.0');
 +    expect(report).toContain('React 18.3.1、React 19.2.7、Vue 3.5.27');
-+    expect(report).toContain('`0.0.0-bootstrap.0` 仅保留历史占位');
++    expect(report).toContain('四个 scoped bootstrap package 已全部 unpublished');
++    expect(report).toContain('Registry API 与 fresh npm cache 均返回 404');
++    expect(report).not.toContain('仅保留历史占位');
 +    expect(report).toContain('.ai-platform/evidence/T131/tarball-manifest.json');
 +    expect(report).toContain('没有已知发布阻塞');
 +    expect(report).not.toContain('TELLPLOT_FINAL_COMMIT_SHA');
@@ -2825,7 +2858,7 @@ index 05478cc..932bdd2 100644
    });
  
    it('separates clean public-release source checks from the dirty-capable local RC gate', () => {
-@@ -432,19 +478,9 @@ describe('1.0 stable release contract', () => {
+@@ -432,19 +480,9 @@ describe('1.0 stable release contract', () => {
        } from './scripts/release/preflight-public.mjs';
  
        const head = 'a'.repeat(40);
@@ -2847,7 +2880,7 @@ index 05478cc..932bdd2 100644
        const packageManifests = packageVersions.map(([name, version]) => ({
          name,
          version,
-@@ -669,7 +705,7 @@ describe('1.0 stable release contract', () => {
+@@ -669,7 +707,7 @@ describe('1.0 stable release contract', () => {
        const missingRemote = resolve(temporaryRoot, 'missing-origin.git');
        const canonicalRemote = 'https://github.com/iiwish/tellplot.git';
        const remoteQueryUrl = pathToFileURL(remote).href;
@@ -2856,7 +2889,7 @@ index 05478cc..932bdd2 100644
  
        function git(cwd, args) {
          const command = spawnSync('git', args, { cwd, encoding: 'utf8' });
-@@ -687,7 +723,7 @@ describe('1.0 stable release contract', () => {
+@@ -687,7 +725,7 @@ describe('1.0 stable release contract', () => {
  
          const artifactsRoot = resolve(
            repository,
@@ -2865,7 +2898,7 @@ index 05478cc..932bdd2 100644
          );
          mkdirSync(artifactsRoot, { recursive: true });
          const artifactEntries = packages.map(directory => {
-@@ -696,7 +732,7 @@ describe('1.0 stable release contract', () => {
+@@ -696,7 +734,7 @@ describe('1.0 stable release contract', () => {
            writeFileSync(
              resolve(packageRoot, 'package.json'),
              JSON.stringify({
@@ -2874,7 +2907,7 @@ index 05478cc..932bdd2 100644
                version: '1.0.0',
                publishConfig: {
                  access: 'public',
-@@ -704,11 +740,11 @@ describe('1.0 stable release contract', () => {
+@@ -704,11 +742,11 @@ describe('1.0 stable release contract', () => {
                },
              }),
            );
@@ -2888,7 +2921,7 @@ index 05478cc..932bdd2 100644
              version: '1.0.0',
              filename,
              sizeBytes: statSync(artifactPath).size,
-@@ -718,7 +754,7 @@ describe('1.0 stable release contract', () => {
+@@ -718,7 +756,7 @@ describe('1.0 stable release contract', () => {
            };
          });
          writeFileSync(
@@ -2897,7 +2930,7 @@ index 05478cc..932bdd2 100644
            JSON.stringify({ version: '1.0.0', packages: artifactEntries }),
          );
  
-@@ -827,12 +863,7 @@ describe('1.0 stable release contract', () => {
+@@ -827,12 +865,7 @@ describe('1.0 stable release contract', () => {
          validateTrustReadiness,
        } from './scripts/release/check-package-availability.mjs';
  
@@ -2911,7 +2944,7 @@ index 05478cc..932bdd2 100644
        const ready = packages.map(({ name, version }) => ({
          name,
          version,
-@@ -842,16 +873,16 @@ describe('1.0 stable release contract', () => {
+@@ -842,16 +875,16 @@ describe('1.0 stable release contract', () => {
        const confirmation = 'stage 1.0.0 stage-only-trusted-publishers-verified';
        assert.deepEqual(validateTrustReadiness(packages, ready, confirmation), []);
        assert.equal(
@@ -2933,7 +2966,7 @@ index 05478cc..932bdd2 100644
          confirmation,
        );
        assert.ok(bootstrapFindings.some(finding => finding.includes('bootstrap required')));
-@@ -860,14 +891,14 @@ describe('1.0 stable release contract', () => {
+@@ -860,14 +893,14 @@ describe('1.0 stable release contract', () => {
        assert.ok(
          validateTrustReadiness(
            packages,
@@ -2950,7 +2983,7 @@ index 05478cc..932bdd2 100644
            confirmation,
          ).some(finding => finding.includes('package root query failed')),
        );
-@@ -877,8 +908,8 @@ describe('1.0 stable release contract', () => {
+@@ -877,8 +910,8 @@ describe('1.0 stable release contract', () => {
          ),
        );
        assert.ok(
@@ -2961,7 +2994,7 @@ index 05478cc..932bdd2 100644
          ),
        );
      `);
-@@ -909,22 +940,17 @@ describe('1.0 stable release contract', () => {
+@@ -909,22 +942,17 @@ describe('1.0 stable release contract', () => {
      const gettingStarted = text('docs/getting-started.md');
      const api = text('docs/api.md');
      const errors = text('docs/errors.md');
@@ -2993,7 +3026,7 @@ index 05478cc..932bdd2 100644
      expect(gettingStarted).toContain('受控模式不会自行提交候选视图');
      expect(api).toContain('`dispatch(command): CommandResult | null`');
      expect(api).toContain('`getView(): ViewSpec`');
-@@ -1119,7 +1145,7 @@ describe('1.0 stable release contract', () => {
+@@ -1119,7 +1147,7 @@ describe('1.0 stable release contract', () => {
            runtime: ['run', 'value'],
            types: ['Alias', 'PublicShape', 'Shape'],
          });
