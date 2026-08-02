@@ -1,8 +1,27 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { EXAMPLE_CATALOG, exampleById } from '../src/exampleCatalog';
+import { SiteHeader } from '../src/SiteHeader';
 import { SITE_METADATA, SITE_ORIGIN, siteMetadataForPage } from '../src/siteMetadata';
 import { resolveSiteRoute, siteTitleForRoute } from '../src/siteRouting';
+
+describe('playground website header', () => {
+  it('links the GitHub icon to the public TellPlot repository', () => {
+    const markup = renderToStaticMarkup(
+      createElement(SiteHeader, {
+        page: 'home',
+        onNavigate: () => undefined,
+      }),
+    );
+
+    expect(markup).toContain('href="https://github.com/iiwish/tellplot"');
+    expect(markup).toContain('aria-label="在 GitHub 查看 TellPlot"');
+    expect(markup).toContain('target="_blank"');
+    expect(markup).toContain('rel="noopener noreferrer"');
+  });
+});
 
 describe('playground website content', () => {
   it('keeps the example catalog explicit, unique, and limited to validated chart types', () => {
