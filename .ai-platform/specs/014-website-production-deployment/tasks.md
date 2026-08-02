@@ -31,7 +31,7 @@
 
 ## T133 - 建立并验收 Vercel Preview 与 Production source
 
-- Status: Ready
+- Status: Needs_Review
 - Priority: P0
 - Story / Requirement: WEB-FR-005
 - Dependencies: T132 Needs_Review；clean committed and pushed source
@@ -51,7 +51,7 @@
 
 ## T134 - 绑定 Cloudflare 域名并完成生产验收
 
-- Status: Pending
+- Status: Needs_Review
 - Priority: P0
 - Story / Requirement: WEB-FR-006
 - Dependencies: T133 Needs_Review；Vercel Production Ready

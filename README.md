@@ -42,8 +42,9 @@ pnpm test:package
 pnpm test:framework-matrix
 ```
 
-本地网站入口包括产品首页、示例中心、开发者文档和完整编辑工作台。网站通过 `tellplot/react`
-消费公共包，编辑能力仍由内部 framework-neutral editor 唯一实现。
+生产官网位于 [tellplot.com](https://tellplot.com)，包括产品首页、示例中心、开发者文档和完整编辑工作台。
+网站通过 `tellplot/react` 消费公共包，编辑能力仍由内部 framework-neutral editor 唯一实现。Vercel 从
+GitHub `main` 的 clean commit 构建静态产物，Cloudflare 保持权威 DNS。
 
 ## 文档
 
@@ -57,7 +58,7 @@ pnpm test:framework-matrix
 - [版本与兼容政策](docs/versioning.md)
 - [产品设计 SSOT](.ai-platform/docs/product-design.md)
 
-`tellplot@1.0.0` 的公开 npm、Git tag、GitHub Release 和生产部署均经过独立发布闸门。
+`tellplot@1.0.0` 的公开 npm、Git tag、GitHub Release 与官网 Production 均经过独立发布闸门。
 
 ## License
 

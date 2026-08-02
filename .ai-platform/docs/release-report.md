@@ -98,6 +98,17 @@ automation；下载复核通过后由维护者完成 WebAuthn 2FA approval。
 - 官方 Registry fresh consumers：imperative no-framework、React 18.3.1、React 19.2.7、Vue 3.5.27 的
   strict peer install、ESM/CJS import 与 Vite production build；无框架 consumer 未安装 React/Vue。
 
+## Production Website
+
+生产官网为 `https://tellplot.com`。Vercel 项目 `iiwishs-projects/tellplot` 从 GitHub `main` 的 clean commit
+构建 `apps/playground`，使用 Node 22、pnpm 11.1.3、frozen lockfile 与 route-specific static shells。
+Cloudflare 保持 `tellplot.com` 权威 DNS；apex 与 `www` 使用 DNS-only Vercel CNAME，`www` 以 308 保留路径
+跳转到 canonical apex。
+
+生产部署、四个直接路由、未知路径 404、TLS、route metadata、robots/sitemap、缓存、安全头和真实 Chrome
+G2 图表渲染均已验证。部署 evidence 位于 `.ai-platform/evidence/T132/`、`.ai-platform/evidence/T133/` 和
+`.ai-platform/evidence/T134/`；Vercel 保留前一 Ready Production 作为显式 rollback target。
+
 四个 scoped bootstrap package 已全部 unpublished，删除顺序为 `@tellplot/react`、`@tellplot/vue`、
 `@tellplot/editor`、`@tellplot/core`。Registry API 与 fresh npm cache 均返回 404，`@tellplot` organization
 只保留 namespace，`npm access list packages tellplot` 返回空对象。四个 scoped `1.0.0` stage 已拒绝，

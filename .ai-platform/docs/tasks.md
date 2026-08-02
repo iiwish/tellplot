@@ -238,11 +238,13 @@ T131 已完成 package 聚合、playground/文档/consumer/release pipeline 迁�
 `Accepted`。权威目标图与 evidence 位于
 `.ai-platform/specs/013-single-package-distribution/` 和 `.ai-platform/evidence/T131/`。
 
-## G008 Execution
+## G008 Needs Review
 
-G008 已由用户于 2026-08-02 批准，目标是把现有 React/Vite 官网以可追溯的静态构建部署到 Vercel，
-保留 Cloudflare 权威 DNS 并绑定 `tellplot.com`。内部以 T132-T134 连续完成生产配置与静态可发现性、
-Vercel Preview/Production、Cloudflare DNS/HTTPS 与最终 evidence。远程 push、Vercel deployment、Production
-提升和 DNS 变更均已获得本目标明确授权；任何 npm publish、tag 或公共包变化不在范围内。
+G008 已完成 T132-T134。React/Vite 官网由 Vercel 从 GitHub `main` 的 clean commit 构建，使用 Node 22、
+pnpm 11.1.3 和 frozen lockfile；Preview、Production、四个直接路由、404、metadata、缓存与安全头均已验证。
+Cloudflare 继续提供权威 DNS，`https://tellplot.com` 是 canonical production origin，`www` 以 308 保留路径
+跳转到 apex。TLS、真实 Chrome 图表渲染与 Vercel rollback 入口均有 evidence。
 
-权威目标图位于 `.ai-platform/specs/014-website-production-deployment/tasks.md`。
+T132-T134 状态均为 `Needs_Review`，无 unresolved Critical、High 或 Medium finding。权威目标图位于
+`.ai-platform/specs/014-website-production-deployment/tasks.md`，evidence 位于 `.ai-platform/evidence/T132/`、
+`.ai-platform/evidence/T133/` 和 `.ai-platform/evidence/T134/`。
