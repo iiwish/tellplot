@@ -30,7 +30,7 @@ codebase_context:
   interfaces_or_contracts: [.ai-platform/specs/014-website-production-deployment/spec.md]
 execution_constraints:
   branch_or_worktree: main
-  allowed_files: [Vercel project and deployments, GitHub repository and settings, .gitignore, .ai-platform/**, README.md]
+  allowed_files: [Vercel project and deployments, GitHub repository and settings, package.json, apps/playground/tests/**, .gitignore, .vercelignore, .ai-platform/**, README.md]
   forbidden_changes: [DNS before preview passes, npm release, git tag]
 tdd_plan:
   required: false

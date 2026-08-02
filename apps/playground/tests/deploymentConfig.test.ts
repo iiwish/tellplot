@@ -19,6 +19,7 @@ describe('production website deployment contract', () => {
     const scripts = packageJson['scripts'] as Record<string, unknown>;
 
     expect(packageJson['packageManager']).toBe('pnpm@11.1.3');
+    expect((packageJson['engines'] as Record<string, unknown>)['node']).toBe('22.x');
     expect(scripts['build:site']).toBe('pnpm --filter @tellplot/playground build');
   });
 

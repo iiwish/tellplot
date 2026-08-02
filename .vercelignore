@@ -1,0 +1,10 @@
+.git
+.vercel
+.env*
+**/node_modules
+**/dist
+coverage
+playwright-report
+test-results
+tmp
+.ai-platform/evidence
