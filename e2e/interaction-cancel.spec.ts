@@ -25,13 +25,27 @@ async function rootOrder(page: Page): Promise<readonly string[]> {
     );
 }
 
-async function startOutlineDrag(page: Page): Promise<void> {
+interface ActiveOutlineDrag {
+  readonly handle: Locator;
+  readonly pointerId: number;
+}
+
+async function startOutlineDrag(page: Page): Promise<ActiveOutlineDrag> {
   const handle = page.getByRole('button', { name: '拖动 销量增长' });
   const box = await handle.boundingBox();
   expect(box).not.toBeNull();
   if (box === null) {
-    return;
+    return { handle, pointerId: -1 };
   }
+  await handle.evaluate(element => {
+    element.addEventListener(
+      'pointerdown',
+      event => {
+        element.setAttribute('data-test-pointer-id', String(event.pointerId));
+      },
+      { capture: true, once: true },
+    );
+  });
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 14, box.y + box.height / 2 + 8, {
@@ -39,6 +53,9 @@ async function startOutlineDrag(page: Page): Promise<void> {
   });
   await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
   await expect(page.getByTestId('outline-drag-overlay')).toBeVisible();
+  const pointerIdAttribute = await handle.getAttribute('data-test-pointer-id');
+  expect(pointerIdAttribute).not.toBeNull();
+  return { handle, pointerId: Number(pointerIdAttribute) };
 }
 
 async function expectCancelledAndReusable(
@@ -63,7 +80,7 @@ async function expectCancelledAndReusable(
 
 const outlineCancelCases: readonly {
   readonly name: string;
-  readonly cancel: (page: Page) => Promise<void>;
+  readonly cancel: (page: Page, drag: ActiveOutlineDrag) => Promise<void>;
 }[] = [
   {
     name: 'Escape',
@@ -77,18 +94,25 @@ const outlineCancelCases: readonly {
   },
   {
     name: 'pointercancel',
-    cancel: async page => {
-      await page.evaluate(() => {
+    cancel: async (page, drag) => {
+      await page.evaluate(pointerId => {
         document.dispatchEvent(
-          new PointerEvent('pointercancel', { bubbles: true, cancelable: true, pointerId: 1 }),
+          new PointerEvent('pointercancel', { bubbles: true, cancelable: true, pointerId }),
         );
-      });
+      }, drag.pointerId);
     },
   },
   {
     name: 'release outside every semantic target',
     cancel: async page => {
       await page.mouse.move(2, 2, { steps: 4 });
+      await page.mouse.up();
+    },
+  },
+  {
+    name: 'release outside the top-level viewport',
+    cancel: async page => {
+      await page.mouse.move(-10, -10, { steps: 4 });
       await page.mouse.up();
     },
   },
@@ -100,11 +124,44 @@ for (const cancelCase of outlineCancelCases) {
   }) => {
     await openEditor(page);
     const baselineOrder = await rootOrder(page);
-    await startOutlineDrag(page);
-    await cancelCase.cancel(page);
+    const drag = await startOutlineDrag(page);
+    await cancelCase.cancel(page, drag);
     await expectCancelledAndReusable(page, baselineOrder);
   });
 }
+
+test('an active outline drag keeps ownership when another pointer starts', async ({ page }) => {
+  await openEditor(page);
+  const baselineOrder = await rootOrder(page);
+  const drag = await startOutlineDrag(page);
+
+  await drag.handle.dispatchEvent('pointerdown', {
+    button: 0,
+    buttons: 1,
+    pointerId: drag.pointerId + 1,
+    pointerType: 'touch',
+  });
+  await page.mouse.move(2, 2, { steps: 4 });
+  await page.mouse.up();
+
+  await expectCancelledAndReusable(page, baselineOrder);
+});
+
+test('an active outline drag ignores pointercancel from a different pointer', async ({ page }) => {
+  await openEditor(page);
+  const baselineOrder = await rootOrder(page);
+  const drag = await startOutlineDrag(page);
+
+  await drag.handle.dispatchEvent('pointercancel', {
+    pointerId: drag.pointerId + 1,
+    pointerType: 'touch',
+  });
+
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'dragging');
+  await expect(page.getByTestId('outline-drag-overlay')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expectCancelledAndReusable(page, baselineOrder);
+});
 
 async function chartBarPoints(canvas: Locator): Promise<readonly { x: number; y: number }[]> {
   const localPoints = await canvas.evaluate((element, expectedBarCount) => {
@@ -254,6 +311,13 @@ const chartCancelCases: readonly {
       await page.mouse.up();
     },
   },
+  {
+    name: 'release outside the top-level viewport',
+    cancel: async page => {
+      await page.mouse.move(-10, -10, { steps: 4 });
+      await page.mouse.up();
+    },
+  },
 ];
 
 for (const cancelCase of chartCancelCases) {
@@ -285,6 +349,27 @@ for (const cancelCase of chartCancelCases) {
     await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
   });
 }
+
+test('non-primary mouse buttons never start a chart pointer session', async ({ page }) => {
+  await openEditor(page);
+  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
+  await expect.poll(() => chartBarPoints(canvas)).toHaveLength(EXPECTED_CHART_BAR_COUNT);
+  const point = (await chartBarPoints(canvas))[1];
+  expect(point).toBeDefined();
+  if (point === undefined) {
+    return;
+  }
+
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(point.x + 60, point.y + 60, { steps: 4 });
+
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
+  await expect(page.getByTestId('chart-drag-overlay')).toHaveCount(0);
+  await expect(page.locator('.tp-chart-marquee:not([hidden])')).toHaveCount(0);
+  await page.mouse.up({ button: 'right' });
+  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
+});
 
 test('start, operating subtotal, and end chart marks never open a pointer session', async ({
   page,

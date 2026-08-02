@@ -8,6 +8,8 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或�
 ### Fixed
 
 - 图表框选拖到绘图区外松开时仍会完成当前选区并打开分组命名弹窗；元素拖拽在图外松开仍保持取消语义。
+- Firefox 中指针移出浏览器视口后释放会可靠取消图表与大纲交互；图表不再响应右键或中键拖拽，
+  大纲拖拽也不会被其他指针覆盖或取消。
 
 ## 1.0.0
 

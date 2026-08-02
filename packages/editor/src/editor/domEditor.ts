@@ -1105,6 +1105,7 @@ export function createEditor(
 
   const startOutlineDrag = (event: PointerEvent, entry: OutlineEntry): void => {
     if (
+      outlineDrag !== null ||
       event.button !== 0 ||
       entry.kind === 'anchor' ||
       entry.locked ||
@@ -2291,6 +2292,10 @@ export function createEditor(
     if (outlineDrag === null || outlineDrag.pointerId !== event.pointerId) {
       return;
     }
+    if (event.pointerType === 'mouse' && event.buttons === 0) {
+      cancelOutlineDrag();
+      return;
+    }
     if (
       !outlineDrag.moved &&
       Math.hypot(event.clientX - outlineDrag.startX, event.clientY - outlineDrag.startY) < 4
@@ -2420,6 +2425,16 @@ export function createEditor(
       focusNode(active.itemId);
     }
   };
+  const handleOutlinePointerOut = (event: PointerEvent): void => {
+    if (outlineDrag?.pointerId === event.pointerId && event.relatedTarget === null) {
+      cancelOutlineDrag();
+    }
+  };
+  const handleOutlinePointerCancel = (event: PointerEvent): void => {
+    if (outlineDrag?.pointerId === event.pointerId) {
+      cancelOutlineDrag();
+    }
+  };
   const handleDocumentKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape' && outlineDrag !== null) {
       event.preventDefault();
@@ -2428,7 +2443,8 @@ export function createEditor(
   };
   document.addEventListener('pointermove', handleOutlinePointerMove, true);
   document.addEventListener('pointerup', handleOutlinePointerUp, true);
-  document.addEventListener('pointercancel', cancelOutlineDrag, true);
+  document.addEventListener('pointercancel', handleOutlinePointerCancel, true);
+  document.addEventListener('pointerout', handleOutlinePointerOut, true);
   document.addEventListener('keydown', handleDocumentKeyDown);
   ownerWindow?.addEventListener('blur', cancelOutlineDrag);
 
@@ -2675,7 +2691,8 @@ export function createEditor(
       unsubscribe();
       document.removeEventListener('pointermove', handleOutlinePointerMove, true);
       document.removeEventListener('pointerup', handleOutlinePointerUp, true);
-      document.removeEventListener('pointercancel', cancelOutlineDrag, true);
+      document.removeEventListener('pointercancel', handleOutlinePointerCancel, true);
+      document.removeEventListener('pointerout', handleOutlinePointerOut, true);
       document.removeEventListener('keydown', handleDocumentKeyDown);
       ownerWindow?.removeEventListener('blur', cancelOutlineDrag);
       layoutObserver?.disconnect();

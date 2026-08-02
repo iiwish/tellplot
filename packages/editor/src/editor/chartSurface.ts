@@ -195,6 +195,18 @@ function pointFromPointerEvent(event: PointerEvent, canvas: HTMLCanvasElement): 
   };
 }
 
+function usesPrimaryPointerButton(event: unknown): boolean {
+  if ((typeof event !== 'object' || event === null) && typeof event !== 'function') {
+    return true;
+  }
+  try {
+    const button = Reflect.get(event, 'button');
+    return typeof button !== 'number' || button === 0;
+  } catch {
+    return false;
+  }
+}
+
 function ancestorGroupIds(view: ViewSpec, nodeId: ViewNodeId): readonly GroupId[] {
   const groups: GroupId[] = [];
   const visited = new Set<ViewNodeId>();
@@ -675,7 +687,12 @@ export function createChartSurface(
   };
 
   const handleElementPointerDown = (event: unknown): void => {
-    if (current === undefined || drag !== null || marqueeSession !== null) {
+    if (
+      !usesPrimaryPointerButton(event) ||
+      current === undefined ||
+      drag !== null ||
+      marqueeSession !== null
+    ) {
       return;
     }
     runtime.finishAnimations();
@@ -687,6 +704,7 @@ export function createChartSurface(
 
   const handlePlotPointerDown = (event: unknown): void => {
     if (
+      !usesPrimaryPointerButton(event) ||
       drag !== null ||
       marqueeSession !== null ||
       current === undefined ||
@@ -862,6 +880,7 @@ export function createChartSurface(
 
   const handleNativeDown = (event: PointerEvent): void => {
     if (
+      event.button !== 0 ||
       drag !== null ||
       marqueeSession !== null ||
       current === undefined ||
@@ -922,10 +941,21 @@ export function createChartSurface(
     }
   };
 
+  const cancelActiveInteraction = (): void => {
+    if (drag !== null || marqueeSession !== null) {
+      clearInteraction();
+      callbacks.onCancel('cancelled');
+    }
+  };
+
   const handleNativeMove = (event: PointerEvent): void => {
     const canvas = plot.querySelector('canvas');
     const ownsActivePointer =
       drag?.pointerId === event.pointerId || marqueeSession?.pointerId === event.pointerId;
+    if (ownsActivePointer && event.pointerType === 'mouse' && event.buttons === 0) {
+      cancelActiveInteraction();
+      return;
+    }
     if (canvas !== null && ownsActivePointer) {
       pointerMove(pointFromPointerEvent(event, canvas));
     } else if (
@@ -955,9 +985,16 @@ export function createChartSurface(
     }
   };
   const handleNativeCancel = (event: PointerEvent): void => {
-    const canvas = plot.querySelector('canvas');
-    if (canvas !== null) {
-      completePointer(pointFromPointerEvent(event, canvas), true);
+    if (drag?.pointerId === event.pointerId || marqueeSession?.pointerId === event.pointerId) {
+      cancelActiveInteraction();
+    }
+  };
+  const handleDocumentPointerOut = (event: PointerEvent): void => {
+    if (
+      event.relatedTarget === null &&
+      (drag?.pointerId === event.pointerId || marqueeSession?.pointerId === event.pointerId)
+    ) {
+      cancelActiveInteraction();
     }
   };
   const handleKeyDown = (event: KeyboardEvent): void => {
@@ -968,15 +1005,13 @@ export function createChartSurface(
     }
   };
   const handleWindowBlur = (): void => {
-    if (drag !== null || marqueeSession !== null) {
-      clearInteraction();
-      callbacks.onCancel('cancelled');
-    }
+    cancelActiveInteraction();
   };
   plot.addEventListener('pointerdown', handleNativeDown, true);
   document.addEventListener('pointermove', handleNativeMove, true);
   document.addEventListener('pointerup', handleNativeUp, true);
   document.addEventListener('pointercancel', handleNativeCancel, true);
+  document.addEventListener('pointerout', handleDocumentPointerOut, true);
   document.addEventListener('keydown', handleKeyDown);
   ownerWindow?.addEventListener('blur', handleWindowBlur);
 
@@ -1106,6 +1141,7 @@ export function createChartSurface(
       document.removeEventListener('pointermove', handleNativeMove, true);
       document.removeEventListener('pointerup', handleNativeUp, true);
       document.removeEventListener('pointercancel', handleNativeCancel, true);
+      document.removeEventListener('pointerout', handleDocumentPointerOut, true);
       document.removeEventListener('keydown', handleKeyDown);
       ownerWindow?.removeEventListener('blur', handleWindowBlur);
       runtime.dispose();

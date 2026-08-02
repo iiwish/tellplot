@@ -313,6 +313,71 @@ describe('chart surface render recovery', () => {
     surface.destroy();
   });
 
+  it('ignores non-primary buttons across native and G2 pointer entrypoints', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    document.body.append(surface.element);
+    surface.update(state);
+    const runtime = latestRuntime();
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+    });
+    const plot = surface.element.querySelector<HTMLElement>('[data-testid="tellplot-chart"]');
+    const canvas = document.createElement('canvas');
+    canvas.width = 100;
+    canvas.height = 100;
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      toJSON: () => ({}),
+    });
+    plot?.append(canvas);
+
+    fireEvent.pointerDown(canvas, { button: 2, pointerId: 10, clientX: 20, clientY: 20 });
+    runtime.options.events
+      .find(event => event.name === 'plot:pointerdown')
+      ?.listener({ button: 1, pointerId: 11, canvas: { x: 30, y: 30 } });
+
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+    expect(callbacks.onInteractionChange).not.toHaveBeenCalledWith({ state: 'selecting' });
+    surface.destroy();
+  });
+
+  it('cancels an active pointer session when its pointer leaves the top-level document', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    document.body.append(surface.element);
+    surface.update(state);
+    const runtime = latestRuntime();
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+    });
+    runtime.options.events
+      .find(event => event.name === 'plot:pointerdown')
+      ?.listener({ button: 0, pointerId: 12, canvas: { x: 20, y: 30 } });
+
+    expect(surface.element.dataset['interactionState']).toBe('selecting');
+    fireEvent.pointerMove(document, {
+      buttons: 0,
+      pointerId: 12,
+      pointerType: 'mouse',
+    });
+
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+    expect(callbacks.onCancel).toHaveBeenCalledWith('cancelled');
+    surface.destroy();
+  });
+
   it('commits an outside marquee while cancelling an outside item drag', () => {
     const callbacks = createCallbacks();
     const surface = createChartSurface(document, callbacks);
