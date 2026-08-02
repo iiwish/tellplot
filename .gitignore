@@ -45,3 +45,4 @@ tmp/
 # Other package manager lock files
 # package-lock.json
 # yarn.lock
+.vercel

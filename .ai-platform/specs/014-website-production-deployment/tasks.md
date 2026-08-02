@@ -39,7 +39,7 @@
 - Parallel: false
 - Conflicts with: dirty worktree deployment、DNS cutover、npm release
 - Goal: 连接 GitHub 与 Vercel，使用仓库配置完成 Preview，验收后建立 main Production deployment。
-- Allowed files: Vercel project/settings/deployments、GitHub repository/settings、`.ai-platform/**`、`README.md`
+- Allowed files: Vercel project/settings/deployments、GitHub repository/settings、`.gitignore`、`.ai-platform/**`、`README.md`
 - Test targets: hosted build log、direct routes、headers、metadata、desktop/mobile、editor smoke
 - Deliverables: Preview/Production URL、source SHA、deployment evidence、T133 review
 - Acceptance criteria: WEB-FR-005、WEB-SC-002 与 Production source traceability 满足。
