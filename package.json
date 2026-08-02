@@ -18,6 +18,7 @@
   "scripts": {
     "dev": "pnpm --filter @tellplot/playground dev",
     "build": "pnpm -r --if-present run build",
+    "build:site": "pnpm --filter @tellplot/playground build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",

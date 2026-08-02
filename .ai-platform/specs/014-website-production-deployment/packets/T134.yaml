@@ -1,0 +1,54 @@
+schema_version: 1
+packet_id: EP-014-T134
+task_id: T134
+feature_id: 014-website-production-deployment
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/014-website-production-deployment/spec.md
+  requirements_checklist: .ai-platform/specs/014-website-production-deployment/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/014-website-production-deployment/plan.md
+  work_graph: .ai-platform/specs/014-website-production-deployment/tasks.md
+  analysis: .ai-platform/specs/014-website-production-deployment/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 绑定 Cloudflare 域名并完成生产验收
+  goal: Serve the verified production deployment at https://tellplot.com
+  epic: G008
+  requirements: [WEB-FR-006]
+  priority: P0
+  depends_on: [T133]
+  blocks: [G008 goal review]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [Cloudflare tellplot.com zone, Vercel domains, README.md, .ai-platform]
+  existing_patterns: [Cloudflare authoritative DNS, Vercel managed TLS]
+  interfaces_or_contracts: [.ai-platform/specs/014-website-production-deployment/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [Cloudflare tellplot.com DNS, Vercel domains and deployments, README.md, docs/**, AGENTS.md, .ai-platform/**]
+  forbidden_changes: [nameserver migration, npm release, unverified deployment cutover]
+tdd_plan:
+  required: false
+  exception: DNS and TLS validation use before-after external-state evidence
+  red: {command: query authoritative DNS and HTTPS, expected_failure: apex has no production origin}
+  green: {command: bind Vercel domains and configure Cloudflare records, expected_signal: apex HTTPS and www redirect pass}
+  refactor: {command: run production browser and HTTP matrix, expected_signal: all routes and headers pass}
+validation_loop:
+  commands: [authoritative DNS query, HTTPS and redirect checks, production browser smoke, artifact validator]
+  retry_budget: 2
+evidence_contract:
+  summary: .ai-platform/evidence/T134/summary.md
+  test_results: .ai-platform/evidence/T134/test-results.md
+  required: [DNS before and after, TLS, apex routes, www redirect, metadata and headers, rollback record]
+review_contract:
+  required_passes: [spec_compliance, production_qa, dns_tls, rollback]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [mark G008 Needs_Review]
+stop_conditions: [unavailable production deployment, unresolved TLS, conflicting DNS, credential exposure]

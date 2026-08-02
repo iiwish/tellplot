@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EXAMPLE_CATALOG, exampleById } from '../src/exampleCatalog';
+import { SITE_METADATA, SITE_ORIGIN, siteMetadataForPage } from '../src/siteMetadata';
 import { resolveSiteRoute, siteTitleForRoute } from '../src/siteRouting';
 
 describe('playground website content', () => {
@@ -46,5 +47,14 @@ describe('playground website routes', () => {
     expect(siteTitleForRoute({ page: 'docs' })).toContain('文档');
     expect(siteTitleForRoute({ page: 'playground' })).toContain('在线编辑');
     expect(siteTitleForRoute({ page: 'not-found' })).toContain('页面不存在');
+  });
+
+  it('provides canonical production metadata for every indexable route', () => {
+    expect(SITE_ORIGIN).toBe('https://tellplot.com');
+    expect(Object.keys(SITE_METADATA)).toEqual(['home', 'examples', 'docs', 'playground']);
+    expect(siteMetadataForPage('home').canonicalUrl).toBe('https://tellplot.com/');
+    expect(siteMetadataForPage('examples').canonicalUrl).toBe('https://tellplot.com/examples');
+    expect(siteMetadataForPage('docs').title).toContain('文档');
+    expect(siteMetadataForPage('playground').description).toContain('实时编辑');
   });
 });

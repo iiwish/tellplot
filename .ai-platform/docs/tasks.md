@@ -237,3 +237,12 @@ T131 已完成 package 聚合、playground/文档/consumer/release pipeline 迁�
 `a3e07c9ac9b20183092729cde234322db98f9835`；四个 scoped bootstrap package 无可安装版本，状态为
 `Accepted`。权威目标图与 evidence 位于
 `.ai-platform/specs/013-single-package-distribution/` 和 `.ai-platform/evidence/T131/`。
+
+## G008 Execution
+
+G008 已由用户于 2026-08-02 批准，目标是把现有 React/Vite 官网以可追溯的静态构建部署到 Vercel，
+保留 Cloudflare 权威 DNS 并绑定 `tellplot.com`。内部以 T132-T134 连续完成生产配置与静态可发现性、
+Vercel Preview/Production、Cloudflare DNS/HTTPS 与最终 evidence。远程 push、Vercel deployment、Production
+提升和 DNS 变更均已获得本目标明确授权；任何 npm publish、tag 或公共包变化不在范围内。
+
+权威目标图位于 `.ai-platform/specs/014-website-production-deployment/tasks.md`。

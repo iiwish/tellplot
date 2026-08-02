@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TellPlot">
+  <rect width="64" height="64" rx="13" fill="#0969da"/>
+  <path fill="#fff" d="M14 41h7V27h-7v14Zm14 0h7V15h-7v26Zm14 0h7V22h-7v19Z"/>
+</svg>

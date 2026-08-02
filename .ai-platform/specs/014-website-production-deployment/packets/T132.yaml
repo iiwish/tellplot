@@ -1,0 +1,60 @@
+schema_version: 1
+packet_id: EP-014-T132
+task_id: T132
+feature_id: 014-website-production-deployment
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/014-website-production-deployment/spec.md
+  requirements_checklist: .ai-platform/specs/014-website-production-deployment/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/014-website-production-deployment/plan.md
+  work_graph: .ai-platform/specs/014-website-production-deployment/tasks.md
+  analysis: .ai-platform/specs/014-website-production-deployment/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 固化生产构建、路由与可发现性
+  goal: Build a reproducible, secure Vercel-ready static website artifact
+  epic: G008
+  requirements: [WEB-FR-001, WEB-FR-002, WEB-FR-003, WEB-FR-004]
+  priority: P0
+  depends_on: [T131]
+  blocks: [T133]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [package.json, apps/playground, vercel.json, .ai-platform]
+  existing_patterns: [React Vite SPA, typed route metadata, source workspace aliases]
+  interfaces_or_contracts: [.ai-platform/specs/014-website-production-deployment/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [package.json, apps/playground/**, e2e/**, vercel.json, README.md, docs/**, AGENTS.md, .ai-platform/**]
+  test_targets: [deployment config, route metadata, production output, browser direct routes, CSP, caching]
+  forbidden_changes: [package API, schema, chart behavior, dependencies, npm release, git tag]
+tdd_plan:
+  required: true
+  red:
+    command: pnpm exec vitest run apps/playground/tests/deploymentConfig.test.ts apps/playground/tests/siteContent.test.ts apps/playground/tests/buildOutput.test.ts
+    expected_failure: deployment config, discovery assets and route shells do not exist
+  green:
+    command: pnpm build:site
+    expected_signal: four route shells and discovery assets are emitted
+  refactor:
+    command: pnpm lint && pnpm typecheck && pnpm test:unit
+    expected_signal: metadata has one typed source and all gates pass
+validation_loop:
+  commands: [pnpm format:check, pnpm lint, pnpm typecheck, pnpm build:site, pnpm test:unit, relevant Playwright, python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 014-website-production-deployment --strict, git diff --check]
+  retry_budget: 2
+evidence_contract:
+  summary: .ai-platform/evidence/T132/summary.md
+  test_results: .ai-platform/evidence/T132/test-results.md
+  required: [changed files, RED receipt, GREEN build output, validation results, review]
+review_contract:
+  required_passes: [spec_compliance, bug_code_quality, qa_acceptance]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [commit and push verified deployment source]
+stop_conditions: [dependency change, package contract drift, failed route or CSP smoke]

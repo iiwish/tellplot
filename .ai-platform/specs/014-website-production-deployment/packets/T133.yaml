@@ -1,0 +1,54 @@
+schema_version: 1
+packet_id: EP-014-T133
+task_id: T133
+feature_id: 014-website-production-deployment
+mode: execute_one_task
+adapter: codex
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/014-website-production-deployment/spec.md
+  requirements_checklist: .ai-platform/specs/014-website-production-deployment/checklists/requirements.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/014-website-production-deployment/plan.md
+  work_graph: .ai-platform/specs/014-website-production-deployment/tasks.md
+  analysis: .ai-platform/specs/014-website-production-deployment/analysis.md
+  approval_gates: {product_or_spec: Confirmed, technical_plan_and_work_graph: Confirmed, analysis: Clear}
+work_unit:
+  title: 建立并验收 Vercel Preview 与 Production source
+  goal: Connect the clean GitHub source to a verified Vercel deployment
+  epic: G008
+  requirements: [WEB-FR-005]
+  priority: P0
+  depends_on: [T132]
+  blocks: [T134]
+  parallel: false
+codebase_context:
+  local_instructions: [AGENTS.md]
+  relevant_files: [vercel.json, package.json, apps/playground, .ai-platform]
+  existing_patterns: [GitHub main release source, Vercel static deployment]
+  interfaces_or_contracts: [.ai-platform/specs/014-website-production-deployment/spec.md]
+execution_constraints:
+  branch_or_worktree: main
+  allowed_files: [Vercel project and deployments, GitHub repository and settings, .ai-platform/**, README.md]
+  forbidden_changes: [DNS before preview passes, npm release, git tag]
+tdd_plan:
+  required: false
+  exception: remote deployment verification uses Preview-first fail-closed validation
+  red: {command: verify no existing deployment, expected_failure: no Vercel production source exists}
+  green: {command: deploy Preview, expected_signal: deployment Ready and hosted smoke passes}
+  refactor: {command: deploy Production from clean source, expected_signal: source SHA is traceable}
+validation_loop:
+  commands: [Vercel deployment inspect, hosted HTTP and browser smoke, secret scan, artifact validator]
+  retry_budget: 2
+evidence_contract:
+  summary: .ai-platform/evidence/T133/summary.md
+  test_results: .ai-platform/evidence/T133/test-results.md
+  required: [source SHA, Preview URL, Production URL, build status, hosted route and editor results]
+review_contract:
+  required_passes: [spec_compliance, hosted_qa, source_traceability]
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options: [continue to Cloudflare domain binding]
+stop_conditions: [failed preview, indeterminate source SHA, credential exposure]

@@ -2,10 +2,10 @@
 
 ## Metadata
 
-- Version: 1.2.0
+- Version: 1.3.0
 - Status: Confirmed
-- Last updated: 2026-08-01
-- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构、单包分发与首个公开稳定版目标
+- Last updated: 2026-08-02
+- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构、单包分发、首个公开稳定版与官网生产部署目标
 
 ## Product Positioning
 
@@ -226,6 +226,12 @@ Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包�
 React 18/19、Vue 3、当前及上一发布浏览器。G2/G SVG 是精确审核的 direct dependencies；React/Vue 是
 optional peer dependencies，根入口和 imperative consumer 不安装框架也可运行。
 
+### NFR-008 官网生产可用性
+
+官网使用可复现的静态构建部署到全球 HTTPS 边缘网络。首页、示例、文档和工作台必须支持直接访问与刷新；
+索引页面具有 canonical、社交分享、robots 与 sitemap 元数据，静态资源使用不可变缓存，HTML 可及时更新。
+生产部署绑定 `tellplot.com`，预览部署与生产域名分离，DNS 切换和生产提升保留人工闸门与可回滚记录。
+
 ## Current Scope
 
 - 瀑布图、单序列分类条形图和单序列分类柱状图。
@@ -237,6 +243,7 @@ optional peer dependencies，根入口和 imperative consumer 不安装框架也
 - SVG、PNG 和 ViewSpec JSON 导出。
 - 单个 `tellplot` 公共包、私有框架无关 core/editor layers、React/Vue 薄适配、参考编辑器和发布候选质量门禁。
 - 真实图表驱动的开源官网、示例中心、开发者文档入口和在线工作台。
+- Vercel 静态生产托管、Cloudflare 权威 DNS、Preview/Production 分离与 `tellplot.com` HTTPS 域名。
 
 ## Expansion Policy
 

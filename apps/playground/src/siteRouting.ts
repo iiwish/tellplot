@@ -1,4 +1,6 @@
-export type SitePage = 'home' | 'examples' | 'docs' | 'playground' | 'not-found';
+import { type IndexableSitePage, siteMetadataForPage } from './siteMetadata';
+
+export type SitePage = IndexableSitePage | 'not-found';
 
 export interface SiteRoute {
   readonly page: SitePage;
@@ -30,31 +32,15 @@ export function resolveSiteRoute(url: URL): SiteRoute {
 }
 
 export function siteTitleForRoute(route: SiteRoute): string {
-  switch (route.page) {
-    case 'home':
-      return 'TellPlot | 可编辑基础图表';
-    case 'examples':
-      return '图表示例 | TellPlot';
-    case 'docs':
-      return '开发者文档 | TellPlot';
-    case 'playground':
-      return '在线编辑 | TellPlot';
-    case 'not-found':
-      return '页面不存在 | TellPlot';
+  if (route.page === 'not-found') {
+    return '页面不存在 | TellPlot';
   }
+  return siteMetadataForPage(route.page).title;
 }
 
 export function siteDescriptionForRoute(route: SiteRoute): string {
-  switch (route.page) {
-    case 'home':
-      return 'TellPlot 是基于 AntV G2 的轻量、可嵌入、可编辑基础图表库。';
-    case 'examples':
-      return '浏览 TellPlot 已验证的瀑布图、分类柱状图和分类条形图示例。';
-    case 'docs':
-      return '了解 tellplot 的安装、数据合同、安全配置和导出能力。';
-    case 'playground':
-      return '实时编辑 TellPlot 公共图表配置与视图状态，并同步查看结构和图形变化。';
-    case 'not-found':
-      return '当前 TellPlot 页面不存在。';
+  if (route.page === 'not-found') {
+    return '当前 TellPlot 页面不存在。';
   }
+  return siteMetadataForPage(route.page).description;
 }

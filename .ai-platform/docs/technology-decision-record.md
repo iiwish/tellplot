@@ -2,12 +2,12 @@
 
 ## Metadata
 
-- Version: 0.12.0
+- Version: 0.13.0
 - Status: Confirmed
 - Last updated: 2026-08-02
 - Approval: 用户于 2026-07-20 明确确认轻量基础图表库边界、G2 ownership 和目标级交付方式，于
   2026-07-23 批准首个公开 Beta 发布决策，于 2026-08-01 批准单包分发，并于 2026-08-02 批准删除
-  scoped bootstrap packages
+  scoped bootstrap packages 与官网 Vercel 生产部署
 
 ## Decision Context
 
@@ -319,9 +319,31 @@ TellPlot 需要在财务正确性、直接操作体验和可嵌入性之间取�
 - Rejected alternatives: 继续发布四包、只发布 imperative 包、把 React/Vue 作为 direct dependencies、
   使用 `@tellplot/tellplot` organization package、公开四包后再合并。
 
+## TDR-024 官网生产托管与 DNS
+
+- Status: Confirmed
+- Hosting: `apps/playground` 继续作为 React/Vite 官网源码，生产静态产物部署到 Vercel；不引入 SSR、
+  Serverless Function、数据库或第二个网站工程。Vercel 项目根目录固定为仓库根目录，构建命令只选择
+  `@tellplot/playground`，产物目录为 `apps/playground/dist`。
+- Routing: `/`、`/examples`、`/docs` 与 `/playground` 生成带独立 canonical 和社交元数据的 HTML shell；
+  Vercel 对已知客户端路由提供显式 fallback，未知直接路径保持 404 语义。客户端导航同步更新 document
+  title、description、canonical 与 Open Graph URL。
+- Toolchain: 部署使用 Node 22 与精确 `pnpm@11.1.3`。在 Vercel 尚未原生承诺 pnpm 11 时，install/build
+  command 通过 `npx pnpm@11.1.3` 显式执行，不降低仓库已验收的 release toolchain。
+- Delivery: GitHub `main` 是 Production source，提交产生 Vercel 部署；先验收 Preview，再提升 Production。
+  Vercel deployment URL 用于预览，`tellplot.com` 是唯一 canonical production origin。
+- DNS: Cloudflare 保持权威 DNS，不迁移 nameserver。Vercel 持有域名绑定与 TLS；Cloudflare 只配置 Vercel
+  要求的 apex 与 `www` 记录，切换时避免与旧记录冲突，`www` 永久重定向到 apex。
+- Security and caching: hashed `/assets/*` 使用长期 immutable cache；HTML 保持 revalidate。所有响应提供
+  CSP、nosniff、referrer、permissions 与 frame-ancestors 防护；网站不得把凭据或运行时 secret 打入客户端。
+- Rationale: 当前官网是无服务端状态的 Vite 应用，Vercel 原生 Preview、Production、TLS 与 Git source
+  traceability 足以满足发布目标；保留 Cloudflare DNS 可避免域名托管迁移并保持回滚控制。
+- Rejected alternatives: 继续只提供 localhost、把官网并入 npm tarball、为静态页面引入 Next.js/SSR、
+  迁移 Cloudflare nameserver、直接从 dirty worktree 部署、为 Vercel 降低整个仓库 pnpm 主版本。
+
 ## Approval Gate
 
-TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-023 已获得用户明确批准；TDR-004 至 TDR-006
+TDR-001 至 TDR-003、TDR-007 至 TDR-018、TDR-020 至 TDR-024 已获得用户明确批准；TDR-004 至 TDR-006
 由 TDR-022 取代，TDR-019 由 TDR-021 取代，TDR-022 的公共 package strategy 由 TDR-023 取代。后续实现以 approved goal
 为执行单位；内部 task graph 和 execution packet 由执行方维护。任何依赖、schema、breaking public API、
 远程 Git 或发布变化必须重新进入审批，并运行兼容性、许可证和包边界检查。

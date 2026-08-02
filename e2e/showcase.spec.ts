@@ -85,6 +85,15 @@ test.describe('TellPlot 开源官网', () => {
     await page.goto('/docs');
 
     await expect(page.getByRole('heading', { level: 1, name: '开发者文档' })).toBeVisible();
+    await expect(page).toHaveTitle('开发者文档 | TellPlot');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      'https://tellplot.com/docs',
+    );
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      'content',
+      'https://tellplot.com/docs',
+    );
     await expect(page.getByRole('heading', { name: '安装' })).toBeVisible();
     await expect(
       page.locator('pre').filter({
