@@ -1,36 +1,159 @@
-# TellPlot
+<p align="center">
+  <a href="https://tellplot.com" aria-label="TellPlot 官网">
+    <img src="apps/playground/public/favicon.svg" width="72" height="72" alt="TellPlot 标志">
+  </a>
+</p>
 
-TellPlot 是基于 AntV G2 的框架无关可编辑基础图表库。它提供瀑布图、分类条形图和分类柱状图，完整编辑器
-可直接挂载到任意 DOM 容器，也可通过 React 18/19 或 Vue 3 薄适配器接入。
+<h1 align="center">TellPlot</h1>
 
-## 分发结构
+<p align="center">
+  <strong>基于 AntV G2 的可编辑财务叙事图表。</strong>
+</p>
 
-TellPlot 对外只发布 `tellplot`。根入口提供数据、命令与 imperative 编辑器，`tellplot/core`、
-`tellplot/react` 和 `tellplot/vue` 提供隔离的按需入口。仓库内部继续按 core、editor、React 和 Vue
-分层，框架适配器不拥有第二套编辑状态或 G2 runtime。
+<p align="center">
+  在不改写原始数据的前提下，对瀑布图、条形图和柱状图进行<br>
+  排序、分组、注释与导出。
+</p>
 
-编辑动作只产生新的 `ViewSpec`，不会改写宿主持有的 `SourceData`。直接操作、结构大纲、键盘和宿主命令
-进入同一套确定性命令与历史。
+<p align="center">
+  <a href="README.en.md">English</a> · <a href="README.md">简体中文</a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/tellplot"><img src="https://img.shields.io/npm/v/tellplot?color=0969da&label=npm" alt="npm 版本"></a>
+  <a href="https://github.com/iiwish/tellplot/actions/workflows/ci.yml"><img src="https://github.com/iiwish/tellplot/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI 状态"></a>
+  <a href="https://www.npmjs.com/package/tellplot"><img src="https://img.shields.io/npm/types/tellplot?color=3178c6" alt="TypeScript 类型"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/iiwish/tellplot?color=1f883d" alt="MIT 许可证"></a>
+</p>
+
+<p align="center">
+  <a href="https://tellplot.com">官网</a> ·
+  <a href="https://tellplot.com/examples">示例</a> ·
+  <a href="https://tellplot.com/docs">文档</a> ·
+  <a href="https://tellplot.com/playground">在线工作台</a>
+</p>
+
+<a href="https://tellplot.com/playground">
+  <img src="apps/playground/public/og-image.png" alt="TellPlot 编辑器中的可编辑瀑布图">
+</a>
+
+## 为什么选择 TellPlot
+
+大多数图表库帮助你绘制数据。TellPlot 还让用户能够组织数据背后的叙事。
+
+- **编辑叙事，不修改来源。** 排序、递归分组、折叠状态、注释和强调保存在独立的 `ViewSpec`
+  中，宿主持有的 `SourceData` 始终不可变。
+- **一套编辑器，多种宿主。** imperative DOM、React 18/19 和 Vue 3 共用同一个框架无关 runtime。
+- **每个动作都确定可重放。** 图表直接操作、结构大纲、键盘和宿主命令进入同一套类型化命令模型，
+  并共享撤销与重做。
+- **所见即可交付。** SVG 与 PNG 导出保留当前顺序、分组、标签、注释和视觉语义。
+- **核心有意保持轻量。** TellPlot runtime 不发起网络请求，也不捆绑 Dashboard、AI 层、服务端工作流
+  或通用插件系统。
 
 ## 快速开始
 
-在已有宿主项目中安装一个包。G2 使用 TellPlot 内部经过兼容与安全复核的精确版本：
+安装唯一的公共包：
 
 ```bash
 pnpm add tellplot
 ```
 
-三种可复制示例、公共配置和受控状态说明见[入门与三种集成](docs/getting-started.md)。每个 UI 入口都需
-导入统一的 `tellplot/styles.css`；原生 DOM 接入还需在卸载时调用 `destroy()`。
+在任意浏览器应用中创建可编辑柱状图：
+
+```ts
+import { createEditor } from 'tellplot';
+import 'tellplot/styles.css';
+
+const host = document.querySelector<HTMLElement>('#chart');
+if (!host) throw new Error('Missing chart host');
+
+const editor = createEditor(host, {
+  config: {
+    type: 'column',
+    data: {
+      schemaVersion: '2.0.0',
+      dataKind: 'categorical',
+      datasetId: 'revenue-by-region',
+      items: [
+        { id: 'east', label: '华东', amount: 128 },
+        { id: 'west', label: '华西', amount: 96 },
+        { id: 'north', label: '华北', amount: 74 },
+      ],
+    },
+    locale: 'zh-CN',
+  },
+});
+
+// 宿主卸载时释放 DOM、G2 和事件资源。
+window.addEventListener('pagehide', () => editor.destroy(), { once: true });
+```
+
+同一份 `ChartConfig` 可以通过适合宿主应用的任意入口接入：
+
+| 环境            | 导入路径              | 入口                               |
+| --------------- | --------------------- | ---------------------------------- |
+| 浏览器 / DOM    | `tellplot`            | `createEditor(container, options)` |
+| React 18 或 19  | `tellplot/react`      | `<ChartEditor />`                  |
+| Vue 3           | `tellplot/vue`        | `<ChartEditor />`                  |
+| 无 DOM 领域能力 | `tellplot/core`       | 校验、命令、持久化                 |
+| 编辑器样式      | `tellplot/styles.css` | 一份共享样式表                     |
+
+[入门与集成指南](docs/getting-started.md)提供完整 DOM、React、Vue 示例，以及受控与非受控状态、
+图像导出和生命周期规则。
+
+## 完整能力
+
+| 能力     | 已包含                                                             |
+| -------- | ------------------------------------------------------------------ |
+| 图表家族 | 瀑布图、分类条形图、分类柱状图                                     |
+| 叙事编辑 | 排序、递归分组、折叠、展开、固定、注释、强调                       |
+| 精确操作 | 图表直接操作、结构大纲、键盘访问、宿主命令                         |
+| 状态     | 不可变来源数据、版本化 `ViewSpec`、确定性历史、撤销与重做          |
+| 呈现     | 标题、语义颜色、坐标轴、标签、Tooltip、数字格式、动画              |
+| 输出     | SVG、PNG、可序列化的 `ViewSpec` JSON                               |
+| 质量     | TypeScript strict、ESM/CJS、可访问性、reduced motion、跨浏览器矩阵 |
+
+## 核心模型
+
+TellPlot 有意把宿主数据、呈现意图和用户编辑拆分为不同合同：
+
+| 合同          | 所有者      | 用途                                             |
+| ------------- | ----------- | ------------------------------------------------ |
+| `SourceData`  | 宿主        | 不可变数值、维度、稳定 ID 与来源引用             |
+| `ChartConfig` | 宿主        | 图表家族、外观、编辑能力、locale 与尺寸          |
+| `ViewSpec`    | 宿主/编辑器 | 顺序、层级、折叠、固定、注释与强调               |
+| Commands      | 共享核心    | 在视图状态之间执行经过校验、可重放、可撤销的转换 |
+
+AntV G2 始终是唯一的图表渲染和图形动画引擎。TellPlot 负责类型化数据合同、叙事状态、交互、持久化与
+导出生命周期；它不暴露原始 G2 instance，也不接受任意 `G2Spec` 覆盖。
+
+## 文档
+
+| 指南                                  | 内容                                   |
+| ------------------------------------- | -------------------------------------- |
+| [入门与集成](docs/getting-started.md) | DOM、React、Vue、受控状态、导出        |
+| [公共 API](docs/api.md)               | runtime 入口、类型、事件、instance API |
+| [配置边界](docs/configuration.md)     | 安全外观配置与编辑器选项               |
+| [错误处理](docs/errors.md)            | 校验与可恢复 runtime 失败              |
+| [架构概览](docs/architecture.md)      | 包边界与 G2 ownership                  |
+| [迁移与兼容](docs/migration.md)       | 包入口选择与状态迁移                   |
+| [版本政策](docs/versioning.md)        | 兼容、支持与弃用政策                   |
+
+产品、路线图与交付文档入口见[文档索引](docs/README.md)。
 
 ## 本地开发
 
+TellPlot 使用 Node 22 和 pnpm 11.1.3。
+
 ```bash
+git clone https://github.com/iiwish/tellplot.git
+cd tellplot
+corepack enable
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-主要质量命令：
+提交 Pull Request 前运行主要质量门禁：
 
 ```bash
 pnpm format:check
@@ -42,24 +165,17 @@ pnpm test:package
 pnpm test:framework-matrix
 ```
 
-生产官网位于 [tellplot.com](https://tellplot.com)，包括产品首页、示例中心、开发者文档和完整编辑工作台。
-网站通过 `tellplot/react` 消费公共包，编辑能力仍由内部 framework-neutral editor 唯一实现。Vercel 从
-GitHub `main` 的 clean commit 构建静态产物，Cloudflare 保持权威 DNS。
+行为变更默认先写失败测试。财务聚合、顺序和层级变化必须包含不变量测试。完整浏览器、可访问性、
+性能与 Pull Request 要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-## 文档
+## 社区
 
-- [文档入口](docs/README.md)
-- [入门与三种集成](docs/getting-started.md)
-- [公共 API](docs/api.md)
-- [架构概览](docs/architecture.md)
-- [配置边界](docs/configuration.md)
-- [错误处理](docs/errors.md)
-- [包选择与状态迁移](docs/migration.md)
-- [版本与兼容政策](docs/versioning.md)
-- [产品设计 SSOT](.ai-platform/docs/product-design.md)
+- 集成问题与最小复现请先阅读[支持指南](SUPPORT.md)。
+- 可复现缺陷和明确图表需求请使用 [Issue 选择器](https://github.com/iiwish/tellplot/issues/new/choose)。
+- 安全漏洞请通过 [Security Advisory 私有入口](https://github.com/iiwish/tellplot/security/advisories/new)
+  报告。
+- 参与社区须遵守[行为准则](CODE_OF_CONDUCT.md)。
 
-`tellplot@1.0.0` 的公开 npm、Git tag、GitHub Release 与官网 Production 均经过独立发布闸门。
+## 许可证
 
-## License
-
-MIT
+TellPlot 基于 [MIT License](LICENSE) 开源。
