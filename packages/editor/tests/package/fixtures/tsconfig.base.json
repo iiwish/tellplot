@@ -1,0 +1,11 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "baseUrl": "../../../../tellplot",
+    "paths": {
+      "tellplot": ["dist/index.d.ts"]
+    }
+  }
+}

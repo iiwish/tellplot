@@ -40,8 +40,8 @@ const requiredPaths = [
 if (manifest.name !== 'tellplot') {
   throw new Error(`Unexpected package name: ${manifest.name}`);
 }
-if (manifest.version !== '1.0.0') {
-  throw new Error(`Unexpected stable version: ${manifest.version}`);
+if (manifest.version !== '2.0.0') {
+  throw new Error(`Unexpected candidate version: ${manifest.version}`);
 }
 for (const path of requiredPaths) {
   if (!paths.includes(path)) {

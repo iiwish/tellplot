@@ -2,7 +2,8 @@
 
 ## Stable Scope
 
-1.x 支持 waterfall、单序列 bar、单序列 column，以及文档化的配置、编辑、持久化、SVG/PNG 和无障碍能力。
+2.x 支持 waterfall、scalar bar/column、2 至 4 序列 comparison bar/column，以及文档化的配置、编辑、
+持久化、SVG/PNG 和无障碍能力。v1/v2 wire/runtime compatibility 继续受支持。
 支持矩阵见 [docs/versioning.md](docs/versioning.md)。
 
 ## Before Opening An Issue

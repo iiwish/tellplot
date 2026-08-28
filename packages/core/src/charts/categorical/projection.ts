@@ -145,6 +145,11 @@ export function projectCategorical(
   if (!validation.ok) {
     return validation;
   }
+  if (sourceData.schemaVersion === '3.0.0') {
+    return validationFailure([
+      validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_PROJECTOR_GENERATION', '/schemaVersion'),
+    ]);
+  }
   if (sourceData.schemaVersion !== '2.0.0' || sourceData.dataKind !== 'categorical') {
     return validationFailure([
       validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'),

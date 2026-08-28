@@ -1,0 +1,904 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T141",
+  "attempt": "T141-A002",
+  "baseCommit": "cd90ddf3d27bb323c994b5ba01735a4972c46f48",
+  "pathRule": "T135-T140 non-governance b-path union plus five amendment additions",
+  "counts": {
+    "paths": 108,
+    "trackedModified": 70,
+    "untrackedAdded": 38
+  },
+  "amendmentCoverage": {
+    "omittedFromOriginalPatchUnion": [
+      "docs/getting-started.md",
+      "packages/core/src/charts/categorical/comparisonTypes.ts",
+      "packages/core/tests/config/comparison-chart-config.test.ts",
+      "packages/core/tests/domain/schema-v3.test.ts",
+      "scripts/release/validate-package-surface.mjs"
+    ],
+    "finalReviewedByteMismatch": [
+      "packages/core/src/config/chartConfig.ts"
+    ],
+    "coveredByFrozenManifestAndCumulativePatch": true
+  },
+  "cumulativePatch": {
+    "path": ".ai-platform/evidence/T141/predecessor-product-baseline.patch",
+    "sizeBytes": 685625,
+    "sha256": "026f1f3d61afc753557ec14696c04341ce5a1cfb276c1bd50e8e654d74562a18",
+    "paths": 108
+  },
+  "replay": {
+    "isolatedHeadForwardApply": "passed",
+    "pathTypeModeSizeSha256Compare": "passed",
+    "isolatedReverseApply": "passed",
+    "recoveredExactBaseFileTree": "passed",
+    "sharedIndexUnchanged": true
+  },
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3256,
+      "sha256": "db2addef5f3c145715547a619cbb6c49bd4273b20ddc26e31d630ddb7cdde1e9",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "README.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2536,
+      "sha256": "e0049c19edfaae0c6e56f4fd9b7f167923c38630d23379ff90b3989c1f7860b3",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "SUPPORT.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1176,
+      "sha256": "cf50317a99df52310f455bc07a8a9c95a5406ea5eeae25bc2c137761c9d2db7e",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "apps/playground/src/ExampleWorkbench.tsx",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 15046,
+      "sha256": "125afaad9109c0df14016dbaa867b9f80baeba8f7360d11213235049230cef8c",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "apps/playground/src/ShowcaseChart.tsx",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3668,
+      "sha256": "28d3a0e86deb5c745122df582229e333f56488408c7696d0c636a80719abf629",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "apps/playground/src/fixtures.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8084,
+      "sha256": "96a898ff876325f221794f573c7e643e7a1aa1a6a2464660697177e95e66ef46",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "apps/playground/tests/comparisonExamples.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1636,
+      "sha256": "d5231e0e322fd75819c44f07616c784eb645ced6f079e97982fb2f5a63963527",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "apps/playground/tests/schemaV3Guards.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1017,
+      "sha256": "999f71789a78ee0dbf1c72894248956ee37c03437618847143248c3f991ffb44",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "docs/README.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2000,
+      "sha256": "2ead2a2c5a10e9cb2f120bb8abc685f07467bccb323a2e639e3ba4a9cc23eee7",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "docs/api.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 14338,
+      "sha256": "c1bd7849fdd09ca9d62e45484fbd98f01fc27dbe4e12690906e0d377eef8ce1b",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "docs/architecture.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3290,
+      "sha256": "715a7cb3368a74755e7943d5094540087393081a078b92af6be64595238332e4",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "docs/configuration.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8394,
+      "sha256": "730fbed6c61e403a9d70c4f8b9fcd949d27ffe632e6b88905eec109bdd13b5c8",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "docs/data-contract.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2385,
+      "sha256": "8ccc6e760152b163684dacba4d47869e728cdbd1931f322d654b3304858158b1",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "docs/errors.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5193,
+      "sha256": "457349305af75d8c51deed11081dfc34e562f4b9fa1ccd4cb22e8ea769b24c34",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "docs/getting-started.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5663,
+      "sha256": "07e5d9ec312e948f4cb45e0b1590c5f18fb54b473c4dc6f5e701f744a8d7acd2",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "docs/migration.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 10136,
+      "sha256": "7577221e05c912918d83f99b68f91b96d92eb0b4d5c747b81fef55cc5dc2703f",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "docs/versioning.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2490,
+      "sha256": "47fed3014c3d35259c488d26948f42d3fe01bf727e6b6ebac2dd3c1e21b3bced",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "e2e/accessibility.spec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 22013,
+      "sha256": "091561010417bd8e5d539d63e276a396baa8e9d15877cdc5adb1b6c688eb99bb",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "e2e/comparison-export.spec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 20909,
+      "sha256": "cb49c73cdd9d81b6563a7ef821cfb9fe48945272665ad17a2a48b967abe6c23b",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "e2e/comparison-interaction.spec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 24912,
+      "sha256": "f168e62e771f98ee3ac2c9277d5616c4fde3cee9784f959cdb3b21adce28de58",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "e2e/comparison-rendering.spec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 14145,
+      "sha256": "f848cbbbe7a5a2b83523cc53245317224f3152095b8d73816d41068d2d11c1ae",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "e2e/container-responsive.spec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 10913,
+      "sha256": "90b03c98e2755c44df4aa863a247ed47d96935b2d46fdb4e8d760476fb1b0c43",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "e2e/editorPanels.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1498,
+      "sha256": "5cbf38ac0cfce3f876730099b07f35cf6debb01feeb961dfe4e0a79cb2adc5b4",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "package.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3859,
+      "sha256": "524cbeac79f49c063255ba38eb9e89ce67886e179235c33fed49c7347667c5ca",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/README.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 488,
+      "sha256": "b54fb0f82871b4f8a68cdd17e568fb689940d7221c1b0fe3b531eb6b41e55dfb",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/charts/categorical/comparisonProjection.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 11916,
+      "sha256": "d74a1d7cb70775c526bc9c5388b128400db2bc3277b47c5a934502d43d5ad760",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/core/src/charts/categorical/comparisonTypes.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 856,
+      "sha256": "62a17812d573518749637713ab6b71e125b93b46a3deeadd1ca0583e11a47486",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/core/src/charts/categorical/projection.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5406,
+      "sha256": "4b26c8cd419bb3b2a336115b064feb8894e7b2cd71d332cbcd59726e0cd29ef1",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/charts/waterfall/projection.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 10529,
+      "sha256": "5417bf849edb1efe2305332068ab17fc91eeada44a05fbe23ad26c0133a3c54e",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/config/chartConfig.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 28504,
+      "sha256": "5b7461ac5b8bc5523e0dbbf15d58b19a4476931f0a8c9a8b8564ebaf9d79142a",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/domain/createInitialViewSpec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4357,
+      "sha256": "4b1dec3fb9094435ec522f41f008e18308fc1076774f2d84422878809400ac51",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/domain/errors.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 9747,
+      "sha256": "b7527a414e5498634127df4e314a0d3b613c00c225b1f6fff9d41c519d666339",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/domain/history.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6057,
+      "sha256": "b6f43a4e179f70e0fd1cc16d8990d0318d4ad3b8d3f16a8abc86a3738e03224f",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/domain/ids.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 364,
+      "sha256": "39350cffc76628a6a551521b04296709611053ba26768554326986fefc901c4f",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/domain/model.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4894,
+      "sha256": "36545c7a67ba46ecaadb0d3484bed1295e2b93054ff4ff8e965b9c54e3898db4",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/domain/session.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8725,
+      "sha256": "6f465d15917120ea49c1386ab0d92d7db8a0189181e718128fd222b30cc26fde",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/domain/validation.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 40673,
+      "sha256": "59be32bf3c94c97835e07579f5222c166cc19bad88e103147273e441428706cf",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1025,
+      "sha256": "33c5576bdcb4af14a33bafd6584d6d45715c42967926932bd39fc7a431791ef7",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/interactions/groupSelection.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5205,
+      "sha256": "bfa08c30da8ce6098709facc3aa168d7746d0ebf2cdbc78f3199bcd9e5df4a1b",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/src/store/editorStore.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 29037,
+      "sha256": "5bc11e1c29d751e2f0fbb73e601070240c75011d6aeff87670e099183034a003",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/tests/categorical/comparison-invariants.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 9857,
+      "sha256": "f621145cc67c79f33e44d145d67a40711bf8a77f8f5c07f2b3d11c3b13fcb588",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/core/tests/categorical/comparison-property-sequences.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8022,
+      "sha256": "186cb08fc6bb273e758318b2a792345d10b48217d31f7778b9928b070859eb3a",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/core/tests/categorical/projectCategoricalComparison.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 24824,
+      "sha256": "490feda488ffb3014a958c2fc504dc97c784f8806631dae67133ea33a5d86f52",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/core/tests/config/comparison-chart-config.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7326,
+      "sha256": "6bf2fdccdc4b0eedb3184646201ac33b9941801a0cf0a4c8c67b15f1d1482415",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/core/tests/domain/persistence.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6230,
+      "sha256": "5afcab2b4123520df068bd13dc72b7f1ab1847ed6ddff10507b8c11531644e42",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/tests/domain/schema-v3.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 22153,
+      "sha256": "33f58c80ff6f468090f7a286443efd0deb8dd924e9ccc8bce9c516702772bf6d",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/core/tests/domain/validation.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 36657,
+      "sha256": "1daff9dca3e4b19ab0a4a24edf2ead4d1696751d1bd006af079b87b6d25af6a9",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/tests/editorStore.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 38846,
+      "sha256": "fc1ef988e3be6b4bc678171f2956656bbe9c2d17fc331db834063eea2eccebec",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/tests/interactions/categoryAxis.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 12305,
+      "sha256": "6e3fb853225511c26e7d810a71e60559f3c49e3295c5cd5f1b1fdd0cf35b8c17",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/core/tests/public-api.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1733,
+      "sha256": "c8008ae463bbd978da96987c1de1166485dcfadef6dcbf9940eb389799ad6a16",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/README.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 493,
+      "sha256": "cb6256f95c0617afdc53d2922cd834ff56c0853f7806a9ebefa1c7bb68f0c709",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/charts/categorical/comparisonAppearance.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4470,
+      "sha256": "b737060872f15d28b99b8e1cece1f50d15cc34d2623df1e3f845d77a8fedeaec",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/src/charts/categorical/comparisonLabels.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6793,
+      "sha256": "518ba7e4433505ccb6dc92d8b4f7b1411d198327da4e3c8f201d26e9f5679de5",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/src/charts/categorical/comparisonSpec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 12911,
+      "sha256": "9bc8ccef2c15ad3b3d588c1df822f055d0c11ce6294788c2b20330b2d0357702",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/src/charts/groupRegions.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 13046,
+      "sha256": "055ab6ce5e1ec5ae9305a51a52184adfd8d0122029f63c78177c0c21117c8afb",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/charts/safeTooltip.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3858,
+      "sha256": "1d4fc9aee303cffdb6ea5ade6a53c246bd18fc64ecc3390cbc6808d379510425",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/editor/chartSurface.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 54309,
+      "sha256": "821fba19ffb6707a89a054a1f6304eb5f152884d1cde4a2ccce0345e794f7e9c",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/editor/domEditor.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 107605,
+      "sha256": "a4404fa58fe3e4b6b88acca72a16919992e3c44b352265e03ecb6d0d6d098ffc",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/editor/messages.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 9998,
+      "sha256": "fe83cadbd5298b8eb3ecdfb3348cb3164c3a518540e2bb6c1be65a0bb8134857",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/editor/outline.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5946,
+      "sha256": "20ac950ebbb3e2d1c107c7ccc64727e26d4de277c7dbc5153a705025c55816f1",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/editor/projection.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2840,
+      "sha256": "79ff40427aa867607c527ff4ad9df217efe5b82be40a30f714a43de40036e91a",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/export/comparisonExportSpec.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1555,
+      "sha256": "a71f7c564f2d0939f853c7822f1b2309dbdabc75cf268aaf937264c51265af95",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/src/export/pngExport.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8566,
+      "sha256": "a6b3476bcda16026886db06126f630322c9beee6dcbd58716ad51fe154537cc7",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/export/svgExport.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 10174,
+      "sha256": "3b87d35c0b36f74f7eb5d6570b6653e0ee76bbfbbc58e30aa032011b8c53f122",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/rendering/g2/chartPointer.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8384,
+      "sha256": "6e1adb1353f9df38b038f3274b99df3054586ff34a64993f08011c388d2ad38f",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/rendering/g2/chartRuntime.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 14412,
+      "sha256": "86a5a6995f3e89e8ae819e763b1ef2821cfb9ad23a725ce0903221677e392c75",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/src/rendering/g2/comparisonLabelTransform.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3455,
+      "sha256": "7ee8e6012fa30f7131a2b27a93f858410a0e08ed4407a0208c0beff89588a00d",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/src/rendering/g2/comparisonSceneReceipt.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 21028,
+      "sha256": "1779f68ab84bd0419d9d7a3cb13a1d2f0e6bf021a68a8394c034774401763131",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/export/categorical-export.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4570,
+      "sha256": "596fb5974f807d78cd9e63ea526034213d9f99390566f4ac997c591521e140aa",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/export/comparison-chart-spec.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 18515,
+      "sha256": "31de963c7062e78066646a85c7ecba957fd990c9bdb3d76e24f76d9c2f416c00",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/export/comparison-export.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7486,
+      "sha256": "a9094aba4559c3f88a6c91acde4ca371c8eebb75172584c2a7b880f714186ef3",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/architecture-boundary.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2563,
+      "sha256": "43d47863e19fd475a5c82d096a89f519cf591a3d65cca5568f8545ee300c964f",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/package/candidate-tools.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 11258,
+      "sha256": "acc61844f13ab0d653a7cb0406441c0edd363c3fd643da1455fd52267476a908",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/fixtures/exhaustive-after.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 369,
+      "sha256": "e98260b67089562bc3fff29b35c980be53df02dd4ec571bf4539973ce83b294c",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/fixtures/exhaustive-before.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 296,
+      "sha256": "ceab0b8b4d0649193183ede0f8b24fc02955d5d3fdfe01e8d36cc85902b65a83",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/fixtures/tsconfig.after.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 78,
+      "sha256": "c6a04408154d3723b1225f59c956bdaeef7e8852c6b5db1dffcb7ceb0315f876",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/fixtures/tsconfig.base.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 219,
+      "sha256": "8fd11e4c407f63930f12bffc42c2b873eaa1c6803f731165fa36954cd415e9f2",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/fixtures/tsconfig.before.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 79,
+      "sha256": "112ac3380e3f8ae236913d519070f24520c85e889734c1e6e3611f7fb4a2389d",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/generation-compatibility.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4217,
+      "sha256": "a626638176fbdf5efbc3f948957f0942d68b70913afefa61a09bd7a9921229fd",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/package/single-package-distribution.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4134,
+      "sha256": "ff39ada9d3b3bff3accfbe2a4f901b2a215e642800cd0e1a1e311eb1e2045fb3",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/package/stable-release.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 51173,
+      "sha256": "8920cf2202133fdab3d3297e46d4443df52c8c2d5e3b3313d6fb80c1609d69c8",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/package/types-consumer.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5285,
+      "sha256": "affa599690316eaba9650828ab1988f1554d9fd95942105b1d7c075d7ca5a7d7",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/react-matrix/consumer/src/main.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 13233,
+      "sha256": "4a4d894dc5ef560528a61a795c8376d9ab7eeb93d5be2fb603733ed9d04a61b0",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 12073,
+      "sha256": "fa713d4a5a77af4e9d9bb792e033914825fd8cd9d503e70726b16183d451180a",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/react-matrix/run-react-matrix.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 30239,
+      "sha256": "502bcfb087b67f8d4856da2709f6122fbd4c8f569817913eb423bc08cb09e093",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/react-matrix/vue-consumer/src/main.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 12563,
+      "sha256": "1d2b12312bf8bc53df1139ad075704202edf2805720f008aea6084f82fb1da97",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/rendering/comparison-group-regions.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2827,
+      "sha256": "84162d3cbfe48e67866fac7d949d600040c3fd8e6f7a80fc143cca6f012a2aa2",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/rendering/g2/chart-pointer.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6552,
+      "sha256": "0adb0bfa7f4d99d76c10ada8d073b31b11d794767f586b49652af9c9d1ab011c",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/rendering/g2/chart-runtime.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 35773,
+      "sha256": "7f10d92d30abe8475857685333c5ddb5fbbd6992936273291a8c3643a9e1f56d",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/rendering/g2/comparison-label-transform.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1753,
+      "sha256": "628a7e2dedfd69c87dbd840bbd02717bbde416d6128fb37af880c4e10017ea8c",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 13860,
+      "sha256": "2bc66cf8cc13adaf0909deb9169fe322bc69f89c80f141888cc174c0709ed8ec",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/runtime/chart-surface.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 40924,
+      "sha256": "532fa2109e50b4f3cae77dd09a773ec0938030bef135d1b646e6229f5eab84da",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/runtime/comparison-editor.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 27892,
+      "sha256": "6844f0573927bdd57a9890e954d97895db7075fad2b2345f6957a3d622468eff",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/editor/tests/runtime/editor.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 61513,
+      "sha256": "932b34426ce21d6046f6f92331ca3536cd3001461a06bef1aba16bb683dbdd97",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/editor/tests/runtime/outline.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1358,
+      "sha256": "42fdfd670551d04033d0cc8b09cab3317f34c09523d20d60b6b0d53453f7d014",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "packages/react/tests/ChartEditor.test.tsx",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7395,
+      "sha256": "01b3ca069a830eacd590d60f495676a69249c2298a672088c033ce6d3a3e5763",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/tellplot/README.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1750,
+      "sha256": "60fb74a64a38827881fe37ac84fe7fc0c0284831fda97f229a993e04a9c3979d",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/tellplot/package.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2794,
+      "sha256": "dc07d51367b115fc70d4659cff9493a2c8d7930ac19a68cdc2e5166a7b9766f0",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/tellplot/tests/package/consumer.tsx",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2348,
+      "sha256": "436c445a43507829ccb733f0528f08bd7ec5337334c28b26c860143d82ee8e38",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/tellplot/tests/package/pack-contract.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1508,
+      "sha256": "d6329c4606e4e2a6c9593b7499ff6661ad359cc73e2d3033c8c4c71019157c1e",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "packages/vue/tests/ChartEditor.test.ts",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7114,
+      "sha256": "4d80758219ecf43441bb84d2bb080d86646868a4999864d2d41fbe43f472a276",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "scripts/release/audit-candidate.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8580,
+      "sha256": "a2b70db9e0f050c7981b7c981562cbe26220617759bfe7d90170911b48e38bcf",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "scripts/release/check-architecture.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 8252,
+      "sha256": "098afd66e632b97cc868f7ebef8379feb360d43c737aa5eee44d9cd002f41174",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "scripts/release/package-candidate-artifact.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3158,
+      "sha256": "91929b4bef77f516a8f399ce3f207e127bb8ebad5eba168dad1b2d5ff859a0b7",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "scripts/release/package-contracts.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 11573,
+      "sha256": "a28c687add9d5891db9b9f611ea459165ffd7091340e56e096d8a7759aeb2ddc",
+      "baselineStatus": "tracked_modified"
+    },
+    {
+      "path": "scripts/release/rehearse-candidate-source.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3173,
+      "sha256": "3eb9d0211710df464fe3dfc38cf8d4eb5fb87f1b2cfb4a64a935c77b0badc1be",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "scripts/release/test-doc-code.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5645,
+      "sha256": "61c20d53d425df55ff6476c2a7891cae3455572d65e8c4bd90599819118580ef",
+      "baselineStatus": "untracked_added"
+    },
+    {
+      "path": "scripts/release/validate-package-surface.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1234,
+      "sha256": "5897d4afee3a6f1f515a7a22fb91f5fe9a47ee9bd262f60e0cd78a0226f7eb5f",
+      "baselineStatus": "untracked_added"
+    }
+  ]
+}

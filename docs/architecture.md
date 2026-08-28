@@ -19,7 +19,8 @@ flowchart LR
 
 ## Core layer
 
-`core` 包含 schema、配置校验、领域不变量、命令执行、undo/redo、持久化、waterfall/categorical
+`core` 包含 schema、配置校验、领域不变量、命令执行、undo/redo、持久化、waterfall/scalar categorical/
+comparison categorical
 projection、pointer geometry 和 `EditorStore`。它不依赖 DOM、G2、React 或 Vue，Node/SSR import 不产生
 浏览器副作用。
 
@@ -41,7 +42,9 @@ packages/editor/src/
   styles/              # canonical workbench stylesheet
 ```
 
-G2 事件只在 `chartSurface` 边界转为稳定 point、datum 和 scene bounds。排序读取 G2 scene geometry，不猜测
+comparison screen、SVG 和 PNG 共享同一个 renderer-neutral projection、source-ordered series registry、palette
+resolver 与 private G2 spec factory；每次 image export 创建独立 offscreen G2 runtime。G2 事件只在
+`chartSurface` 边界转为稳定 point、datum 和 scene bounds。排序读取 G2 scene geometry，不猜测
 柱宽；waterfall/column 使用 X category axis，bar 使用 Y category axis。
 
 ## Framework adapters

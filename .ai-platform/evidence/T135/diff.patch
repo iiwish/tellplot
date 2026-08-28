@@ -1,0 +1,1480 @@
+diff --git a/apps/playground/src/ExampleWorkbench.tsx b/apps/playground/src/ExampleWorkbench.tsx
+index ddac3a5..d2cef2c 100644
+--- a/apps/playground/src/ExampleWorkbench.tsx
++++ b/apps/playground/src/ExampleWorkbench.tsx
+@@ -43,6 +43,9 @@ function initialConfig(sourceData: SourceData, requestedChartType: 'bar' | undef
+       height: '100%',
+     };
+   }
++  if (sourceData.schemaVersion === '3.0.0') {
++    throw new Error('Comparison fixtures are not available in the playground yet.');
++  }
+   return {
+     type: 'waterfall',
+     appearance: {
+diff --git a/apps/playground/src/ShowcaseChart.tsx b/apps/playground/src/ShowcaseChart.tsx
+index af5c00b..f93a198 100644
+--- a/apps/playground/src/ShowcaseChart.tsx
++++ b/apps/playground/src/ShowcaseChart.tsx
+@@ -74,7 +74,7 @@ function showcaseConfig(
+   }
+   if (
+     type === 'waterfall' &&
+-    !(sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical')
++    (sourceData.schemaVersion === '1.0.0' || sourceData.dataKind === 'waterfall')
+   ) {
+     return {
+       ...common,
+diff --git a/packages/core/src/charts/categorical/projection.ts b/packages/core/src/charts/categorical/projection.ts
+index b94cdb2..38e7fc7 100644
+--- a/packages/core/src/charts/categorical/projection.ts
++++ b/packages/core/src/charts/categorical/projection.ts
+@@ -145,6 +145,15 @@ export function projectCategorical(
+   if (!validation.ok) {
+     return validation;
+   }
++  if (sourceData.schemaVersion === '3.0.0') {
++    return validationFailure([
++      validationIssue(
++        'SOURCE_CONFLICT',
++        'INCOMPATIBLE_PROJECTOR_GENERATION',
++        '/schemaVersion',
++      ),
++    ]);
++  }
+   if (sourceData.schemaVersion !== '2.0.0' || sourceData.dataKind !== 'categorical') {
+     return validationFailure([
+       validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'),
+diff --git a/packages/core/src/charts/waterfall/projection.ts b/packages/core/src/charts/waterfall/projection.ts
+index 03d7347..186b5e3 100644
+--- a/packages/core/src/charts/waterfall/projection.ts
++++ b/packages/core/src/charts/waterfall/projection.ts
+@@ -308,7 +308,7 @@ export function projectWaterfall(
+   if (!validation.ok) {
+     return validation;
+   }
+-  if (sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical') {
++  if (sourceData.schemaVersion !== '1.0.0' && sourceData.dataKind === 'categorical') {
+     return validationFailure([
+       validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'),
+     ]);
+diff --git a/packages/core/src/config/chartConfig.ts b/packages/core/src/config/chartConfig.ts
+index e86640d..9cf602b 100644
+--- a/packages/core/src/config/chartConfig.ts
++++ b/packages/core/src/config/chartConfig.ts
+@@ -6,11 +6,13 @@ import {
+   type ValidationResult,
+ } from '../domain/errors';
+ import type {
++  CategoricalComparisonSourceData,
+   CategoricalSourceData,
+   LegacyWaterfallSourceData,
+   SourceData,
+   WaterfallSourceData,
+ } from '../domain/model';
++import type { SeriesId } from '../domain/ids';
+ import { validateSourceData, validateViewSpec } from '../domain/validation';
+ import type { FinancialChartAppearance } from './chartAppearance';
+ import type {
+@@ -34,6 +36,16 @@ export interface WaterfallChartColors extends ChartColors {
+   readonly end?: string;
+ }
+ 
++export interface CategoricalComparisonSeriesColor {
++  readonly seriesId: SeriesId;
++  readonly color: string;
++}
++
++export interface CategoricalComparisonChartColors {
++  readonly series?: readonly CategoricalComparisonSeriesColor[];
++  readonly group?: string;
++}
++
+ export interface ChartAxes {
+   readonly category?: boolean;
+   readonly value?: boolean;
+@@ -81,7 +93,7 @@ export interface ChartNumberFormat {
+   readonly currencyDisplay?: ChartCurrencyDisplay;
+ }
+ 
+-interface ChartAppearanceBase<TColors extends ChartColors> {
++interface ChartAppearanceBase<TColors> {
+   readonly title?: string;
+   readonly colors?: TColors;
+   readonly axes?: ChartAxes;
+@@ -94,7 +106,22 @@ interface ChartAppearanceBase<TColors extends ChartColors> {
+ 
+ export type CategoricalChartAppearance = ChartAppearanceBase<ChartColors>;
+ export type WaterfallChartAppearance = ChartAppearanceBase<WaterfallChartColors>;
+-export type ChartAppearance = CategoricalChartAppearance | WaterfallChartAppearance;
++export interface CategoricalComparisonChartAppearance {
++  readonly title?: string;
++  readonly colors?: CategoricalComparisonChartColors;
++  readonly legend?: boolean;
++  readonly axes?: ChartAxes;
++  readonly labels?: ChartLabels;
++  readonly tooltip?: boolean;
++  readonly animation?: ChartAnimation;
++  readonly groupRegion?: ChartGroupRegion;
++  readonly numberFormat?: ChartNumberFormat;
++}
++
++export type ChartAppearance =
++  | CategoricalChartAppearance
++  | WaterfallChartAppearance
++  | CategoricalComparisonChartAppearance;
+ 
+ export interface ChartEditorPanels {
+   readonly outline?: boolean;
+@@ -141,7 +168,19 @@ export type CategoricalChartConfig = ChartConfigBase<
+   CategoricalChartAppearance
+ >;
+ 
+-export type ChartConfig = WaterfallChartConfig | CategoricalChartConfig;
++export interface CategoricalComparisonChartConfig {
++  readonly type: 'bar' | 'column';
++  readonly data: CategoricalComparisonSourceData;
++  readonly locale?: ChartLocale;
++  readonly height?: number | string;
++  readonly appearance?: CategoricalComparisonChartAppearance;
++  readonly editor?: ChartEditorOptions;
++}
++
++export type ChartConfig =
++  | WaterfallChartConfig
++  | CategoricalChartConfig
++  | CategoricalComparisonChartConfig;
+ 
+ type UnknownRecord = Record<string, unknown>;
+ 
+@@ -163,6 +202,10 @@ const APPEARANCE_FIELDS: ReadonlySet<string> = new Set([
+   'groupRegion',
+   'numberFormat',
+ ]);
++const COMPARISON_APPEARANCE_FIELDS: ReadonlySet<string> = new Set([
++  ...APPEARANCE_FIELDS,
++  'legend',
++]);
+ const COMMON_COLOR_FIELDS: ReadonlySet<string> = new Set(['positive', 'negative', 'group']);
+ const WATERFALL_COLOR_FIELDS: ReadonlySet<string> = new Set([
+   ...COMMON_COLOR_FIELDS,
+@@ -170,6 +213,8 @@ const WATERFALL_COLOR_FIELDS: ReadonlySet<string> = new Set([
+   'subtotal',
+   'end',
+ ]);
++const COMPARISON_COLOR_FIELDS: ReadonlySet<string> = new Set(['series', 'group']);
++const COMPARISON_SERIES_COLOR_FIELDS: ReadonlySet<string> = new Set(['seriesId', 'color']);
+ const AXIS_FIELDS: ReadonlySet<string> = new Set(['category', 'value']);
+ const LABEL_FIELDS: ReadonlySet<string> = new Set(['value', 'group']);
+ const LABEL_STYLE_FIELDS: readonly string[] = [
+@@ -225,6 +270,14 @@ function isPlainRecord(value: unknown): value is UnknownRecord {
+   return prototype === Object.prototype || prototype === null;
+ }
+ 
++function hasReadableComparisonSchema(value: unknown): boolean {
++  try {
++    return isPlainRecord(value) && ownDataValue(value, 'schemaVersion') === '3.0.0';
++  } catch {
++    return false;
++  }
++}
++
+ function ownDataValue(record: UnknownRecord, key: string): unknown {
+   const descriptor = Object.getOwnPropertyDescriptor(record, key);
+   return descriptor !== undefined && 'value' in descriptor ? descriptor.value : undefined;
+@@ -235,6 +288,63 @@ function pointer(base: string, key: string): string {
+   return `${base}/${escaped}`;
+ }
+ 
++function isArrayIndexKey(key: string, length: number): boolean {
++  const index = Number(key);
++  return Number.isInteger(index) && index >= 0 && index < length && String(index) === key;
++}
++
++function readArray(
++  value: unknown,
++  path: string,
++  errors: ValidationIssue[],
++): readonly unknown[] | undefined {
++  if (!Array.isArray(value)) {
++    errors.push(configIssue('INVALID_TYPE', path));
++    return undefined;
++  }
++
++  const entriesByIndex = new Map<number, unknown>();
++  const presentIndexes: number[] = [];
++  for (const key of Reflect.ownKeys(value)) {
++    if (key === 'length') {
++      continue;
++    }
++    if (typeof key === 'symbol') {
++      errors.push(configIssue('NON_PLAIN_DATA', path));
++      continue;
++    }
++    if (!isArrayIndexKey(key, value.length)) {
++      errors.push(configIssue('UNKNOWN_FIELD', pointer(path, key)));
++      continue;
++    }
++    const index = Number(key);
++    presentIndexes.push(index);
++    const descriptor = Object.getOwnPropertyDescriptor(value, key);
++    if (descriptor === undefined || !descriptor.enumerable || !('value' in descriptor)) {
++      errors.push(configIssue('NON_PLAIN_DATA', pointer(path, key)));
++    } else {
++      entriesByIndex.set(index, descriptor.value);
++    }
++  }
++
++  if (presentIndexes.length !== value.length) {
++    presentIndexes.sort((left, right) => left - right);
++    let firstMissingIndex = 0;
++    for (const index of presentIndexes) {
++      if (index !== firstMissingIndex) {
++        break;
++      }
++      firstMissingIndex += 1;
++    }
++    errors.push(configIssue('INVALID_TYPE', pointer(path, String(firstMissingIndex))));
++    return undefined;
++  }
++  if (entriesByIndex.size !== value.length) {
++    return undefined;
++  }
++  return Array.from({ length: value.length }, (_, index) => entriesByIndex.get(index));
++}
++
+ function inspectRecord(
+   value: unknown,
+   path: string,
+@@ -363,9 +473,17 @@ function validateLabelOptions<TMode extends string>(
+ function validateAppearance(
+   config: UnknownRecord,
+   chartType: unknown,
++  comparison: boolean,
++  comparisonSeriesIds: ReadonlySet<string> | undefined,
+   errors: ValidationIssue[],
+ ): void {
+-  const appearance = optionalRecord(config, 'appearance', '', APPEARANCE_FIELDS, errors);
++  const appearance = optionalRecord(
++    config,
++    'appearance',
++    '',
++    comparison ? COMPARISON_APPEARANCE_FIELDS : APPEARANCE_FIELDS,
++    errors,
++  );
+   if (appearance === undefined) {
+     return;
+   }
+@@ -375,20 +493,91 @@ function validateAppearance(
+     errors.push(configIssue('INVALID_TYPE', '/appearance/title'));
+   }
+   validateOptionalBoolean(appearance, 'tooltip', '/appearance', errors);
++  if (comparison) {
++    validateOptionalBoolean(appearance, 'legend', '/appearance', errors);
++  }
+ 
+   const colors = optionalRecord(
+     appearance,
+     'colors',
+     '/appearance',
+-    chartType === 'waterfall' ? WATERFALL_COLOR_FIELDS : COMMON_COLOR_FIELDS,
++    comparison
++      ? COMPARISON_COLOR_FIELDS
++      : chartType === 'waterfall'
++        ? WATERFALL_COLOR_FIELDS
++        : COMMON_COLOR_FIELDS,
+     errors,
+   );
+   if (colors !== undefined) {
+-    const allowedColors = chartType === 'waterfall' ? WATERFALL_COLOR_FIELDS : COMMON_COLOR_FIELDS;
+-    for (const key of allowedColors) {
+-      const color = ownDataValue(colors, key);
+-      if (color !== undefined && (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color))) {
+-        errors.push(configIssue('INVALID_TYPE', pointer('/appearance/colors', key)));
++    if (comparison) {
++      const group = ownDataValue(colors, 'group');
++      if (group !== undefined && (typeof group !== 'string' || !HEX_COLOR_PATTERN.test(group))) {
++        errors.push(configIssue('INVALID_TYPE', '/appearance/colors/group'));
++      }
++
++      const rawSeries = ownDataValue(colors, 'series');
++      if (rawSeries !== undefined) {
++        const series = readArray(rawSeries, '/appearance/colors/series', errors);
++        if (series !== undefined) {
++          const firstIndexById = new Map<string, number>();
++          for (let index = 0; index < series.length; index += 1) {
++            const path = `/appearance/colors/series/${index}`;
++            const entry = inspectRecord(
++              series[index],
++              path,
++              COMPARISON_SERIES_COLOR_FIELDS,
++              errors,
++            );
++            if (entry === undefined) {
++              continue;
++            }
++            const seriesId = ownDataValue(entry, 'seriesId');
++            if (typeof seriesId !== 'string') {
++              errors.push(configIssue('INVALID_TYPE', `${path}/seriesId`));
++            } else if (seriesId.trim().length === 0) {
++              errors.push(configIssue('EMPTY_ID', `${path}/seriesId`));
++            } else {
++              const firstIndex = firstIndexById.get(seriesId);
++              if (firstIndex !== undefined) {
++                errors.push(
++                  validationIssue(
++                    'INVALID_CHART_CONFIG',
++                    'DUPLICATE_SERIES_COLOR',
++                    `${path}/seriesId`,
++                    { index, firstIndex },
++                  ),
++                );
++              } else {
++                firstIndexById.set(seriesId, index);
++              }
++              if (
++                comparisonSeriesIds !== undefined &&
++                !comparisonSeriesIds.has(seriesId)
++              ) {
++                errors.push(
++                  validationIssue(
++                    'SOURCE_CONFLICT',
++                    'UNKNOWN_SERIES_REFERENCE',
++                    `${path}/seriesId`,
++                  ),
++                );
++              }
++            }
++            const color = ownDataValue(entry, 'color');
++            if (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color)) {
++              errors.push(configIssue('INVALID_TYPE', `${path}/color`));
++            }
++          }
++        }
++      }
++    } else {
++      const allowedColors =
++        chartType === 'waterfall' ? WATERFALL_COLOR_FIELDS : COMMON_COLOR_FIELDS;
++      for (const key of allowedColors) {
++        const color = ownDataValue(colors, key);
++        if (color !== undefined && (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color))) {
++          errors.push(configIssue('INVALID_TYPE', pointer('/appearance/colors', key)));
++        }
+       }
+     }
+   }
+@@ -531,15 +720,22 @@ function validateChartConfigInternal(input: unknown): ValidationResult<ChartConf
+     errors.push(configIssue('INVALID_CHART_TYPE', '/type'));
+   }
+ 
+-  const dataResult = validateSourceData(ownDataValue(config, 'data'));
++  const rawData = ownDataValue(config, 'data');
++  const dataResult = validateSourceData(rawData);
++  const comparison = dataResult.ok
++    ? dataResult.value.schemaVersion === '3.0.0'
++    : hasReadableComparisonSchema(rawData);
+   if (!dataResult.ok) {
+     errors.push(...dataResult.errors.map(prefixedIssue));
+   } else if (
+     (chartType === 'waterfall' &&
+-      dataResult.value.schemaVersion === '2.0.0' &&
++      dataResult.value.schemaVersion !== '1.0.0' &&
+       dataResult.value.dataKind === 'categorical') ||
+     ((chartType === 'bar' || chartType === 'column') &&
+-      !(dataResult.value.schemaVersion === '2.0.0' && dataResult.value.dataKind === 'categorical'))
++      !(
++        dataResult.value.schemaVersion !== '1.0.0' &&
++        dataResult.value.dataKind === 'categorical'
++      ))
+   ) {
+     errors.push(validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/type'));
+   }
+@@ -560,7 +756,11 @@ function validateChartConfigInternal(input: unknown): ValidationResult<ChartConf
+     errors.push(configIssue('INVALID_TYPE', '/height'));
+   }
+ 
+-  validateAppearance(config, chartType, errors);
++  const comparisonSeriesIds =
++    dataResult.ok && dataResult.value.schemaVersion === '3.0.0'
++      ? new Set(dataResult.value.series.map(series => series.id))
++      : undefined;
++  validateAppearance(config, chartType, comparison, comparisonSeriesIds, errors);
+   validateEditor(config, errors);
+ 
+   return errors.length === 0 ? validationSuccess(input as ChartConfig) : validationFailure(errors);
+@@ -600,8 +800,8 @@ export function toFinancialChartAppearance(config: ChartConfig): FinancialChartA
+       : {
+           palette: {
+             ...present('start', 'start' in colors ? colors.start : undefined),
+-            ...present('positive', colors.positive),
+-            ...present('negative', colors.negative),
++            ...present('positive', 'positive' in colors ? colors.positive : undefined),
++            ...present('negative', 'negative' in colors ? colors.negative : undefined),
+             ...present('subtotal', 'subtotal' in colors ? colors.subtotal : undefined),
+             ...present('group', colors.group),
+             ...present('end', 'end' in colors ? colors.end : undefined),
+@@ -633,7 +833,12 @@ export function toFinancialChartAppearance(config: ChartConfig): FinancialChartA
+             ...present('backgroundOpacity', valueLabelOptions.backgroundOpacity),
+           },
+         }),
+-    ...present('tooltip', appearance?.tooltip),
++    ...present(
++      'tooltip',
++      config.data.schemaVersion === '3.0.0'
++        ? (appearance?.tooltip ?? true)
++        : appearance?.tooltip,
++    ),
+     ...(animation === undefined
+       ? {}
+       : {
+diff --git a/packages/core/src/domain/createInitialViewSpec.ts b/packages/core/src/domain/createInitialViewSpec.ts
+index 2cdeeb7..14eb0ef 100644
+--- a/packages/core/src/domain/createInitialViewSpec.ts
++++ b/packages/core/src/domain/createInitialViewSpec.ts
+@@ -134,5 +134,12 @@ export function createInitialViewSpec(
+       chartType: 'waterfall',
+     });
+   }
++  if (source.schemaVersion === '3.0.0') {
++    return validationSuccess({
++      ...narrativeFields,
++      schemaVersion: '3.0.0',
++      chartType: chartType as 'bar' | 'column',
++    });
++  }
+   return validationSuccess({ ...narrativeFields, schemaVersion: '2.0.0', chartType });
+ }
+diff --git a/packages/core/src/domain/errors.ts b/packages/core/src/domain/errors.ts
+index ea38ebe..668dd92 100644
+--- a/packages/core/src/domain/errors.ts
++++ b/packages/core/src/domain/errors.ts
+@@ -49,7 +49,16 @@ export type ValidationIssueReason =
+   | 'INVALID_ANNOTATION'
+   | 'ANNOTATION_TOO_LONG'
+   | 'UNKNOWN_NODE_REFERENCE'
+-  | 'INVALID_EMPHASIS';
++  | 'INVALID_EMPHASIS'
++  | 'INVALID_SERIES_COUNT'
++  | 'DUPLICATE_SERIES_ID'
++  | 'DUPLICATE_SERIES_LABEL'
++  | 'UNKNOWN_SERIES_REFERENCE'
++  | 'DUPLICATE_SERIES_VALUE'
++  | 'MISSING_SERIES_VALUE'
++  | 'SERIES_VALUE_ORDER_MISMATCH'
++  | 'DUPLICATE_SERIES_COLOR'
++  | 'INCOMPATIBLE_PROJECTOR_GENERATION';
+ 
+ export interface ValidationIssue {
+   readonly code: ValidationErrorCode;
+@@ -114,6 +123,15 @@ const ISSUE_MESSAGES: Readonly<Record<ValidationIssueReason, string>> = {
+   ANNOTATION_TOO_LONG: 'Annotation exceeds the supported length.',
+   UNKNOWN_NODE_REFERENCE: 'View references an unknown node.',
+   INVALID_EMPHASIS: 'Emphasis value is not supported.',
++  INVALID_SERIES_COUNT: 'Series count must be between two and four.',
++  DUPLICATE_SERIES_ID: 'Series identifiers must be unique.',
++  DUPLICATE_SERIES_LABEL: 'Series labels must be unique after normalization.',
++  UNKNOWN_SERIES_REFERENCE: 'Reference does not match a declared series.',
++  DUPLICATE_SERIES_VALUE: 'Category values must contain each series exactly once.',
++  MISSING_SERIES_VALUE: 'Category values must cover every declared series.',
++  SERIES_VALUE_ORDER_MISMATCH: 'Category values must follow declared series order.',
++  DUPLICATE_SERIES_COLOR: 'Series color may be configured only once.',
++  INCOMPATIBLE_PROJECTOR_GENERATION: 'Projector does not support this schema generation.',
+ };
+ 
+ export function validationIssue(
+diff --git a/packages/core/src/domain/history.ts b/packages/core/src/domain/history.ts
+index ccfb29d..c8d8d75 100644
+--- a/packages/core/src/domain/history.ts
++++ b/packages/core/src/domain/history.ts
+@@ -45,9 +45,13 @@ export function cloneViewSpec(view: ViewSpec): ViewSpec {
+     emphasis: { ...view.emphasis },
+   };
+ 
+-  return view.schemaVersion === '1.0.0'
+-    ? { ...narrativeFields, schemaVersion: '1.0.0', chartType: 'waterfall' }
+-    : { ...narrativeFields, schemaVersion: '2.0.0', chartType: view.chartType };
++  if (view.schemaVersion === '1.0.0') {
++    return { ...narrativeFields, schemaVersion: '1.0.0', chartType: 'waterfall' };
++  }
++  if (view.schemaVersion === '3.0.0') {
++    return { ...narrativeFields, schemaVersion: '3.0.0', chartType: view.chartType };
++  }
++  return { ...narrativeFields, schemaVersion: '2.0.0', chartType: view.chartType };
+ }
+ 
+ /** Appends an entry while evicting the oldest entries beyond the configured limit. */
+diff --git a/packages/core/src/domain/ids.ts b/packages/core/src/domain/ids.ts
+index 7a74630..1885362 100644
+--- a/packages/core/src/domain/ids.ts
++++ b/packages/core/src/domain/ids.ts
+@@ -6,5 +6,6 @@ type BrandedId<TName extends string> = string & {
+ 
+ export type DatasetId = BrandedId<'DatasetId'>;
+ export type SourceItemId = BrandedId<'SourceItemId'>;
++export type SeriesId = BrandedId<'SeriesId'>;
+ export type GroupId = BrandedId<'GroupId'>;
+ export type ViewNodeId = SourceItemId | GroupId;
+diff --git a/packages/core/src/domain/model.ts b/packages/core/src/domain/model.ts
+index 57accce..e8c192a 100644
+--- a/packages/core/src/domain/model.ts
++++ b/packages/core/src/domain/model.ts
+@@ -1,9 +1,13 @@
+-import type { DatasetId, GroupId, SourceItemId, ViewNodeId } from './ids';
++import type { DatasetId, GroupId, SeriesId, SourceItemId, ViewNodeId } from './ids';
+ 
+ export type LegacySchemaVersion = '1.0.0';
+ export type CurrentSchemaVersion = '2.0.0';
++export type ComparisonSchemaVersion = '3.0.0';
+ /** Supported persisted schema generations. */
+-export type SchemaVersion = LegacySchemaVersion | CurrentSchemaVersion;
++export type SchemaVersion =
++  | LegacySchemaVersion
++  | CurrentSchemaVersion
++  | ComparisonSchemaVersion;
+ /** Chart layouts understood by the editor data contract. */
+ export type ChartType = 'waterfall' | 'bar' | 'column';
+ /** Source families with distinct validation and narrative policies. */
+@@ -28,9 +32,33 @@ export interface WaterfallSourceItem extends SourceItemBase {
+ /** A plain categorical value with no per-item family discriminator. */
+ export type CategoricalSourceItem = SourceItemBase;
+ 
++export interface CategoricalComparisonSeries {
++  readonly id: SeriesId;
++  readonly label: string;
++  readonly metadata?: Readonly<Record<string, MetadataValue>>;
++}
++
++export interface CategoricalComparisonValue {
++  readonly seriesId: SeriesId;
++  readonly amount: number;
++  readonly sourceRef?: string;
++  readonly metadata?: Readonly<Record<string, MetadataValue>>;
++}
++
++export interface CategoricalComparisonSourceItem {
++  readonly id: SourceItemId;
++  readonly label: string;
++  readonly sourceRef?: string;
++  readonly metadata?: Readonly<Record<string, MetadataValue>>;
++  readonly values: readonly CategoricalComparisonValue[];
++}
++
+ /** Backward-compatible alias retaining the existing waterfall item contract. */
+ export type SourceItem = WaterfallSourceItem;
+-export type SourceDataItem = WaterfallSourceItem | CategoricalSourceItem;
++export type SourceDataItem =
++  | WaterfallSourceItem
++  | CategoricalSourceItem
++  | CategoricalComparisonSourceItem;
+ 
+ export interface LegacyWaterfallSourceData {
+   readonly schemaVersion: LegacySchemaVersion;
+@@ -57,8 +85,22 @@ export interface CategoricalSourceData {
+   readonly items: readonly CategoricalSourceItem[];
+ }
+ 
++/** Comparison-schema categorical source data with a dense series matrix. */
++export interface CategoricalComparisonSourceData {
++  readonly schemaVersion: ComparisonSchemaVersion;
++  readonly dataKind: 'categorical';
++  readonly datasetId: DatasetId;
++  readonly currency?: string;
++  readonly series: readonly CategoricalComparisonSeries[];
++  readonly items: readonly CategoricalComparisonSourceItem[];
++}
++
+ /** Valid legacy and current source-data variants. */
+-export type SourceData = LegacyWaterfallSourceData | WaterfallSourceData | CategoricalSourceData;
++export type SourceData =
++  | LegacyWaterfallSourceData
++  | WaterfallSourceData
++  | CategoricalSourceData
++  | CategoricalComparisonSourceData;
+ 
+ export type Annotation = string;
+ export type Emphasis = 'highlight' | 'muted';
+@@ -90,5 +132,13 @@ export interface CurrentViewSpec extends NarrativeViewFields {
+   readonly chartType: ChartType;
+ }
+ 
++export interface CategoricalComparisonViewSpec extends NarrativeViewFields {
++  readonly schemaVersion: ComparisonSchemaVersion;
++  readonly chartType: 'bar' | 'column';
++}
++
+ /** Persisted narrative view state paired with a compatible source generation and family. */
+-export type ViewSpec = LegacyWaterfallViewSpec | CurrentViewSpec;
++export type ViewSpec =
++  | LegacyWaterfallViewSpec
++  | CurrentViewSpec
++  | CategoricalComparisonViewSpec;
+diff --git a/packages/core/src/domain/session.ts b/packages/core/src/domain/session.ts
+index eb19991..2de47c1 100644
+--- a/packages/core/src/domain/session.ts
++++ b/packages/core/src/domain/session.ts
+@@ -130,28 +130,66 @@ function parseSessionOptions(options: unknown): ValidationResult<ParsedSessionOp
+ 
+ function sourceFingerprint(sourceData: SourceData): string {
+   const waterfall = sourceDataKind(sourceData) === 'waterfall';
+-  const canonicalSource = {
+-    schemaVersion: sourceData.schemaVersion,
+-    ...(sourceData.schemaVersion === '2.0.0' ? { dataKind: sourceData.dataKind } : {}),
+-    datasetId: sourceData.datasetId,
+-    ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
+-    items: sourceData.items.map(item => ({
+-      id: item.id,
+-      label: item.label,
+-      amount: item.amount,
+-      ...(waterfall && 'kind' in item ? { kind: item.kind } : {}),
+-      ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
+-      ...(item.metadata === undefined
+-        ? {}
+-        : {
+-            metadata: Object.fromEntries(
+-              Object.entries(item.metadata).sort(([first], [second]) =>
+-                first < second ? -1 : first > second ? 1 : 0,
+-              ),
+-            ),
+-          }),
+-    })),
+-  };
++  const sortedMetadata = (
++    metadata: Readonly<Record<string, string | number | boolean | null>>,
++    canonicalizeZero: boolean,
++  ): Record<string, string | number | boolean | null> =>
++    Object.fromEntries(
++      Object.entries(metadata)
++        .sort(([first], [second]) => (first < second ? -1 : first > second ? 1 : 0))
++        .map(([key, value]) => [
++          key,
++          canonicalizeZero && typeof value === 'number' && value === 0 ? 0 : value,
++        ]),
++    );
++
++  const canonicalSource =
++    sourceData.schemaVersion === '3.0.0'
++      ? {
++          schemaVersion: sourceData.schemaVersion,
++          dataKind: sourceData.dataKind,
++          datasetId: sourceData.datasetId,
++          ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
++          series: sourceData.series.map(series => ({
++            id: series.id,
++            label: series.label,
++            ...(series.metadata === undefined
++              ? {}
++              : { metadata: sortedMetadata(series.metadata, true) }),
++          })),
++          items: sourceData.items.map(item => ({
++            id: item.id,
++            label: item.label,
++            ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
++            ...(item.metadata === undefined
++              ? {}
++              : { metadata: sortedMetadata(item.metadata, true) }),
++            values: item.values.map(value => ({
++              seriesId: value.seriesId,
++              amount: value.amount === 0 ? 0 : value.amount,
++              ...(value.sourceRef === undefined ? {} : { sourceRef: value.sourceRef }),
++              ...(value.metadata === undefined
++                ? {}
++                : { metadata: sortedMetadata(value.metadata, true) }),
++            })),
++          })),
++        }
++      : {
++          schemaVersion: sourceData.schemaVersion,
++          ...(sourceData.schemaVersion === '2.0.0' ? { dataKind: sourceData.dataKind } : {}),
++          datasetId: sourceData.datasetId,
++          ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
++          items: sourceData.items.map(item => ({
++            id: item.id,
++            label: item.label,
++            amount: item.amount,
++            ...(waterfall && 'kind' in item ? { kind: item.kind } : {}),
++            ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
++            ...(item.metadata === undefined
++              ? {}
++              : { metadata: sortedMetadata(item.metadata, false) }),
++          })),
++        };
+   let hash = FNV1A_64_OFFSET;
+   for (const character of JSON.stringify(canonicalSource)) {
+     const codePoint = character.codePointAt(0) as number;
+diff --git a/packages/core/src/domain/validation.ts b/packages/core/src/domain/validation.ts
+index 728fda7..76aeeb2 100644
+--- a/packages/core/src/domain/validation.ts
++++ b/packages/core/src/domain/validation.ts
+@@ -29,6 +29,10 @@ const CURRENT_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
+   ...LEGACY_SOURCE_DATA_FIELDS,
+   'dataKind',
+ ]);
++const COMPARISON_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
++  ...CURRENT_SOURCE_DATA_FIELDS,
++  'series',
++]);
+ const SOURCE_ITEM_BASE_FIELDS: ReadonlySet<string> = new Set([
+   'id',
+   'label',
+@@ -40,6 +44,20 @@ const WATERFALL_SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
+   ...SOURCE_ITEM_BASE_FIELDS,
+   'kind',
+ ]);
++const COMPARISON_SERIES_FIELDS: ReadonlySet<string> = new Set(['id', 'label', 'metadata']);
++const COMPARISON_SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
++  'id',
++  'label',
++  'sourceRef',
++  'metadata',
++  'values',
++]);
++const COMPARISON_VALUE_FIELDS: ReadonlySet<string> = new Set([
++  'seriesId',
++  'amount',
++  'sourceRef',
++  'metadata',
++]);
+ const VIEW_SPEC_FIELDS: ReadonlySet<string> = new Set([
+   'schemaVersion',
+   'datasetId',
+@@ -194,7 +212,7 @@ function validateSchemaVersion(
+     errors.push(validationIssue(code, 'INVALID_TYPE', '/schemaVersion'));
+     return undefined;
+   }
+-  if (value !== '1.0.0' && value !== '2.0.0') {
++  if (value !== '1.0.0' && value !== '2.0.0' && value !== '3.0.0') {
+     errors.push(
+       validationIssue('UNSUPPORTED_SCHEMA_VERSION', 'UNSUPPORTED_SCHEMA_VERSION', '/schemaVersion'),
+     );
+@@ -203,6 +221,34 @@ function validateSchemaVersion(
+   return value;
+ }
+ 
++function validateMetadata(
++  value: unknown,
++  path: string,
++  errors: ValidationIssue[],
++): void {
++  if (value === undefined) {
++    return;
++  }
++  if (!isPlainRecord(value)) {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', path));
++    return;
++  }
++  const metadataKeys = inspectRecord(value, path, 'INVALID_SOURCE_DATA', errors);
++  for (const key of metadataKeys) {
++    const metadataValue = ownDataValue(value, key);
++    const primitive =
++      metadataValue === null ||
++      typeof metadataValue === 'string' ||
++      typeof metadataValue === 'boolean' ||
++      (typeof metadataValue === 'number' && Number.isFinite(metadataValue));
++    if (!primitive) {
++      errors.push(
++        validationIssue('INVALID_SOURCE_DATA', 'INVALID_METADATA_VALUE', pointer(path, key)),
++      );
++    }
++  }
++}
++
+ function validateSourceItem(
+   value: unknown,
+   index: number,
+@@ -274,29 +320,299 @@ function validateSourceItem(
+     );
+   }
+ 
+-  const metadata = ownDataValue(value, 'metadata');
+-  if (metadata === undefined) {
++  validateMetadata(ownDataValue(value, 'metadata'), pointer(itemPath, 'metadata'), errors);
++}
++
++interface ComparisonSeriesRegistry {
++  readonly ids: readonly string[];
++  readonly indexById: ReadonlyMap<string, number>;
++}
++
++function validateComparisonSeries(
++  value: unknown,
++  errors: ValidationIssue[],
++): ComparisonSeriesRegistry | undefined {
++  const series = readArray(value, '/series', 'INVALID_SOURCE_DATA', errors);
++  if (series === undefined) {
++    return undefined;
++  }
++  if (series.length < 2 || series.length > 4) {
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'INVALID_SERIES_COUNT', '/series', {
++        minimum: 2,
++        maximum: 4,
++        actualCount: series.length,
++      }),
++    );
++  }
++
++  const indexById = new Map<string, number>();
++  const firstIndexByLabel = new Map<string, number>();
++  const ids: string[] = [];
++  let reliable = true;
++
++  for (let index = 0; index < series.length; index += 1) {
++    const entryPath = pointer('/series', index);
++    const entry = series[index];
++    if (!isPlainRecord(entry)) {
++      errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', entryPath));
++      reliable = false;
++      continue;
++    }
++    inspectRecord(
++      entry,
++      entryPath,
++      'INVALID_SOURCE_DATA',
++      errors,
++      COMPARISON_SERIES_FIELDS,
++    );
++
++    const id = ownDataValue(entry, 'id');
++    if (typeof id !== 'string') {
++      errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(entryPath, 'id')));
++      reliable = false;
++    } else if (id.trim().length === 0) {
++      errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_ID', pointer(entryPath, 'id')));
++      reliable = false;
++    } else {
++      const firstIndex = indexById.get(id);
++      if (firstIndex !== undefined) {
++        errors.push(
++          validationIssue(
++            'INVALID_SOURCE_DATA',
++            'DUPLICATE_SERIES_ID',
++            pointer(entryPath, 'id'),
++            { index, firstIndex },
++          ),
++        );
++        reliable = false;
++      } else {
++        indexById.set(id, index);
++        ids.push(id);
++      }
++    }
++
++    const label = ownDataValue(entry, 'label');
++    if (typeof label !== 'string') {
++      errors.push(
++        validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(entryPath, 'label')),
++      );
++    } else if (label.trim().length === 0) {
++      errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_LABEL', pointer(entryPath, 'label')));
++    } else {
++      const normalizedLabel = label.trim().normalize('NFC');
++      const firstIndex = firstIndexByLabel.get(normalizedLabel);
++      if (firstIndex !== undefined) {
++        errors.push(
++          validationIssue(
++            'INVALID_SOURCE_DATA',
++            'DUPLICATE_SERIES_LABEL',
++            pointer(entryPath, 'label'),
++            { index, firstIndex },
++          ),
++        );
++      } else {
++        firstIndexByLabel.set(normalizedLabel, index);
++      }
++    }
++
++    validateMetadata(
++      ownDataValue(entry, 'metadata'),
++      pointer(entryPath, 'metadata'),
++      errors,
++    );
++  }
++
++  return reliable ? { ids, indexById } : undefined;
++}
++
++function validateComparisonValue(
++  value: unknown,
++  itemIndex: number,
++  valueIndex: number,
++  errors: ValidationIssue[],
++): string | undefined {
++  const valuePath = pointer(pointer(pointer('/items', itemIndex), 'values'), valueIndex);
++  if (!isPlainRecord(value)) {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', valuePath));
++    return undefined;
++  }
++  inspectRecord(
++    value,
++    valuePath,
++    'INVALID_SOURCE_DATA',
++    errors,
++    COMPARISON_VALUE_FIELDS,
++  );
++
++  const seriesId = ownDataValue(value, 'seriesId');
++  let validSeriesId: string | undefined;
++  if (typeof seriesId !== 'string') {
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'seriesId')),
++    );
++  } else if (seriesId.trim().length === 0) {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_ID', pointer(valuePath, 'seriesId')));
++  } else {
++    validSeriesId = seriesId;
++  }
++
++  const amount = ownDataValue(value, 'amount');
++  if (typeof amount !== 'number') {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'amount')));
++  } else if (!Number.isFinite(amount)) {
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'NON_FINITE_AMOUNT', pointer(valuePath, 'amount')),
++    );
++  } else if (Math.abs(amount) > Number.MAX_SAFE_INTEGER) {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'UNSAFE_AMOUNT', pointer(valuePath, 'amount')));
++  }
++
++  const sourceRef = ownDataValue(value, 'sourceRef');
++  if (sourceRef !== undefined && typeof sourceRef !== 'string') {
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'sourceRef')),
++    );
++  }
++  validateMetadata(ownDataValue(value, 'metadata'), pointer(valuePath, 'metadata'), errors);
++  return validSeriesId;
++}
++
++function validateComparisonSourceItem(
++  value: unknown,
++  index: number,
++  seenIds: Set<string>,
++  registry: ComparisonSeriesRegistry | undefined,
++  errors: ValidationIssue[],
++): void {
++  const itemPath = pointer('/items', index);
++  if (!isPlainRecord(value)) {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', itemPath));
++    return;
++  }
++  inspectRecord(
++    value,
++    itemPath,
++    'INVALID_SOURCE_DATA',
++    errors,
++    COMPARISON_SOURCE_ITEM_FIELDS,
++  );
++
++  const id = ownDataValue(value, 'id');
++  if (typeof id !== 'string') {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(itemPath, 'id')));
++  } else if (id.trim().length === 0) {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_ID', pointer(itemPath, 'id')));
++  } else if (seenIds.has(id)) {
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'DUPLICATE_SOURCE_ITEM_ID', pointer(itemPath, 'id'), {
++        index,
++      }),
++    );
++  } else {
++    seenIds.add(id);
++  }
++
++  const label = ownDataValue(value, 'label');
++  if (typeof label !== 'string') {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(itemPath, 'label')));
++  } else if (label.trim().length === 0) {
++    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_LABEL', pointer(itemPath, 'label')));
++  }
++
++  const sourceRef = ownDataValue(value, 'sourceRef');
++  if (sourceRef !== undefined && typeof sourceRef !== 'string') {
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(itemPath, 'sourceRef')),
++    );
++  }
++  validateMetadata(ownDataValue(value, 'metadata'), pointer(itemPath, 'metadata'), errors);
++
++  const valuesPath = pointer(itemPath, 'values');
++  const values = readArray(
++    ownDataValue(value, 'values'),
++    valuesPath,
++    'INVALID_SOURCE_DATA',
++    errors,
++  );
++  if (values === undefined) {
+     return;
+   }
+-  const metadataPath = pointer(itemPath, 'metadata');
+-  if (!isPlainRecord(metadata)) {
+-    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', metadataPath));
++
++  const seriesIds = values.map((entry, valueIndex) =>
++    validateComparisonValue(entry, index, valueIndex, errors),
++  );
++  if (registry === undefined) {
+     return;
+   }
+-  const metadataKeys = inspectRecord(metadata, metadataPath, 'INVALID_SOURCE_DATA', errors);
+-  for (const key of metadataKeys) {
+-    const metadataValue = ownDataValue(metadata, key);
+-    const primitive =
+-      metadataValue === null ||
+-      typeof metadataValue === 'string' ||
+-      typeof metadataValue === 'boolean' ||
+-      (typeof metadataValue === 'number' && Number.isFinite(metadataValue));
+-    if (!primitive) {
++
++  const firstValueIndexById = new Map<string, number>();
++  const coveredSeries = new Set<string>();
++  let exactUniqueCoverage = values.length === registry.ids.length;
++  for (let valueIndex = 0; valueIndex < seriesIds.length; valueIndex += 1) {
++    const seriesId = seriesIds[valueIndex];
++    if (seriesId === undefined) {
++      exactUniqueCoverage = false;
++      continue;
++    }
++    const path = pointer(pointer(valuesPath, valueIndex), 'seriesId');
++    const declaredIndex = registry.indexById.get(seriesId);
++    if (declaredIndex === undefined) {
++      errors.push(
++        validationIssue('INVALID_SOURCE_DATA', 'UNKNOWN_SERIES_REFERENCE', path, {
++          itemIndex: index,
++          valueIndex,
++        }),
++      );
++      exactUniqueCoverage = false;
++      continue;
++    }
++
++    const firstValueIndex = firstValueIndexById.get(seriesId);
++    if (firstValueIndex !== undefined) {
++      errors.push(
++        validationIssue('INVALID_SOURCE_DATA', 'DUPLICATE_SERIES_VALUE', path, {
++          itemIndex: index,
++          valueIndex,
++          firstValueIndex,
++        }),
++      );
++      exactUniqueCoverage = false;
++    } else {
++      firstValueIndexById.set(seriesId, valueIndex);
++      coveredSeries.add(seriesId);
++    }
++  }
++
++  registry.ids.forEach((seriesId, seriesIndex) => {
++    if (!coveredSeries.has(seriesId)) {
++      errors.push(
++        validationIssue('INVALID_SOURCE_DATA', 'MISSING_SERIES_VALUE', valuesPath, {
++          itemIndex: index,
++          seriesIndex,
++        }),
++      );
++      exactUniqueCoverage = false;
++    }
++  });
++
++  if (exactUniqueCoverage) {
++    const mismatchIndex = seriesIds.findIndex(
++      (seriesId, valueIndex) => seriesId !== registry.ids[valueIndex],
++    );
++    if (mismatchIndex >= 0) {
++      const actualSeriesId = seriesIds[mismatchIndex] as string;
+       errors.push(
+         validationIssue(
+           'INVALID_SOURCE_DATA',
+-          'INVALID_METADATA_VALUE',
+-          pointer(metadataPath, key),
++          'SERIES_VALUE_ORDER_MISMATCH',
++          pointer(pointer(valuesPath, mismatchIndex), 'seriesId'),
++          {
++            itemIndex: index,
++            valueIndex: mismatchIndex,
++            expectedSeriesIndex: mismatchIndex,
++            actualSeriesIndex: registry.indexById.get(actualSeriesId) as number,
++          },
+         ),
+       );
+     }
+@@ -365,12 +681,19 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
+     '',
+     'INVALID_SOURCE_DATA',
+     errors,
+-    schemaValue === '2.0.0' ? CURRENT_SOURCE_DATA_FIELDS : LEGACY_SOURCE_DATA_FIELDS,
++    schemaValue === '3.0.0'
++      ? COMPARISON_SOURCE_DATA_FIELDS
++      : schemaValue === '2.0.0'
++        ? CURRENT_SOURCE_DATA_FIELDS
++        : LEGACY_SOURCE_DATA_FIELDS,
+   );
+   const schemaVersion = validateSchemaVersion(input, 'INVALID_SOURCE_DATA', errors);
+ 
+   const dataKind = ownDataValue(input, 'dataKind');
+-  if (schemaVersion === '2.0.0' && dataKind !== 'waterfall' && dataKind !== 'categorical') {
++  if (
++    (schemaVersion === '2.0.0' && dataKind !== 'waterfall' && dataKind !== 'categorical') ||
++    (schemaVersion === '3.0.0' && dataKind !== 'categorical')
++  ) {
+     errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_DATA_KIND', '/dataKind'));
+   }
+ 
+@@ -386,15 +709,31 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
+     errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', '/currency'));
+   }
+ 
++  const comparisonRegistry =
++    schemaVersion === '3.0.0'
++      ? validateComparisonSeries(ownDataValue(input, 'series'), errors)
++      : undefined;
+   const items = readArray(ownDataValue(input, 'items'), '/items', 'INVALID_SOURCE_DATA', errors);
+   if (items !== undefined) {
+-    const waterfall = schemaVersion !== '2.0.0' || dataKind === 'waterfall';
+     const seenIds = new Set<string>();
+-    for (let index = 0; index < items.length; index += 1) {
+-      validateSourceItem(items[index], index, seenIds, errors, waterfall);
+-    }
+-    if (waterfall) {
+-      validateAnchors(items, errors);
++    if (schemaVersion === '3.0.0') {
++      for (let index = 0; index < items.length; index += 1) {
++        validateComparisonSourceItem(
++          items[index],
++          index,
++          seenIds,
++          comparisonRegistry,
++          errors,
++        );
++      }
++    } else {
++      const waterfall = schemaVersion !== '2.0.0' || dataKind === 'waterfall';
++      for (let index = 0; index < items.length; index += 1) {
++        validateSourceItem(items[index], index, seenIds, errors, waterfall);
++      }
++      if (waterfall) {
++        validateAnchors(items, errors);
++      }
+     }
+   }
+ 
+diff --git a/packages/core/src/index.ts b/packages/core/src/index.ts
+index 598dda7..eba9011 100644
+--- a/packages/core/src/index.ts
++++ b/packages/core/src/index.ts
+@@ -1,5 +1,6 @@
+ export * from './charts/categorical/projection';
+ export * from './charts/categorical/types';
++export type * from './charts/categorical/comparisonTypes';
+ export * from './charts/waterfall/projection';
+ export * from './charts/waterfall/types';
+ export * from './config/chartAppearance';
+diff --git a/packages/core/src/interactions/groupSelection.ts b/packages/core/src/interactions/groupSelection.ts
+index 3dd0700..8ce5ce4 100644
+--- a/packages/core/src/interactions/groupSelection.ts
++++ b/packages/core/src/interactions/groupSelection.ts
+@@ -131,7 +131,7 @@ export function evaluateGroupSelection(
+   const sourceItems = new Map(sourceData.items.map(item => [item.id, item]));
+   const leafIds = orderedIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId));
+   const categoricalSource =
+-    sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical';
++    sourceData.schemaVersion !== '1.0.0' && sourceData.dataKind === 'categorical';
+   if (
+     leafIds.some(itemId => {
+       const item = sourceItems.get(itemId);
+diff --git a/packages/core/tests/domain/persistence.test.ts b/packages/core/tests/domain/persistence.test.ts
+index 6f39f72..66f541a 100644
+--- a/packages/core/tests/domain/persistence.test.ts
++++ b/packages/core/tests/domain/persistence.test.ts
+@@ -148,7 +148,7 @@ describe('ViewSpec persistence', () => {
+ 
+   it('rejects unsupported major schema versions without migration', () => {
+     const parsed = JSON.parse(serializeViewSpec(initialView())) as Record<string, unknown>;
+-    parsed['schemaVersion'] = '3.0.0';
++    parsed['schemaVersion'] = '4.0.0';
+ 
+     expectIssue(parseViewSpec(JSON.stringify(parsed), financialSourceData), {
+       code: 'UNSUPPORTED_SCHEMA_VERSION',
+diff --git a/packages/core/tests/domain/validation.test.ts b/packages/core/tests/domain/validation.test.ts
+index 7dc9732..cf14ae2 100644
+--- a/packages/core/tests/domain/validation.test.ts
++++ b/packages/core/tests/domain/validation.test.ts
+@@ -133,7 +133,7 @@ describe('validateSourceData', () => {
+     },
+     {
+       name: 'unsupported schema',
+-      input: () => ({ ...cloneSource(), schemaVersion: '3.0.0' }),
++      input: () => ({ ...cloneSource(), schemaVersion: '4.0.0' }),
+       expected: {
+         code: 'UNSUPPORTED_SCHEMA_VERSION',
+         reason: 'UNSUPPORTED_SCHEMA_VERSION',
+@@ -588,7 +588,7 @@ describe('validateViewSpec', () => {
+   }[] = [
+     {
+       name: 'unsupported schema',
+-      mutate: view => void (view['schemaVersion'] = '3.0.0'),
++      mutate: view => void (view['schemaVersion'] = '4.0.0'),
+       expected: {
+         code: 'UNSUPPORTED_SCHEMA_VERSION',
+         reason: 'UNSUPPORTED_SCHEMA_VERSION',
+diff --git a/packages/core/tests/public-api.mjs b/packages/core/tests/public-api.mjs
+index 8e4dc41..29a01cc 100644
+--- a/packages/core/tests/public-api.mjs
++++ b/packages/core/tests/public-api.mjs
+@@ -14,10 +14,33 @@ const rendererInternals = [
+   'readChartPointerPoint',
+   'readChartTargetCoordinate',
+ ];
++const comparisonTypes = [
++  'SeriesId',
++  'ComparisonSchemaVersion',
++  'CategoricalComparisonSeries',
++  'CategoricalComparisonValue',
++  'CategoricalComparisonSourceItem',
++  'CategoricalComparisonSourceData',
++  'CategoricalComparisonViewSpec',
++  'CategoricalComparisonDatumKind',
++  'CategoricalComparisonSeriesValue',
++  'CategoricalComparisonDatum',
++  'CategoricalComparisonProjection',
++  'CategoricalComparisonProjectionResult',
++  'CategoricalComparisonSeriesColor',
++  'CategoricalComparisonChartColors',
++  'CategoricalComparisonChartAppearance',
++  'CategoricalComparisonChartConfig',
++];
+ 
+ for (const name of rendererInternals) {
+   assert.equal(Object.hasOwn(core, name), false, `${name} must not be a core runtime export`);
+ }
++assert.equal(
++  Object.hasOwn(core, 'projectCategoricalComparison'),
++  false,
++  'T135 must not export the comparison runtime projector',
++);
+ 
+ const declarations = await readFile(new URL('../dist/index.d.ts', import.meta.url), 'utf8');
+ for (const name of rendererInternals) {
+@@ -27,3 +50,10 @@ for (const name of rendererInternals) {
+     `${name} must not be a core type export`,
+   );
+ }
++for (const name of comparisonTypes) {
++  assert.equal(
++    new RegExp(`\\b${name}\\b`, 'u').test(declarations),
++    true,
++    `${name} must be a core type export`,
++  );
++}
+diff --git a/packages/editor/tests/package/types-consumer.ts b/packages/editor/tests/package/types-consumer.ts
+index 70ee36a..aa4de62 100644
+--- a/packages/editor/tests/package/types-consumer.ts
++++ b/packages/editor/tests/package/types-consumer.ts
+@@ -11,11 +11,27 @@ import {
+   validateViewSpec,
+   viewSpecsEqual,
+   type ChartConfig,
++  type CategoricalComparisonChartAppearance,
++  type CategoricalComparisonChartColors,
++  type CategoricalComparisonChartConfig,
++  type CategoricalComparisonDatum,
++  type CategoricalComparisonDatumKind,
++  type CategoricalComparisonProjection,
++  type CategoricalComparisonProjectionResult,
++  type CategoricalComparisonSeries,
++  type CategoricalComparisonSeriesColor,
++  type CategoricalComparisonSeriesValue,
++  type CategoricalComparisonSourceData,
++  type CategoricalComparisonSourceItem,
++  type CategoricalComparisonValue,
++  type CategoricalComparisonViewSpec,
+   type CategoricalSourceData,
+   type CommandResult,
++  type ComparisonSchemaVersion,
+   type EditorCommand,
+   type EditorSession,
+   type SessionActionMeta,
++  type SeriesId,
+   type SourceData,
+   type ValidationResult,
+   type ViewSpec,
+@@ -37,6 +53,79 @@ declare const session: EditorSession;
+ declare const command: EditorCommand;
+ declare const historyAction: SessionActionMeta;
+ 
++export const comparisonSchema: ComparisonSchemaVersion = '3.0.0';
++export const comparisonSeriesId: SeriesId = 'actual';
++export const comparisonSeries: CategoricalComparisonSeries = {
++  id: comparisonSeriesId,
++  label: 'Actual',
++};
++export const comparisonValue: CategoricalComparisonValue = {
++  seriesId: comparisonSeriesId,
++  amount: 1,
++};
++export const comparisonItem: CategoricalComparisonSourceItem = {
++  id: 'revenue',
++  label: 'Revenue',
++  values: [comparisonValue, { seriesId: 'budget', amount: 2 }],
++};
++export const comparisonSource: CategoricalComparisonSourceData = {
++  schemaVersion: comparisonSchema,
++  dataKind: 'categorical',
++  datasetId: 'comparison-package-consumer',
++  series: [comparisonSeries, { id: 'budget', label: 'Budget' }],
++  items: [comparisonItem],
++};
++export const comparisonView: CategoricalComparisonViewSpec = {
++  schemaVersion: comparisonSchema,
++  datasetId: comparisonSource.datasetId,
++  chartType: 'column',
++  revision: 0,
++  rootOrder: ['revenue'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++};
++export const comparisonColor: CategoricalComparisonSeriesColor = {
++  seriesId: comparisonSeriesId,
++  color: '#0072B2',
++};
++export const comparisonColors: CategoricalComparisonChartColors = {
++  series: [comparisonColor],
++  group: '#A46812',
++};
++export const comparisonAppearance: CategoricalComparisonChartAppearance = {
++  colors: comparisonColors,
++  legend: true,
++};
++export const comparisonConfig: CategoricalComparisonChartConfig = {
++  type: 'column',
++  data: comparisonSource,
++  appearance: comparisonAppearance,
++};
++export const comparisonDatumKind: CategoricalComparisonDatumKind = 'category';
++export const comparisonSeriesValue: CategoricalComparisonSeriesValue = {
++  seriesId: comparisonSeriesId,
++  label: 'Actual',
++  amount: 1,
++};
++export const comparisonDatum: CategoricalComparisonDatum = {
++  nodeId: 'revenue',
++  label: 'Revenue',
++  values: [comparisonSeriesValue],
++  kind: comparisonDatumKind,
++  sourceIds: ['revenue'],
++  locked: false,
++  order: 0,
++};
++export const comparisonProjection: CategoricalComparisonProjection = [comparisonDatum];
++export const comparisonProjectionResult: CategoricalComparisonProjectionResult = {
++  ok: true,
++  value: comparisonProjection,
++  errors: [],
++};
++
+ export const sourceValidation: ValidationResult<SourceData> = validateSourceData(source);
+ export const viewValidation: ValidationResult<ViewSpec> = validateViewSpec(view, source);
+ export const serializedView: string = serializeViewSpec(view);
+diff --git a/packages/tellplot/tests/package/consumer.tsx b/packages/tellplot/tests/package/consumer.tsx
+index a654a72..232119d 100644
+--- a/packages/tellplot/tests/package/consumer.tsx
++++ b/packages/tellplot/tests/package/consumer.tsx
+@@ -1,6 +1,9 @@
+ import {
+   createEditor,
+   createInitialViewSpec,
++  type CategoricalComparisonChartConfig,
++  type CategoricalComparisonSourceData,
++  type CategoricalComparisonViewSpec,
+   type ChartConfig,
+   type EditorInstance,
+   type ViewSpec,
+@@ -23,6 +26,45 @@ const config = {
+ const result = validateChartConfig(config);
+ const initial = createInitialViewSpec(config.data, { chartType: config.type });
+ 
++const comparisonData = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'comparison-package-consumer',
++  series: [
++    { id: 'actual', label: 'Actual' },
++    { id: 'budget', label: 'Budget' },
++  ],
++  items: [
++    {
++      id: 'revenue',
++      label: 'Revenue',
++      values: [
++        { seriesId: 'actual', amount: 128 },
++        { seriesId: 'budget', amount: 135 },
++      ],
++    },
++  ],
++} as const satisfies CategoricalComparisonSourceData;
++
++export const comparisonConfig = {
++  type: 'column',
++  data: comparisonData,
++  appearance: { legend: true, colors: { series: [{ seriesId: 'actual', color: '#0072B2' }] } },
++} as const satisfies CategoricalComparisonChartConfig;
++
++export const comparisonView: CategoricalComparisonViewSpec = {
++  schemaVersion: '3.0.0',
++  datasetId: comparisonData.datasetId,
++  chartType: 'column',
++  revision: 0,
++  rootOrder: ['revenue'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++};
++
+ export function mount(container: HTMLElement): EditorInstance {
+   return createEditor(container, { config });
+ }
+diff --git a/scripts/release/package-contracts.json b/scripts/release/package-contracts.json
+index 1a13ce1..9a31292 100644
+--- a/scripts/release/package-contracts.json
++++ b/scripts/release/package-contracts.json
+@@ -64,6 +64,20 @@
+         "Annotation",
+         "CategoricalChartAppearance",
+         "CategoricalChartConfig",
++        "CategoricalComparisonChartAppearance",
++        "CategoricalComparisonChartColors",
++        "CategoricalComparisonChartConfig",
++        "CategoricalComparisonDatum",
++        "CategoricalComparisonDatumKind",
++        "CategoricalComparisonProjection",
++        "CategoricalComparisonProjectionResult",
++        "CategoricalComparisonSeries",
++        "CategoricalComparisonSeriesColor",
++        "CategoricalComparisonSeriesValue",
++        "CategoricalComparisonSourceData",
++        "CategoricalComparisonSourceItem",
++        "CategoricalComparisonValue",
++        "CategoricalComparisonViewSpec",
+         "CategoricalDatum",
+         "CategoricalDatumKind",
+         "CategoricalProjection",
+@@ -109,6 +123,7 @@
+         "CommandParseResult",
+         "CommandResult",
+         "CommandSource",
++        "ComparisonSchemaVersion",
+         "CreateGroupCommand",
+         "CreateGroupPayload",
+         "CurrentSchemaVersion",
+@@ -162,6 +177,7 @@
+         "ResolvedFinancialChartNumberFormat",
+         "ResolvedFinancialChartValueLabelAppearance",
+         "SchemaVersion",
++        "SeriesId",
+         "SelectionState",
+         "SessionActionMeta",
+         "SetAnnotationCommand",

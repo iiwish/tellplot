@@ -6,11 +6,13 @@ import {
   type ValidationResult,
 } from '../domain/errors';
 import type {
+  CategoricalComparisonSourceData,
   CategoricalSourceData,
   LegacyWaterfallSourceData,
   SourceData,
   WaterfallSourceData,
 } from '../domain/model';
+import type { SeriesId } from '../domain/ids';
 import { validateSourceData, validateViewSpec } from '../domain/validation';
 import type { FinancialChartAppearance } from './chartAppearance';
 import type {
@@ -32,6 +34,16 @@ export interface WaterfallChartColors extends ChartColors {
   readonly start?: string;
   readonly subtotal?: string;
   readonly end?: string;
+}
+
+export interface CategoricalComparisonSeriesColor {
+  readonly seriesId: SeriesId;
+  readonly color: string;
+}
+
+export interface CategoricalComparisonChartColors {
+  readonly series?: readonly CategoricalComparisonSeriesColor[];
+  readonly group?: string;
 }
 
 export interface ChartAxes {
@@ -81,7 +93,7 @@ export interface ChartNumberFormat {
   readonly currencyDisplay?: ChartCurrencyDisplay;
 }
 
-interface ChartAppearanceBase<TColors extends ChartColors> {
+interface ChartAppearanceBase<TColors> {
   readonly title?: string;
   readonly colors?: TColors;
   readonly axes?: ChartAxes;
@@ -94,7 +106,20 @@ interface ChartAppearanceBase<TColors extends ChartColors> {
 
 export type CategoricalChartAppearance = ChartAppearanceBase<ChartColors>;
 export type WaterfallChartAppearance = ChartAppearanceBase<WaterfallChartColors>;
-export type ChartAppearance = CategoricalChartAppearance | WaterfallChartAppearance;
+export interface CategoricalComparisonChartAppearance {
+  readonly title?: string;
+  readonly colors?: CategoricalComparisonChartColors;
+  readonly legend?: boolean;
+  readonly axes?: ChartAxes;
+  readonly labels?: ChartLabels;
+  readonly tooltip?: boolean;
+  readonly animation?: ChartAnimation;
+  readonly groupRegion?: ChartGroupRegion;
+  readonly numberFormat?: ChartNumberFormat;
+}
+
+export type ChartAppearance =
+  CategoricalChartAppearance | WaterfallChartAppearance | CategoricalComparisonChartAppearance;
 
 export interface ChartEditorPanels {
   readonly outline?: boolean;
@@ -141,7 +166,17 @@ export type CategoricalChartConfig = ChartConfigBase<
   CategoricalChartAppearance
 >;
 
-export type ChartConfig = WaterfallChartConfig | CategoricalChartConfig;
+export interface CategoricalComparisonChartConfig {
+  readonly type: 'bar' | 'column';
+  readonly data: CategoricalComparisonSourceData;
+  readonly locale?: ChartLocale;
+  readonly height?: number | string;
+  readonly appearance?: CategoricalComparisonChartAppearance;
+  readonly editor?: ChartEditorOptions;
+}
+
+export type ChartConfig =
+  WaterfallChartConfig | CategoricalChartConfig | CategoricalComparisonChartConfig;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -163,6 +198,7 @@ const APPEARANCE_FIELDS: ReadonlySet<string> = new Set([
   'groupRegion',
   'numberFormat',
 ]);
+const COMPARISON_APPEARANCE_FIELDS: ReadonlySet<string> = new Set([...APPEARANCE_FIELDS, 'legend']);
 const COMMON_COLOR_FIELDS: ReadonlySet<string> = new Set(['positive', 'negative', 'group']);
 const WATERFALL_COLOR_FIELDS: ReadonlySet<string> = new Set([
   ...COMMON_COLOR_FIELDS,
@@ -170,6 +206,8 @@ const WATERFALL_COLOR_FIELDS: ReadonlySet<string> = new Set([
   'subtotal',
   'end',
 ]);
+const COMPARISON_COLOR_FIELDS: ReadonlySet<string> = new Set(['series', 'group']);
+const COMPARISON_SERIES_COLOR_FIELDS: ReadonlySet<string> = new Set(['seriesId', 'color']);
 const AXIS_FIELDS: ReadonlySet<string> = new Set(['category', 'value']);
 const LABEL_FIELDS: ReadonlySet<string> = new Set(['value', 'group']);
 const LABEL_STYLE_FIELDS: readonly string[] = [
@@ -225,6 +263,14 @@ function isPlainRecord(value: unknown): value is UnknownRecord {
   return prototype === Object.prototype || prototype === null;
 }
 
+function hasReadableComparisonSchema(value: unknown): boolean {
+  try {
+    return isPlainRecord(value) && ownDataValue(value, 'schemaVersion') === '3.0.0';
+  } catch {
+    return false;
+  }
+}
+
 function ownDataValue(record: UnknownRecord, key: string): unknown {
   const descriptor = Object.getOwnPropertyDescriptor(record, key);
   return descriptor !== undefined && 'value' in descriptor ? descriptor.value : undefined;
@@ -233,6 +279,63 @@ function ownDataValue(record: UnknownRecord, key: string): unknown {
 function pointer(base: string, key: string): string {
   const escaped = key.replaceAll('~', '~0').replaceAll('/', '~1');
   return `${base}/${escaped}`;
+}
+
+function isArrayIndexKey(key: string, length: number): boolean {
+  const index = Number(key);
+  return Number.isInteger(index) && index >= 0 && index < length && String(index) === key;
+}
+
+function readArray(
+  value: unknown,
+  path: string,
+  errors: ValidationIssue[],
+): readonly unknown[] | undefined {
+  if (!Array.isArray(value)) {
+    errors.push(configIssue('INVALID_TYPE', path));
+    return undefined;
+  }
+
+  const entriesByIndex = new Map<number, unknown>();
+  const presentIndexes: number[] = [];
+  for (const key of Reflect.ownKeys(value)) {
+    if (key === 'length') {
+      continue;
+    }
+    if (typeof key === 'symbol') {
+      errors.push(configIssue('NON_PLAIN_DATA', path));
+      continue;
+    }
+    if (!isArrayIndexKey(key, value.length)) {
+      errors.push(configIssue('UNKNOWN_FIELD', pointer(path, key)));
+      continue;
+    }
+    const index = Number(key);
+    presentIndexes.push(index);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor === undefined || !descriptor.enumerable || !('value' in descriptor)) {
+      errors.push(configIssue('NON_PLAIN_DATA', pointer(path, key)));
+    } else {
+      entriesByIndex.set(index, descriptor.value);
+    }
+  }
+
+  if (presentIndexes.length !== value.length) {
+    presentIndexes.sort((left, right) => left - right);
+    let firstMissingIndex = 0;
+    for (const index of presentIndexes) {
+      if (index !== firstMissingIndex) {
+        break;
+      }
+      firstMissingIndex += 1;
+    }
+    errors.push(configIssue('INVALID_TYPE', pointer(path, String(firstMissingIndex))));
+    return undefined;
+  }
+  if (entriesByIndex.size !== value.length) {
+    return undefined;
+  }
+  return Array.from({ length: value.length }, (_, index) => entriesByIndex.get(index));
 }
 
 function inspectRecord(
@@ -363,9 +466,17 @@ function validateLabelOptions<TMode extends string>(
 function validateAppearance(
   config: UnknownRecord,
   chartType: unknown,
+  comparison: boolean,
+  comparisonSeriesIds: ReadonlySet<string> | undefined,
   errors: ValidationIssue[],
 ): void {
-  const appearance = optionalRecord(config, 'appearance', '', APPEARANCE_FIELDS, errors);
+  const appearance = optionalRecord(
+    config,
+    'appearance',
+    '',
+    comparison ? COMPARISON_APPEARANCE_FIELDS : APPEARANCE_FIELDS,
+    errors,
+  );
   if (appearance === undefined) {
     return;
   }
@@ -375,20 +486,88 @@ function validateAppearance(
     errors.push(configIssue('INVALID_TYPE', '/appearance/title'));
   }
   validateOptionalBoolean(appearance, 'tooltip', '/appearance', errors);
+  if (comparison) {
+    validateOptionalBoolean(appearance, 'legend', '/appearance', errors);
+  }
 
   const colors = optionalRecord(
     appearance,
     'colors',
     '/appearance',
-    chartType === 'waterfall' ? WATERFALL_COLOR_FIELDS : COMMON_COLOR_FIELDS,
+    comparison
+      ? COMPARISON_COLOR_FIELDS
+      : chartType === 'waterfall'
+        ? WATERFALL_COLOR_FIELDS
+        : COMMON_COLOR_FIELDS,
     errors,
   );
   if (colors !== undefined) {
-    const allowedColors = chartType === 'waterfall' ? WATERFALL_COLOR_FIELDS : COMMON_COLOR_FIELDS;
-    for (const key of allowedColors) {
-      const color = ownDataValue(colors, key);
-      if (color !== undefined && (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color))) {
-        errors.push(configIssue('INVALID_TYPE', pointer('/appearance/colors', key)));
+    if (comparison) {
+      const group = ownDataValue(colors, 'group');
+      if (group !== undefined && (typeof group !== 'string' || !HEX_COLOR_PATTERN.test(group))) {
+        errors.push(configIssue('INVALID_TYPE', '/appearance/colors/group'));
+      }
+
+      const rawSeries = ownDataValue(colors, 'series');
+      if (rawSeries !== undefined) {
+        const series = readArray(rawSeries, '/appearance/colors/series', errors);
+        if (series !== undefined) {
+          const firstIndexById = new Map<string, number>();
+          for (let index = 0; index < series.length; index += 1) {
+            const path = `/appearance/colors/series/${index}`;
+            const entry = inspectRecord(
+              series[index],
+              path,
+              COMPARISON_SERIES_COLOR_FIELDS,
+              errors,
+            );
+            if (entry === undefined) {
+              continue;
+            }
+            const seriesId = ownDataValue(entry, 'seriesId');
+            if (typeof seriesId !== 'string') {
+              errors.push(configIssue('INVALID_TYPE', `${path}/seriesId`));
+            } else if (seriesId.trim().length === 0) {
+              errors.push(configIssue('EMPTY_ID', `${path}/seriesId`));
+            } else {
+              const firstIndex = firstIndexById.get(seriesId);
+              if (firstIndex !== undefined) {
+                errors.push(
+                  validationIssue(
+                    'INVALID_CHART_CONFIG',
+                    'DUPLICATE_SERIES_COLOR',
+                    `${path}/seriesId`,
+                    { index, firstIndex },
+                  ),
+                );
+              } else {
+                firstIndexById.set(seriesId, index);
+              }
+              if (comparisonSeriesIds !== undefined && !comparisonSeriesIds.has(seriesId)) {
+                errors.push(
+                  validationIssue(
+                    'SOURCE_CONFLICT',
+                    'UNKNOWN_SERIES_REFERENCE',
+                    `${path}/seriesId`,
+                  ),
+                );
+              }
+            }
+            const color = ownDataValue(entry, 'color');
+            if (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color)) {
+              errors.push(configIssue('INVALID_TYPE', `${path}/color`));
+            }
+          }
+        }
+      }
+    } else {
+      const allowedColors =
+        chartType === 'waterfall' ? WATERFALL_COLOR_FIELDS : COMMON_COLOR_FIELDS;
+      for (const key of allowedColors) {
+        const color = ownDataValue(colors, key);
+        if (color !== undefined && (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color))) {
+          errors.push(configIssue('INVALID_TYPE', pointer('/appearance/colors', key)));
+        }
       }
     }
   }
@@ -531,15 +710,19 @@ function validateChartConfigInternal(input: unknown): ValidationResult<ChartConf
     errors.push(configIssue('INVALID_CHART_TYPE', '/type'));
   }
 
-  const dataResult = validateSourceData(ownDataValue(config, 'data'));
+  const rawData = ownDataValue(config, 'data');
+  const dataResult = validateSourceData(rawData);
+  const comparison = dataResult.ok
+    ? dataResult.value.schemaVersion === '3.0.0'
+    : hasReadableComparisonSchema(rawData);
   if (!dataResult.ok) {
     errors.push(...dataResult.errors.map(prefixedIssue));
   } else if (
     (chartType === 'waterfall' &&
-      dataResult.value.schemaVersion === '2.0.0' &&
+      dataResult.value.schemaVersion !== '1.0.0' &&
       dataResult.value.dataKind === 'categorical') ||
     ((chartType === 'bar' || chartType === 'column') &&
-      !(dataResult.value.schemaVersion === '2.0.0' && dataResult.value.dataKind === 'categorical'))
+      !(dataResult.value.schemaVersion !== '1.0.0' && dataResult.value.dataKind === 'categorical'))
   ) {
     errors.push(validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/type'));
   }
@@ -560,7 +743,11 @@ function validateChartConfigInternal(input: unknown): ValidationResult<ChartConf
     errors.push(configIssue('INVALID_TYPE', '/height'));
   }
 
-  validateAppearance(config, chartType, errors);
+  const comparisonSeriesIds =
+    dataResult.ok && dataResult.value.schemaVersion === '3.0.0'
+      ? new Set(dataResult.value.series.map(series => series.id))
+      : undefined;
+  validateAppearance(config, chartType, comparison, comparisonSeriesIds, errors);
   validateEditor(config, errors);
 
   return errors.length === 0 ? validationSuccess(input as ChartConfig) : validationFailure(errors);
@@ -600,8 +787,8 @@ export function toFinancialChartAppearance(config: ChartConfig): FinancialChartA
       : {
           palette: {
             ...present('start', 'start' in colors ? colors.start : undefined),
-            ...present('positive', colors.positive),
-            ...present('negative', colors.negative),
+            ...present('positive', 'positive' in colors ? colors.positive : undefined),
+            ...present('negative', 'negative' in colors ? colors.negative : undefined),
             ...present('subtotal', 'subtotal' in colors ? colors.subtotal : undefined),
             ...present('group', colors.group),
             ...present('end', 'end' in colors ? colors.end : undefined),
@@ -633,7 +820,10 @@ export function toFinancialChartAppearance(config: ChartConfig): FinancialChartA
             ...present('backgroundOpacity', valueLabelOptions.backgroundOpacity),
           },
         }),
-    ...present('tooltip', appearance?.tooltip),
+    ...present(
+      'tooltip',
+      config.data.schemaVersion === '3.0.0' ? (appearance?.tooltip ?? true) : appearance?.tooltip,
+    ),
     ...(animation === undefined
       ? {}
       : {

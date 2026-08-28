@@ -1,6 +1,6 @@
 {
   "name": "tellplot",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Framework-neutral editable charts for DOM, React and Vue, built on AntV G2",
   "license": "MIT",
   "homepage": "https://tellplot.com",

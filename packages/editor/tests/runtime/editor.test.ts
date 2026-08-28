@@ -56,6 +56,38 @@ const replacementConfig: ChartConfig = {
   },
 };
 
+const comparisonConfig: ChartConfig = {
+  type: 'column',
+  data: {
+    schemaVersion: '3.0.0',
+    dataKind: 'categorical',
+    datasetId: 'comparison-runtime-fixture',
+    series: [
+      { id: 'actual', label: 'Actual' },
+      { id: 'budget', label: 'Budget' },
+    ],
+    items: [
+      {
+        id: 'north',
+        label: 'North',
+        values: [
+          { seriesId: 'actual', amount: 12 },
+          { seriesId: 'budget', amount: 10 },
+        ],
+      },
+      {
+        id: 'south',
+        label: 'South',
+        values: [
+          { seriesId: 'actual', amount: -4 },
+          { seriesId: 'budget', amount: 6 },
+        ],
+      },
+    ],
+  },
+  appearance: { labels: { value: 'never' }, animation: { enabled: false } },
+};
+
 let host: HTMLDivElement;
 
 beforeEach(() => {
@@ -71,6 +103,63 @@ afterEach(() => {
 });
 
 describe('createEditor', () => {
+  it('routes comparison projection to one private interval and recreates only structural registries', async () => {
+    const initialInstanceCount = g2Mock.instances.length;
+    const editor = createEditor(host, { config: comparisonConfig });
+    await waitFor(() => expect(g2Mock.instances.length).toBe(initialInstanceCount + 1));
+    const initialChart = g2Mock.instances.at(-1);
+    await waitFor(() => expect(initialChart?.options).toHaveBeenCalled());
+    const optionCalls = initialChart?.options.mock.calls as unknown as readonly (readonly [
+      unknown,
+    ])[];
+    const spec = optionCalls.at(-1)?.[0] as {
+      readonly children?: readonly { readonly key?: string; readonly type?: string }[];
+    };
+    const intervals = spec.children?.filter(
+      child => child.key === 'categorical-comparison-interval',
+    );
+    expect(intervals).toHaveLength(1);
+    expect(intervals?.[0]).toMatchObject({
+      key: 'categorical-comparison-interval',
+      type: 'interval',
+    });
+    expect(host.querySelector('[data-testid="tellplot-chart-stage"]')?.textContent).not.toContain(
+      '22',
+    );
+
+    editor.update({
+      config: {
+        ...comparisonConfig,
+        data: {
+          ...comparisonConfig.data,
+          series: comparisonConfig.data.series.map(series => ({
+            ...series,
+            label: `${series.label} renamed`,
+          })),
+        },
+      },
+    });
+    await waitFor(() => expect(initialChart?.options.mock.calls.length).toBeGreaterThan(1));
+    expect(g2Mock.instances.length).toBe(initialInstanceCount + 1);
+
+    editor.update({
+      config: {
+        ...comparisonConfig,
+        data: {
+          ...comparisonConfig.data,
+          series: [...comparisonConfig.data.series].reverse(),
+          items: comparisonConfig.data.items.map(item => ({
+            ...item,
+            values: [...item.values].reverse(),
+          })),
+        },
+      },
+    });
+    await waitFor(() => expect(g2Mock.instances.length).toBe(initialInstanceCount + 2));
+    expect(initialChart?.destroy).toHaveBeenCalledOnce();
+    editor.destroy();
+  });
+
   it('mounts the complete workbench and updates through shared commands', async () => {
     const views: ViewSpec[] = [];
     const editor = createEditor(host, { config, onViewChange: view => views.push(view) });

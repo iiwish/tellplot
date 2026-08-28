@@ -1,0 +1,150 @@
+schema_version: 1
+packet_id: EP-016-T143
+task_id: T143
+feature_id: 016-tellplot-v2-release-readiness
+packet_status: running
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  feature_spec: .ai-platform/specs/016-tellplot-v2-release-readiness/spec.md
+  requirements_checklist: .ai-platform/specs/016-tellplot-v2-release-readiness/checklists/requirements.md
+  technical_decision: .ai-platform/docs/technology-decision-record.md#tdr-026-tellplot-20-current-release-lineage
+  feature_plan: .ai-platform/specs/016-tellplot-v2-release-readiness/plan.md
+  work_graph: .ai-platform/specs/016-tellplot-v2-release-readiness/tasks.md
+  analysis: .ai-platform/specs/016-tellplot-v2-release-readiness/analysis.md
+  predecessor_packet: .ai-platform/specs/016-tellplot-v2-release-readiness/packets/T142.yaml
+  predecessor_evidence: .ai-platform/evidence/T142
+  g003_baseline: .ai-platform/evidence/T141
+  approval_gates:
+    goal_scope: Confirmed by user on 2026-08-28
+    g003_acceptance: Accepted by user on 2026-08-28
+    technical_plan_tdr_work_graph: Confirmed by user on 2026-08-28
+    remote_git: Not authorized
+    public_release: Not authorized
+
+work_unit:
+  title: 整合 Clean Source 并冻结最终 2.0 Artifact
+  goal: >-
+    Construct an isolated source from the explicitly recorded observed origin/main lineage, reviewed G003 tree and T142
+    release-only delta; preserve both bilingual README and 2.0 semantics; rebuild tellplot-2.0.0.tgz twice and atomically
+    freeze the final manifest/hash in descriptor, workflow and T143 evidence without changing shared Git or remote state.
+  requirements:
+    - REL2-FR-004
+    - REL2-FR-005
+    - REL2-NFR-002
+    - REL2-NFR-003
+    - REL2-NFR-005
+    - REL2-NFR-006
+  depends_on:
+    - T142 Needs_Review with three-lens review passed
+  blocks:
+    - T144
+    - T145
+  parallel: false
+  conflicts_with:
+    - T142
+    - T144
+    - README lineage
+    - release descriptor and workflow hash
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - README.md
+    - README.en.md
+    - .ai-platform/evidence/T141/predecessor-product-baseline.patch
+    - .ai-platform/evidence/T141/diff.patch
+    - .ai-platform/evidence/T141/tarball-manifest.json
+    - scripts/release/package-artifact.mjs
+    - scripts/release/rehearse-source.mjs
+    - scripts/release/current-release.json
+    - .github/workflows/publish-npm.yml
+  source_baseline:
+    current_head: cd90ddf3d27bb323c994b5ba01735a4972c46f48
+    observed_origin_main: 4d754cc9d635d097370b674633c972fb0ac199a1
+    observed_origin_change: README.md modified and README.en.md added by bilingual README lineage
+    freshness_claim: local_tracking_ref_only
+  existing_patterns:
+    - T141 uses external temporary Git index, exact path/mode/size/SHA manifests, forward/reverse replay and shared-index receipts.
+    - Candidate packaging uses canonical manifest ordering and deterministic gzip under exact Node 22.20.0.
+    - Source rehearsal excludes only approved generated video roots and must not copy prior evidence into the isolated source.
+  forbidden_changes:
+    - Any live fetch/pull/merge/rebase/stage/commit/push/tag or remote query.
+    - T131 evidence, lockfile, package behavior, public API/schema or private package version changes.
+    - Dropping either bilingual README navigation/content or approved G003 2.0 documentation semantics.
+
+execution_constraints:
+  allowed_files:
+    - README.md
+    - README.en.md
+    - scripts/release/current-release.*
+    - .github/workflows/publish-npm.yml
+    - .ai-platform/evidence/T143/**
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/tasks.md
+  shared_worktree: true
+  external_temporary_index_required: true
+  shared_index_hash_must_match_baseline: true
+  no_subdelegation: true
+  retry_budget: 2
+
+tdd_plan:
+  red:
+    - Prove the current reviewed source cannot replay cleanly on the observed origin/main README lineage or cannot close descriptor/hash parity.
+    - Add a focused bilingual/release receipt that detects dropping either lineage.
+  green:
+    - Apply the smallest semantic README integration and rebuild the current artifact from the isolated integrated source.
+    - Refresh descriptor, workflow hash and T143 manifest atomically from the fresh artifact.
+  refactor:
+    - Keep rehearsal helpers deterministic and private; do not alter package output after the final freeze.
+
+validation_loop:
+  commands:
+    - pnpm release:artifact
+    - pnpm release:artifact
+    - pnpm release:audit
+    - pnpm release:rehearse
+    - pnpm test:package
+    - git diff --check
+  expected_signals:
+    - Two consecutive tarballs have identical filename, size, files and SHA-256.
+    - Descriptor, workflow and T143 manifest name the same artifact and hash.
+    - Forward replay matches integrated source; reverse replay restores the exact base; shared index is unchanged.
+  failure_handling:
+    - Invalidate the freeze after any source, descriptor, workflow, toolchain or packlist change.
+    - Stop if observed origin/main integration requires remote Git or discarding either README lineage.
+
+evidence_contract:
+  root: .ai-platform/evidence/T143
+  required_files:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+    - source-manifest.json
+    - tarball-manifest.json
+    - artifacts/tellplot-2.0.0.tgz
+    - isolated-source-receipt.md
+  privacy:
+    - Normalize temporary paths and exclude prior evidence, credentials and business data.
+
+review_contract:
+  lenses:
+    - spec_compliance
+    - bug_and_code_quality
+    - qa_acceptance
+  pass_condition: Critical 0, High 0, Medium 0 unresolved
+
+handoff:
+  success_status: Needs_Review
+  next_task: T144
+  user_acceptance_required: false
+  remote_actions_authorized: false
+
+stop_conditions:
+  - T142 is not Needs_Review or has a blocking review finding.
+  - Shared Git/index/tag/remote would be changed.
+  - The artifact cannot be reproduced twice or hash facts diverge.
+  - Integration requires dropping confirmed G003 or bilingual README content.

@@ -1,6 +1,7 @@
 import type { Mark } from '@antv/g2';
 
 import type {
+  CategoricalComparisonProjection,
   GroupId,
   ResolvedFinancialChartAppearance,
   SourceItemId,
@@ -8,6 +9,7 @@ import type {
   ViewSpec,
 } from '@tellplot/core';
 import { collectLeafSourceIds, groupDepth, locateViewNode } from '@tellplot/core';
+import { comparisonFlipToInteriorLabelTransform } from '../rendering/g2/comparisonLabelTransform';
 import { createForegroundLabelStyle } from './labelStyle';
 
 interface VisibleProjectionDatum {
@@ -28,6 +30,10 @@ export interface ExpandedGroupRegion {
   readonly valueStart: number;
   readonly valueEnd: number;
   readonly labelValue: number;
+}
+
+interface ComparisonGroupLabelDatum extends ExpandedGroupRegion {
+  readonly helperKey: string;
 }
 
 interface ExpandedGroupRegionMarkOptions {
@@ -179,6 +185,72 @@ export function createExpandedGroupRegionLabelMark({
   };
 }
 
+/** Builds the comparison-only category-centered point label above every expanded group region. */
+export function createComparisonExpandedGroupRegionLabelMark({
+  regions,
+  categoryDomain,
+  valueDomain,
+  appearance,
+  denseCanvas,
+  transposed = false,
+}: ExpandedGroupRegionMarkOptions): Mark | undefined {
+  if (
+    !appearance.groupRegion.enabled ||
+    appearance.groupRegion.label !== 'auto' ||
+    denseCanvas ||
+    regions.length === 0
+  ) {
+    return undefined;
+  }
+  const labelStyle = appearance.groupRegion.labelStyle;
+  const inside = labelStyle.placement === 'inside';
+  const data: ComparisonGroupLabelDatum[] = regions.map(region => ({
+    ...region,
+    helperKey: JSON.stringify(['comparison-group-label', region.groupId]),
+  }));
+  const value = {
+    key: 'categorical-comparison-group-labels',
+    type: 'point',
+    data,
+    ...(transposed ? { coordinate: coordinate(true) } : {}),
+    encode: {
+      x: 'startNodeId',
+      y: 'labelValue',
+      key: 'helperKey',
+    },
+    scale: scales(categoryDomain, transposed, valueDomain),
+    axis: false,
+    legend: false,
+    labels: [
+      {
+        text: 'label',
+        position: transposed ? (inside ? 'left' : 'right') : inside ? 'bottom' : 'top',
+        transform: [
+          { type: comparisonFlipToInteriorLabelTransform, transposed },
+          { type: 'exceedAdjust' as const, bounds: 'main' as const },
+        ],
+        style: {
+          ...createForegroundLabelStyle(labelStyle),
+          dx: (region: ComparisonGroupLabelDatum) =>
+            transposed
+              ? (inside ? -1 : 1) *
+                (labelStyle.offset + Math.min(Math.max(region.depth - 1, 0), 2) * 10)
+              : 0,
+          dy: (region: ComparisonGroupLabelDatum) =>
+            transposed
+              ? 0
+              : (inside ? 1 : -1) *
+                (labelStyle.offset + Math.min(Math.max(region.depth - 1, 0), 2) * 12),
+        },
+      },
+    ],
+    style: { opacity: 0, pointerEvents: 'none' as const },
+    tooltip: false,
+    animate: false,
+  };
+  return value as unknown as Mark;
+}
+
 function visibleValueExtent(
   projection: readonly VisibleProjectionDatum[],
 ): readonly [number, number] | undefined {
@@ -266,6 +338,73 @@ export function projectExpandedGroupRegions(
       valueStart: valueExtent[0],
       valueEnd: valueExtent[1],
       labelValue: visibleUpperEdge(first) ?? valueExtent[1],
+    });
+  }
+
+  return regions.sort(
+    (left, right) =>
+      left.depth - right.depth ||
+      projection.findIndex(datum => datum.nodeId === left.startNodeId) -
+        projection.findIndex(datum => datum.nodeId === right.startNodeId) ||
+      left.groupId.localeCompare(right.groupId),
+  );
+}
+
+/** Projects comparison regions across all visible category-series values and the zero baseline. */
+export function projectComparisonExpandedGroupRegions(
+  viewSpec: ViewSpec,
+  projection: CategoricalComparisonProjection,
+): readonly ExpandedGroupRegion[] {
+  const collapsed = new Set(viewSpec.collapsedGroupIds);
+  const regions: ExpandedGroupRegion[] = [];
+
+  for (const group of Object.values(viewSpec.groups)) {
+    let ancestorId: ViewNodeId = group.id;
+    let hiddenByCollapsedAncestor = false;
+    const visited = new Set<ViewNodeId>();
+    while (!visited.has(ancestorId)) {
+      visited.add(ancestorId);
+      if (collapsed.has(ancestorId as GroupId)) {
+        hiddenByCollapsedAncestor = true;
+        break;
+      }
+      const location = locateViewNode(viewSpec, ancestorId);
+      if (location === undefined || location.containerId === 'root') {
+        break;
+      }
+      ancestorId = location.containerId;
+    }
+    if (hiddenByCollapsedAncestor) {
+      continue;
+    }
+
+    const leaves = new Set(collectLeafSourceIds(viewSpec, group.id));
+    const visible = projection.filter(datum =>
+      datum.sourceIds.some(sourceId => leaves.has(sourceId)),
+    );
+    const first = visible[0];
+    const last = visible.at(-1);
+    if (first === undefined || last === undefined) {
+      continue;
+    }
+    let minimum = 0;
+    let maximum = 0;
+    for (const datum of visible) {
+      for (const value of datum.values) {
+        minimum = Math.min(minimum, value.amount);
+        maximum = Math.max(maximum, value.amount);
+      }
+    }
+    regions.push({
+      regionId: `group-region:${group.id}`,
+      groupId: group.id,
+      label: group.label,
+      depth: groupDepth(viewSpec, group.id),
+      startNodeId: first.nodeId,
+      endNodeId: last.nodeId,
+      valueStart: minimum,
+      valueEnd: maximum,
+      labelValue: maximum,
     });
   }
 

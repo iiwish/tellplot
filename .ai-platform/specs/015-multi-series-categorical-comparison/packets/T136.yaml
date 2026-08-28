@@ -1,0 +1,349 @@
+schema_version: 1
+packet_id: EP-015-T136
+task_id: T136
+feature_id: 015-multi-series-categorical-comparison
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-multi-series-categorical-comparison/spec.md
+  requirements_checklists:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/checklists/requirements.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/checklists/public-contract.md
+  data_model: .ai-platform/specs/015-multi-series-categorical-comparison/data-model.md
+  public_contracts:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/public-api.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/validation.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/migration.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md#tdr-025-多序列分类比较与-g2-几何合同
+  feature_plan: .ai-platform/specs/015-multi-series-categorical-comparison/plan.md
+  work_graph: .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+  analysis: .ai-platform/specs/015-multi-series-categorical-comparison/analysis.md
+  predecessor_packet: .ai-platform/specs/015-multi-series-categorical-comparison/packets/T135.yaml
+  predecessor_evidence:
+    summary: .ai-platform/evidence/T135/summary.md
+    test_results: .ai-platform/evidence/T135/test-results.md
+    diff: .ai-platform/evidence/T135/diff.patch
+  approval_gates:
+    constitution: Confirmed
+    product_or_spec: Confirmed by user on 2026-08-12
+    exact_breaking_public_contract: Confirmed by user on 2026-08-12
+    requirements_checklists: Completed with no unresolved Critical/High/Medium findings
+    technical_plan_tdr_and_work_graph: Confirmed by user on 2026-08-12
+    analysis: Critical 0 / High 0 / Medium 0; Clear_For_T136
+    predecessor: >-
+      T135 is Needs_Review; spec-compliance, bug/code-quality and task-scope QA review passed with
+      Critical 0 / High 0 / Medium 0.
+    predecessor_baseline_exception: >-
+      The unchanged private @tellplot/editor@0.0.0 manifest conflicts with its stale internal 1.0.0 pack assertion.
+      This is a pre-existing non-T135 baseline exception: publint, ATTW, ESM/CJS imports and TypeScript consumers passed.
+      It does not authorize any package-version, assertion, dependency, release or published-lineage edit.
+
+work_unit:
+  title: 实现 Comparison Projection 与 State Invariants
+  goal: >-
+    实现唯一新增runtime export、逐series投影/聚合、category-only command/history与完整source update/session语义，
+    用不变量和property tests证明不跨series求和且不修改source。
+  epic: E015
+  stories:
+    - US-MSC-001
+    - US-MSC-002
+    - US-MSC-003
+    - US-MSC-005
+  requirements:
+    - MSC-FR-002
+    - MSC-FR-003
+    - MSC-FR-009
+    - MSC-NFR-001
+    - MSC-NFR-005
+    - MSC-NFR-006
+  priority: P0
+  depends_on:
+    - T135 Needs_Review
+    - T135 spec-compliance review passed
+  blocks:
+    - T137
+    - T138
+    - T139
+    - T140
+    - T141
+  parallel: false
+  conflicts_with:
+    - T135
+    - T137
+    - core categorical/session/store/public runtime export
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - packages/core/src/charts/categorical/types.ts
+    - packages/core/src/charts/categorical/comparisonTypes.ts
+    - packages/core/src/charts/categorical/projection.ts
+    - packages/core/src/domain/session.ts
+    - packages/core/src/domain/executeCommand.ts
+    - packages/core/src/domain/history.ts
+    - packages/core/src/domain/invariants.ts
+    - packages/core/src/domain/viewTree.ts
+    - packages/core/src/domain/chartPolicy.ts
+    - packages/core/src/interactions/groupSelection.ts
+    - packages/core/src/store/editorStore.ts
+    - packages/core/src/index.ts
+    - packages/core/tests/categorical/projectCategorical.test.ts
+    - packages/core/tests/domain/property-sequences.test.ts
+    - packages/core/tests/editorStore.test.ts
+    - packages/core/tests/public-api.mjs
+    - scripts/release/package-contracts.json
+    - scripts/release/validate-package-surface.mjs
+  existing_patterns:
+    - >-
+      projectCategorical validates source/view first, recursively traverses the narrative tree, uses Neumaier compensated
+      aggregation for collapsed groups, returns an atomic ValidationResult and never mutates source or view.
+    - >-
+      comparisonTypes.ts already defines the approved CategoricalComparisonDatum and result types from T135; T136 adds the
+      separate comparisonProjection.ts implementation rather than widening the v2 CategoricalDatum contract.
+    - >-
+      createEditorSession owns immutable source identity, schema-specific fingerprints, history stacks and processed action IDs;
+      executeCommand, history and viewTree remain the only category/group narrative mutation path.
+    - >-
+      createEditorStore validates complete options atomically, separates controlled and uncontrolled state, reconciles selection
+      by category/group node IDs and avoids synthetic command/view callbacks during host updates.
+    - >-
+      Public core symbols and the single-package facade are explicit allowlists checked by public-api, core package and
+      validate-package-surface fixtures; core stays free of G2, DOM, React and Vue imports.
+  interfaces_or_contracts:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/data-model.md#comparison-projection
+    - .ai-platform/specs/015-multi-series-categorical-comparison/data-model.md#compatibility-matrix
+    - .ai-platform/specs/015-multi-series-categorical-comparison/data-model.md#persistence-and-fingerprint
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/public-api.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/validation.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md#editor-update-matrix
+  projection_contract:
+    - Validate the complete source, source/view compatibility and narrative invariants before generation dispatch; return no partial data.
+    - Expanded groups recursively emit visible descendants; a collapsed group emits one group datum.
+    - Category values preserve declared source series order and canonicalize every amount equal to zero to positive zero.
+    - Each collapsed group uses one independent Neumaier accumulator per series in narrative leaf order; never calculate a cross-series total.
+    - >-
+      Any non-finite or unsafe accumulator fails the whole projection at
+      /items/{sourceIndex}/values/{seriesIndex}/amount with privacy-safe
+      { operation: groupAggregate, sourceIndex, seriesIndex } details.
+    - sourceIds contain only category leaf IDs in narrative leaf order, without duplicates or series IDs.
+    - Category locked equals its pin state; collapsed-group locked equals presence of a pinned descendant; order is zero-based projection order.
+    - >-
+      projectCategoricalComparison(SourceData, ViewSpec) is the only new runtime export. A compatible non-v3 pair returns
+      SOURCE_CONFLICT / INCOMPATIBLE_PROJECTOR_GENERATION /schemaVersion after compatibility validation.
+  state_contract:
+    - Commands, selection, pin, annotation, emphasis, grouping, collapse, history and undo/redo remain category/group-only.
+    - Source object identity and contents remain immutable; successful undo restores a deep-equal view.
+    - >-
+      A semantic source or series change creates a new fingerprint/session and clears history and processed IDs while preserving
+      only valid selection, without synthesizing command or view events.
+    - >-
+      A category source-order-only update preserves the valid current narrative order; category ID set or generation changes use
+      the approved controlled/uncontrolled/defaultView replacement rules.
+    - >-
+      A v3 amount or numeric metadata 0/-0-only change is fingerprint-equivalent, does not rebuild the session and still projects
+      and formats positive zero.
+    - Selection change is emitted exactly once only when the normalized category/group selection actually changes.
+  forbidden_changes:
+    - Adding any runtime export other than projectCategoricalComparison.
+    - Widening the v2 CategoricalDatum, CategoricalProjection or projectCategorical signature/return contract.
+    - Changing the public command union wire shape or introducing series/cell commands, selection or history state.
+    - Implementing editor/G2 presentation, scene receipt, direct manipulation, host adapters, export, docs, playground examples or package 2.0 work owned by T137-T140.
+    - Adding G2, DOM, React or Vue imports to core.
+    - Changing dependencies, lockfiles, package manifests, private package versions, the stale editor package assertion, published 1.0 lineage, T131 evidence, workflows, remote Git, tag, publish, release or production configuration.
+    - Editing files outside execution_constraints.allowed_files.
+
+execution_constraints:
+  branch_or_worktree: current main worktree with approved uncommitted G003 governance artifacts and reviewed T135 dependency baseline
+  known_preexisting_worktree_baseline:
+    governance:
+      - .ai-platform/docs/product-design.md
+      - .ai-platform/docs/tasks.md
+      - .ai-platform/docs/technology-decision-record.md
+      - .ai-platform/specs/015-multi-series-categorical-comparison/**
+      - .ai-platform/evidence/T135/**
+      - AGENTS.md
+      - docs/roadmap.md
+    t135_runtime_and_tests:
+      - apps/playground/src/ExampleWorkbench.tsx
+      - apps/playground/src/ShowcaseChart.tsx
+      - apps/playground/tests/schemaV3Guards.test.ts
+      - packages/core/src/charts/categorical/comparisonTypes.ts
+      - packages/core/src/charts/categorical/projection.ts
+      - packages/core/src/charts/waterfall/projection.ts
+      - packages/core/src/config/chartConfig.ts
+      - packages/core/src/domain/createInitialViewSpec.ts
+      - packages/core/src/domain/errors.ts
+      - packages/core/src/domain/history.ts
+      - packages/core/src/domain/ids.ts
+      - packages/core/src/domain/model.ts
+      - packages/core/src/domain/session.ts
+      - packages/core/src/domain/validation.ts
+      - packages/core/src/index.ts
+      - packages/core/src/interactions/groupSelection.ts
+      - packages/core/tests/config/comparison-chart-config.test.ts
+      - packages/core/tests/domain/persistence.test.ts
+      - packages/core/tests/domain/schema-v3.test.ts
+      - packages/core/tests/domain/validation.test.ts
+      - packages/core/tests/public-api.mjs
+      - packages/editor/tests/package/types-consumer.ts
+      - packages/tellplot/tests/package/consumer.tsx
+      - scripts/release/package-contracts.json
+      - scripts/release/validate-package-surface.mjs
+    baseline_evidence: .ai-platform/evidence/T135/diff.patch
+    rule: >-
+      Treat these changes as the reviewed predecessor baseline. Extend overlapping T136-owned files without reverting T135,
+      and stop if any other pre-existing change overlaps an allowed file. Capture the pre-edit status/diff in T136 evidence so
+      the task-local delta remains auditable even though the main worktree is intentionally uncommitted.
+  allowed_files:
+    - packages/core/src/charts/categorical/types.ts
+    - packages/core/src/charts/categorical/comparisonTypes.ts
+    - packages/core/src/charts/categorical/comparisonProjection.ts
+    - packages/core/src/charts/categorical/projection.ts
+    - packages/core/src/domain/session.ts
+    - packages/core/src/domain/executeCommand.ts
+    - packages/core/src/domain/history.ts
+    - packages/core/src/domain/invariants.ts
+    - packages/core/src/domain/viewTree.ts
+    - packages/core/src/domain/chartPolicy.ts
+    - packages/core/src/interactions/groupSelection.ts
+    - packages/core/src/store/editorStore.ts
+    - packages/core/src/index.ts
+    - "packages/core/tests/categorical/**"
+    - packages/core/tests/domain/commands.test.ts
+    - packages/core/tests/domain/history.test.ts
+    - packages/core/tests/domain/invariants.test.ts
+    - packages/core/tests/domain/immutability.test.ts
+    - packages/core/tests/domain/property-sequences.test.ts
+    - packages/core/tests/domain/recursive-groups.test.ts
+    - packages/core/tests/editorStore.test.ts
+    - packages/core/tests/public-api.mjs
+    - scripts/release/package-contracts.json
+    - scripts/release/validate-package-surface.mjs
+    - ".ai-platform/evidence/T136/**"
+    - .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+  allowed_file_qualifiers:
+    packages/core/src/charts/categorical/types.ts: preserve the exact v2 contract; only a genuinely shared private helper is allowed
+    packages/core/src/charts/categorical/comparisonTypes.ts: consume the T135 types; edit only if implementation proves a precise type defect
+    packages/core/src/index.ts: add the single projectCategoricalComparison runtime export and projection type wiring only
+    scripts/release/validate-package-surface.mjs: consume the T135 exact-surface gate only
+    .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md: T136 status field only
+  test_targets:
+    - packages/core/tests/categorical/projectCategoricalComparison.test.ts
+    - packages/core/tests/categorical/comparison-invariants.test.ts
+    - packages/core/tests/categorical/comparison-property-sequences.test.ts
+    - packages/core/tests/domain/commands.test.ts
+    - packages/core/tests/domain/history.test.ts
+    - packages/core/tests/domain/immutability.test.ts
+    - packages/core/tests/domain/recursive-groups.test.ts
+    - packages/core/tests/editorStore.test.ts
+    - packages/core/tests/public-api.mjs
+  ownership_notes:
+    - Preserve every approved T135 change and every unrelated user change; never reset, restore or overwrite the worktree.
+    - Do not broaden the categorical test glob beyond comparison projection/invariant/property coverage and required legacy regressions.
+    - T137-T141 remain Draft and must not receive packets, evidence or implementation edits during T136.
+    - The T135 editor package baseline exception is read-only dependency context and not a T136 repair target.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    steps: public projector、per-series aggregation、overflow、zero-sign、commands与update matrix tests。
+    command: pnpm exec vitest run packages/core/tests/categorical packages/core/tests/domain/commands.test.ts packages/core/tests/domain/history.test.ts packages/core/tests/domain/property-sequences.test.ts packages/core/tests/editorStore.test.ts
+    expected_failure: >-
+      Focused tests fail because projectCategoricalComparison, independent per-series aggregation, comparison invariants or
+      schema-specific store/session update behavior is missing; failures must not come from a fixture, timeout or environment error.
+  green:
+    steps: 最小comparison traversal/accumulators与schema-specific store/session branches。
+    command: pnpm exec vitest run packages/core/tests/categorical packages/core/tests/domain/commands.test.ts packages/core/tests/domain/history.test.ts packages/core/tests/domain/property-sequences.test.ts packages/core/tests/editorStore.test.ts
+    expected_signal: >-
+      Comparison projection, per-series atomic aggregation, category-only command/history and update-matrix tests pass while
+      source identity stays immutable and the v2 projector contract remains exact.
+  refactor:
+    steps: 只抽取真实共享tree/sum helpers，不把v2/v3 public datum宽化。
+    command: pnpm --filter @tellplot/core test && pnpm --filter @tellplot/core typecheck && pnpm release:architecture
+    expected_signal: Core tests, strict types and architecture remain green after only proven shared helper cleanup.
+
+validation_loop:
+  commands:
+    - pnpm exec vitest run packages/core/tests/categorical packages/core/tests/domain/commands.test.ts packages/core/tests/domain/history.test.ts packages/core/tests/domain/property-sequences.test.ts packages/core/tests/editorStore.test.ts
+    - pnpm --filter @tellplot/core test
+    - pnpm test:coverage
+    - pnpm --filter @tellplot/core typecheck
+    - pnpm --filter @tellplot/core build
+    - pnpm --filter @tellplot/core test:package
+    - node scripts/release/validate-package-surface.mjs
+    - pnpm test:package
+    - pnpm release:architecture
+    - pnpm lint
+    - git diff --check
+  expected_signals:
+    - Every ordinary category and collapsed group contains exactly 2-4 values in current source series order.
+    - Per-series aggregation matches independent source sums; any unsafe series fails the complete projection with a privacy-safe source value path.
+    - Property sequences prove no lost/duplicate sources, no cross-series total, immutable source identity and deep-equal undo.
+    - Wrong-projector dispatch preserves source and compatibility precedence and returns the dedicated generation reason only for a valid compatible pair.
+    - Source/category/series updates produce only the approved session, history, selection and callback outcomes.
+    - The exact public runtime allowlist adds one function and no editor, G2, package-version, dependency or release surface.
+  retry_budget: 2
+  failure_policy:
+    first_failure: Diagnose and fix only a T136-scoped projector, aggregation, invariant, command, history, session, store, public-export or test issue.
+    second_failure: Classify a scope, approved-contract, predecessor-baseline, user-change, toolchain or environment blocker before any further edit.
+    beyond_budget: Stop, keep tests truthful and record blocked evidence; never delete tests, weaken assertions, change timeouts or skip a required command.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T136/summary.md
+  test_results: .ai-platform/evidence/T136/test-results.md
+  diff: .ai-platform/evidence/T136/diff.patch
+  required:
+    - changed files, separated from the recorded T135 predecessor baseline
+    - pre-edit worktree status and baseline-diff receipt
+    - RED failure command, output and matching expected reason
+    - GREEN and REFACTOR results
+    - every validation command and result
+    - diff summary copied from real git diff output
+    - residual risks
+    - property and invariant receipt
+    - spec-compliance review
+    - explicit confirmation of source immutability, no cross-series total and no command-union wire change
+    - explicit confirmation of no editor/G2/framework, dependency/lockfile, package-version/assertion, T131, remote or release change
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - Projection validation precedence, deterministic DFS order, source-ordered values, positive-zero output and atomic per-series overflow.
+    - Category/group-only command, selection, history and update semantics with immutable source and deep-equal undo/redo.
+    - Exact v2 projector/datum compatibility, exactly one new runtime export, privacy-safe errors and core import boundary.
+    - T135 baseline preservation and absence of editor/G2/package/release or T137 scope leakage.
+  acceptance_rule: >-
+    T136 may enter Needs_Review only after validation and all review passes. It cannot be marked Accepted without the later
+    explicit G003 goal-level user acceptance after T141.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - Integrate T136 evidence and review, then make T137 Ready and generate only the T137 packet.
+    - Keep the current worktree for the approved serial G003 sequence.
+  prohibited_handoff:
+    - stage, commit, push, pull request, tag, publish, release or production promotion without separate authorization
+
+stop_conditions:
+  - T135 is not Needs_Review, its evidence/review is missing or stale, or its final review gains a Critical/High finding.
+  - The pre-edit worktree differs from the recorded governance and reviewed T135 baseline in a file that overlaps T136 ownership.
+  - An unrelated user change overlaps an allowed runtime or test file and cannot be preserved without ambiguity.
+  - Execution requires a file outside the exact allowed-files list or a broader use than its qualifier.
+  - Execution requires changing an approved public, validation, editor, migration, data-model, plan, TDR or work-graph contract.
+  - A RED test cannot be made to fail for the expected missing projector, per-series aggregation, invariant or update-matrix reason.
+  - Passing T136 requires widening the v2 public datum/projector contract, changing the command wire union or adding series/cell state.
+  - Passing T136 requires calculating a cross-series total, mutating source, returning partial overflow data or exposing raw business values in errors/evidence.
+  - Passing T136 requires editor/G2/framework, rendering, receipt, direct-manipulation, export, docs, playground-example, local candidate or T137-T141 work.
+  - Passing T136 requires changing the T135 editor package baseline exception, any dependency/lockfile/package version, published 1.0 lineage, T131 evidence, workflow, remote Git, tag, publish, release or production configuration.
+  - A validation command is unavailable or the retry budget is exhausted.
+  - Analysis gains an unresolved Critical or High finding.

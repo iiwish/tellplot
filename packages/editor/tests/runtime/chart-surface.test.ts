@@ -20,6 +20,13 @@ const runtimeMock = vi.hoisted(() => {
       readonly value: unknown;
       readonly status: 'success' | 'failure';
       readonly latest: boolean;
+      readonly generation?: number;
+      readonly origin?: 'render' | 'resize';
+      readonly geometryAuthoritative?: boolean;
+    }) => void;
+    readonly onGeometryInvalidated?: (invalidation: {
+      readonly generation: number;
+      readonly reason: 'render' | 'resize' | 'dispose';
     }) => void;
   }
 
@@ -27,17 +34,52 @@ const runtimeMock = vi.hoisted(() => {
     readonly options: RuntimeOptions;
     readonly requests: unknown[];
     context: unknown;
+    generation: number;
+    structuralIdentity: unknown;
+    readonly dismissTooltip: ReturnType<typeof vi.fn>;
   }
 
   const records: RuntimeRecord[] = [];
   const create = vi.fn((options: RuntimeOptions) => {
-    const record: RuntimeRecord = { options, requests: [], context: undefined };
+    const record: RuntimeRecord = {
+      options,
+      requests: [],
+      context: undefined,
+      generation: 0,
+      structuralIdentity: undefined,
+      dismissTooltip: vi.fn(),
+    };
     records.push(record);
     return {
-      request: vi.fn((request: unknown) => record.requests.push(request)),
+      request: vi.fn((request: unknown) => {
+        const details = request as {
+          readonly structuralIdentity?: unknown;
+          readonly invalidateGeometry?: boolean;
+        };
+        const identity = details.structuralIdentity;
+        if (identity !== record.structuralIdentity) {
+          record.structuralIdentity = identity;
+          record.generation += 1;
+        }
+        if (details.invalidateGeometry !== false) {
+          record.options.onGeometryInvalidated?.({
+            generation: record.generation,
+            reason: 'render',
+          });
+        }
+        record.requests.push(request);
+      }),
       finishAnimations: vi.fn(),
+      dismissTooltip: record.dismissTooltip,
       getContext: vi.fn(() => record.context),
-      dispose: vi.fn(),
+      getGeneration: vi.fn(() => record.generation),
+      dispose: vi.fn(() => {
+        record.generation += 1;
+        record.options.onGeometryInvalidated?.({
+          generation: record.generation,
+          reason: 'dispose',
+        });
+      }),
     };
   });
 
@@ -74,9 +116,133 @@ const view: ViewSpec = {
 const state: ChartSurfaceState = {
   config,
   view,
-  chart: { family: 'categorical', chartType: 'bar', projection: [] },
+  chart: { family: 'categorical', generation: 'scalar', chartType: 'bar', projection: [] },
   messages: editorMessages('en-US'),
 };
+
+const comparisonState: ChartSurfaceState = {
+  config: {
+    type: 'column',
+    data: {
+      schemaVersion: '3.0.0',
+      dataKind: 'categorical',
+      datasetId: 'comparison-chart-surface',
+      series: [
+        { id: 'actual', label: 'Actual' },
+        { id: 'budget', label: 'Budget' },
+      ],
+      items: [
+        {
+          id: 'alpha',
+          label: 'Alpha',
+          values: [
+            { seriesId: 'actual', amount: 10 },
+            { seriesId: 'budget', amount: -8 },
+          ],
+        },
+        {
+          id: 'beta',
+          label: 'Beta',
+          values: [
+            { seriesId: 'actual', amount: 20 },
+            { seriesId: 'budget', amount: -12 },
+          ],
+        },
+      ],
+    },
+  },
+  view: {
+    schemaVersion: '3.0.0',
+    chartType: 'column',
+    datasetId: 'comparison-chart-surface',
+    revision: 0,
+    rootOrder: ['alpha', 'beta'],
+    groups: {},
+    collapsedGroupIds: [],
+    pinnedItemIds: [],
+    annotations: {},
+    emphasis: {},
+  },
+  chart: {
+    family: 'categorical',
+    generation: 'comparison',
+    chartType: 'column',
+    projection: [
+      {
+        nodeId: 'alpha',
+        label: 'Alpha',
+        values: [
+          { seriesId: 'actual', label: 'Actual', amount: 10 },
+          { seriesId: 'budget', label: 'Budget', amount: -8 },
+        ],
+        kind: 'category',
+        sourceIds: ['alpha'],
+        locked: false,
+        order: 0,
+      },
+      {
+        nodeId: 'beta',
+        label: 'Beta',
+        values: [
+          { seriesId: 'actual', label: 'Actual', amount: 20 },
+          { seriesId: 'budget', label: 'Budget', amount: -12 },
+        ],
+        kind: 'category',
+        sourceIds: ['beta'],
+        locked: false,
+        order: 1,
+      },
+    ],
+  },
+  messages: editorMessages('en-US'),
+};
+
+function comparisonElement(
+  nodeId: 'alpha' | 'beta',
+  seriesId: 'actual' | 'budget',
+  min: readonly [number, number],
+  max: readonly [number, number],
+): Record<string, unknown> {
+  const elementKey = JSON.stringify(['comparison-element', nodeId, seriesId]);
+  return {
+    markType: 'interval',
+    __data__: {
+      viewKey: 'categorical-comparison-view',
+      markKey: 'categorical-comparison-interval',
+      key: elementKey,
+      data: { nodeId, seriesId, elementKey },
+    },
+    getBounds: () => ({ min, max }),
+  };
+}
+
+function comparisonContext(includeBudget = true): unknown {
+  return {
+    canvas: {
+      document: {
+        getElementsByClassName: () => [
+          comparisonElement('beta', 'actual', [50, 10], [60, 70]),
+          comparisonElement('alpha', 'actual', [10, 20], [20, 70]),
+          ...(includeBudget
+            ? [
+                comparisonElement('beta', 'budget', [62, 40], [72, 80]),
+                comparisonElement('alpha', 'budget', [22, 50], [32, 90]),
+              ]
+            : []),
+          {
+            markType: 'point',
+            __data__: {
+              viewKey: 'categorical-comparison-view',
+              markKey: 'categorical-comparison-value-label-anchor',
+              data: { nodeId: 'alpha', seriesId: 'actual' },
+            },
+            getBounds: () => ({ min: [15, 20], max: [15, 20] }),
+          },
+        ],
+      },
+    },
+  };
+}
 
 function createCallbacks() {
   return {
@@ -144,6 +310,7 @@ describe('chart surface render recovery', () => {
       },
       chart: {
         family: 'categorical',
+        generation: 'scalar',
         chartType: 'column',
         projection: [
           {
@@ -293,6 +460,7 @@ describe('chart surface render recovery', () => {
       },
       chart: {
         family: 'categorical',
+        generation: 'scalar',
         chartType: 'column',
         projection: [
           {
@@ -396,7 +564,12 @@ describe('chart surface render recovery', () => {
     const columnState: ChartSurfaceState = {
       config: { ...config, type: 'column' },
       view: { ...view, chartType: 'column' },
-      chart: { family: 'categorical', chartType: 'column', projection: [] },
+      chart: {
+        family: 'categorical',
+        generation: 'scalar',
+        chartType: 'column',
+        projection: [],
+      },
       messages: state.messages,
     };
     surface.update(columnState);
@@ -513,6 +686,7 @@ describe('chart surface render recovery', () => {
       },
       chart: {
         family: 'categorical',
+        generation: 'scalar',
         chartType: 'column',
         projection: [
           {
@@ -596,6 +770,12 @@ describe('chart surface render recovery', () => {
     surface.update(state);
     const runtime = latestRuntime();
     const pointerDown = runtime.options.events.find(event => event.name === 'plot:pointerdown');
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+    });
     pointerDown?.listener({ pointerId: 7, canvas: { x: 20, y: 30 } });
 
     expect(surface.element.dataset['interactionState']).toBe('selecting');
@@ -626,7 +806,7 @@ describe('chart surface render recovery', () => {
     pointerDown?.listener({ pointerId: 7, canvas: { x: 20, y: 30 } });
     surface.preview({
       ...state,
-      chart: { family: 'categorical', chartType: 'bar', projection: [] },
+      chart: { family: 'categorical', generation: 'scalar', chartType: 'bar', projection: [] },
     });
     const failedPreview = latestRequestValue(runtime);
 
@@ -672,6 +852,373 @@ describe('chart surface render recovery', () => {
       code: 'CHART_RENDER_ERROR',
       path: '/chart',
     });
+    surface.destroy();
+  });
+
+  it('uses every registered comparison series as one category drag with a 2D union ghost', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    surface.update(comparisonState);
+    const runtime = latestRuntime();
+    runtime.context = comparisonContext();
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+    });
+    const elementDown = runtime.options.events.find(event => event.name === 'element:pointerdown');
+    const move = runtime.options.events.find(event => event.name === 'plot:pointermove');
+    const up = runtime.options.events.find(event => event.name === 'plot:pointerup');
+
+    elementDown?.listener({
+      pointerId: 21,
+      canvas: { x: 25, y: 60 },
+      data: {
+        data: {
+          nodeId: 'alpha',
+          seriesId: 'budget',
+          elementKey: '["comparison-element","alpha","budget"]',
+        },
+      },
+    });
+    move?.listener({ pointerId: 21, canvas: { x: 65, y: 60 } });
+
+    const overlay = surface.element.querySelector<HTMLElement>(
+      '[data-testid="chart-drag-overlay"]',
+    );
+    expect(overlay?.style.width).toBe('22px');
+    expect(overlay?.style.height).toBe('70px');
+    expect(overlay?.style.transform).toBe('translate3d(50px, 20px, 0)');
+    expect(surface.element.dataset['interactionState']).toBe('dragging');
+
+    runtime.context = comparisonContext(false);
+    elementDown?.listener({ pointerId: 99, canvas: { x: 0, y: 0 } });
+    expect(surface.element.dataset['interactionState']).toBe('dragging');
+
+    up?.listener({ pointerId: 21, canvas: { x: 65, y: 60 } });
+
+    expect(callbacks.onMove).toHaveBeenCalledOnce();
+    expect(callbacks.onMove).toHaveBeenCalledWith('alpha', { containerId: 'root', index: 1 });
+    expect(callbacks.onSelect).not.toHaveBeenCalled();
+    surface.destroy();
+  });
+
+  it('fails comparison chart interaction closed for a partial receipt', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    surface.update(comparisonState);
+    const runtime = latestRuntime();
+    runtime.context = comparisonContext(false);
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+    });
+    runtime.options.events
+      .find(event => event.name === 'element:pointerdown')
+      ?.listener({
+        pointerId: 22,
+        canvas: { x: 15, y: 40 },
+        data: {
+          data: {
+            nodeId: 'alpha',
+            seriesId: 'actual',
+            elementKey: '["comparison-element","alpha","actual"]',
+          },
+        },
+      });
+
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+    expect(callbacks.onSelect).not.toHaveBeenCalled();
+    expect(callbacks.onMove).not.toHaveBeenCalled();
+    surface.destroy();
+  });
+
+  it('treats an inactive comparison cluster gap as marquee and cancels on geometry invalidation', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    surface.update(comparisonState);
+    const runtime = latestRuntime();
+    runtime.context = comparisonContext();
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+    });
+    const plotDown = runtime.options.events.find(event => event.name === 'plot:pointerdown');
+    plotDown?.listener({ pointerId: 23, canvas: { x: 21, y: 30 } });
+
+    expect(surface.element.dataset['interactionState']).toBe('selecting');
+    runtime.options.onGeometryInvalidated?.({ generation: runtime.generation, reason: 'resize' });
+
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+    expect(callbacks.onInteractionChange).toHaveBeenLastCalledWith({ state: 'idle' });
+    expect(callbacks.onInteractionAbort).not.toHaveBeenCalled();
+    expect(callbacks.onRenderError).not.toHaveBeenCalled();
+    expect(runtime.dismissTooltip).toHaveBeenCalled();
+    expect(callbacks.onMove).not.toHaveBeenCalled();
+    expect(callbacks.onMarqueeSelection).not.toHaveBeenCalled();
+    surface.destroy();
+  });
+
+  it('keeps comparison blocked for non-authoritative resize geometry without a render error', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    surface.update(comparisonState);
+    const runtime = latestRuntime();
+    runtime.context = comparisonContext();
+    const value = latestRequestValue(runtime);
+
+    runtime.options.onRenderSettled({
+      value,
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+      origin: 'resize',
+      geometryAuthoritative: false,
+    });
+    runtime.options.events
+      .find(event => event.name === 'element:pointerdown')
+      ?.listener({
+        pointerId: 24,
+        canvas: { x: 15, y: 40 },
+        data: {
+          data: {
+            nodeId: 'alpha',
+            seriesId: 'actual',
+            elementKey: '["comparison-element","alpha","actual"]',
+          },
+        },
+      });
+
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+    expect(surface.element.dataset['renderState']).toBe('rendering');
+    expect(callbacks.onRenderError).not.toHaveBeenCalled();
+    expect(callbacks.onMove).not.toHaveBeenCalled();
+    expect(callbacks.onSelect).not.toHaveBeenCalled();
+
+    runtime.options.onRenderSettled({
+      value,
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+      origin: 'resize',
+      geometryAuthoritative: true,
+    });
+    expect(surface.element.dataset['renderState']).toBe('ready');
+    surface.destroy();
+  });
+
+  it('preserves scalar ready state for non-authoritative resize geometry', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    surface.update(state);
+    const runtime = latestRuntime();
+
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+      origin: 'resize',
+      geometryAuthoritative: false,
+    });
+
+    expect(surface.element.dataset['renderState']).toBe('ready');
+    expect(callbacks.onRenderError).not.toHaveBeenCalled();
+    surface.destroy();
+  });
+
+  it('blocks comparison interaction until an authoritative null-preview restore settles', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    surface.update(comparisonState);
+    const runtime = latestRuntime();
+    runtime.context = comparisonContext();
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+      geometryAuthoritative: true,
+    });
+
+    surface.preview(comparisonState);
+    const previewRequest = runtime.requests.at(-1) as {
+      readonly value?: { readonly authoritative?: unknown };
+      readonly invalidateGeometry?: unknown;
+    };
+    expect(previewRequest.value?.authoritative).toBe(false);
+    expect(previewRequest.invalidateGeometry).toBe(false);
+
+    surface.preview(null);
+    const restoreRequest = runtime.requests.at(-1) as {
+      readonly value?: { readonly authoritative?: unknown };
+      readonly invalidateGeometry?: unknown;
+    };
+    expect(restoreRequest.value?.authoritative).toBe(true);
+    expect(restoreRequest.invalidateGeometry).toBe(true);
+    expect(surface.element.dataset['renderState']).toBe('rendering');
+
+    const elementDown = runtime.options.events.find(event => event.name === 'element:pointerdown');
+    const move = runtime.options.events.find(event => event.name === 'plot:pointermove');
+    const event = {
+      pointerId: 26,
+      canvas: { x: 15, y: 40 },
+      data: {
+        data: {
+          nodeId: 'alpha',
+          seriesId: 'actual',
+          elementKey: '["comparison-element","alpha","actual"]',
+        },
+      },
+    };
+    elementDown?.listener(event);
+    move?.listener({ pointerId: 26, canvas: { x: 65, y: 60 } });
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+      geometryAuthoritative: true,
+    });
+    expect(surface.element.dataset['renderState']).toBe('ready');
+    elementDown?.listener(event);
+    move?.listener({ pointerId: 26, canvas: { x: 65, y: 60 } });
+    expect(surface.element.dataset['interactionState']).toBe('dragging');
+    surface.destroy();
+  });
+
+  it('owns comparison preview restores without rendering a bare null preview', () => {
+    const surface = createChartSurface(document, createCallbacks());
+    surface.update(comparisonState);
+    const runtime = latestRuntime();
+    const initialRequestCount = runtime.requests.length;
+
+    surface.preview(null);
+    expect(runtime.requests).toHaveLength(initialRequestCount);
+
+    surface.preview(comparisonState);
+    expect(runtime.requests).toHaveLength(initialRequestCount + 1);
+    surface.preview(null);
+    expect(runtime.requests).toHaveLength(initialRequestCount + 2);
+    expect(
+      (
+        runtime.requests.at(-1) as {
+          readonly value?: { readonly authoritative?: unknown };
+        }
+      ).value?.authoritative,
+    ).toBe(true);
+
+    surface.update(comparisonState);
+    const updatedRequestCount = runtime.requests.length;
+    surface.preview(null);
+    expect(runtime.requests).toHaveLength(updatedRequestCount);
+
+    surface.preview(comparisonState);
+    surface.destroy();
+    const destroyedRequestCount = runtime.requests.length;
+    surface.preview(null);
+    expect(runtime.requests).toHaveLength(destroyedRequestCount);
+  });
+
+  it('keeps an active comparison drag across a null preview until idle restore', () => {
+    const callbacks = createCallbacks();
+    const surface = createChartSurface(document, callbacks);
+    surface.update(comparisonState);
+    const runtime = latestRuntime();
+    runtime.context = comparisonContext();
+    runtime.options.onRenderSettled({
+      value: latestRequestValue(runtime),
+      status: 'success',
+      latest: true,
+      generation: runtime.generation,
+      geometryAuthoritative: true,
+    });
+    const elementDown = runtime.options.events.find(event => event.name === 'element:pointerdown');
+    const move = runtime.options.events.find(event => event.name === 'plot:pointermove');
+    const up = runtime.options.events.find(event => event.name === 'plot:pointerup');
+    const event = {
+      pointerId: 27,
+      canvas: { x: 15, y: 40 },
+      data: {
+        data: {
+          nodeId: 'alpha',
+          seriesId: 'actual',
+          elementKey: '["comparison-element","alpha","actual"]',
+        },
+      },
+    };
+
+    elementDown?.listener(event);
+    move?.listener({ pointerId: 27, canvas: { x: 65, y: 60 } });
+    expect(surface.element.dataset['interactionState']).toBe('dragging');
+    expect(callbacks.onInteractionChange).toHaveBeenLastCalledWith({
+      state: 'dragging',
+      itemId: 'alpha',
+      target: expect.objectContaining({ nodeId: 'beta' }),
+    });
+    surface.preview(comparisonState);
+
+    move?.listener({ pointerId: 27, canvas: { x: 25, y: 60 } });
+    expect(callbacks.onInteractionChange).toHaveBeenLastCalledWith({
+      state: 'dragging',
+      itemId: 'alpha',
+      target: null,
+    });
+    surface.preview(null);
+    const invalidTargetRestore = runtime.requests.at(-1) as {
+      readonly value?: { readonly authoritative?: unknown };
+      readonly invalidateGeometry?: unknown;
+    };
+    expect(invalidTargetRestore.value?.authoritative).toBe(false);
+    expect(invalidTargetRestore.invalidateGeometry).toBe(false);
+    expect(surface.element.dataset['interactionState']).toBe('dragging');
+
+    move?.listener({ pointerId: 27, canvas: { x: 65, y: 60 } });
+    surface.preview(comparisonState);
+    up?.listener({ pointerId: 27, canvas: { x: 65, y: 60 } });
+    expect(callbacks.onMove).toHaveBeenCalledOnce();
+    expect(surface.element.dataset['interactionState']).toBe('idle');
+
+    surface.preview(null);
+    const idleRestore = runtime.requests.at(-1) as {
+      readonly value?: { readonly authoritative?: unknown };
+      readonly invalidateGeometry?: unknown;
+    };
+    expect(idleRestore.value?.authoritative).toBe(true);
+    expect(idleRestore.invalidateGeometry).toBe(true);
+    const restoredRequestCount = runtime.requests.length;
+    surface.preview(null);
+    expect(runtime.requests).toHaveLength(restoredRequestCount);
+    surface.destroy();
+  });
+
+  it('preserves scalar bare null preview rendering', () => {
+    const surface = createChartSurface(document, createCallbacks());
+    surface.update(state);
+    const runtime = latestRuntime();
+    const initialRequestCount = runtime.requests.length;
+
+    surface.preview(null);
+
+    expect(runtime.requests).toHaveLength(initialRequestCount + 1);
+    expect(
+      (
+        runtime.requests.at(-1) as {
+          readonly value?: { readonly authoritative?: unknown };
+          readonly invalidateGeometry?: unknown;
+        }
+      ).value?.authoritative,
+    ).toBe(true);
+    expect(
+      (runtime.requests.at(-1) as { readonly invalidateGeometry?: unknown }).invalidateGeometry,
+    ).toBe(true);
     surface.destroy();
   });
 });

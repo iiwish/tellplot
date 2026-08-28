@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T141",
+  "attempt": "T141-A002",
+  "mutationAllowed": false,
+  "count": 15,
+  "files": [
+    {
+      "path": ".ai-platform/evidence/T131/artifacts/tellplot-1.0.0.tgz",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 485325,
+      "sha256": "e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e"
+    },
+    {
+      "path": ".ai-platform/evidence/T131/diff.patch",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 214377,
+      "sha256": "2d518265990aa07de77419da3bd44b39451a333085cf51a756fb3761434d53fe"
+    },
+    {
+      "path": ".ai-platform/evidence/T131/review.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2098,
+      "sha256": "bf417be0e38ecfe454b615502a663969c72d1c2e02b95e3ffa79548b4d3e5cd9"
+    },
+    {
+      "path": ".ai-platform/evidence/T131/summary.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2871,
+      "sha256": "ad19cf6ee420daa7022cac1d75f2cfac72406ad53765527e2c545a2ba84486f0"
+    },
+    {
+      "path": ".ai-platform/evidence/T131/tarball-manifest.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2729,
+      "sha256": "3a8bbc957789686d35de90e3a8f873bed0f0095d5685334e353bd918d364a0be"
+    },
+    {
+      "path": ".ai-platform/evidence/T131/test-results.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2723,
+      "sha256": "61d24f1fb3f04401e0ed7868b22498a491ea137277a91f25432f73131400c632"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3276,
+      "sha256": "d7bb4575716149d5d7c43fb1e182bdf5c0cd560dde3b385b267592441a39f956"
+    },
+    {
+      "path": ".github/workflows/publish-npm.yml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7487,
+      "sha256": "3dfeeca8157f3191159aeacc3efba652e5515168664b501d3d04598d1d9f1210"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 156914,
+      "sha256": "c4d9c91e3868b48fdfd63cba648a19eca0db5e865e4bee3092acf3683e906fd2"
+    },
+    {
+      "path": "scripts/release/audit-release.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6484,
+      "sha256": "87e5be80d01034546e99e82aff47e6ead85e0884b21d4ff7aa822ada70b717a9"
+    },
+    {
+      "path": "scripts/release/check-package-availability.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 5938,
+      "sha256": "c6641c938bbd53112fcf1864eb6b50c0d7c0d3c1a5c147f65b52db354a58f70c"
+    },
+    {
+      "path": "scripts/release/check-stable.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 946,
+      "sha256": "72a7ecefdba7cdd3968a93391903269da0ab68e53b5df7a0df0a2e7e177c8589"
+    },
+    {
+      "path": "scripts/release/package-artifact.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4921,
+      "sha256": "df9c32f32b2cd9b2a4fdaf8c6801d97cbbebb81d12b1e8e7529cba2a92cba568"
+    },
+    {
+      "path": "scripts/release/preflight-public.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 16808,
+      "sha256": "7bf401d26eb1eb62f2684a2c27affea6dc6e5ffd8c8f247249237907fdde84f6"
+    },
+    {
+      "path": "scripts/release/rehearse-source.mjs",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 1984,
+      "sha256": "46bd0623ca1db29153c34b5cc7798957a4f9b0cb432176683991f6c66bc3477d"
+    }
+  ]
+}

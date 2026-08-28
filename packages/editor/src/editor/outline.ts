@@ -1,6 +1,8 @@
 import {
   collectLeafSourceIds,
   ownGroup,
+  type CategoricalComparisonDatum,
+  type CategoricalComparisonProjection,
   type CategoricalDatum,
   type CategoricalProjection,
   type SourceItemId,
@@ -21,11 +23,12 @@ export interface OutlineEntry {
   readonly kind: 'anchor' | 'contribution' | 'group';
   readonly expanded?: boolean;
   readonly groupSize?: number;
+  readonly seriesCount?: number;
 }
 
 function groupEntry(
   group: ViewGroup,
-  datum: WaterfallDatum | CategoricalDatum | undefined,
+  datum: WaterfallDatum | CategoricalDatum | CategoricalComparisonDatum | undefined,
   expanded: boolean,
   view: ViewSpec,
   level: number,
@@ -34,7 +37,7 @@ function groupEntry(
   return {
     nodeId: group.id,
     label: group.label,
-    amount: datum?.amount ?? null,
+    amount: datum !== undefined && 'amount' in datum ? datum.amount : null,
     sourceIds: [...sourceIds],
     locked: sourceIds.some(itemId => view.pinnedItemIds.includes(itemId)),
     level,
@@ -139,12 +142,71 @@ function categoricalEntries(
   return entries;
 }
 
+function comparisonEntries(
+  view: ViewSpec,
+  projection: CategoricalComparisonProjection,
+): readonly OutlineEntry[] {
+  const entries: OutlineEntry[] = [];
+  const collapsed = new Set(view.collapsedGroupIds);
+  const datumById = new Map(projection.map(datum => [datum.nodeId, datum]));
+  const visited = new Set<ViewNodeId>();
+  const seriesCount = projection[0]?.values.length ?? 0;
+
+  const visit = (nodeId: ViewNodeId, level: number): void => {
+    if (visited.has(nodeId)) {
+      return;
+    }
+    visited.add(nodeId);
+    const group = ownGroup(view, nodeId);
+    if (group !== undefined) {
+      const isCollapsed = collapsed.has(group.id);
+      entries.push({
+        ...groupEntry(
+          group,
+          isCollapsed ? datumById.get(group.id) : undefined,
+          !isCollapsed,
+          view,
+          level,
+        ),
+        seriesCount,
+      });
+      if (!isCollapsed) {
+        for (const childId of group.childIds) {
+          visit(childId, level + 1);
+        }
+      }
+      return;
+    }
+    const datum = datumById.get(nodeId);
+    if (datum !== undefined) {
+      entries.push({
+        nodeId: datum.nodeId,
+        label: datum.label,
+        amount: null,
+        sourceIds: [...datum.sourceIds],
+        locked: datum.locked,
+        level,
+        kind: 'contribution',
+        seriesCount,
+      });
+    }
+  };
+
+  for (const nodeId of view.rootOrder) {
+    visit(nodeId, 1);
+  }
+  return entries;
+}
+
 export function outlineEntries(
   view: ViewSpec,
-  projection: WaterfallProjection | CategoricalProjection,
+  projection: WaterfallProjection | CategoricalProjection | CategoricalComparisonProjection,
   family: 'waterfall' | 'categorical',
+  generation: 'scalar' | 'comparison' = 'scalar',
 ): readonly OutlineEntry[] {
   return family === 'waterfall'
     ? waterfallEntries(view, projection as WaterfallProjection)
-    : categoricalEntries(view, projection as CategoricalProjection);
+    : generation === 'comparison'
+      ? comparisonEntries(view, projection as CategoricalComparisonProjection)
+      : categoricalEntries(view, projection as CategoricalProjection);
 }

@@ -1,0 +1,155 @@
+schema_version: 1
+packet_id: EP-016-T142
+task_id: T142
+feature_id: 016-tellplot-v2-release-readiness
+packet_status: needs_review
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/016-tellplot-v2-release-readiness/spec.md
+  requirements_checklist: .ai-platform/specs/016-tellplot-v2-release-readiness/checklists/requirements.md
+  technical_decision: .ai-platform/docs/technology-decision-record.md#tdr-026-tellplot-20-current-release-lineage
+  feature_plan: .ai-platform/specs/016-tellplot-v2-release-readiness/plan.md
+  work_graph: .ai-platform/specs/016-tellplot-v2-release-readiness/tasks.md
+  analysis: .ai-platform/specs/016-tellplot-v2-release-readiness/analysis.md
+  predecessor_feature: .ai-platform/specs/015-multi-series-categorical-comparison
+  predecessor_evidence: .ai-platform/evidence/T141
+  approval_gates:
+    goal_scope: Confirmed by user on 2026-08-28
+    g003_acceptance: Accepted by user on 2026-08-28
+    technical_plan_tdr_work_graph: Confirmed by user on 2026-08-28
+    remote_git: Not authorized
+    public_release: Not authorized
+
+work_unit:
+  title: 建立 2.0 Current-Release Contract 与 Pipeline
+  goal: >-
+    Test-first establish one structured TellPlot 2.0 current-release descriptor and migrate HEAD release scripts,
+    package contract tests and publish workflow to consume the exact version, tag, evidence, artifact, workflow,
+    registry and toolchain contract without changing historical T131 evidence or performing remote actions.
+  requirements:
+    - REL2-FR-001
+    - REL2-FR-002
+    - REL2-FR-003
+    - REL2-FR-007
+    - REL2-NFR-001
+    - REL2-NFR-002
+    - REL2-NFR-004
+    - REL2-NFR-005
+    - REL2-NFR-006
+  depends_on:
+    - G003 and T135-T141 Accepted by explicit user approval on 2026-08-28
+    - TDR-026, plan and work graph Confirmed
+  blocks:
+    - T143
+    - T144
+    - T145
+  parallel: false
+  conflicts_with:
+    - all current release scripts and package release tests
+    - .github/workflows/publish-npm.yml
+    - T143 through T145
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - package.json
+    - scripts/release/audit-release.mjs
+    - scripts/release/package-artifact.mjs
+    - scripts/release/rehearse-source.mjs
+    - scripts/release/check-stable.mjs
+    - scripts/release/preflight-public.mjs
+    - scripts/release/check-package-availability.mjs
+    - scripts/release/release-utils.mjs
+    - scripts/release/package-candidate-artifact.mjs
+    - .github/workflows/publish-npm.yml
+    - packages/editor/tests/package/stable-release.test.ts
+    - packages/editor/tests/package/single-package-distribution.test.ts
+    - packages/editor/tests/package/candidate-tools.test.ts
+    - .ai-platform/evidence/T131
+    - .ai-platform/evidence/T141/tarball-manifest.json
+  existing_patterns:
+    - Candidate tools already validate explicit version/evidence-task paths and must not be weakened.
+    - Public preflight already validates annotated tags, clean main, remote tag/main identity, workflow ref and official registry.
+    - The stage job is intentionally minimal, protected by npm-production and allowed to run only npm stage publish.
+  interfaces_or_contracts:
+    - The public package is exactly tellplot@2.0.0 with one tarball and five documented entry paths.
+    - Historical v1.0.0 tag, T131 evidence and 1.0 release report are immutable records, not HEAD current-release inputs.
+    - Initial exact candidate SHA-256 is 44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca.
+  forbidden_changes:
+    - Public API, schema, chart behavior, package exports, dependencies, pnpm-lock.yaml or private package versions.
+    - Any change under .ai-platform/evidence/T131.
+    - Fetch, pull, stage, commit, push, PR, merge, tag, workflow dispatch, npm stage/publish or GitHub Release.
+    - A generic multi-package registry framework or direct npm publish path.
+
+execution_constraints:
+  allowed_files:
+    - scripts/release/**
+    - .github/workflows/publish-npm.yml
+    - package.json
+    - packages/editor/tests/package/**
+    - packages/tellplot/tests/package/**
+    - .ai-platform/evidence/T142/**
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/tasks.md
+  shared_worktree: true
+  shared_index_must_remain_unstaged: true
+  no_subdelegation: true
+  retry_budget: 2
+
+tdd_plan:
+  red:
+    - Add exact descriptor and 2.0 workflow tests that fail against the 1.0/T131 hard-pinned HEAD tools.
+    - Add negative descriptor/path/hash/tag/registry and historical T131 immutability fixtures.
+  green:
+    - Introduce the minimal structured descriptor reader/validator and migrate current-release tools and workflow.
+    - Preserve the existing candidate tools unless a shared private parser removes proven duplication without widening scope.
+  refactor:
+    - Remove duplicate release facts only after focused tests pass; do not introduce a plugin or multi-package abstraction.
+
+validation_loop:
+  commands:
+    - pnpm exec vitest run packages/editor/tests/package/stable-release.test.ts packages/editor/tests/package/single-package-distribution.test.ts packages/editor/tests/package/candidate-tools.test.ts
+    - pnpm test:package
+    - pnpm release:architecture
+    - pnpm lint
+    - git diff --check
+  expected_signals:
+    - Exact 2.0 descriptor/workflow assertions pass.
+    - Negative fixtures fail closed before any simulated stage action.
+    - T131 receipt comparison reports no changed path.
+  failure_handling:
+    - Preserve RED output and each failed validation attempt.
+    - Stop if a passing result requires dependency, lockfile, public contract, historical evidence or remote-state changes.
+
+evidence_contract:
+  root: .ai-platform/evidence/T142
+  required_files:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+  privacy:
+    - No token, credential, business values, local temp path or live external metadata.
+
+review_contract:
+  lenses:
+    - spec_compliance
+    - bug_and_code_quality
+    - qa_acceptance
+  pass_condition: Critical 0, High 0, Medium 0 unresolved
+
+handoff:
+  success_status: Needs_Review
+  next_task: T143
+  user_acceptance_required: false
+  remote_actions_authorized: false
+
+stop_conditions:
+  - G003 is not Accepted or planning artifacts are not Confirmed.
+  - The shared index is staged or an unrelated user change would be overwritten.
+  - Correctness requires changing T131 evidence, dependencies, public API/schema or remote state.
+  - A validation can pass only by weakening an assertion, timeout, security check or stage-only boundary.

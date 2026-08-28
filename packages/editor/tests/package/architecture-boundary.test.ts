@@ -18,7 +18,13 @@ describe('internal chart architecture boundary', () => {
       'charts/categorical/projection.ts',
       'charts/categorical/types.ts',
     ];
-    const editorRequired = ['charts/waterfall/spec.ts', 'charts/categorical/spec.ts'];
+    const editorRequired = [
+      'charts/waterfall/spec.ts',
+      'charts/categorical/spec.ts',
+      'charts/categorical/comparisonSpec.ts',
+      'charts/categorical/comparisonLabels.ts',
+      'rendering/g2/comparisonLabelTransform.ts',
+    ];
     const obsolete = [
       'waterfall/projectWaterfall.ts',
       'waterfall/waterfallTypes.ts',
@@ -50,5 +56,9 @@ describe('internal chart architecture boundary', () => {
     expect(source('index.ts')).not.toContain('rendering/g2');
     expect(source('index.ts')).not.toContain('G2Spec');
     expect(source('index.ts')).not.toContain('G2Chart');
+    expect(source('index.ts')).not.toContain('createComparisonChartSpec');
+    expect(source('index.ts')).not.toContain('ComparisonMarkDatum');
+    expect(source('index.ts')).not.toContain('comparisonStructuralIdentity');
+    expect(source('index.ts')).not.toContain('comparisonFlipToInteriorLabelTransform');
   });
 });

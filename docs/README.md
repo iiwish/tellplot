@@ -16,6 +16,7 @@
 - [架构概览](architecture.md)
 - [入门与集成](getting-started.md)
 - [公共 API](api.md)
+- [数据合同](data-contract.md)
 - [错误处理](errors.md)
 - [图表配置边界](configuration.md)
 - [迁移与兼容](migration.md)

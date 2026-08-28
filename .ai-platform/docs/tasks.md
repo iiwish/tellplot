@@ -2,10 +2,13 @@
 
 ## Metadata
 
-- Version: 0.39.0
+- Version: 0.53.0
 - Status: Active
-- Last updated: 2026-08-02
-- Scope: T101-T116、G002 系列、G004、G006 与 G007 已验收；`tellplot@1.0.0` 已完成公开发布
+- Last updated: 2026-08-28
+- Scope: T101-T116、G002 系列、G004、G006 与 G007 已验收；`tellplot@1.0.0` 已完成公开发布；
+  G003 产品、breaking contract、TDR-025、technical plan 与 work graph 已确认；T135-T141 与 G003 已完成
+  质量矩阵、三层终审和用户验收；G003-R1 2.0 发布准备范围、TDR-026、plan 与 T142-T145 work graph
+  已确认，T142 为 `Needs_Review`，T143 为 `Running`
 
 ## Goal-Level Delivery
 
@@ -24,7 +27,8 @@
 | G002-R1 - 分组与跨层编辑体验 | Accepted | T118；上下文选择、跨层拖拽和可配置展开分组区域 |
 | G002-R2 - 开源官网与示例中心 | Accepted | T119；真实图表首页、示例中心、文档入口和连续工作台 |
 | G002-R3 - 公共配置 API v1 | Accepted | T122；声明式配置、公共 facade 与 config/view 双文件工作台 |
-| G003 - 基础图表扩展 | Candidate | 按明确需求增加下一组图表家族 |
+| G003 - 多序列分类比较 | Accepted | T135-T141 Accepted；完整质量矩阵、目标级 evidence 与用户验收已完成 |
+| G003-R1 - TellPlot 2.0 发布准备 | Executing | T142 Needs_Review；T143 Running；T144-T145 串行待执行 |
 | G004 - 首个稳定版 1.0 候选 | Accepted | T123；稳定合同、发布门禁与隔离源码复演 |
 | G005 - 四包公开稳定版发布 | Superseded | T130 的安全门禁由 G007 复用；四包公开目标由单包决策取代 |
 | G006 - 框架无关编辑器架构 | Accepted | T125-T129；内部四层架构、完整编辑器与质量门禁已验收 |
@@ -248,3 +252,44 @@ Cloudflare 继续提供权威 DNS，`https://tellplot.com` 是 canonical product
 T132-T134 状态均为 `Needs_Review`，无 unresolved Critical、High 或 Medium finding。权威目标图位于
 `.ai-platform/specs/014-website-production-deployment/tasks.md`，evidence 位于 `.ai-platform/evidence/T132/`、
 `.ai-platform/evidence/T133/` 和 `.ai-platform/evidence/T134/`。
+
+## G003 Execution
+
+用户于 2026-08-12 先后批准 G003 多序列分类比较产品范围、本地 `tellplot@2.0.0` / schema `3.0.0`
+方向、精确 breaking public contract、TDR-025、feature `plan.md` 与 T135-T141 串行 work graph。planning
+analysis 为 Critical 0 / High 0 / Medium 0；T135-T139 终审均为 Critical 0 / High 0 / Medium 0。
+
+T135 已移到 `Needs_Review`，其唯一未通过的 editor package version assertion 被终审确认为 T135 之前即存在、
+且位于本 task 版本边界之外的 baseline exception；这不代表用户 `Accepted`，也不授权修改内部包版本或断言。
+T136 已完成 comparison projection、state/session/update invariants 与 exact public runtime surface，全部 validation
+gates 通过并移到 `Needs_Review`；这不代表用户 `Accepted`。T137 已完成 G2 comparison presentation、真实 Canvas
+characterization 与 structural runtime generation，首轮 review 的 3 个 Medium finding 已完成修复，两次独立复审最终
+均为 Critical 0 / High 0 / Medium 0，因此移到 `Needs_Review`。T138 已完成 authoritative receipt、四类
+renderer-owned geometry、all-zero 32 CSS px target、category-only direct manipulation 与 lifecycle cancellation；
+A001-A010 的 RED/GREEN、诊断与 stop history 保留在 `.ai-platform/evidence/T138/`，最终 validation 与三层 review
+均为 Critical 0 / High 0 / Medium 0，因此移到 `Needs_Review`，不代表用户 `Accepted`。T139 已完成 comparison
+Workbench、Inspector、summary、comparison-only focus timing、完整 update matrix 与 imperative/React 18/19/Vue 3
+parity；A001-A014 的失败、重试、stop、recovery 与 execution-policy deviation 保留在 `.ai-platform/evidence/T139/`，
+最终 validation 与三层 review 均为 Critical 0 / High 0 / Medium 0，因此移到 `Needs_Review`，不代表用户
+`Accepted`。TDR-025-A01 与 T140 exact ownership/evidence amendment 已由用户于 2026-08-27 明确批准。T140
+A008/A009 完成全部修复、fresh evidence与三层终审，最终 Critical 0 / High 0 / Medium 0，现为 `Needs_Review`；
+T141-A003 format hygiene 与 candidate rehearsal amendment 已获用户明确批准。T141 完成 200x2 performance、
+50x4 responsive、current/previous browser、a11y、coverage、package/framework/security、可复现 2.0 candidate 与
+三层终审；T138 Tooltip ownership full-gate finding 已定向修复并通过 owner 与完整浏览器复验。用户于
+2026-08-28 在收到目标级结果与下一阶段边界后明确要求继续创建目标并完成下一阶段，T135-T141 与 G003
+因此完成目标级验收并标记为 `Accepted`。T135 的 editor package baseline exception 保持原记录。
+依赖、远程 Git、stage/commit/push/PR、publish、tag、release 与 production promotion 继续保持独立闸门。
+
+## G003-R1 Planning
+
+用户于 2026-08-28 明确要求创建 G003-R1 并完成 TellPlot 2.0 发布准备。该目标把 G003 的本地
+`tellplot@2.0.0` candidate 转换为 structured current-release contract、隔离 integrated source、可复现 final
+artifact、fresh full release rehearsal 与 release authorization dossier；不执行 fetch/pull、stage、commit、push、
+PR/merge、tag、workflow dispatch、npm stage/publish、GitHub Release 或 production promotion。
+
+权威 scope 位于 `.ai-platform/specs/016-tellplot-v2-release-readiness/spec.md`，状态为 `Confirmed`；requirements
+checklist 已完成且 Critical / High / Medium finding 为 0。TDR-026、Technical Plan、T142-T145 Work Graph、
+execution packets 与 planning analysis 已形成并于 2026-08-28 获用户明确批准。G003/T135-T141 已完成用户
+验收；T142 已通过 TDD、focused gates 与三层终审并处于 `Needs_Review`，T143 为 `Running`，
+T144-T145 继续由串行前置阻塞。远程 Git 和 public release
+继续使用两个后续独立人工闸门。

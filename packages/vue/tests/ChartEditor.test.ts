@@ -39,6 +39,47 @@ const config: ChartConfig = {
   },
 };
 
+const comparisonConfig: ChartConfig = {
+  type: 'bar',
+  data: {
+    schemaVersion: '3.0.0',
+    dataKind: 'categorical',
+    datasetId: 'vue-comparison',
+    series: [
+      { id: 'current', label: 'Current' },
+      { id: 'plan', label: 'Plan' },
+    ],
+    items: [
+      {
+        id: 'a',
+        label: 'Alpha',
+        values: [
+          { seriesId: 'current', amount: 1 },
+          { seriesId: 'plan', amount: 2 },
+        ],
+      },
+    ],
+  },
+  editor: {
+    readOnly: true,
+    panels: { outline: true, inspector: false, toolbar: true },
+    inspector: { mode: 'tabs' },
+  },
+};
+
+const comparisonView: ViewSpec = {
+  schemaVersion: '3.0.0',
+  datasetId: 'vue-comparison',
+  chartType: 'bar',
+  revision: 1,
+  rootOrder: ['a'],
+  groups: {},
+  collapsedGroupIds: [],
+  pinnedItemIds: [],
+  annotations: {},
+  emphasis: {},
+};
+
 describe('Vue ChartEditor adapter', () => {
   it('maps updates and update:view to one imperative instance', async () => {
     const host = document.createElement('div');
@@ -98,5 +139,76 @@ describe('Vue ChartEditor adapter', () => {
 
     app.unmount();
     expect(instance?.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('submits a compatible comparison config and controlled view in one reactive flush', async () => {
+    const host = document.createElement('div');
+    const currentConfig = ref<ChartConfig>(config);
+    const currentView = ref<ViewSpec | undefined>();
+    const app = createApp(
+      defineComponent({
+        setup: () => () =>
+          h(ChartEditor, {
+            config: currentConfig.value,
+            ...(currentView.value === undefined ? {} : { view: currentView.value }),
+          }),
+      }),
+    );
+    app.mount(host);
+    const instance = runtime.instances.at(-1);
+
+    currentConfig.value = comparisonConfig;
+    currentView.value = comparisonView;
+    await nextTick();
+
+    expect(instance?.update).toHaveBeenCalledOnce();
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ config: comparisonConfig, view: comparisonView }),
+    );
+    app.unmount();
+  });
+
+  it('forwards standalone defaultView and both controlled-mode transitions', async () => {
+    const host = document.createElement('div');
+    const currentView = ref<ViewSpec | undefined>();
+    const currentDefaultView = ref<ViewSpec | undefined>(comparisonView);
+    const app = createApp(
+      defineComponent({
+        setup: () => () =>
+          h(ChartEditor, {
+            config: comparisonConfig,
+            ...(currentView.value === undefined ? {} : { view: currentView.value }),
+            ...(currentDefaultView.value === undefined
+              ? {}
+              : { defaultView: currentDefaultView.value }),
+          }),
+      }),
+    );
+    app.mount(host);
+    const instance = runtime.instances.at(-1);
+    expect((instance as (typeof instance & { options: object }) | undefined)?.options).toEqual(
+      expect.objectContaining({ defaultView: comparisonView }),
+    );
+
+    currentDefaultView.value = undefined;
+    currentView.value = comparisonView;
+    await nextTick();
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ defaultView: expect.anything() }),
+    );
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ view: comparisonView }),
+    );
+
+    currentView.value = undefined;
+    currentDefaultView.value = comparisonView;
+    await nextTick();
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ view: expect.anything() }),
+    );
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ defaultView: comparisonView }),
+    );
+    app.unmount();
   });
 });

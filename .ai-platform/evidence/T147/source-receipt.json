@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T147",
+  "status": "passed",
+  "baseCommit": "4d754cc9d635d097370b674633c972fb0ac199a1",
+  "candidateBranch": "codex/g003-r2a",
+  "sourcePatch": {
+    "pathCount": 154,
+    "sha256": "19fd38c377c45dcc0af6a3df6848bad684d079e1332b2fc296ad307f5805459d"
+  },
+  "sourceManifest": {
+    "expectedCount": 462,
+    "actualCount": 462,
+    "missingCount": 0,
+    "extraCount": 0,
+    "mismatchCount": 0,
+    "sha256": "fc167c6800dd5474293fedf293e3448f29aeb0d865ed3e03a179d179a4e1958a"
+  },
+  "release": {
+    "artifactFilename": "tellplot-2.0.0.tgz",
+    "artifactSizeBytes": 597508,
+    "artifactFileCount": 41,
+    "artifactSha256": "44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca",
+    "descriptorSha256": "729bf4a1e67d8249d1146ebf5e961f0376f059ff8aa14750127c99c565570182",
+    "workflowSha256": "d85da954fee1e5696ddfd6bd678f68ead50f2d4d815ecda45ca9e9d2ea53ac63"
+  },
+  "sharedIndexSha256": "3f83dab964030f0816078e1ff7312e063fd8920167c0fa3c610d972b7cc69fd8",
+  "remoteWritesPerformed": false,
+  "publicReleaseActionsPerformed": false
+}

@@ -1,0 +1,148 @@
+schema_version: 1
+packet_id: EP-016-T144
+task_id: T144
+feature_id: 016-tellplot-v2-release-readiness
+packet_status: draft_pending_plan_approval
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  feature_spec: .ai-platform/specs/016-tellplot-v2-release-readiness/spec.md
+  requirements_checklist: .ai-platform/specs/016-tellplot-v2-release-readiness/checklists/requirements.md
+  technical_decision: .ai-platform/docs/technology-decision-record.md#tdr-026-tellplot-20-current-release-lineage
+  feature_plan: .ai-platform/specs/016-tellplot-v2-release-readiness/plan.md
+  work_graph: .ai-platform/specs/016-tellplot-v2-release-readiness/tasks.md
+  analysis: .ai-platform/specs/016-tellplot-v2-release-readiness/analysis.md
+  predecessor_packet: .ai-platform/specs/016-tellplot-v2-release-readiness/packets/T143.yaml
+  predecessor_evidence: .ai-platform/evidence/T143
+  approval_gates:
+    remote_git: Not authorized
+    public_release: Not authorized
+
+work_unit:
+  title: 完成 Fresh Full Release Rehearsal
+  goal: >-
+    Run the complete local quality and release matrix from the T143 integrated source, prove the exact frozen 2.0 artifact
+    remains valid, and verify all dirty, wrong-source, wrong-tag, wrong-hash, hostile-Git and unavailable-registry fixtures
+    fail closed without querying or modifying live external state.
+  requirements:
+    - REL2-FR-003
+    - REL2-FR-004
+    - REL2-FR-005
+    - REL2-FR-006
+    - REL2-NFR-001
+    - REL2-NFR-002
+    - REL2-NFR-003
+    - REL2-NFR-004
+    - REL2-NFR-005
+    - REL2-NFR-006
+  depends_on:
+    - T143 Needs_Review with final artifact freeze review passed
+  blocks:
+    - T145
+  parallel: false
+  conflicts_with:
+    - T142
+    - T143
+    - T145
+    - release scripts, workflow, artifact hash and evidence
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - package.json
+    - playwright.config.ts
+    - scripts/release/**
+    - packages/editor/tests/package/**
+    - e2e/**
+    - .ai-platform/evidence/T143/**
+  existing_patterns:
+    - T141 is the previous full-matrix baseline but cannot substitute for fresh release-readiness validation.
+    - Current and previous browser, a11y and performance commands are repository-owned authoritative gates.
+    - Public preflight positive state is tested in an isolated Git fixture; live remote/registry state remains unqueried.
+  owner_variance_policy:
+    - T144 is evidence-only. Return a blocking release-tool defect to T142 or an artifact/source defect to T143.
+    - Any product/API/schema/dependency/threshold change stops the task and returns to a new approval gate.
+  forbidden_changes:
+    - Skipping or renaming tests, increasing timeouts/budgets, lowering coverage or weakening release/security assertions.
+    - Live external registry, GitHub or remote Git operations.
+    - Changes to the final artifact without invalidating and rerunning T143.
+
+execution_constraints:
+  allowed_files:
+    - .ai-platform/evidence/T144/**
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/tasks.md
+  shared_worktree: true
+  full_matrix_required: true
+  no_subdelegation: true
+  retry_budget: 2
+
+tdd_plan:
+  red:
+    - Not applicable to planned behavior; record the exact failing full gate and return defects to T142/T143 ownership.
+  green:
+    - No implementation in T144. Resume only after the owning task supplies a reviewed fix and T143 artifact is refrozen.
+  refactor:
+    - No opportunistic cleanup. Any fix invalidating T143 artifact returns to T143 before full-matrix continuation.
+
+validation_loop:
+  commands:
+    - pnpm format:check
+    - pnpm lint
+    - pnpm typecheck
+    - pnpm test:coverage
+    - pnpm build
+    - pnpm test:package
+    - pnpm test:framework-matrix
+    - pnpm test:e2e
+    - pnpm test:a11y
+    - pnpm test:performance
+    - pnpm test:browser-previous
+    - pnpm security:lock
+    - pnpm security:dependencies
+    - pnpm audit:prod
+    - pnpm release:architecture
+    - pnpm release:audit
+    - pnpm release:artifact
+    - pnpm release:check
+    - pnpm release:rehearse
+    - git diff --check
+  expected_signals:
+    - Every exact command exits zero under Node 22.20.0.
+    - Frozen artifact/hash matches T143 after all gates.
+    - Public preflight fixtures fail or pass exactly as specified without live network state.
+  failure_handling:
+    - Preserve first failure and fresh replay output; classify product, release-tool or environment ownership.
+    - Never convert Not_Run_Not_Authorized external checks into pass.
+
+evidence_contract:
+  root: .ai-platform/evidence/T144
+  required_files:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+    - quality-matrix.json
+    - preflight-fixtures.json
+  privacy:
+    - No credentials, live external account metadata, business values or local temp paths.
+
+review_contract:
+  lenses:
+    - spec_compliance
+    - bug_and_code_quality
+    - qa_acceptance
+  pass_condition: Critical 0, High 0, Medium 0 unresolved
+
+handoff:
+  success_status: Needs_Review
+  next_task: T145
+  user_acceptance_required: false
+  remote_actions_authorized: false
+
+stop_conditions:
+  - T143 artifact freeze or review is invalid.
+  - A fix requires public contract, dependency, threshold, workflow authorization or remote-state changes.
+  - Full gates cannot pass without weakening evidence.

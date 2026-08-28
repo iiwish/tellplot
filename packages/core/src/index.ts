@@ -1,5 +1,7 @@
 export * from './charts/categorical/projection';
 export * from './charts/categorical/types';
+export * from './charts/categorical/comparisonProjection';
+export type * from './charts/categorical/comparisonTypes';
 export * from './charts/waterfall/projection';
 export * from './charts/waterfall/types';
 export * from './config/chartAppearance';

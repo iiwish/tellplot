@@ -340,6 +340,138 @@ for (const layout of ['column', 'bar'] as const) {
   });
 }
 
+test('comparison Workbench exposes source-ordered Inspector and complete narrative semantics', async ({
+  page,
+}) => {
+  await openEditor(page);
+  const comparisonConfig = {
+    type: 'column',
+    locale: 'en-US',
+    data: {
+      schemaVersion: '3.0.0',
+      dataKind: 'categorical',
+      datasetId: 'comparison-accessibility',
+      currency: 'USD',
+      series: [
+        { id: 'current', label: 'Current' },
+        { id: 'plan', label: 'Plan' },
+      ],
+      items: [
+        {
+          id: 'alpha',
+          label: 'Alpha',
+          values: [
+            { seriesId: 'current', amount: 12 },
+            { seriesId: 'plan', amount: 10 },
+          ],
+        },
+        {
+          id: 'beta',
+          label: 'Beta',
+          values: [
+            { seriesId: 'current', amount: 8 },
+            { seriesId: 'plan', amount: 11 },
+          ],
+        },
+        {
+          id: 'gamma',
+          label: 'Gamma',
+          values: [
+            { seriesId: 'current', amount: 5 },
+            { seriesId: 'plan', amount: 7 },
+          ],
+        },
+      ],
+    },
+    appearance: { legend: false, animation: { enabled: false } },
+    editor: {
+      panels: { outline: true, inspector: true, toolbar: true },
+      outline: { placement: 'left' },
+      inspector: { mode: 'static' },
+    },
+    height: '100%',
+  };
+  const configInput = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
+  await configInput.fill(JSON.stringify(comparisonConfig, null, 2));
+  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
+  await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
+    name: 'comparison-view.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        schemaVersion: '3.0.0',
+        datasetId: 'comparison-accessibility',
+        chartType: 'column',
+        revision: 0,
+        rootOrder: ['group', 'gamma'],
+        groups: { group: { id: 'group', label: 'Alpha and Beta', childIds: ['alpha', 'beta'] } },
+        collapsedGroupIds: [],
+        pinnedItemIds: ['gamma'],
+        annotations: { group: 'Regional context', gamma: 'Pinned context' },
+        emphasis: { group: 'muted', gamma: 'highlight' },
+      }),
+    ),
+  });
+  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('VIEW_IMPORTED');
+
+  const tree = page.getByRole('tree', { name: 'Structure outline' });
+  await expect(tree.getByRole('treeitem')).toHaveCount(4);
+  await expect(tree.locator('[data-series-id]')).toHaveCount(0);
+  await expect(tree.getByRole('treeitem').first()).toContainText('2 series');
+  await tree.locator('[data-node-id="gamma"]').click();
+  const inspector = await activateInspectorPanel(page);
+  await expect(inspector.locator('[data-inspector-kind="category"]')).toBeVisible();
+  await expect(inspector.locator('[data-series-id]')).toHaveCount(2);
+  await expect(inspector.locator('[data-series-id]').nth(0)).toContainText('Current');
+  await expect(inspector.locator('[data-series-id]').nth(1)).toContainText('Plan');
+  await expect(inspector.getByRole('textbox', { name: /Annotation|注释/u })).toHaveValue(
+    'Pinned context',
+  );
+  await expect(inspector).toContainText('Pinned');
+  await expect(inspector).toContainText('Highlighted');
+  await expect(inspector).toContainText('Locked');
+
+  let summary = page.getByRole('region', { name: 'Chart summary' });
+  await expect(summary.locator('[data-summary-kind="series-registry"]')).toHaveText(
+    'Series registry: Current, Plan.',
+  );
+  expect(
+    await summary
+      .locator('[data-summary-node-id]')
+      .evaluateAll(nodes =>
+        nodes.map(node => [
+          node.getAttribute('data-summary-node-id'),
+          node.getAttribute('data-summary-node-kind'),
+        ]),
+      ),
+  ).toEqual([
+    ['group', 'expanded-group'],
+    ['alpha', 'category'],
+    ['beta', 'category'],
+    ['gamma', 'category'],
+  ]);
+  await expect(summary).toContainText('Regional context');
+  await expect(summary).toContainText('muted');
+  await expect(summary).toContainText('pinned');
+  await expectNoSeriousOrCritical(page, 'comparison narrative Workbench');
+
+  const emptyConfig = {
+    ...comparisonConfig,
+    data: { ...comparisonConfig.data, datasetId: 'comparison-accessibility-empty', items: [] },
+  };
+  await page.getByRole('button', { name: 'Inspector backdrop' }).click();
+  await configInput.fill(JSON.stringify(emptyConfig, null, 2));
+  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('CONFIG_APPLIED');
+  summary = page.getByRole('region', { name: 'Chart summary' });
+  await expect(summary.locator('[data-summary-kind="intro"]')).toContainText(
+    '0 visible clusters and 2 series',
+  );
+  await expect(summary.locator('[data-summary-kind="series-registry"]')).toHaveText(
+    'Series registry: Current, Plan.',
+  );
+  await expect(summary.locator('[data-summary-node-id]')).toHaveCount(0);
+});
+
 for (const websitePage of [
   { path: '/', heading: 'TellPlot', state: 'showcase home' },
   { path: '/examples', heading: '图表示例', state: 'showcase examples' },

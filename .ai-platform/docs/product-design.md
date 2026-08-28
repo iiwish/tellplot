@@ -2,10 +2,11 @@
 
 ## Metadata
 
-- Version: 1.3.0
+- Version: 1.4.0
 - Status: Confirmed
-- Last updated: 2026-08-02
-- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构、单包分发、首个公开稳定版与官网生产部署目标
+- Last updated: 2026-08-12
+- Approval: 用户已确认轻量可编辑基础图表库定位、框架无关编辑器架构、单包分发、首个公开稳定版、
+  官网生产部署目标与 G003 多序列分类比较产品范围
 
 ## Product Positioning
 
@@ -15,13 +16,17 @@ TellPlot 是基于 AntV G2 的轻量、可嵌入、可编辑基础图表库。�
 G2 是唯一图表渲染与图形动画引擎。TellPlot 不复制 G2 的绘制、场景图、比例尺或动画系统，也不以
 替代 G2、建设通用 BI 平台或提供任意图表插件框架为目标。
 
-当前内建图表为：
+已交付的内建图表为：
 
 - 瀑布图。
 - 单序列分类条形图。
 - 单序列分类柱状图。
 
-新增图表类型以明确的使用需求为输入，按图表家族逐步实现。项目不为尚未确认的图表提前增加
+G003 已确认把分类条形图和分类柱状图扩展为 2 至 4 个序列的业务比较图。该扩展以 category 作为唯一
+叙事编辑原子，以 series 作为只读比较维度，并采用本地 `tellplot@2.0.0` candidate 与 schema `3.0.0`。
+精确公开 API/schema contract 已确认；技术 plan/TDR/work graph 与 runtime 实现保留后续审批闸门。
+
+其他图表类型以明确的使用需求为输入，按图表家族逐步实现。项目不为尚未确认的图表提前增加
 registry、通用 adapter 或公共扩展协议。
 
 ## Delivery Form
@@ -99,6 +104,11 @@ registry、通用 adapter 或公共扩展协议。
 ### US-007 图表输出
 
 用户可以导出保持当前顺序、分组、折叠、标签和强调样式的 SVG 与 PNG。
+
+### US-008 多序列分类比较
+
+用户可以在同一分类下比较 2 至 4 个序列，并继续把完整分类作为排序、分组、折叠、固定、注释、强调和
+历史操作的唯一编辑原子。
 
 ## Core User Journey
 
@@ -193,6 +203,15 @@ Tooltip、数字格式和动画。标签配置保持可序列化，不接受任�
 Semantic Versioning。公开发布前不保留未分发候选 API 的兼容包袱；公开 1.x 不进行 breaking public API
 或 schema 变更，弃用至少跨一个 minor，并提供替代路径、迁移说明和兼容测试。
 
+### FR-018 多序列分类比较
+
+schema `3.0.0` 分类数据显式声明 2 至 4 个有序 series，并为每个 category 提供按 series 顺序完整覆盖的
+finite/safe dense value matrix；缺失值不解释为零。series value 不进入 `ViewSpec` 或命令 union，折叠组对
+每个 series 独立使用 compensated sum，系统不定义跨 series total。bar/column 使用 G2 原生分组 interval、
+稳定 series 顺序、只读 legend、共享 Tooltip、逐 series 数值和 category-only 直接操作；屏幕、SVG 与 PNG
+保持相同 palette/legend；Tooltip、Inspector 与无障碍摘要保持相同 series 文本、顺序和值；结构大纲保持
+category/group 叙事树并显示 series 数量，不虚构 total。
+
 ## Non-Functional Requirements
 
 ### NFR-001 正确性
@@ -244,6 +263,17 @@ optional peer dependencies，根入口和 imperative consumer 不安装框架也
 - 单个 `tellplot` 公共包、私有框架无关 core/editor layers、React/Vue 薄适配、参考编辑器和发布候选质量门禁。
 - 真实图表驱动的开源官网、示例中心、开发者文档入口和在线工作台。
 - Vercel 静态生产托管、Cloudflare 权威 DNS、Preview/Production 分离与 `tellplot.com` HTTPS 域名。
+
+## Confirmed Expansion Target
+
+- G003 为分类条形图和分类柱状图增加 2 至 4 series dense-matrix 业务比较能力。
+- category 是唯一编辑原子；series/value 只作为不可编辑的比较维度进入逐 series 投影与 G2 marks。
+- 本地交付目标为 `tellplot@2.0.0` candidate，多序列 source/view 使用 closed schema `3.0.0`；v1/v2
+  wire、runtime 与 persistence 继续兼容。
+- 首期包含分组 bar/column、逐 series 聚合、只读 legend、shared Tooltip、Inspector、无障碍摘要和导出；
+  不包含 stacked、双轴、series 编辑、自动业务指标或公开发布。
+- 精确 public types/wire/errors/appearance/migration contract 已通过 breaking approval；plan/TDR/task graph
+  再经批准后才能修改 runtime。
 
 ## Expansion Policy
 
@@ -326,3 +356,9 @@ ownership，不提供 raw `G2Spec`。
 公共包 `tellplot` 的首个稳定版本为 `1.0.0`。稳定承诺限定当前 waterfall、bar、column 和文档化公共能力，不以图表数量
 作为稳定条件。`1.0.0` 从受保护的 annotated tag、stage-only Trusted Publisher 和人类 2FA approval 发布；
 后续公开版本继续只允许来自明确授权的干净 commit、受保护 tag 和可追溯 artifact。
+
+### CD-011 多序列分类比较方向
+
+G003 使用本地 `tellplot@2.0.0` candidate 与 schema `3.0.0` 承载多序列 categorical variant，不修改
+schema `1.0.0` 或 `2.0.0` 的 closed wire shape。category 继续是唯一叙事节点，series/value 不成为
+`ViewNode`；首期数据限定为 2 至 4 series dense matrix，并排除 stacked、双轴和 series 编辑。

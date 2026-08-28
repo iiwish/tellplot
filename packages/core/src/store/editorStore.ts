@@ -397,6 +397,25 @@ function reconcileSelection(
     : { ...selection, sourceIds: nextSourceIds };
 }
 
+function crossesComparisonBoundary(
+  previousConfig: ChartConfig | null,
+  nextConfig: ChartConfig,
+): boolean {
+  if (previousConfig === null) {
+    return false;
+  }
+  const previousComparison = previousConfig.data.schemaVersion === '3.0.0';
+  const nextComparison = nextConfig.data.schemaVersion === '3.0.0';
+  if (!previousComparison && !nextComparison) {
+    return false;
+  }
+  return (
+    previousConfig.data.schemaVersion !== nextConfig.data.schemaVersion ||
+    previousConfig.data.datasetId !== nextConfig.data.datasetId ||
+    previousConfig.type !== nextConfig.type
+  );
+}
+
 function snapshot(state: ActiveState, destroyed: boolean): EditorStoreSnapshot {
   if (destroyed) {
     return {
@@ -704,6 +723,7 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
             : created.session;
       const visibleView =
         mode === 'controlled' ? (requestedView ?? null) : retainedSession.viewSpec;
+      const preserveSelection = !crossesComparisonBoundary(previousState.config, config);
       pendingControlledSession = null;
       pendingControlledActionIds.clear();
       state = {
@@ -711,7 +731,9 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
         session: retainedSession,
         controlledView: mode === 'controlled' ? requestedView : undefined,
         issues: [],
-        selection: reconcileSelection(previousState.selection, config, visibleView),
+        selection: preserveSelection
+          ? reconcileSelection(previousState.selection, config, visibleView)
+          : null,
         mode,
       };
       if (acceptedOptions.defaultView === undefined) {
@@ -769,6 +791,7 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
       if (destroyed) {
         return;
       }
+      const previousSelection = internalSnapshot().selection;
       const requestedSelection =
         nextSelection === null
           ? null
@@ -791,9 +814,11 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
       if (visibleSelection === null && pendingSelection !== null) {
         return;
       }
-      const publicSelection = detachedFrozen(visibleSelection);
-      invokeCallback('onSelectionChange', () => options.onSelectionChange?.(publicSelection));
-      notify();
+      if (!sameSelection(previousSelection, visibleSelection)) {
+        const publicSelection = detachedFrozen(visibleSelection);
+        invokeCallback('onSelectionChange', () => options.onSelectionChange?.(publicSelection));
+        notify();
+      }
     },
     destroy(): void {
       if (destroyed) {

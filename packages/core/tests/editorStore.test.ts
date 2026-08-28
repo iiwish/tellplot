@@ -21,6 +21,47 @@ const config: ChartConfig = {
   },
 };
 
+const comparisonConfig = {
+  type: 'column',
+  data: {
+    schemaVersion: '3.0.0',
+    dataKind: 'categorical',
+    datasetId: 'comparison-store-fixture',
+    currency: 'CNY',
+    series: [
+      { id: 'actual', label: 'Actual', metadata: { signed: -0 } },
+      { id: 'budget', label: 'Budget' },
+    ],
+    items: [
+      {
+        id: 'a',
+        label: 'A',
+        values: [
+          { seriesId: 'actual', amount: 10 },
+          { seriesId: 'budget', amount: 12 },
+        ],
+      },
+      {
+        id: 'b',
+        label: 'B',
+        values: [
+          { seriesId: 'actual', amount: 20 },
+          { seriesId: 'budget', amount: 18 },
+        ],
+      },
+      {
+        id: 'c',
+        label: 'C',
+        metadata: { signed: -0 },
+        values: [
+          { seriesId: 'actual', amount: -0, metadata: { signed: -0 } },
+          { seriesId: 'budget', amount: 0 },
+        ],
+      },
+    ],
+  },
+} as const satisfies ChartConfig;
+
 function moveCommand(itemId: 'a' | 'b' = 'a', targetIndex = 1, baseRevision = 0): EditorCommand {
   return {
     schemaVersion: '1.0.0',
@@ -653,6 +694,392 @@ describe('createEditorStore', () => {
     store.update({ config, onConfigRejected: existingRejection });
     expect(store.getSnapshot()).toMatchObject({ status: 'ready', mode: 'uncontrolled' });
   });
+
+  it('retains comparison session, history and selection for presentation and zero-sign updates', () => {
+    const onCommand = vi.fn();
+    const onViewChange = vi.fn();
+    const onSelectionChange = vi.fn();
+    const store = createEditorStore({
+      config: comparisonConfig,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+    expect(store.dispatch(moveCommand())?.ok).toBe(true);
+    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
+    const originalSession = store.getSnapshot().session;
+    expect(originalSession?.undoStack).toHaveLength(1);
+    expect(originalSession?.processedActionIds).toEqual(['move-a-1-0']);
+    onCommand.mockClear();
+    onViewChange.mockClear();
+    onSelectionChange.mockClear();
+
+    const presentationConfig = {
+      ...comparisonConfig,
+      appearance: { title: 'Comparison', legend: false },
+    } as const satisfies ChartConfig;
+    store.update({
+      config: presentationConfig,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+    expect(store.getSnapshot().session?.sourceFingerprint).toBe(originalSession?.sourceFingerprint);
+    expect(store.getSnapshot().session?.processedActionIds).toEqual(['move-a-1-0']);
+    expect(store.getSnapshot().canUndo).toBe(true);
+    expect(store.getSnapshot().selection?.nodeId).toBe('a');
+
+    const positiveZeroConfig = {
+      ...presentationConfig,
+      data: {
+        ...presentationConfig.data,
+        series: presentationConfig.data.series.map((series, index) =>
+          index === 0 ? { ...series, metadata: { signed: 0 } } : series,
+        ),
+        items: presentationConfig.data.items.map(item =>
+          item.id === 'c'
+            ? {
+                ...item,
+                metadata: { signed: 0 },
+                values: item.values.map((value, index) =>
+                  index === 0 ? { ...value, amount: 0, metadata: { signed: 0 } } : value,
+                ),
+              }
+            : item,
+        ),
+      },
+    } as const satisfies ChartConfig;
+    store.update({
+      config: positiveZeroConfig,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+
+    expect(store.getSnapshot().session?.sourceFingerprint).toBe(originalSession?.sourceFingerprint);
+    expect(store.getSnapshot().session?.processedActionIds).toEqual(['move-a-1-0']);
+    expect(store.getSnapshot().canUndo).toBe(true);
+    expect(store.getSnapshot().selection?.nodeId).toBe('a');
+    expect(onCommand).not.toHaveBeenCalled();
+    expect(onViewChange).not.toHaveBeenCalled();
+    expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
+  it('rebuilds comparison sessions for semantic source updates while preserving valid narrative state', () => {
+    const onCommand = vi.fn();
+    const onViewChange = vi.fn();
+    const onSelectionChange = vi.fn();
+    const store = createEditorStore({
+      config: comparisonConfig,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+    expect(store.dispatch(moveCommand())?.ok).toBe(true);
+    expect(store.dispatch(moveCommand('a', 0, 1))?.ok).toBe(true);
+    expect(store.undo()?.ok).toBe(true);
+    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
+    const before = store.getSnapshot();
+    expect(before.session?.undoStack.length).toBeGreaterThan(0);
+    expect(before.session?.redoStack.length).toBeGreaterThan(0);
+    expect(before.session?.processedActionIds.length).toBeGreaterThan(0);
+    onCommand.mockClear();
+    onViewChange.mockClear();
+    onSelectionChange.mockClear();
+
+    const reorderedSeriesConfig = {
+      ...comparisonConfig,
+      data: {
+        ...comparisonConfig.data,
+        series: [...comparisonConfig.data.series].reverse(),
+        items: comparisonConfig.data.items.map(item => ({
+          ...item,
+          values: [...item.values].reverse(),
+        })),
+      },
+    } as const satisfies ChartConfig;
+    store.update({
+      config: reorderedSeriesConfig,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+
+    const afterSeries = store.getSnapshot();
+    expect(afterSeries.session?.sourceFingerprint).not.toBe(before.session?.sourceFingerprint);
+    expect(afterSeries.session?.undoStack).toEqual([]);
+    expect(afterSeries.session?.redoStack).toEqual([]);
+    expect(afterSeries.session?.processedActionIds).toEqual([]);
+    expect(afterSeries.view?.rootOrder).toEqual(['b', 'a', 'c']);
+    expect(afterSeries.selection).toEqual({
+      nodeId: 'a',
+      nodeIds: ['a'],
+      sourceIds: ['a'],
+    });
+    expect(onCommand).not.toHaveBeenCalled();
+    expect(onViewChange).not.toHaveBeenCalled();
+    expect(onSelectionChange).not.toHaveBeenCalled();
+
+    const changedAmountConfig = {
+      ...reorderedSeriesConfig,
+      data: {
+        ...reorderedSeriesConfig.data,
+        items: reorderedSeriesConfig.data.items.map(item =>
+          item.id === 'b'
+            ? {
+                ...item,
+                values: item.values.map((value, index) =>
+                  index === 0 ? { ...value, amount: value.amount + 1 } : value,
+                ),
+              }
+            : item,
+        ),
+      },
+    } as const satisfies ChartConfig;
+    store.update({ config: changedAmountConfig, onSelectionChange });
+    expect(store.getSnapshot().session?.sourceFingerprint).not.toBe(
+      afterSeries.session?.sourceFingerprint,
+    );
+    expect(store.getSnapshot().selection?.nodeId).toBe('a');
+    expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
+  it('accepts a compatible controlled v3 view with a category-ID replacement in one update', () => {
+    const seed = createEditorStore({ config: comparisonConfig });
+    const view = seed.getSnapshot().view as ViewSpec;
+    seed.destroy();
+    const onCommand = vi.fn();
+    const onViewChange = vi.fn();
+    const onSelectionChange = vi.fn();
+    const store = createEditorStore({
+      config: comparisonConfig,
+      view,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
+    onSelectionChange.mockClear();
+
+    const replacementConfig = {
+      ...comparisonConfig,
+      data: {
+        ...comparisonConfig.data,
+        items: comparisonConfig.data.items.map(item =>
+          item.id === 'a' ? { ...item, id: 'replacement', label: 'Replacement' } : item,
+        ),
+      },
+    } as const satisfies ChartConfig;
+    const replacementSeed = createEditorStore({ config: replacementConfig });
+    const replacementView = replacementSeed.getSnapshot().view as ViewSpec;
+    replacementSeed.destroy();
+
+    store.update({
+      config: replacementConfig,
+      view: replacementView,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+
+    expect(store.getSnapshot()).toMatchObject({
+      status: 'ready',
+      mode: 'controlled',
+      selection: null,
+      canUndo: false,
+      canRedo: false,
+    });
+    expect(store.getSnapshot().view?.rootOrder).toEqual(['replacement', 'b', 'c']);
+    expect(store.getSnapshot().session?.processedActionIds).toEqual([]);
+    expect(onCommand).not.toHaveBeenCalled();
+    expect(onViewChange).not.toHaveBeenCalled();
+    expect(onSelectionChange).toHaveBeenCalledOnce();
+    expect(onSelectionChange).toHaveBeenCalledWith(null);
+  });
+
+  it('uses a valid v3 defaultView for an uncontrolled category-ID replacement', () => {
+    const onCommand = vi.fn();
+    const onViewChange = vi.fn();
+    const onSelectionChange = vi.fn();
+    const store = createEditorStore({
+      config: comparisonConfig,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+    expect(store.dispatch(moveCommand())?.ok).toBe(true);
+    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
+    onCommand.mockClear();
+    onViewChange.mockClear();
+    onSelectionChange.mockClear();
+
+    const replacementConfig = {
+      ...comparisonConfig,
+      data: {
+        ...comparisonConfig.data,
+        items: comparisonConfig.data.items.map(item =>
+          item.id === 'a' ? { ...item, id: 'replacement', label: 'Replacement' } : item,
+        ),
+      },
+    } as const satisfies ChartConfig;
+    const replacementSeed = createEditorStore({ config: replacementConfig });
+    const replacementInitial = replacementSeed.getSnapshot().view as ViewSpec;
+    replacementSeed.destroy();
+    const defaultView = {
+      ...replacementInitial,
+      revision: 7,
+      rootOrder: ['c', 'replacement', 'b'],
+    } as ViewSpec;
+
+    store.update({
+      config: replacementConfig,
+      defaultView,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+
+    expect(store.getSnapshot()).toMatchObject({
+      status: 'ready',
+      mode: 'uncontrolled',
+      selection: null,
+      canUndo: false,
+      canRedo: false,
+    });
+    expect(store.getSnapshot().view).toEqual(defaultView);
+    expect(store.getSnapshot().session?.processedActionIds).toEqual([]);
+    expect(onCommand).not.toHaveBeenCalled();
+    expect(onViewChange).not.toHaveBeenCalled();
+    expect(onSelectionChange).toHaveBeenCalledOnce();
+    expect(onSelectionChange).toHaveBeenCalledWith(null);
+  });
+
+  it('preserves narrative order for source-order-only updates and clears an invalid selection once', () => {
+    const onCommand = vi.fn();
+    const onViewChange = vi.fn();
+    const onSelectionChange = vi.fn();
+    const store = createEditorStore({
+      config: comparisonConfig,
+      onCommand,
+      onViewChange,
+      onSelectionChange,
+    });
+    expect(store.dispatch(moveCommand())?.ok).toBe(true);
+    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
+    const beforeOrderUpdate = store.getSnapshot().session;
+    onCommand.mockClear();
+    onViewChange.mockClear();
+    onSelectionChange.mockClear();
+
+    const sourceOrderConfig = {
+      ...comparisonConfig,
+      data: {
+        ...comparisonConfig.data,
+        items: [...comparisonConfig.data.items].reverse(),
+      },
+    } as const satisfies ChartConfig;
+    store.update({ config: sourceOrderConfig, onCommand, onViewChange, onSelectionChange });
+
+    expect(store.getSnapshot().session?.sourceFingerprint).not.toBe(
+      beforeOrderUpdate?.sourceFingerprint,
+    );
+    expect(store.getSnapshot().view?.rootOrder).toEqual(['b', 'a', 'c']);
+    expect(store.getSnapshot().selection?.nodeId).toBe('a');
+    expect(store.getSnapshot().canUndo).toBe(false);
+    expect(onCommand).not.toHaveBeenCalled();
+    expect(onViewChange).not.toHaveBeenCalled();
+    expect(onSelectionChange).not.toHaveBeenCalled();
+
+    const removedCategoryConfig = {
+      ...sourceOrderConfig,
+      data: {
+        ...sourceOrderConfig.data,
+        items: sourceOrderConfig.data.items.filter(item => item.id !== 'a'),
+      },
+    } as const satisfies ChartConfig;
+    store.update({ config: removedCategoryConfig, onSelectionChange });
+
+    expect(store.getSnapshot().view?.rootOrder).toEqual(['c', 'b']);
+    expect(store.getSnapshot().selection).toBeNull();
+    expect(onSelectionChange).toHaveBeenCalledOnce();
+    expect(onSelectionChange).toHaveBeenCalledWith(null);
+  });
+
+  it('emits selection changes only when normalized comparison selection actually changes', () => {
+    const onSelectionChange = vi.fn();
+    const store = createEditorStore({ config: comparisonConfig, onSelectionChange });
+    const selection = { nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] } as const;
+
+    store.select(selection);
+    store.select({ ...selection, nodeIds: [...selection.nodeIds], sourceIds: ['wrong'] });
+
+    expect(store.getSnapshot().selection).toEqual(selection);
+    expect(onSelectionChange).toHaveBeenCalledOnce();
+    expect(onSelectionChange).toHaveBeenCalledWith(selection);
+  });
+
+  it.each([
+    {
+      name: 'comparison layout',
+      initialConfig: comparisonConfig as ChartConfig,
+      nextConfig: { ...comparisonConfig, type: 'bar' } as ChartConfig,
+    },
+    {
+      name: 'comparison dataset with matching category IDs',
+      initialConfig: comparisonConfig as ChartConfig,
+      nextConfig: {
+        ...comparisonConfig,
+        data: { ...comparisonConfig.data, datasetId: 'comparison-store-replacement' },
+      } as ChartConfig,
+    },
+    {
+      name: 'schema generation with matching category IDs',
+      initialConfig: {
+        type: 'column',
+        data: {
+          schemaVersion: '2.0.0',
+          dataKind: 'categorical',
+          datasetId: comparisonConfig.data.datasetId,
+          items: comparisonConfig.data.items.map(item => ({
+            id: item.id,
+            label: item.label,
+            amount: item.values[0]?.amount ?? 0,
+          })),
+        },
+      } as ChartConfig,
+      nextConfig: comparisonConfig as ChartConfig,
+    },
+  ])(
+    'clears comparison selection and session state once across a $name boundary',
+    ({ initialConfig, nextConfig }) => {
+      const onCommand = vi.fn();
+      const onViewChange = vi.fn();
+      const onSelectionChange = vi.fn();
+      const store = createEditorStore({
+        config: initialConfig,
+        onCommand,
+        onViewChange,
+        onSelectionChange,
+      });
+      expect(store.dispatch(moveCommand())?.ok).toBe(true);
+      store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
+      onCommand.mockClear();
+      onViewChange.mockClear();
+      onSelectionChange.mockClear();
+
+      store.update({ config: nextConfig, onCommand, onViewChange, onSelectionChange });
+
+      expect(store.getSnapshot().status).toBe('ready');
+      expect(store.getSnapshot().selection).toBeNull();
+      expect(store.getSnapshot().session?.undoStack).toEqual([]);
+      expect(store.getSnapshot().session?.redoStack).toEqual([]);
+      expect(store.getSnapshot().session?.processedActionIds).toEqual([]);
+      expect(onCommand).not.toHaveBeenCalled();
+      expect(onViewChange).not.toHaveBeenCalled();
+      expect(onSelectionChange).toHaveBeenCalledOnce();
+      expect(onSelectionChange).toHaveBeenCalledWith(null);
+    },
+  );
 
   it('releases subscribers and rejects mutations after destroy', () => {
     const store = createEditorStore({ config });

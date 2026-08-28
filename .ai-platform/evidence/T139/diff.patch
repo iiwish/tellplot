@@ -1,0 +1,3357 @@
+diff --git a/e2e/accessibility.spec.ts b/e2e/accessibility.spec.ts
+index 9af00ac49fea852dd5112af846e2124882fda165..d1ddf23ad571e721fae597bf7d1d9b0eebf1c72c 100644
+--- a/e2e/accessibility.spec.ts
++++ b/e2e/accessibility.spec.ts
+@@ -340,6 +340,137 @@ for (const layout of ['column', 'bar'] as const) {
+   });
+ }
+ 
++test('comparison Workbench exposes source-ordered Inspector and complete narrative semantics', async ({
++  page,
++}) => {
++  await openEditor(page);
++  const comparisonConfig = {
++    type: 'column',
++    locale: 'en-US',
++    data: {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: 'comparison-accessibility',
++      currency: 'USD',
++      series: [
++        { id: 'current', label: 'Current' },
++        { id: 'plan', label: 'Plan' },
++      ],
++      items: [
++        {
++          id: 'alpha',
++          label: 'Alpha',
++          values: [
++            { seriesId: 'current', amount: 12 },
++            { seriesId: 'plan', amount: 10 },
++          ],
++        },
++        {
++          id: 'beta',
++          label: 'Beta',
++          values: [
++            { seriesId: 'current', amount: 8 },
++            { seriesId: 'plan', amount: 11 },
++          ],
++        },
++        {
++          id: 'gamma',
++          label: 'Gamma',
++          values: [
++            { seriesId: 'current', amount: 5 },
++            { seriesId: 'plan', amount: 7 },
++          ],
++        },
++      ],
++    },
++    appearance: { legend: false, animation: { enabled: false } },
++    editor: {
++      panels: { outline: true, inspector: true, toolbar: true },
++      outline: { placement: 'left' },
++      inspector: { mode: 'static' },
++    },
++    height: '100%',
++  };
++  const configInput = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
++  await configInput.fill(JSON.stringify(comparisonConfig, null, 2));
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++  await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
++    name: 'comparison-view.json',
++    mimeType: 'application/json',
++    buffer: Buffer.from(
++      JSON.stringify({
++        schemaVersion: '3.0.0',
++        datasetId: 'comparison-accessibility',
++        chartType: 'column',
++        revision: 0,
++        rootOrder: ['group', 'gamma'],
++        groups: { group: { id: 'group', label: 'Alpha and Beta', childIds: ['alpha', 'beta'] } },
++        collapsedGroupIds: [],
++        pinnedItemIds: ['gamma'],
++        annotations: { group: 'Regional context', gamma: 'Pinned context' },
++        emphasis: { group: 'muted', gamma: 'highlight' },
++      }),
++    ),
++  });
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('VIEW_IMPORTED');
++
++  const tree = page.getByRole('tree', { name: 'Structure outline' });
++  await expect(tree.getByRole('treeitem')).toHaveCount(4);
++  await expect(tree.locator('[data-series-id]')).toHaveCount(0);
++  await expect(tree.getByRole('treeitem').first()).toContainText('2 series');
++  await tree.locator('[data-node-id="gamma"]').click();
++  const inspector = await activateInspectorPanel(page);
++  await expect(inspector.locator('[data-inspector-kind="category"]')).toBeVisible();
++  await expect(inspector.locator('[data-series-id]')).toHaveCount(2);
++  await expect(inspector.locator('[data-series-id]').nth(0)).toContainText('Current');
++  await expect(inspector.locator('[data-series-id]').nth(1)).toContainText('Plan');
++  await expect(inspector.getByRole('textbox', { name: /Annotation|注释/u })).toHaveValue(
++    'Pinned context',
++  );
++  await expect(inspector).toContainText('Pinned');
++  await expect(inspector).toContainText('Highlighted');
++  await expect(inspector).toContainText('Locked');
++
++  let summary = page.getByRole('region', { name: 'Chart summary' });
++  await expect(summary.locator('[data-summary-kind="series-registry"]')).toHaveText(
++    'Series registry: Current, Plan.',
++  );
++  expect(
++    await summary
++      .locator('[data-summary-node-id]')
++      .evaluateAll(nodes =>
++        nodes.map(node => [
++          node.getAttribute('data-summary-node-id'),
++          node.getAttribute('data-summary-node-kind'),
++        ]),
++      ),
++  ).toEqual([
++    ['group', 'expanded-group'],
++    ['alpha', 'category'],
++    ['beta', 'category'],
++    ['gamma', 'category'],
++  ]);
++  await expect(summary).toContainText('Regional context');
++  await expect(summary).toContainText('muted');
++  await expect(summary).toContainText('pinned');
++  await expectNoSeriousOrCritical(page, 'comparison narrative Workbench');
++
++  const emptyConfig = {
++    ...comparisonConfig,
++    data: { ...comparisonConfig.data, datasetId: 'comparison-accessibility-empty', items: [] },
++  };
++  await configInput.fill(JSON.stringify(emptyConfig, null, 2));
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++  summary = page.getByRole('region', { name: 'Chart summary' });
++  await expect(summary.locator('[data-summary-kind="intro"]')).toContainText(
++    '0 visible clusters and 2 series',
++  );
++  await expect(summary.locator('[data-summary-kind="series-registry"]')).toHaveText(
++    'Series registry: Current, Plan.',
++  );
++  await expect(summary.locator('[data-summary-node-id]')).toHaveCount(0);
++});
++
+ for (const websitePage of [
+   { path: '/', heading: 'TellPlot', state: 'showcase home' },
+   { path: '/examples', heading: '图表示例', state: 'showcase examples' },
+diff --git a/e2e/container-responsive.spec.ts b/e2e/container-responsive.spec.ts
+index f582c998519de44ba0ac104f72eece83f5d2dd06..aa20d0b14e8f346b1d45bd31a21d9c51ce2e50c9 100644
+--- a/e2e/container-responsive.spec.ts
++++ b/e2e/container-responsive.spec.ts
+@@ -1,7 +1,42 @@
+-import { expect, test } from '@playwright/test';
++import { expect, test, type Locator } from '@playwright/test';
++
++import { activateInspectorPanel } from './editorPanels';
+ 
+ const EDITOR = '[data-tellplot="editor"]';
+ 
++async function applyConfigWithoutMovingFocus(
++  configInput: Locator,
++  config: unknown,
++  hideFocusedHeading = false,
++): Promise<void> {
++  await configInput.evaluate(
++    async (element, update) => {
++      if (!(element instanceof HTMLTextAreaElement)) {
++        throw new Error('Playground config input is unavailable.');
++      }
++      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
++      setter?.call(element, update.serialized);
++      element.dispatchEvent(new Event('input', { bubbles: true }));
++      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
++      const apply = element.ownerDocument.querySelector<HTMLButtonElement>(
++        'button[aria-label="立即应用图表配置"]',
++      );
++      if (apply === null) {
++        throw new Error('Playground config apply control is unavailable.');
++      }
++      if (update.hideFocusedHeading) {
++        const style = element.ownerDocument.createElement('style');
++        style.dataset['comparisonHiddenHeading'] = 'true';
++        style.textContent =
++          '[data-tellplot="editor"] [data-focus-key="chart-heading"] { display: none !important; }';
++        element.ownerDocument.head.append(style);
++      }
++      apply.click();
++    },
++    { hideFocusedHeading, serialized: JSON.stringify(config, null, 2) },
++  );
++}
++
+ test('responds to a narrow host container inside a wide viewport', async ({ page }) => {
+   await page.setViewportSize({ width: 1440, height: 900 });
+   await page.goto('/playground');
+@@ -87,3 +122,156 @@ test('responds to a narrow host container inside a wide viewport', async ({ page
+     'ready',
+   );
+ });
++
++test('comparison focus fallback follows visible responsive surfaces only', async ({ page }) => {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto('/playground');
++  const editor = page.locator(EDITOR);
++  await expect(editor).toHaveAttribute('data-editor-state', 'ready');
++  const host = page.locator('.tellplot-react-host');
++  const configInput = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
++  const comparisonConfig = {
++    type: 'column',
++    locale: 'en-US',
++    data: {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: 'comparison-responsive-focus',
++      currency: 'USD',
++      series: [
++        { id: 'current', label: 'Current' },
++        { id: 'plan', label: 'Plan' },
++      ],
++      items: [
++        {
++          id: 'alpha',
++          label: 'Alpha',
++          values: [
++            { seriesId: 'current', amount: 12 },
++            { seriesId: 'plan', amount: 10 },
++          ],
++        },
++        {
++          id: 'beta',
++          label: 'Beta',
++          values: [
++            { seriesId: 'current', amount: 8 },
++            { seriesId: 'plan', amount: 11 },
++          ],
++        },
++      ],
++    },
++    appearance: { legend: false, animation: { enabled: false } },
++    editor: {
++      panels: { outline: true, inspector: true, toolbar: true },
++      outline: { placement: 'left' },
++      inspector: { mode: 'static' },
++    },
++    height: '100%',
++  };
++  await configInput.fill(JSON.stringify(comparisonConfig, null, 2));
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++
++  await host.evaluate(element => {
++    if (element instanceof HTMLElement) {
++      element.style.width = '1280px';
++    }
++  });
++  await expect(editor).toHaveAttribute('data-layout', 'wide');
++  const firstOutline = editor.getByRole('treeitem').first();
++  await firstOutline.click();
++  let inspector = await activateInspectorPanel(page);
++  const annotation = inspector.getByRole('textbox', { name: /Annotation|注释/u });
++  await annotation.fill('Responsive note');
++  await inspector.getByRole('button', { name: /Save annotation|保存注释/u }).focus();
++
++  await host.evaluate(element => {
++    if (element instanceof HTMLElement) {
++      element.style.width = '1000px';
++    }
++  });
++  await expect(editor).toHaveAttribute('data-layout', 'compact');
++  await expect(editor.locator('.tp-inspector-static')).toBeHidden();
++  await expect(firstOutline).toBeFocused();
++
++  await host.evaluate(element => {
++    if (element instanceof HTMLElement) {
++      element.style.width = '500px';
++    }
++  });
++  await expect(editor).toHaveAttribute('data-layout', 'narrow');
++  await editor.locator('.tp-inspector-trigger').click();
++  inspector = await activateInspectorPanel(page);
++  await inspector.getByRole('textbox', { name: /Annotation|注释/u }).focus();
++  await host.evaluate(element => {
++    if (element instanceof HTMLElement) {
++      element.style.width = '1000px';
++    }
++  });
++  await expect(editor).toHaveAttribute('data-layout', 'compact');
++  await expect(editor.getByRole('dialog', { name: 'Inspector' })).toBeHidden();
++  await expect(firstOutline).toBeFocused();
++
++  await host.evaluate(element => {
++    if (element instanceof HTMLElement) {
++      element.style.width = '500px';
++    }
++  });
++  const hiddenAfterResize = editor.locator('.tp-inspector-trigger');
++  await hiddenAfterResize.focus();
++  await expect(hiddenAfterResize).toBeFocused();
++  await host.evaluate(element => {
++    if (element instanceof HTMLElement) {
++      element.style.width = '1280px';
++    }
++  });
++  await expect(editor).toHaveAttribute('data-layout', 'wide');
++  await expect(hiddenAfterResize).toBeHidden();
++  await expect(firstOutline).toBeFocused();
++
++  await firstOutline.focus();
++  await applyConfigWithoutMovingFocus(configInput, {
++    ...comparisonConfig,
++    editor: {
++      ...comparisonConfig.editor,
++      panels: { outline: false, inspector: true, toolbar: true },
++    },
++  });
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++  await expect(editor.locator('[data-focus-key="chart-heading"]')).toBeFocused();
++  await expect(editor.locator('.tp-inspector-trigger')).toBeHidden();
++
++  await host.evaluate(element => {
++    if (element instanceof HTMLElement) {
++      element.style.width = '500px';
++    }
++  });
++  await editor.locator('.tp-inspector-trigger').click();
++  inspector = await activateInspectorPanel(page);
++  await inspector.getByRole('textbox', { name: /Annotation|注释/u }).focus();
++  await applyConfigWithoutMovingFocus(configInput, {
++    ...comparisonConfig,
++    data: { ...comparisonConfig.data, datasetId: 'comparison-responsive-empty', items: [] },
++    editor: {
++      ...comparisonConfig.editor,
++      panels: { outline: false, inspector: false, toolbar: false },
++    },
++  });
++  await expect(editor).toHaveAttribute('data-editor-state', 'empty');
++  await expect(editor.getByRole('region', { name: 'Chart summary' })).toContainText(
++    '0 visible clusters and 2 series',
++  );
++  const emptyHeading = editor.getByRole('heading', { name: 'Category column chart' });
++  await expect(emptyHeading).toBeFocused();
++  await applyConfigWithoutMovingFocus(configInput, {
++    ...comparisonConfig,
++    data: { ...comparisonConfig.data, datasetId: 'comparison-responsive-empty', items: [] },
++    editor: {
++      ...comparisonConfig.editor,
++      panels: { outline: false, inspector: false, toolbar: false },
++    },
++    height: 721,
++  }, true);
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++  await expect(editor).toBeFocused();
++});
+diff --git a/e2e/editorPanels.ts b/e2e/editorPanels.ts
+index 16777e5daca5aafa9818f6cf91471686732c950d..75839984412a8bff67139c3809dc33f75489ab17 100644
+--- a/e2e/editorPanels.ts
++++ b/e2e/editorPanels.ts
+@@ -1,12 +1,40 @@
+-import { expect, type Page } from '@playwright/test';
++import { expect, type Locator, type Page } from '@playwright/test';
+ 
+-export async function activateInspectorPanel(page: Page): Promise<void> {
+-  const tab = page.getByRole('tab', { name: '检查器' });
+-  if ((await tab.count()) === 0) {
+-    return;
++export async function activateInspectorPanel(page: Page): Promise<Locator> {
++  const container = page
++    .locator(
++      [
++        '[role="complementary"][aria-label="检查器"]:visible',
++        '[role="complementary"][aria-label="Inspector"]:visible',
++        '[role="tabpanel"][aria-label="检查器"]:visible',
++        '[role="tabpanel"][aria-label="Inspector"]:visible',
++        '[role="dialog"][aria-label="检查器"]:visible',
++        '[role="dialog"][aria-label="Inspector"]:visible',
++      ].join(', '),
++    )
++    .first();
++  if ((await container.count()) > 0) {
++    return container;
+   }
+-  await tab.click();
+-  await expect(tab).toHaveAttribute('aria-selected', 'true');
++
++  const tab = page
++    .locator('[role="tab"]:visible')
++    .filter({ hasText: /^(检查器|Inspector)$/u })
++    .first();
++  if ((await tab.count()) > 0) {
++    await tab.click();
++    await expect(tab).toHaveAttribute('aria-selected', 'true');
++  } else {
++    const trigger = page
++      .locator(
++        'button[aria-label="打开检查器"]:visible, button[aria-label="Open inspector"]:visible',
++      )
++      .first();
++    await expect(trigger).toBeVisible();
++    await trigger.click();
++  }
++  await expect(container).toBeVisible();
++  return container;
+ }
+ 
+ export async function activateOutlinePanel(page: Page): Promise<void> {
+diff --git a/packages/editor/src/editor/chartSurface.ts b/packages/editor/src/editor/chartSurface.ts
+index 3a904ac09e2d99ccbb48413ae3b8b1dd40b6f7bf..6a35d6c1946db2ab5e88d8e04dc7b33c35347f86 100644
+--- a/packages/editor/src/editor/chartSurface.ts
++++ b/packages/editor/src/editor/chartSurface.ts
+@@ -48,9 +48,10 @@ import {
+   type ComparisonSceneReceipt,
+ } from '../rendering/g2/comparisonSceneReceipt';
+ import { button, element, setOptionalAttribute } from './dom';
+-import type { EditorLocale } from './formatAmount';
++import { formatAmount, type EditorLocale } from './formatAmount';
+ import type { EditorLayoutMode } from './layout';
+ import type { EditorMessages } from './messages';
++import { outlineEntries } from './outline';
+ import { chartTitle, type EditorChartProjection } from './projection';
+ import type { ChartRenderIssue } from './types';
+ 
+@@ -1324,6 +1325,13 @@ export function createChartSurface(
+       current = state;
+       currentInteractionSignature = interactionSignature(state, layoutMode);
+       clearInteraction();
++      if (state.chart.family === 'categorical' && state.chart.generation === 'comparison') {
++        title.tabIndex = -1;
++        title.dataset['focusKey'] = 'chart-heading';
++      } else {
++        title.removeAttribute('tabindex');
++        delete title.dataset['focusKey'];
++      }
+       const locale = state.config.locale ?? 'zh-CN';
+       const copy = chartCopy(locale, state.chart.family);
+       renderErrorMessage.textContent = state.messages.chartRenderFailed;
+@@ -1347,21 +1355,112 @@ export function createChartSurface(
+         empty.hidden = !isEmpty;
+       }
+       summary.setAttribute('aria-label', locale === 'en-US' ? 'Chart summary' : '图表摘要');
+-      const intro = element(document, 'p', {
+-        text:
+-          locale === 'en-US'
+-            ? `${title.textContent ?? ''}, ${state.chart.projection.length} visible nodes.`
+-            : `${title.textContent ?? ''}，共 ${state.chart.projection.length} 个可见节点。`,
+-      });
+-      const list = element(document, 'ol');
+-      for (const datum of state.chart.projection) {
+-        list.append(
+-          element(document, 'li', {
+-            text: 'amount' in datum ? `${datum.label}, ${datum.amount}` : datum.label,
+-          }),
++      if (state.chart.family === 'categorical' && state.chart.generation === 'comparison') {
++        const series = state.config.data.schemaVersion === '3.0.0' ? state.config.data.series : [];
++        const intro = element(document, 'p', {
++          text: `${title.textContent ?? ''}, ${state.messages.comparisonSummary(
++            state.chart.projection.length,
++            series.length,
++          )}`,
++          attributes: { 'data-summary-kind': 'intro' },
++        });
++        const registry = element(document, 'p', {
++          text: state.messages.seriesRegistry(series.map(entry => entry.label)),
++          attributes: { 'data-summary-kind': 'series-registry' },
++        });
++        const list = element(document, 'ol');
++        const entries = outlineEntries(
++          state.view,
++          state.chart.projection,
++          'categorical',
++          'comparison',
++        );
++        const resolved = resolveFinancialChartAppearance(
++          toFinancialChartAppearance(state.config),
++          '',
+         );
++        for (const entry of entries) {
++          const datum = state.chart.projection.find(value => value.nodeId === entry.nodeId);
++          const group = ownGroup(state.view, entry.nodeId);
++          const kind =
++            group === undefined
++              ? 'category'
++              : entry.expanded === true
++                ? 'expanded-group'
++                : 'collapsed-group';
++          const fragments = [entry.label];
++          if (group !== undefined) {
++            fragments.push(
++              entry.expanded === true ? state.messages.expanded : state.messages.collapsed,
++            );
++          }
++          if (datum !== undefined && 'values' in datum) {
++            fragments.push(
++              datum.values
++                .map(
++                  value =>
++                    `${value.label}, ${formatAmount(
++                      value.amount,
++                      locale,
++                      state.config.data.currency,
++                      resolved.numberFormat,
++                    )}`,
++                )
++                .join('; '),
++            );
++          }
++          fragments.push(state.messages.sourceCategories(new Set(entry.sourceIds).size));
++          const annotation = state.view.annotations[entry.nodeId];
++          if (annotation !== undefined) {
++            fragments.push(`${state.messages.annotation}: ${annotation}`);
++          }
++          const emphasis = state.view.emphasis[entry.nodeId];
++          if (emphasis !== undefined) {
++            fragments.push(
++              (emphasis === 'highlight'
++                ? state.messages.highlighted
++                : state.messages.muted
++              ).toLocaleLowerCase(locale),
++            );
++          }
++          if (
++            entry.kind === 'contribution' &&
++            entry.sourceIds[0] !== undefined &&
++            state.view.pinnedItemIds.includes(entry.sourceIds[0])
++          ) {
++            fragments.push(state.messages.pinned.toLocaleLowerCase(locale));
++          }
++          if (entry.locked) {
++            fragments.push(state.messages.locked.toLocaleLowerCase(locale));
++          }
++          list.append(
++            element(document, 'li', {
++              text: `${fragments.join('. ')}.`,
++              attributes: {
++                'data-summary-node-id': entry.nodeId,
++                'data-summary-node-kind': kind,
++              },
++            }),
++          );
++        }
++        summary.replaceChildren(intro, registry, list);
++      } else {
++        const intro = element(document, 'p', {
++          text:
++            locale === 'en-US'
++              ? `${title.textContent ?? ''}, ${state.chart.projection.length} visible nodes.`
++              : `${title.textContent ?? ''}，共 ${state.chart.projection.length} 个可见节点。`,
++        });
++        const list = element(document, 'ol');
++        for (const datum of state.chart.projection) {
++          list.append(
++            element(document, 'li', {
++              text: `${datum.label}, ${datum.amount}`,
++            }),
++          );
++        }
++        summary.replaceChildren(intro, list);
+       }
+-      summary.replaceChildren(intro, list);
+       setOptionalAttribute(stage, 'data-chart-type', state.chart.chartType);
+       requestRender();
+     },
+diff --git a/packages/editor/src/editor/domEditor.ts b/packages/editor/src/editor/domEditor.ts
+index 2fd8f5c00825ebccf8ada79e89a74ff9c3fd8649..57d27bb5f0790cde87c49cf0dd6e7fcaa3eaf022 100644
+--- a/packages/editor/src/editor/domEditor.ts
++++ b/packages/editor/src/editor/domEditor.ts
+@@ -9,6 +9,7 @@ import {
+   resolveKeyboardMoveTarget,
+   resolvePointerDropPlacement,
+   resolvePointerMoveTarget,
++  resolveFinancialChartAppearance,
+   serializeViewSpec,
+   toFinancialChartAppearance,
+   viewSpecsEqual,
+@@ -458,8 +459,10 @@ export function createEditor(
+   let transientScrollTop = 0;
+   let workbenchScrollTop = 0;
+   let focusRestoreVersion = 0;
++  let pendingComparisonFocusRestoreVersion: number | null = null;
+   let suppressStoreRender = false;
+   let layoutMode: EditorLayoutMode = 'narrow';
++  let comparisonFocusLifecycle = store.getSnapshot().config?.data.schemaVersion === '3.0.0';
+   let layoutObserver: EditorLayoutObserver | undefined;
+   let onRenderError = initialOptionsSnapshot.onRenderError;
+   const activeExportControllers = new Set<AbortController>();
+@@ -548,16 +551,114 @@ export function createEditor(
+     return captureFocusState(control, 'root');
+   };
+ 
+-  const restoreWorkbenchState = (state: FocusState | null): void => {
++  const comparisonFocusable = (candidate: HTMLElement | undefined): candidate is HTMLElement => {
++    if (
++      candidate === undefined ||
++      !candidate.isConnected ||
++      candidate.hasAttribute('disabled') ||
++      candidate.hidden ||
++      candidate.closest('[hidden], [inert], [aria-hidden="true"]') !== null
++    ) {
++      return false;
++    }
++    if (candidate.closest('.tp-outline-trigger') !== null && layoutMode !== 'narrow') {
++      return false;
++    }
++    if (
++      root.dataset['editorState'] === 'invalid' &&
++      candidate.closest('.tp-outline-trigger, .tp-inspector-trigger') !== null
++    ) {
++      return false;
++    }
++    if (candidate.closest('.tp-inspector-trigger') !== null) {
++      const inspectorMode = root.dataset['inspectorMode'] ?? 'static';
++      if (layoutMode === 'wide' || (layoutMode === 'compact' && inspectorMode === 'tabs')) {
++        return false;
++      }
++    }
++    if (
++      candidate.closest('.tp-inspector-static') !== null &&
++      (layoutMode === 'compact' || layoutMode === 'narrow')
++    ) {
++      return false;
++    }
++    if (
++      layoutMode === 'narrow' &&
++      candidate.closest('.tp-outline-static, .tp-panel-rail-static') !== null
++    ) {
++      return false;
++    }
++    let current: HTMLElement | null = candidate;
++    while (current !== null && root.contains(current)) {
++      const style = ownerWindow?.getComputedStyle(current);
++      if (
++        style?.display === 'none' ||
++        style?.visibility === 'hidden' ||
++        style?.visibility === 'collapse'
++      ) {
++        return false;
++      }
++      current = current.parentElement;
++    }
++    return true;
++  };
++
++  const comparisonFallback = (): HTMLElement => {
++    const outline = Array.from(workbench.querySelectorAll<HTMLElement>('[role="treeitem"]')).find(
++      comparisonFocusable,
++    );
++    if (outline !== undefined) {
++      return outline;
++    }
++    const toolbarControl = Array.from(
++      toolbar.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]'),
++    ).find(comparisonFocusable);
++    if (toolbarControl !== undefined) {
++      return toolbarControl;
++    }
++    const heading = workbench.querySelector<HTMLElement>('[data-focus-key="chart-heading"]');
++    return heading !== null && comparisonFocusable(heading) ? heading : root;
++  };
++
++  const restoreWorkbenchState = (
++    state: FocusState | null,
++    useComparisonFocus = comparisonFocusLifecycle,
++  ): void => {
++    const hasActiveExternalFocusTarget = (): boolean => {
++      const active = document.activeElement;
++      return (
++        active !== null &&
++        active !== document.body &&
++        active !== document.documentElement &&
++        active.isConnected &&
++        !root.contains(active)
++      );
++    };
++    if (
++      state === null &&
++      pendingComparisonFocusRestoreVersion !== null &&
++      !hasActiveExternalFocusTarget()
++    ) {
++      return;
++    }
+     focusRestoreVersion += 1;
+     const version = focusRestoreVersion;
++    pendingComparisonFocusRestoreVersion =
++      useComparisonFocus && state !== null ? version : null;
+     if (state === null) {
+       return;
+     }
+     queueMicrotask(() => {
++      const isPendingComparisonRestore = pendingComparisonFocusRestoreVersion === version;
++      if (isPendingComparisonRestore) {
++        pendingComparisonFocusRestoreVersion = null;
++      }
+       if (destroyed || version !== focusRestoreVersion || modalFocusTrap?.isTop() === true) {
+         return;
+       }
++      if (isPendingComparisonRestore && hasActiveExternalFocusTarget()) {
++        return;
++      }
+       const target =
+         state.key === 'root'
+           ? root
+@@ -565,12 +666,15 @@ export function createEditor(
+               ...toolbar.querySelectorAll<HTMLElement>('[data-focus-key]'),
+               ...workbench.querySelectorAll<HTMLElement>('[data-focus-key]'),
+             ].find(candidate => candidate.dataset['focusKey'] === state.key);
+-      const hiddenStaticPanel =
++      const hiddenLegacyStaticPanel =
+         layoutMode === 'narrow' &&
+         target !== undefined &&
+         target.closest('.tp-outline-static, .tp-inspector-static, .tp-panel-rail-static') !== null;
+-      const focusTarget =
+-        target === undefined || target.hasAttribute('disabled') || hiddenStaticPanel
++      const focusTarget = useComparisonFocus
++        ? comparisonFocusable(target)
++          ? target
++          : comparisonFallback()
++        : target === undefined || target.hasAttribute('disabled') || hiddenLegacyStaticPanel
+           ? root
+           : target;
+       focusTarget.focus();
+@@ -1226,13 +1330,15 @@ export function createEditor(
+       const value = element(document, 'span', {
+         className: 'tp-row-value',
+         text:
+-          entry.amount === null
+-            ? `${entry.sourceIds.length} ${messages.sourceItems}`
+-            : formatAmount(
+-                entry.amount,
+-                snapshot.config?.locale ?? 'zh-CN',
+-                snapshot.config?.data.currency,
+-              ),
++          entry.seriesCount !== undefined
++            ? messages.seriesCount(entry.seriesCount)
++            : entry.amount === null
++              ? `${entry.sourceIds.length} ${messages.sourceItems}`
++              : formatAmount(
++                  entry.amount,
++                  snapshot.config?.locale ?? 'zh-CN',
++                  snapshot.config?.data.currency,
++                ),
+       });
+       const lock = element(document, 'span', {
+         className: entry.locked ? 'tp-row-lock' : 'tp-row-lock-placeholder',
+@@ -1318,12 +1424,33 @@ export function createEditor(
+       scroll.scrollTop = workbenchScrollTop;
+     }
+     const selection = snapshot.selection;
+-    const selected = selection === null ? undefined : projectionDatum(chart, selection.nodeId);
++    const comparison = chart.family === 'categorical' && chart.generation === 'comparison';
++    const singleSelection = selection !== null && (!comparison || selection.nodeIds.length === 1);
++    const selected = !singleSelection ? undefined : projectionDatum(chart, selection.nodeId);
+     const selectedGroup =
+-      selection === null || snapshot.view === null
++      !singleSelection || snapshot.view === null
+         ? undefined
+         : ownGroup(snapshot.view, selection.nodeId);
+     const details = element(document, 'section', { className: 'tp-inspector-section' });
++    const collapsedGroup =
++      selectedGroup !== undefined && snapshot.view?.collapsedGroupIds.includes(selectedGroup.id);
++    const inspectorKind =
++      selection === null
++        ? 'validation'
++        : !singleSelection
++          ? 'multi-selection'
++          : comparison && selectedGroup !== undefined
++            ? collapsedGroup
++              ? 'collapsed-group'
++              : 'expanded-group'
++            : comparison
++              ? 'category'
++              : selectedGroup === undefined
++                ? 'item'
++                : collapsedGroup
++                  ? 'collapsed-group'
++                  : 'expanded-group';
++    details.dataset['inspectorKind'] = inspectorKind;
+     details.append(
+       element(document, 'div', {
+         className: 'tp-section-kicker',
+@@ -1333,7 +1460,9 @@ export function createEditor(
+         text:
+           selection === null
+             ? messages.valid
+-            : (selected?.label ?? selectedGroup?.label ?? selection.nodeId),
++            : !singleSelection
++              ? messages.selectedNodes(selection.nodeIds.length)
++              : (selected?.label ?? selectedGroup?.label ?? selection.nodeId),
+       }),
+     );
+     if (selected !== undefined && 'amount' in selected) {
+@@ -1361,102 +1490,165 @@ export function createEditor(
+       appendMetric(messages.dataset, snapshot.config?.data.datasetId ?? '');
+       appendMetric(messages.sourceCount, String(snapshot.config?.data.items.length ?? 0));
+       appendMetric(messages.revision, String(snapshot.view?.revision ?? 0));
++    } else if (!singleSelection) {
++      appendMetric(messages.selectedItem, messages.selectedNodes(selection.nodeIds.length));
++      appendMetric(
++        messages.sourceCount,
++        messages.sourceCategories(new Set(selection.sourceIds).size),
++      );
+     } else {
+-      appendMetric(messages.sourceCount, String(selection.sourceIds.length));
+       appendMetric(
+-        selected?.locked === true ? messages.locked : messages.editable,
+-        selected?.locked === true ? messages.locked : messages.editable,
++        messages.sourceCount,
++        comparison
++          ? messages.sourceCategories(new Set(selection.sourceIds).size)
++          : String(selection.sourceIds.length),
++      );
++      if (selectedGroup !== undefined) {
++        appendMetric(selectedGroup.label, collapsedGroup ? messages.collapsed : messages.expanded);
++      }
++      if (
++        selected !== undefined &&
++        selectedGroup === undefined &&
++        selected.sourceIds[0] !== undefined &&
++        snapshot.view?.pinnedItemIds.includes(selected.sourceIds[0]) === true
++      ) {
++        appendMetric(messages.pinned, messages.pinned);
++      }
++      const emphasis = snapshot.view?.emphasis[selection.nodeId];
++      if (emphasis !== undefined) {
++        const emphasisMessage = emphasis === 'highlight' ? messages.highlighted : messages.muted;
++        appendMetric(emphasisMessage, emphasisMessage);
++      }
++      const locked =
++        selected?.locked === true ||
++        selection.sourceIds.some(sourceId => snapshot.view?.pinnedItemIds.includes(sourceId)) ||
++        snapshot.readOnly;
++      appendMetric(
++        locked ? messages.locked : messages.editable,
++        locked ? messages.locked : messages.editable,
+       );
+     }
+     details.append(metrics);
++    if (comparison && singleSelection && selected !== undefined && 'values' in selected) {
++      const resolved = resolveFinancialChartAppearance(
++        toFinancialChartAppearance(snapshot.config as NonNullable<typeof snapshot.config>),
++        '',
++      );
++      const values = element(document, 'dl', {
++        className: 'tp-comparison-series-values',
++        attributes: { 'data-inspector-values': '' },
++      });
++      for (const value of selected.values) {
++        const row = element(document, 'div', {
++          attributes: { 'data-series-id': value.seriesId },
++        });
++        row.append(
++          element(document, 'dt', { text: value.label }),
++          element(document, 'dd', {
++            text: formatAmount(
++              value.amount,
++              snapshot.config?.locale ?? 'zh-CN',
++              snapshot.config?.data.currency,
++              resolved.numberFormat,
++            ),
++          }),
++        );
++        values.append(row);
++      }
++      details.append(values);
++    }
+     scroll.append(details);
+ 
+     if (selection !== null && snapshot.view !== null) {
+-      const persistedAnnotation = annotationValue(snapshot.view, selection.nodeId);
+-      const draftAnnotation =
+-        annotationDraft?.nodeId === selection.nodeId ? annotationDraft.value : persistedAnnotation;
+-      const field = element(document, 'section', {
+-        className: 'tp-inspector-section tp-annotation-field',
+-      });
+-      const fieldId = `${instanceId}-${context}-annotation-${selection.nodeId.replace(/[^A-Za-z0-9_-]/gu, '-')}`;
+-      const label = element(document, 'label', {
+-        className: 'tp-field-label',
+-        text: messages.annotation,
+-        attributes: { for: fieldId },
+-      });
+-      const textarea = element(document, 'textarea', {
+-        className: 'tp-text-input tp-text-area',
+-        attributes: {
+-          id: fieldId,
+-          placeholder: messages.annotationPlaceholder,
+-          'data-focus-key': `annotation:${selection.nodeId}`,
+-        },
+-      });
+-      textarea.value = draftAnnotation;
+-      textarea.readOnly = snapshot.readOnly;
+-      const footer = element(document, 'div', { className: 'tp-annotation-footer' });
+-      const count = element(document, 'span', { className: 'tp-annotation-count' });
+-      const save = button(document, messages.saveAnnotation, { className: 'tp-command-button' });
+-      const updateAnnotationState = (): void => {
+-        const length = Array.from(textarea.value).length;
+-        count.textContent = `${length} / 500`;
+-        count.dataset['invalid'] = length > 500 ? 'true' : 'false';
+-        save.disabled =
+-          snapshot.readOnly ||
+-          length > 500 ||
+-          textarea.value === persistedAnnotation ||
+-          (annotationDraft?.nodeId === selection.nodeId &&
+-            annotationDraft.submittedValue === textarea.value);
+-      };
+-      textarea.addEventListener('input', () => {
+-        annotationDraft = {
+-          nodeId: selection.nodeId,
+-          value: textarea.value,
+-          baseline: persistedAnnotation,
+-        };
+-        updateAnnotationState();
+-      });
+-      save.addEventListener('click', () => {
+-        const view = store.getSnapshot().view;
+-        if (view === null || Array.from(textarea.value).length > 500) {
+-          return;
+-        }
+-        const text = textarea.value.trim() === '' ? null : textarea.value;
+-        const submittedValue = text ?? '';
+-        annotationDraft = {
+-          nodeId: selection.nodeId,
+-          value: textarea.value,
+-          baseline: persistedAnnotation,
+-          submittedValue,
+-        };
+-        const result = dispatchInteraction(
+-          {
+-            schemaVersion: '1.0.0',
+-            id: nextActionId('direct'),
+-            type: 'setAnnotation',
+-            source: 'direct',
+-            baseRevision: view.revision,
+-            payload: { nodeId: selection.nodeId, text },
++      if (singleSelection) {
++        const persistedAnnotation = annotationValue(snapshot.view, selection.nodeId);
++        const draftAnnotation =
++          annotationDraft?.nodeId === selection.nodeId
++            ? annotationDraft.value
++            : persistedAnnotation;
++        const field = element(document, 'section', {
++          className: 'tp-inspector-section tp-annotation-field',
++        });
++        const fieldId = `${instanceId}-${context}-annotation-${selection.nodeId.replace(/[^A-Za-z0-9_-]/gu, '-')}`;
++        const label = element(document, 'label', {
++          className: 'tp-field-label',
++          text: messages.annotation,
++          attributes: { for: fieldId },
++        });
++        const textarea = element(document, 'textarea', {
++          className: 'tp-text-input tp-text-area',
++          attributes: {
++            id: fieldId,
++            placeholder: messages.annotationPlaceholder,
++            'data-focus-key': `annotation:${selection.nodeId}`,
+           },
+-          text === null ? messages.annotationRemoved : messages.annotationSaved,
+-        );
+-        if (
+-          result?.ok !== true &&
+-          annotationDraft?.nodeId === selection.nodeId &&
+-          annotationDraft.submittedValue === submittedValue
+-        ) {
++        });
++        textarea.value = draftAnnotation;
++        textarea.readOnly = snapshot.readOnly;
++        const footer = element(document, 'div', { className: 'tp-annotation-footer' });
++        const count = element(document, 'span', { className: 'tp-annotation-count' });
++        const save = button(document, messages.saveAnnotation, { className: 'tp-command-button' });
++        const updateAnnotationState = (): void => {
++          const length = Array.from(textarea.value).length;
++          count.textContent = `${length} / 500`;
++          count.dataset['invalid'] = length > 500 ? 'true' : 'false';
++          save.disabled =
++            snapshot.readOnly ||
++            length > 500 ||
++            textarea.value === persistedAnnotation ||
++            (annotationDraft?.nodeId === selection.nodeId &&
++              annotationDraft.submittedValue === textarea.value);
++        };
++        textarea.addEventListener('input', () => {
+           annotationDraft = {
+             nodeId: selection.nodeId,
+             value: textarea.value,
+             baseline: persistedAnnotation,
+           };
+-        }
+-      });
+-      save.dataset['focusKey'] = `annotation-save:${selection.nodeId}`;
+-      updateAnnotationState();
+-      footer.append(count, save);
+-      field.append(label, textarea, footer);
+-      scroll.append(field);
++          updateAnnotationState();
++        });
++        save.addEventListener('click', () => {
++          const view = store.getSnapshot().view;
++          if (view === null || Array.from(textarea.value).length > 500) {
++            return;
++          }
++          const text = textarea.value.trim() === '' ? null : textarea.value;
++          const submittedValue = text ?? '';
++          annotationDraft = {
++            nodeId: selection.nodeId,
++            value: textarea.value,
++            baseline: persistedAnnotation,
++            submittedValue,
++          };
++          const result = dispatchInteraction(
++            {
++              schemaVersion: '1.0.0',
++              id: nextActionId('direct'),
++              type: 'setAnnotation',
++              source: 'direct',
++              baseRevision: view.revision,
++              payload: { nodeId: selection.nodeId, text },
++            },
++            text === null ? messages.annotationRemoved : messages.annotationSaved,
++          );
++          if (
++            result?.ok !== true &&
++            annotationDraft?.nodeId === selection.nodeId &&
++            annotationDraft.submittedValue === submittedValue
++          ) {
++            annotationDraft = {
++              nodeId: selection.nodeId,
++              value: textarea.value,
++              baseline: persistedAnnotation,
++            };
++          }
++        });
++        save.dataset['focusKey'] = `annotation-save:${selection.nodeId}`;
++        updateAnnotationState();
++        footer.append(count, save);
++        field.append(label, textarea, footer);
++        scroll.append(field);
++      }
+ 
+       const groupSelection =
+         snapshot.config === null
+@@ -1693,7 +1885,11 @@ export function createEditor(
+         groupLabelDraft = null;
+       }
+       if (reusableWasTop) {
+-        queueMicrotask(() => root.focus());
++        if (comparisonFocusLifecycle) {
++          restoreWorkbenchState({ key: 'disabled-panel-return' });
++        } else {
++          queueMicrotask(() => root.focus());
++        }
+       }
+       return;
+     }
+@@ -1721,18 +1917,27 @@ export function createEditor(
+         }
+         renderTransient();
+         overlayReturnFocus = null;
+-        queueMicrotask(() => {
+-          const currentTrigger = root.querySelector<HTMLElement>(
+-            closingOverlay === 'outline' ? '.tp-outline-trigger' : '.tp-inspector-trigger',
+-          );
+-          if (currentTrigger !== null) {
+-            currentTrigger.focus();
+-          } else if (returnFocus?.isConnected === true) {
+-            returnFocus.focus();
+-          } else {
+-            root.focus();
+-          }
+-        });
++        const currentTrigger = root.querySelector<HTMLElement>(
++          closingOverlay === 'outline' ? '.tp-outline-trigger' : '.tp-inspector-trigger',
++        );
++        if (comparisonFocusLifecycle) {
++          restoreWorkbenchState({
++            key:
++              currentTrigger?.dataset['focusKey'] ??
++              returnFocus?.dataset['focusKey'] ??
++              'overlay-return',
++          });
++        } else {
++          queueMicrotask(() => {
++            if (currentTrigger !== null) {
++              currentTrigger.focus();
++            } else if (returnFocus?.isConnected === true) {
++              returnFocus.focus();
++            } else {
++              root.focus();
++            }
++          });
++        }
+       };
+       const overlayLabel = desiredKind === 'outline' ? messages.outline : messages.inspector;
+       const scrim = button(document, messages.backdrop(overlayLabel), {
+@@ -2079,7 +2284,7 @@ export function createEditor(
+     );
+   };
+ 
+-  function render(): void {
++  function render(useComparisonFocus = comparisonFocusLifecycle): void {
+     if (destroyed || rendering) {
+       return;
+     }
+@@ -2093,12 +2298,14 @@ export function createEditor(
+       const empty =
+         snapshot.status === 'ready' &&
+         snapshot.config !== null &&
+-        (snapshot.config.data.schemaVersion === '2.0.0' &&
+-        snapshot.config.data.dataKind === 'categorical'
++        (snapshot.config.data.schemaVersion === '3.0.0'
+           ? snapshot.config.data.items.length === 0
+-          : !snapshot.config.data.items.some(
+-              item => 'kind' in item && item.kind === 'contribution',
+-            ));
++          : snapshot.config.data.schemaVersion === '2.0.0' &&
++              snapshot.config.data.dataKind === 'categorical'
++            ? snapshot.config.data.items.length === 0
++            : !snapshot.config.data.items.some(
++                item => 'kind' in item && item.kind === 'contribution',
++              ));
+       root.dataset['editorState'] =
+         snapshot.status !== 'ready' ? 'invalid' : empty ? 'empty' : 'ready';
+       if (outlineDrag === null) {
+@@ -2137,7 +2344,10 @@ export function createEditor(
+       }
+       renderTransient();
+       editorRenderFailed = false;
+-      restoreWorkbenchState(preservedFocus);
++      restoreWorkbenchState(preservedFocus, useComparisonFocus);
++      if (snapshot.config !== null) {
++        comparisonFocusLifecycle = snapshot.config.data.schemaVersion === '3.0.0';
++      }
+     } finally {
+       rendering = false;
+     }
+@@ -2594,6 +2804,11 @@ export function createEditor(
+       const localeChanged =
+         (before.config?.locale ?? 'zh-CN') !== (after.config?.locale ?? 'zh-CN');
+       const preserveRenderErrorFeedback = feedback.code === 'CHART_RENDER_ERROR';
++      const useComparisonFocus =
++        comparisonFocusLifecycle ||
++        before.config?.data.schemaVersion === '3.0.0' ||
++        after.config?.data.schemaVersion === '3.0.0';
++      let restoreComparisonContextFocus = false;
+ 
+       if (!editorRenderFailed && sameRenderState(before, after)) {
+         return;
+@@ -2627,7 +2842,9 @@ export function createEditor(
+         transientScrollTop = 0;
+         transientLayer.replaceChildren();
+         root.removeAttribute('data-overlay-open');
+-        if (restoreTransientFocus) {
++        if (restoreTransientFocus && useComparisonFocus) {
++          restoreComparisonContextFocus = true;
++        } else if (restoreTransientFocus) {
+           queueMicrotask(() => root.focus());
+         }
+       } else if (pendingGroup !== null && !sameView(before.view, after.view)) {
+@@ -2640,10 +2857,17 @@ export function createEditor(
+         modalKind = null;
+         transientFocus = null;
+         transientScrollTop = 0;
+-        queueMicrotask(() => root.focus());
++        if (useComparisonFocus) {
++          restoreComparisonContextFocus = true;
++        } else {
++          queueMicrotask(() => root.focus());
++        }
+       }
+       try {
+-        render();
++        render(useComparisonFocus);
++        if (restoreComparisonContextFocus) {
++          restoreWorkbenchState({ key: 'context-fallback' }, useComparisonFocus);
++        }
+       } catch {
+         renderEditorFailure();
+         throw editorError('EDITOR_RENDER_FAILED', 'TellPlot editor could not render its state.');
+@@ -2692,6 +2916,8 @@ export function createEditor(
+         return;
+       }
+       destroyed = true;
++      focusRestoreVersion += 1;
++      pendingComparisonFocusRestoreVersion = null;
+       for (const controller of activeExportControllers) {
+         controller.abort(exportError('EXPORT_UNAVAILABLE', '/export'));
+       }
+@@ -2721,6 +2947,8 @@ export function createEditor(
+       if (destroyed || nextMode === layoutMode) {
+         return;
+       }
++      const preservedFocus = comparisonFocusLifecycle ? captureWorkbenchState() : null;
++      const closedOverlay = comparisonFocusLifecycle && overlay !== null;
+       layoutMode = nextMode;
+       root.dataset['layout'] = nextMode;
+       cancelOutlineDrag();
+@@ -2730,7 +2958,14 @@ export function createEditor(
+         overlay = null;
+         overlayReturnFocus = null;
+         renderTransient();
+-        queueMicrotask(() => root.focus());
++        if (!comparisonFocusLifecycle) {
++          queueMicrotask(() => root.focus());
++        }
++      }
++      if (closedOverlay) {
++        restoreWorkbenchState({ key: 'responsive-overlay-fallback' });
++      } else if (preservedFocus !== null) {
++        restoreWorkbenchState(preservedFocus);
+       }
+     });
+     render();
+diff --git a/packages/editor/src/editor/messages.ts b/packages/editor/src/editor/messages.ts
+index 5384339f4b6468f427dc126bef166bce5e6be8fb..e7fb8fca79ddca5c71d2d0f452a3c3721cddc576 100644
+--- a/packages/editor/src/editor/messages.ts
++++ b/packages/editor/src/editor/messages.ts
+@@ -28,6 +28,16 @@ export interface EditorMessages {
+   readonly locked: string;
+   readonly editable: string;
+   readonly groupedItems: string;
++  readonly seriesCount: (count: number) => string;
++  readonly selectedNodes: (count: number) => string;
++  readonly sourceCategories: (count: number) => string;
++  readonly expanded: string;
++  readonly collapsed: string;
++  readonly pinned: string;
++  readonly highlighted: string;
++  readonly muted: string;
++  readonly seriesRegistry: (labels: readonly string[]) => string;
++  readonly comparisonSummary: (clusterCount: number, seriesCount: number) => string;
+   readonly annotation: string;
+   readonly annotationPlaceholder: string;
+   readonly saveAnnotation: string;
+@@ -100,6 +110,17 @@ const ZH_CN: EditorMessages = {
+   locked: '已锁定',
+   editable: '可编辑',
+   groupedItems: '项',
++  seriesCount: count => `${count} 个序列`,
++  selectedNodes: count => `已选 ${count} 个节点`,
++  sourceCategories: count => `${count} 个来源分类`,
++  expanded: '已展开',
++  collapsed: '已折叠',
++  pinned: '已固定',
++  highlighted: '已强调',
++  muted: '已弱化',
++  seriesRegistry: labels => `序列：${labels.join('、')}。`,
++  comparisonSummary: (clusterCount, seriesCount) =>
++    `共 ${clusterCount} 个可见分类或分组，${seriesCount} 个序列。`,
+   annotation: '注释',
+   annotationPlaceholder: '记录口径或汇报说明',
+   saveAnnotation: '保存注释',
+@@ -172,6 +193,17 @@ const EN_US: EditorMessages = {
+   locked: 'Locked',
+   editable: 'Editable',
+   groupedItems: 'items',
++  seriesCount: count => `${count} series`,
++  selectedNodes: count => `${count} selected ${count === 1 ? 'node' : 'nodes'}`,
++  sourceCategories: count => `${count} source ${count === 1 ? 'category' : 'categories'}`,
++  expanded: 'Expanded',
++  collapsed: 'Collapsed',
++  pinned: 'Pinned',
++  highlighted: 'Highlighted',
++  muted: 'Muted',
++  seriesRegistry: labels => `Series registry: ${labels.join(', ')}.`,
++  comparisonSummary: (clusterCount, seriesCount) =>
++    `${clusterCount} visible ${clusterCount === 1 ? 'cluster' : 'clusters'} and ${seriesCount} series.`,
+   annotation: 'Annotation',
+   annotationPlaceholder: 'Add reporting context',
+   saveAnnotation: 'Save annotation',
+diff --git a/packages/editor/src/editor/outline.ts b/packages/editor/src/editor/outline.ts
+index ea766e41931731fb3454806021a320d9a4cfb8e0..60e52b7bef7450212960b5be73a4963762d27313 100644
+--- a/packages/editor/src/editor/outline.ts
++++ b/packages/editor/src/editor/outline.ts
+@@ -23,6 +23,7 @@ export interface OutlineEntry {
+   readonly kind: 'anchor' | 'contribution' | 'group';
+   readonly expanded?: boolean;
+   readonly groupSize?: number;
++  readonly seriesCount?: number;
+ }
+ 
+ function groupEntry(
+@@ -149,6 +150,7 @@ function comparisonEntries(
+   const collapsed = new Set(view.collapsedGroupIds);
+   const datumById = new Map(projection.map(datum => [datum.nodeId, datum]));
+   const visited = new Set<ViewNodeId>();
++  const seriesCount = projection[0]?.values.length ?? 0;
+ 
+   const visit = (nodeId: ViewNodeId, level: number): void => {
+     if (visited.has(nodeId)) {
+@@ -158,15 +160,16 @@ function comparisonEntries(
+     const group = ownGroup(view, nodeId);
+     if (group !== undefined) {
+       const isCollapsed = collapsed.has(group.id);
+-      entries.push(
+-        groupEntry(
++      entries.push({
++        ...groupEntry(
+           group,
+           isCollapsed ? datumById.get(group.id) : undefined,
+           !isCollapsed,
+           view,
+           level,
+         ),
+-      );
++        seriesCount,
++      });
+       if (!isCollapsed) {
+         for (const childId of group.childIds) {
+           visit(childId, level + 1);
+@@ -184,6 +187,7 @@ function comparisonEntries(
+         locked: datum.locked,
+         level,
+         kind: 'contribution',
++        seriesCount,
+       });
+     }
+   };
+diff --git a/packages/editor/tests/react-matrix/consumer/src/main.mjs b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+index 0b3cb16faad18ce101e3468a1b57de441e5584ee..2c0aebb9a808689935a056a92426b63e21111168 100644
+--- a/packages/editor/tests/react-matrix/consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+@@ -1,7 +1,7 @@
+ import { createInitialViewSpec } from 'tellplot';
+ import { ChartEditor } from 'tellplot/react';
+ import 'tellplot/styles.css';
+-import React, { createRef, useState } from 'react';
++import React, { createRef } from 'react';
+ import { createRoot } from 'react-dom/client';
+ 
+ import './host.css';
+@@ -22,6 +22,46 @@ const baseConfig = {
+   data,
+   height: 680,
+ };
++const comparisonData = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'framework-matrix-comparison',
++  currency: 'USD',
++  series: [
++    { id: 'current', label: 'Current' },
++    { id: 'plan', label: 'Plan' },
++  ],
++  items: [
++    {
++      id: 'alpha',
++      label: 'Alpha',
++      values: [
++        { seriesId: 'current', amount: 12 },
++        { seriesId: 'plan', amount: 10 },
++      ],
++    },
++    {
++      id: 'beta',
++      label: 'Beta',
++      values: [
++        { seriesId: 'current', amount: 8 },
++        { seriesId: 'plan', amount: 11 },
++      ],
++    },
++  ],
++};
++const comparisonView = {
++  schemaVersion: '3.0.0',
++  datasetId: comparisonData.datasetId,
++  chartType: 'column',
++  revision: 0,
++  rootOrder: ['alpha', 'beta'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++};
+ const initial = createInitialViewSpec(data, { chartType: baseConfig.type });
+ if (!initial.ok) {
+   throw new Error('React matrix initial view is invalid');
+@@ -36,27 +76,41 @@ const root = createRoot(host);
+ const editorRef = createRef();
+ let lastView;
+ let lastCommand;
+-function MatrixEditor({ appearance }) {
+-  const [view, setView] = useState(initial.value);
++let comparisonConfig = { type: 'column', data: comparisonData, height: 680 };
++let comparisonViewMode = 'controlled';
++let hostView = initial.value;
++let hostDefaultView;
++function MatrixEditor({ appearance, comparison = false }) {
++  const activeView = hostView;
+   return React.createElement(ChartEditor, {
+     ref: editorRef,
+-    config: {
+-      ...baseConfig,
+-      data: structuredClone(data),
+-      appearance,
+-    },
+-    view,
++    config: comparison
++      ? { ...comparisonConfig, data: structuredClone(comparisonConfig.data), appearance }
++      : { ...baseConfig, data: structuredClone(data), appearance },
++    ...(comparison && comparisonViewMode === 'default'
++      ? { defaultView: hostDefaultView }
++      : comparisonViewMode === 'controlled'
++        ? { view: activeView }
++        : {}),
+     onViewChange(nextView) {
+       lastView = nextView;
+-      setView(structuredClone(nextView));
++      if (comparison ? comparisonViewMode === 'controlled' : true) {
++        hostView = structuredClone(nextView);
++        renderEditor(appearance, comparison);
++      }
+     },
+     onCommand(event) {
+       lastCommand = event;
+     },
+   });
+ }
+-const renderEditor = appearance => {
+-  root.render(React.createElement(MatrixEditor, { appearance }));
++const renderEditor = (appearance, comparison = false) => {
++  root.render(
++    React.createElement(MatrixEditor, {
++      appearance,
++      comparison,
++    }),
++  );
+ };
+ 
+ renderEditor();
+@@ -72,6 +126,53 @@ const waitForRevision = async revision => {
+   throw new Error(`React matrix did not reach revision ${revision}`);
+ };
+ 
++const waitForRegistry = async labels => {
++  const deadline = Date.now() + 5_000;
++  while (Date.now() < deadline) {
++    const text = host.querySelector('[data-summary-kind="series-registry"]')?.textContent ?? '';
++    const order = labels.map(label => text.indexOf(label));
++    if (
++      order.every(index => index >= 0) &&
++      order.every((index, position) => position === 0 || index > order[position - 1])
++    ) {
++      return;
++    }
++    await new Promise(resolve => requestAnimationFrame(resolve));
++  }
++  throw new Error(`React matrix did not render registry ${labels.join('|')}`);
++};
++
++const viewReceipt = view =>
++  JSON.stringify({
++    schemaVersion: view.schemaVersion,
++    datasetId: view.datasetId,
++    chartType: view.chartType,
++    revision: view.revision,
++    rootOrder: view.rootOrder,
++    groups: view.groups,
++    collapsedGroupIds: view.collapsedGroupIds,
++    pinnedItemIds: view.pinnedItemIds,
++    annotations: view.annotations,
++    emphasis: view.emphasis,
++  });
++
++const waitForView = async (expected, phase) => {
++  const expectedReceipt = viewReceipt(expected);
++  const deadline = Date.now() + 5_000;
++  let stableSamples = 0;
++  while (Date.now() < deadline) {
++    await new Promise(resolve => requestAnimationFrame(resolve));
++    const current = editorRef.current?.getView();
++    stableSamples = current !== undefined && viewReceipt(current) === expectedReceipt
++      ? stableSamples + 1
++      : 0;
++    if (stableSamples === 2) {
++      return current;
++    }
++  }
++  throw new Error(`React matrix did not settle ${phase}: ${expectedReceipt}`);
++};
++
+ globalThis.__tellplotFrameworkMatrix = {
+   configure() {
+     renderEditor({
+@@ -139,6 +240,127 @@ globalThis.__tellplotFrameworkMatrix = {
+       undoCommand: lastCommand,
+     };
+   },
++  async beginComparisonScenario() {
++    lastView = undefined;
++    lastCommand = undefined;
++    comparisonConfig = { type: 'column', data: comparisonData, height: 680 };
++    comparisonViewMode = 'default';
++    hostDefaultView = structuredClone(comparisonView);
++    hostView = structuredClone(comparisonView);
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    await waitForRegistry(['Current', 'Plan']);
++    await waitForView(comparisonView, 'comparison defaultView seed');
++    const row = host.querySelector('[data-node-id="alpha"]');
++    if (!(row instanceof HTMLElement)) {
++      throw new Error('React comparison row is unavailable');
++    }
++    row.dispatchEvent(
++      new KeyboardEvent('keydown', { altKey: true, bubbles: true, key: 'ArrowDown' }),
++    );
++    await waitForRevision(1);
++    const movedOrder = [...editorRef.current.getView().rootOrder];
++    const undo = host.querySelector('button[aria-label="撤销"], button[aria-label="Undo"]');
++    if (!(undo instanceof HTMLButtonElement) || undo.disabled) {
++      throw new Error('React comparison history is unavailable');
++    }
++    undo.click();
++    await waitForRevision(2);
++    const undoOrder = [...editorRef.current.getView().rootOrder];
++    const beforeDefaultUpdate = editorRef.current.getView();
++    hostDefaultView = {
++      ...structuredClone(comparisonView),
++      revision: 9,
++      rootOrder: ['beta', 'alpha'],
++    };
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    const afterDefaultUpdate = await waitForView(
++      beforeDefaultUpdate,
++      'defaultView-only update preserving the current view',
++    );
++    hostView = structuredClone(afterDefaultUpdate);
++    hostDefaultView = undefined;
++    comparisonViewMode = 'controlled';
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    const controlledView = await waitForView(afterDefaultUpdate, 'defaultView to controlled');
++    hostView = {
++      ...structuredClone(controlledView),
++      annotations: { ...controlledView.annotations, alpha: 'Host controlled note' },
++    };
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    const standaloneView = await waitForView(hostView, 'host-controlled annotation');
++    comparisonViewMode = 'uncontrolled';
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    const uncontrolledView = await waitForView(
++      standaloneView,
++      'controlled to uncontrolled seed',
++    );
++    return {
++      movedOrder,
++      undoOrder,
++      beforeDefaultUpdate,
++      afterDefaultUpdate,
++      controlledView,
++      standaloneView,
++      uncontrolledView,
++      callbackView: lastView,
++      callbackCommand: lastCommand,
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++    };
++  },
++  async reorderComparisonRegistry() {
++    comparisonConfig = {
++      ...comparisonConfig,
++      data: {
++        ...comparisonData,
++        series: [...comparisonData.series].reverse(),
++        items: comparisonData.items.map(item => ({ ...item, values: [...item.values].reverse() })),
++      },
++    };
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    await waitForRegistry(['Plan', 'Current']);
++    host.querySelector('[data-node-id="alpha"]')?.click();
++    await waitForRegistry(['Plan', 'Current']);
++    return {
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++      inspectorOrder: Array.from(
++        host.querySelectorAll('[data-inspector-values] [data-series-id]'),
++      ).map(element => element.getAttribute('data-series-id')),
++      view: editorRef.current.getView(),
++    };
++  },
++  async expandComparisonRegistry() {
++    comparisonConfig = {
++      ...comparisonConfig,
++      data: {
++        ...comparisonConfig.data,
++        series: [
++          ...comparisonConfig.data.series,
++          { id: 'forecast', label: 'Forecast' },
++          { id: 'stretch', label: 'Stretch' },
++        ],
++        items: comparisonConfig.data.items.map(item => ({
++          ...item,
++          values: [
++            ...item.values,
++            { seriesId: 'forecast', amount: 9 },
++            { seriesId: 'stretch', amount: 13 },
++          ],
++        })),
++      },
++    };
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    host.querySelector('[data-node-id="alpha"]')?.click();
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    return {
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++      inspectorOrder: Array.from(
++        host.querySelectorAll('[data-inspector-values] [data-series-id]'),
++      ).map(element => element.getAttribute('data-series-id')),
++      seriesCount: host.querySelectorAll('[data-series-id]').length,
++      view: editorRef.current.getView(),
++    };
++  },
+   unmount() {
+     root.unmount();
+     host.dataset.unmounted = 'true';
+diff --git a/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs b/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
+index 1614d79bb70925b060c426b4bb88fd8e0e730a8d..4bd7e4f9523f5db7cdd1dd7b03934a2a3969c50d 100644
+--- a/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
+@@ -15,6 +15,46 @@ const data = {
+   ],
+ };
+ const baseConfig = { type: 'waterfall', data, height: 680 };
++const comparisonData = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'framework-matrix-comparison',
++  currency: 'USD',
++  series: [
++    { id: 'current', label: 'Current' },
++    { id: 'plan', label: 'Plan' },
++  ],
++  items: [
++    {
++      id: 'alpha',
++      label: 'Alpha',
++      values: [
++        { seriesId: 'current', amount: 12 },
++        { seriesId: 'plan', amount: 10 },
++      ],
++    },
++    {
++      id: 'beta',
++      label: 'Beta',
++      values: [
++        { seriesId: 'current', amount: 8 },
++        { seriesId: 'plan', amount: 11 },
++      ],
++    },
++  ],
++};
++const comparisonView = {
++  schemaVersion: '3.0.0',
++  datasetId: comparisonData.datasetId,
++  chartType: 'column',
++  revision: 0,
++  rootOrder: ['alpha', 'beta'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++};
+ const initial = createInitialViewSpec(data, { chartType: baseConfig.type });
+ if (!initial.ok) {
+   throw new Error('Imperative matrix initial view is invalid');
+@@ -27,17 +67,27 @@ if (!(host instanceof HTMLElement)) {
+ let lastView;
+ let lastCommand;
+ let currentView = initial.value;
++let currentDefaultView;
++let viewMode = 'controlled';
+ let currentAppearance;
++let currentConfig = baseConfig;
+ let editor;
+ const options = () => ({
+-  config: { ...baseConfig, data: structuredClone(data), appearance: currentAppearance },
+-  view: currentView,
++  config: {
++    ...currentConfig,
++    data: structuredClone(currentConfig.data),
++    appearance: currentAppearance,
++  },
++  ...(viewMode === 'controlled' ? { view: currentView } : {}),
++  ...(viewMode === 'default' ? { defaultView: currentDefaultView } : {}),
+   onViewChange(view) {
+     lastView = view;
+-    queueMicrotask(() => {
+-      currentView = structuredClone(view);
+-      editor.update(options());
+-    });
++    if (viewMode === 'controlled') {
++      queueMicrotask(() => {
++        currentView = structuredClone(view);
++        editor.update(options());
++      });
++    }
+   },
+   onCommand(event) {
+     lastCommand = event;
+@@ -56,6 +106,52 @@ const waitForRevision = async revision => {
+   throw new Error(`Imperative matrix did not reach revision ${revision}`);
+ };
+ 
++const waitForRegistry = async labels => {
++  const expected = labels.join('|');
++  const deadline = Date.now() + 5_000;
++  while (Date.now() < deadline) {
++    const text = host.querySelector('[data-summary-kind="series-registry"]')?.textContent ?? '';
++    const order = labels.map(label => text.indexOf(label));
++    if (
++      order.every(index => index >= 0) &&
++      order.every((index, position) => position === 0 || index > order[position - 1])
++    ) {
++      return;
++    }
++    await new Promise(resolve => requestAnimationFrame(resolve));
++  }
++  throw new Error(`Imperative matrix did not render registry ${expected}`);
++};
++
++const viewReceipt = view =>
++  JSON.stringify({
++    schemaVersion: view.schemaVersion,
++    datasetId: view.datasetId,
++    chartType: view.chartType,
++    revision: view.revision,
++    rootOrder: view.rootOrder,
++    groups: view.groups,
++    collapsedGroupIds: view.collapsedGroupIds,
++    pinnedItemIds: view.pinnedItemIds,
++    annotations: view.annotations,
++    emphasis: view.emphasis,
++  });
++
++const waitForView = async (expected, phase) => {
++  const expectedReceipt = viewReceipt(expected);
++  const deadline = Date.now() + 5_000;
++  let stableSamples = 0;
++  while (Date.now() < deadline) {
++    await new Promise(resolve => requestAnimationFrame(resolve));
++    const current = editor.getView();
++    stableSamples = viewReceipt(current) === expectedReceipt ? stableSamples + 1 : 0;
++    if (stableSamples === 2) {
++      return current;
++    }
++  }
++  throw new Error(`Imperative matrix did not settle ${phase}: ${expectedReceipt}`);
++};
++
+ globalThis.__tellplotFrameworkMatrix = {
+   configure() {
+     currentAppearance = {
+@@ -117,6 +213,130 @@ globalThis.__tellplotFrameworkMatrix = {
+       undoCommand: lastCommand,
+     };
+   },
++  async beginComparisonScenario() {
++    lastView = undefined;
++    lastCommand = undefined;
++    currentAppearance = { legend: true, animation: { enabled: false } };
++    currentConfig = { type: 'column', data: comparisonData, height: 680 };
++    currentView = structuredClone(comparisonView);
++    currentDefaultView = structuredClone(comparisonView);
++    viewMode = 'default';
++    editor.update(options());
++    await waitForRegistry(['Current', 'Plan']);
++    await waitForView(comparisonView, 'comparison defaultView seed');
++    const row = host.querySelector('[data-node-id="alpha"]');
++    if (!(row instanceof HTMLElement)) {
++      throw new Error('Imperative comparison row is unavailable');
++    }
++    row.dispatchEvent(
++      new KeyboardEvent('keydown', { altKey: true, bubbles: true, key: 'ArrowDown' }),
++    );
++    await waitForRevision(1);
++    const movedOrder = [...editor.getView().rootOrder];
++    const undo = host.querySelector('button[aria-label="撤销"], button[aria-label="Undo"]');
++    if (!(undo instanceof HTMLButtonElement) || undo.disabled) {
++      throw new Error('Imperative comparison history is unavailable');
++    }
++    undo.click();
++    await waitForRevision(2);
++    const undoOrder = [...editor.getView().rootOrder];
++    const beforeDefaultUpdate = editor.getView();
++    currentDefaultView = {
++      ...structuredClone(comparisonView),
++      revision: 9,
++      rootOrder: ['beta', 'alpha'],
++    };
++    editor.update(options());
++    const afterDefaultUpdate = await waitForView(
++      beforeDefaultUpdate,
++      'defaultView-only update preserving the current view',
++    );
++    currentView = structuredClone(afterDefaultUpdate);
++    currentDefaultView = undefined;
++    viewMode = 'controlled';
++    editor.update(options());
++    const controlledView = await waitForView(afterDefaultUpdate, 'defaultView to controlled');
++    currentView = {
++      ...structuredClone(controlledView),
++      annotations: { ...controlledView.annotations, alpha: 'Host controlled note' },
++    };
++    editor.update(options());
++    const standaloneView = await waitForView(currentView, 'host-controlled annotation');
++    viewMode = 'uncontrolled';
++    editor.update(options());
++    const uncontrolledView = await waitForView(
++      standaloneView,
++      'controlled to uncontrolled seed',
++    );
++    return {
++      movedOrder,
++      undoOrder,
++      beforeDefaultUpdate,
++      afterDefaultUpdate,
++      controlledView,
++      standaloneView,
++      uncontrolledView,
++      callbackView: lastView,
++      callbackCommand: lastCommand,
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++    };
++  },
++  async reorderComparisonRegistry() {
++    currentView = structuredClone(editor.getView());
++    const reorderedSeries = [...comparisonData.series].reverse();
++    currentConfig = {
++      ...currentConfig,
++      data: {
++        ...comparisonData,
++        series: reorderedSeries,
++        items: comparisonData.items.map(item => ({ ...item, values: [...item.values].reverse() })),
++      },
++    };
++    editor.update(options());
++    await waitForRegistry(['Plan', 'Current']);
++    host.querySelector('[data-node-id="alpha"]')?.click();
++    await waitForRegistry(['Plan', 'Current']);
++    return {
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++      inspectorOrder: Array.from(
++        host.querySelectorAll('[data-inspector-values] [data-series-id]'),
++      ).map(element => element.getAttribute('data-series-id')),
++      view: editor.getView(),
++    };
++  },
++  async expandComparisonRegistry() {
++    currentConfig = {
++      ...currentConfig,
++      data: {
++        ...currentConfig.data,
++        series: [
++          ...currentConfig.data.series,
++          { id: 'forecast', label: 'Forecast' },
++          { id: 'stretch', label: 'Stretch' },
++        ],
++        items: currentConfig.data.items.map(item => ({
++          ...item,
++          values: [
++            ...item.values,
++            { seriesId: 'forecast', amount: 9 },
++            { seriesId: 'stretch', amount: 13 },
++          ],
++        })),
++      },
++    };
++    editor.update(options());
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    host.querySelector('[data-node-id="alpha"]')?.click();
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    return {
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++      inspectorOrder: Array.from(
++        host.querySelectorAll('[data-inspector-values] [data-series-id]'),
++      ).map(element => element.getAttribute('data-series-id')),
++      seriesCount: host.querySelectorAll('[data-series-id]').length,
++      view: editor.getView(),
++    };
++  },
+   unmount() {
+     editor.destroy();
+     host.dataset.unmounted = 'true';
+diff --git a/packages/editor/tests/react-matrix/run-react-matrix.mjs b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+index cdbbf62e32a3ab3410b791e8bb71ac143ea2040b..40f31e22924da4536634e38218b519c943c1cbb6 100644
+--- a/packages/editor/tests/react-matrix/run-react-matrix.mjs
++++ b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+@@ -216,6 +216,63 @@ async function canvasPixelSignature(canvas) {
+   });
+ }
+ 
++async function canvasPaletteReceipt(canvas, colors) {
++  return canvas.evaluate((element, expected) => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return [];
++    }
++    const context = element.getContext('2d');
++    if (context === null || element.width === 0 || element.height === 0) {
++      return [];
++    }
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    return expected.map(color => {
++      let count = 0;
++      let minX = element.width;
++      let minY = element.height;
++      for (let offset = 0; offset < pixels.length; offset += 4) {
++        const red = pixels[offset] ?? 0;
++        const green = pixels[offset + 1] ?? 0;
++        const blue = pixels[offset + 2] ?? 0;
++        const alpha = pixels[offset + 3] ?? 0;
++        if (
++          alpha > 160 &&
++          Math.abs(red - color[0]) <= 5 &&
++          Math.abs(green - color[1]) <= 5 &&
++          Math.abs(blue - color[2]) <= 5
++        ) {
++          count += 1;
++          const pixel = offset / 4;
++          minX = Math.min(minX, pixel % element.width);
++          minY = Math.min(minY, Math.floor(pixel / element.width));
++        }
++      }
++      return { count, minX, minY };
++    });
++  }, colors);
++}
++
++async function settledCanvasReceipt(canvas, previousSignature) {
++  const deadline = Date.now() + 30_000;
++  let previousSample = -1;
++  let stableSamples = 0;
++  let painted = 0;
++  let signature = 0;
++  while (stableSamples < 2 && Date.now() < deadline) {
++    lifecycle.throwIfTerminationRequested();
++    painted = await paintedPixelCount(canvas);
++    signature = await canvasPixelSignature(canvas);
++    const eligible =
++      painted > 500 && (previousSignature === undefined || signature !== previousSignature);
++    stableSamples = eligible && signature === previousSample ? stableSamples + 1 : 0;
++    previousSample = signature;
++    await canvas.page().waitForTimeout(16);
++  }
++  assert.ok(painted > 500, 'comparison canvas must remain nonblank');
++  assert.equal(stableSamples, 2, 'comparison canvas must settle on a fresh signature');
++  return { painted, signature };
++}
++
+ async function svgSemantics(page, exported) {
+   return page.evaluate(value => {
+     const parsed = new DOMParser().parseFromString(value.svg, 'image/svg+xml');
+@@ -401,15 +458,103 @@ async function verifyConsumer(browser, consumer, directory) {
+       assert.equal(semantics.externalReferences, 0);
+       assert.ok(semantics.elements.path + semantics.elements.rect > 0);
+ 
++      const comparison = await page.evaluate(() =>
++        globalThis.__tellplotFrameworkMatrix?.beginComparisonScenario(),
++      );
++      assert.notEqual(comparison, null, `${consumer.id} comparison scenario must return a result`);
++      assert.notEqual(
++        comparison,
++        undefined,
++        `${consumer.id} comparison scenario must return a result`,
++      );
++      assert.deepEqual(comparison.movedOrder, ['beta', 'alpha']);
++      assert.deepEqual(comparison.undoOrder, ['alpha', 'beta']);
++      assert.deepEqual(comparison.beforeDefaultUpdate, comparison.afterDefaultUpdate);
++      assert.deepEqual(comparison.controlledView, comparison.afterDefaultUpdate);
++      assert.equal(comparison.standaloneView.annotations.alpha, 'Host controlled note');
++      assert.deepEqual(comparison.uncontrolledView, comparison.standaloneView);
++      assert.equal(comparison.callbackView.revision, 2);
++      assert.equal(comparison.callbackCommand.type, 'undo');
++      assert.match(comparison.registry, /Current(?:,|、)\s*Plan/u);
++      await page.waitForFunction(
++        () =>
++          document.querySelector('[data-chart-type="column"] canvas') instanceof HTMLCanvasElement,
++      );
++      const comparisonCanvas = page.locator('[data-chart-type="column"] canvas').first();
++      const initialComparison = await settledCanvasReceipt(comparisonCanvas, configuredSignature);
++      const twoSeriesPalette = await canvasPaletteReceipt(comparisonCanvas, [
++        [0, 114, 178],
++        [213, 94, 0],
++      ]);
++      assert.ok(
++        twoSeriesPalette.every(receipt => receipt.count > 0),
++        `${consumer.id} initial comparison palette must be visible on Canvas`,
++      );
++
++      const reordered = await page.evaluate(() =>
++        globalThis.__tellplotFrameworkMatrix?.reorderComparisonRegistry(),
++      );
++      assert.match(reordered.registry, /Plan(?:,|、)\s*Current/u);
++      assert.deepEqual(reordered.inspectorOrder, ['plan', 'current']);
++      assert.deepEqual(reordered.view, comparison.uncontrolledView);
++      const reorderedComparison = await settledCanvasReceipt(
++        comparisonCanvas,
++        initialComparison.signature,
++      );
++      const reorderedPalette = await canvasPaletteReceipt(comparisonCanvas, [
++        [0, 114, 178],
++        [213, 94, 0],
++      ]);
++      assert.ok(
++        reorderedPalette.every(receipt => receipt.count > 0),
++        `${consumer.id} reordered comparison palette and legend must remain visible`,
++      );
++
++      const fourSeries = await page.evaluate(() =>
++        globalThis.__tellplotFrameworkMatrix?.expandComparisonRegistry(),
++      );
++      assert.match(
++        fourSeries.registry,
++        /Plan(?:,|、)\s*Current(?:,|、)\s*Forecast(?:,|、)\s*Stretch/u,
++      );
++      assert.deepEqual(fourSeries.inspectorOrder, ['plan', 'current', 'forecast', 'stretch']);
++      assert.equal(fourSeries.seriesCount, 4);
++      assert.deepEqual(fourSeries.view, reordered.view);
++      const fourSeriesComparison = await settledCanvasReceipt(
++        comparisonCanvas,
++        reorderedComparison.signature,
++      );
++      const fourSeriesPalette = await canvasPaletteReceipt(comparisonCanvas, [
++        [0, 114, 178],
++        [213, 94, 0],
++        [0, 158, 115],
++        [204, 121, 167],
++      ]);
++      assert.ok(
++        fourSeriesPalette.every(receipt => receipt.count > 0),
++        `${consumer.id} four-series palette and legend must be visible on Canvas`,
++      );
++
+       await page.evaluate(() => globalThis.__tellplotFrameworkMatrix?.unmount());
+       await page.locator('#root[data-unmounted="true"]').waitFor({ state: 'attached' });
+       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 0);
+-      await page.waitForTimeout(50);
++      await page.waitForFunction(() => document.querySelector('[data-tellplot="editor"]') === null);
+       assert.deepEqual(runtimeErrors, []);
+       console.log(
+-        `[framework-matrix:${consumer.id}] ${consumer.framework} ${runtime.frameworkVersion}, controlled move ${scenario.view.revision}, undo ${scenario.undoView.revision}, SVG ${semantics.width}x${semantics.height}, clean unmount`,
++        `[framework-matrix:${consumer.id}] ${consumer.framework} ${runtime.frameworkVersion}, legacy move/undo and SVG ${semantics.width}x${semantics.height}, v3 move/undo plus reordered/four-series registry on real G2, clean unmount`,
+       );
+-      return { scenario, semantics };
++      return {
++        scenario,
++        semantics,
++        comparison,
++        reordered,
++        fourSeries,
++        signatures: {
++          initial: initialComparison.signature,
++          reordered: reorderedComparison.signature,
++          fourSeries: fourSeriesComparison.signature,
++        },
++      };
+     } finally {
+       await page.close();
+     }
+diff --git a/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+index 85d328ce0700728ff522b5d5a27349930f7e644b..ff1629850f72611c7f73e06cf60ac5534e21b238 100644
+--- a/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+@@ -1,7 +1,7 @@
+ import { createInitialViewSpec } from 'tellplot';
+ import { ChartEditor } from 'tellplot/vue';
+ import 'tellplot/styles.css';
+-import { createApp, h, ref, version } from 'vue';
++import { createApp, h, nextTick, ref, shallowRef, version } from 'vue';
+ 
+ import './host.css';
+ 
+@@ -21,6 +21,46 @@ const baseConfig = {
+   data,
+   height: 680,
+ };
++const comparisonData = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'framework-matrix-comparison',
++  currency: 'USD',
++  series: [
++    { id: 'current', label: 'Current' },
++    { id: 'plan', label: 'Plan' },
++  ],
++  items: [
++    {
++      id: 'alpha',
++      label: 'Alpha',
++      values: [
++        { seriesId: 'current', amount: 12 },
++        { seriesId: 'plan', amount: 10 },
++      ],
++    },
++    {
++      id: 'beta',
++      label: 'Beta',
++      values: [
++        { seriesId: 'current', amount: 8 },
++        { seriesId: 'plan', amount: 11 },
++      ],
++    },
++  ],
++};
++const comparisonView = {
++  schemaVersion: '3.0.0',
++  datasetId: comparisonData.datasetId,
++  chartType: 'column',
++  revision: 0,
++  rootOrder: ['alpha', 'beta'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++};
+ const initial = createInitialViewSpec(data, { chartType: baseConfig.type });
+ if (!initial.ok) {
+   throw new Error('Vue matrix initial view is invalid');
+@@ -33,6 +73,9 @@ if (!(host instanceof HTMLElement)) {
+ 
+ const appearance = ref(undefined);
+ const view = ref(initial.value);
++const defaultView = ref(undefined);
++const viewMode = ref('controlled');
++const config = shallowRef({ ...baseConfig, data: structuredClone(data) });
+ const editorRef = ref(null);
+ let lastView;
+ let lastCommand;
+@@ -41,11 +84,18 @@ const app = createApp({
+     return () =>
+       h(ChartEditor, {
+         ref: editorRef,
+-        config: { ...baseConfig, data: structuredClone(data), appearance: appearance.value },
+-        view: view.value,
++        config: {
++          ...config.value,
++          data: structuredClone(config.value.data),
++          appearance: appearance.value,
++        },
++        ...(viewMode.value === 'controlled' ? { view: view.value } : {}),
++        ...(viewMode.value === 'default' ? { defaultView: defaultView.value } : {}),
+         'onUpdate:view'(nextView) {
+           lastView = nextView;
+-          view.value = nextView;
++          if (viewMode.value === 'controlled') {
++            view.value = nextView;
++          }
+         },
+         onCommand(event) {
+           lastCommand = event;
+@@ -66,6 +116,53 @@ const waitForRevision = async revision => {
+   throw new Error(`Vue matrix did not reach revision ${revision}`);
+ };
+ 
++const waitForRegistry = async labels => {
++  const deadline = Date.now() + 5_000;
++  while (Date.now() < deadline) {
++    const text = host.querySelector('[data-summary-kind="series-registry"]')?.textContent ?? '';
++    const order = labels.map(label => text.indexOf(label));
++    if (
++      order.every(index => index >= 0) &&
++      order.every((index, position) => position === 0 || index > order[position - 1])
++    ) {
++      return;
++    }
++    await new Promise(resolve => requestAnimationFrame(resolve));
++  }
++  throw new Error(`Vue matrix did not render registry ${labels.join('|')}`);
++};
++
++const viewReceipt = currentView =>
++  JSON.stringify({
++    schemaVersion: currentView.schemaVersion,
++    datasetId: currentView.datasetId,
++    chartType: currentView.chartType,
++    revision: currentView.revision,
++    rootOrder: currentView.rootOrder,
++    groups: currentView.groups,
++    collapsedGroupIds: currentView.collapsedGroupIds,
++    pinnedItemIds: currentView.pinnedItemIds,
++    annotations: currentView.annotations,
++    emphasis: currentView.emphasis,
++  });
++
++const waitForView = async (expected, phase) => {
++  const expectedReceipt = viewReceipt(expected);
++  const deadline = Date.now() + 5_000;
++  let stableSamples = 0;
++  while (Date.now() < deadline) {
++    await new Promise(resolve => requestAnimationFrame(resolve));
++    const current = editorRef.value?.getView();
++    stableSamples = current !== undefined && viewReceipt(current) === expectedReceipt
++      ? stableSamples + 1
++      : 0;
++    if (stableSamples === 2) {
++      return current;
++    }
++  }
++  throw new Error(`Vue matrix did not settle ${phase}: ${expectedReceipt}`);
++};
++
+ globalThis.__tellplotFrameworkMatrix = {
+   configure() {
+     appearance.value = {
+@@ -133,6 +230,128 @@ globalThis.__tellplotFrameworkMatrix = {
+       undoCommand: lastCommand,
+     };
+   },
++  async beginComparisonScenario() {
++    lastView = undefined;
++    lastCommand = undefined;
++    appearance.value = { legend: true, animation: { enabled: false } };
++    config.value = { type: 'column', data: comparisonData, height: 680 };
++    view.value = structuredClone(comparisonView);
++    defaultView.value = structuredClone(comparisonView);
++    viewMode.value = 'default';
++    await nextTick();
++    await waitForRegistry(['Current', 'Plan']);
++    await waitForView(comparisonView, 'comparison defaultView seed');
++    const row = host.querySelector('[data-node-id="alpha"]');
++    if (!(row instanceof HTMLElement)) {
++      throw new Error('Vue comparison row is unavailable');
++    }
++    row.dispatchEvent(
++      new KeyboardEvent('keydown', { altKey: true, bubbles: true, key: 'ArrowDown' }),
++    );
++    await waitForRevision(1);
++    const movedOrder = [...editorRef.value.getView().rootOrder];
++    const undo = host.querySelector('button[aria-label="撤销"], button[aria-label="Undo"]');
++    if (!(undo instanceof HTMLButtonElement) || undo.disabled) {
++      throw new Error('Vue comparison history is unavailable');
++    }
++    undo.click();
++    await waitForRevision(2);
++    const undoOrder = [...editorRef.value.getView().rootOrder];
++    const beforeDefaultUpdate = editorRef.value.getView();
++    defaultView.value = {
++      ...structuredClone(comparisonView),
++      revision: 9,
++      rootOrder: ['beta', 'alpha'],
++    };
++    await nextTick();
++    const afterDefaultUpdate = await waitForView(
++      beforeDefaultUpdate,
++      'defaultView-only update preserving the current view',
++    );
++    view.value = structuredClone(afterDefaultUpdate);
++    defaultView.value = undefined;
++    viewMode.value = 'controlled';
++    await nextTick();
++    const controlledView = await waitForView(afterDefaultUpdate, 'defaultView to controlled');
++    view.value = {
++      ...structuredClone(controlledView),
++      annotations: { ...controlledView.annotations, alpha: 'Host controlled note' },
++    };
++    await nextTick();
++    const standaloneView = await waitForView(view.value, 'host-controlled annotation');
++    viewMode.value = 'uncontrolled';
++    await nextTick();
++    const uncontrolledView = await waitForView(
++      standaloneView,
++      'controlled to uncontrolled seed',
++    );
++    return {
++      movedOrder,
++      undoOrder,
++      beforeDefaultUpdate,
++      afterDefaultUpdate,
++      controlledView,
++      standaloneView,
++      uncontrolledView,
++      callbackView: lastView,
++      callbackCommand: lastCommand,
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++    };
++  },
++  async reorderComparisonRegistry() {
++    config.value = {
++      ...config.value,
++      data: {
++        ...comparisonData,
++        series: [...comparisonData.series].reverse(),
++        items: comparisonData.items.map(item => ({ ...item, values: [...item.values].reverse() })),
++      },
++    };
++    await nextTick();
++    await waitForRegistry(['Plan', 'Current']);
++    host.querySelector('[data-node-id="alpha"]')?.click();
++    await waitForRegistry(['Plan', 'Current']);
++    return {
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++      inspectorOrder: Array.from(
++        host.querySelectorAll('[data-inspector-values] [data-series-id]'),
++      ).map(element => element.getAttribute('data-series-id')),
++      view: editorRef.value.getView(),
++    };
++  },
++  async expandComparisonRegistry() {
++    config.value = {
++      ...config.value,
++      data: {
++        ...config.value.data,
++        series: [
++          ...config.value.data.series,
++          { id: 'forecast', label: 'Forecast' },
++          { id: 'stretch', label: 'Stretch' },
++        ],
++        items: config.value.data.items.map(item => ({
++          ...item,
++          values: [
++            ...item.values,
++            { seriesId: 'forecast', amount: 9 },
++            { seriesId: 'stretch', amount: 13 },
++          ],
++        })),
++      },
++    };
++    await nextTick();
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    host.querySelector('[data-node-id="alpha"]')?.click();
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    return {
++      registry: host.querySelector('[data-summary-kind="series-registry"]')?.textContent,
++      inspectorOrder: Array.from(
++        host.querySelectorAll('[data-inspector-values] [data-series-id]'),
++      ).map(element => element.getAttribute('data-series-id')),
++      seriesCount: host.querySelectorAll('[data-series-id]').length,
++      view: editorRef.value.getView(),
++    };
++  },
+   unmount() {
+     app.unmount();
+     host.dataset.unmounted = 'true';
+diff --git a/packages/editor/tests/runtime/comparison-editor.test.ts b/packages/editor/tests/runtime/comparison-editor.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..7d07683bc1809235d27ea149556deda42aba58de
+--- /dev/null
++++ b/packages/editor/tests/runtime/comparison-editor.test.ts
+@@ -0,0 +1,805 @@
++import { fireEvent, getByRole, within } from '@testing-library/dom';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++
++import type {
++  CategoricalComparisonChartConfig,
++  CategoricalComparisonViewSpec,
++  ChartConfig,
++  ViewSpec,
++} from '@tellplot/core';
++import { createEditor, type EditorOptions } from '../../src/index';
++
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    readonly options = vi.fn((): this => this);
++    readonly render = vi.fn((): Promise<void> => Promise.resolve());
++    readonly destroy = vi.fn((): void => undefined);
++    readonly on = vi.fn((): this => this);
++    readonly off = vi.fn((): this => this);
++    readonly getContext = vi.fn(() => ({ animations: [], canvas: undefined }));
++
++    constructor(options: { readonly container: HTMLElement }) {
++      options.container.append(options.container.ownerDocument.createElement('canvas'));
++    }
++  }
++  return { Chart };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
++
++const config = {
++  type: 'column',
++  locale: 'en-US',
++  data: {
++    schemaVersion: '3.0.0',
++    dataKind: 'categorical',
++    datasetId: 'comparison-workbench',
++    currency: 'USD',
++    series: [
++      { id: 'actual', label: 'Actual' },
++      { id: 'budget', label: 'Budget' },
++    ],
++    items: [
++      {
++        id: 'north',
++        label: 'North',
++        values: [
++          { seriesId: 'actual', amount: 12 },
++          { seriesId: 'budget', amount: 10 },
++        ],
++      },
++      {
++        id: 'south',
++        label: 'South',
++        values: [
++          { seriesId: 'actual', amount: 8 },
++          { seriesId: 'budget', amount: 11 },
++        ],
++      },
++      {
++        id: 'west',
++        label: 'West',
++        values: [
++          { seriesId: 'actual', amount: -4 },
++          { seriesId: 'budget', amount: 6 },
++        ],
++      },
++    ],
++  },
++  appearance: {
++    legend: false,
++    animation: { enabled: false },
++    numberFormat: { minimumFractionDigits: 1, maximumFractionDigits: 1 },
++  },
++} as const satisfies CategoricalComparisonChartConfig;
++
++function view(collapsed: boolean): CategoricalComparisonViewSpec {
++  return {
++    schemaVersion: '3.0.0',
++    datasetId: 'comparison-workbench',
++    chartType: 'column',
++    revision: 0,
++    rootOrder: ['group', 'west'],
++    groups: {
++      group: { id: 'group', label: 'North and South', childIds: ['north', 'south'] },
++    },
++    collapsedGroupIds: collapsed ? ['group'] : [],
++    pinnedItemIds: ['west'],
++    annotations: { group: 'Regional note', west: 'West note' },
++    emphasis: { group: 'muted', west: 'highlight' },
++  };
++}
++
++const scalarConfig = {
++  type: 'column',
++  locale: 'en-US',
++  data: {
++    schemaVersion: '2.0.0',
++    dataKind: 'categorical',
++    datasetId: 'comparison-workbench',
++    currency: 'USD',
++    items: [
++      { id: 'north', label: 'North', amount: 12 },
++      { id: 'south', label: 'South', amount: 8 },
++      { id: 'west', label: 'West', amount: -4 },
++    ],
++  },
++} as const satisfies ChartConfig;
++
++function scalarView(grouped: boolean): ViewSpec {
++  return {
++    schemaVersion: '2.0.0',
++    datasetId: 'comparison-workbench',
++    chartType: 'column',
++    revision: 0,
++    rootOrder: grouped ? ['scalar-group', 'west'] : ['north', 'south', 'west'],
++    groups: grouped
++      ? {
++          'scalar-group': {
++            id: 'scalar-group',
++            label: 'North and South',
++            childIds: ['north', 'south'],
++          },
++        }
++      : {},
++    collapsedGroupIds: grouped ? ['scalar-group'] : [],
++    pinnedItemIds: [],
++    annotations: {},
++    emphasis: {},
++  };
++}
++
++let host: HTMLDivElement;
++
++beforeEach(() => {
++  host = document.createElement('div');
++  document.body.append(host);
++});
++
++afterEach(() => {
++  document.body.replaceChildren();
++  vi.restoreAllMocks();
++});
++
++function editorRoot(): HTMLElement {
++  const root = host.querySelector<HTMLElement>('[data-tellplot="editor"]');
++  if (root === null) {
++    throw new Error('Editor root is unavailable.');
++  }
++  return root;
++}
++
++function mockEditorBounds(): void {
++  const originalBounds = HTMLElement.prototype.getBoundingClientRect;
++  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
++    this: HTMLElement,
++  ) {
++    return this.dataset['tellplot'] === 'editor'
++      ? ({
++          x: 0,
++          y: 0,
++          top: 0,
++          right: 1000,
++          bottom: 680,
++          left: 0,
++          width: 1000,
++          height: 680,
++          toJSON: () => ({}),
++        } as DOMRect)
++      : originalBounds.call(this);
++  });
++}
++
++function selectRow(nodeId: string): void {
++  const row = editorRoot().querySelector<HTMLElement>(
++    `[role="treeitem"][data-node-id="${nodeId}"]`,
++  );
++  if (row === null) {
++    throw new Error(`Outline row ${nodeId} is unavailable.`);
++  }
++  fireEvent.click(row);
++}
++
++describe('comparison workbench contract', () => {
++  it('renders one Outline node per category/group with a series count and no total', () => {
++    const editor = createEditor(host, { config, view: view(true) });
++    const tree = getByRole(editorRoot(), 'tree', { name: 'Structure outline' });
++    const rows = within(tree).getAllByRole('treeitem');
++
++    expect(rows).toHaveLength(2);
++    expect(rows.map(row => row.getAttribute('data-node-id'))).toEqual(['group', 'west']);
++    expect(rows.map(row => row.querySelector('.tp-row-value')?.textContent)).toEqual([
++      '2 series',
++      '2 series',
++    ]);
++    expect(tree.querySelector('[data-series-id]')).toBeNull();
++    expect(tree.textContent).not.toContain('$20.0');
++    editor.destroy();
++  });
++
++  it('distinguishes category, collapsed group, expanded group, and multi-selection Inspector data', () => {
++    const editor = createEditor(host, { config, view: view(false) });
++
++    selectRow('west');
++    let inspector = getByRole(editorRoot(), 'complementary', { name: 'Inspector' });
++    expect(
++      inspector.querySelector('[data-inspector-kind]')?.getAttribute('data-inspector-kind'),
++    ).toBe('category');
++    expect(
++      Array.from(inspector.querySelectorAll('[data-series-id]')).map(row => [
++        row.getAttribute('data-series-id'),
++        row.textContent,
++      ]),
++    ).toEqual([
++      ['actual', 'Actual-$4.0'],
++      ['budget', 'Budget$6.0'],
++    ]);
++    expect(
++      within(inspector).getByRole<HTMLTextAreaElement>('textbox', { name: 'Annotation' }).value,
++    ).toBe('West note');
++    expect(inspector.textContent).toContain('Highlighted');
++    expect(inspector.textContent).toContain('Pinned');
++
++    selectRow('group');
++    inspector = getByRole(editorRoot(), 'complementary', { name: 'Inspector' });
++    expect(
++      inspector.querySelector('[data-inspector-kind]')?.getAttribute('data-inspector-kind'),
++    ).toBe('expanded-group');
++    expect(inspector.querySelector('[data-series-id]')).toBeNull();
++    expect(inspector.textContent).toContain('Expanded');
++    expect(inspector.textContent).toContain('2 source categories');
++    expect(
++      within(inspector).getByRole<HTMLTextAreaElement>('textbox', { name: 'Annotation' }).value,
++    ).toBe('Regional note');
++    expect(inspector.textContent).toContain('Muted');
++
++    editor.update({ config, view: view(true) });
++    selectRow('group');
++    inspector = getByRole(editorRoot(), 'complementary', { name: 'Inspector' });
++    expect(
++      inspector.querySelector('[data-inspector-kind]')?.getAttribute('data-inspector-kind'),
++    ).toBe('collapsed-group');
++    expect(
++      Array.from(inspector.querySelectorAll('[data-series-id]')).map(row => row.textContent),
++    ).toEqual(['Actual$20.0', 'Budget$21.0']);
++    expect(inspector.textContent).toContain('Collapsed');
++
++    editor.update({
++      config,
++      view: { ...view(true), pinnedItemIds: ['north'] },
++    });
++    selectRow('group');
++    inspector = getByRole(editorRoot(), 'complementary', { name: 'Inspector' });
++    expect(inspector.textContent).not.toContain('Pinned');
++    expect(inspector.textContent).toContain('Locked');
++
++    editor.update({ config, view: view(false) });
++    selectRow('north');
++    const tree = getByRole(editorRoot(), 'tree', { name: 'Structure outline' });
++    fireEvent.click(within(tree).getByRole('checkbox', { name: 'Select South' }));
++    inspector = getByRole(editorRoot(), 'complementary', { name: 'Inspector' });
++    expect(
++      inspector.querySelector('[data-inspector-kind]')?.getAttribute('data-inspector-kind'),
++    ).toBe('multi-selection');
++    expect(inspector.textContent).toContain('2 selected nodes');
++    expect(inspector.textContent).toContain('2 source categories');
++    expect(inspector.querySelector('[data-series-id]')).toBeNull();
++    expect(within(inspector).queryByRole('textbox', { name: 'Annotation' })).toBeNull();
++    expect(inspector.textContent).not.toContain('NorthCurrent selection');
++    editor.destroy();
++  });
++
++  it('announces the complete registry and narrative DFS for nonempty and empty comparison sources', () => {
++    const editor = createEditor(host, { config, view: view(false) });
++    let summary = getByRole(editorRoot(), 'region', { name: 'Chart summary' });
++
++    expect(summary.querySelector('[data-summary-kind="intro"]')?.textContent).toContain(
++      '3 visible clusters and 2 series',
++    );
++    expect(summary.querySelector('[data-summary-kind="series-registry"]')?.textContent).toBe(
++      'Series registry: Actual, Budget.',
++    );
++    expect(
++      Array.from(summary.querySelectorAll('[data-summary-node-id]')).map(node => [
++        node.getAttribute('data-summary-node-id'),
++        node.getAttribute('data-summary-node-kind'),
++      ]),
++    ).toEqual([
++      ['group', 'expanded-group'],
++      ['north', 'category'],
++      ['south', 'category'],
++      ['west', 'category'],
++    ]);
++    expect(summary.textContent).toContain('Actual, $12.0; Budget, $10.0');
++    expect(summary.textContent).toContain('West note');
++    expect(summary.textContent).toContain('highlighted');
++    expect(summary.textContent).toContain('pinned');
++
++    const emptyConfig = {
++      ...config,
++      data: { ...config.data, datasetId: 'comparison-empty', items: [] },
++    } as const satisfies ChartConfig;
++    editor.update({ config: emptyConfig });
++    summary = getByRole(editorRoot(), 'region', { name: 'Chart summary' });
++    expect(summary.querySelector('[data-summary-kind="intro"]')?.textContent).toContain(
++      '0 visible clusters and 2 series',
++    );
++    expect(summary.querySelector('[data-summary-kind="series-registry"]')?.textContent).toBe(
++      'Series registry: Actual, Budget.',
++    );
++    expect(summary.querySelectorAll('[data-summary-node-id]')).toHaveLength(0);
++    editor.destroy();
++  });
++
++  it('falls back from a disabled or hidden focus key through Outline, toolbar, heading, and root', async () => {
++    const originalBounds = HTMLElement.prototype.getBoundingClientRect;
++    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
++      this: HTMLElement,
++    ) {
++      return this.dataset['tellplot'] === 'editor'
++        ? ({
++            x: 0,
++            y: 0,
++            top: 0,
++            right: 1000,
++            bottom: 680,
++            left: 0,
++            width: 1000,
++            height: 680,
++            toJSON: () => ({}),
++          } as DOMRect)
++        : originalBounds.call(this);
++    });
++    const editor = createEditor(host, { config, view: view(false) });
++    selectRow('west');
++    const inspector = getByRole(editorRoot(), 'complementary', { name: 'Inspector' });
++    const textarea = within(inspector).getByRole<HTMLTextAreaElement>('textbox', {
++      name: 'Annotation',
++    });
++    fireEvent.input(textarea, { target: { value: 'Changed note' } });
++    const save = within(inspector).getByRole<HTMLButtonElement>('button', {
++      name: 'Save annotation',
++    });
++    save.focus();
++
++    editor.update({ config: { ...config, editor: { readOnly: true } }, view: view(false) });
++    await Promise.resolve();
++    expect(document.activeElement).toBe(
++      getByRole(editorRoot(), 'tree', { name: 'Structure outline' }).querySelector(
++        '[role="treeitem"]',
++      ),
++    );
++
++    const row = getByRole(editorRoot(), 'tree', {
++      name: 'Structure outline',
++    }).querySelector<HTMLElement>('[role="treeitem"]');
++    row?.focus();
++    editor.update({
++      config: {
++        ...config,
++        editor: { panels: { outline: false, inspector: true, toolbar: true } },
++      },
++      view: view(false),
++    });
++    await Promise.resolve();
++    expect(document.activeElement?.closest('header')?.getAttribute('role')).toBe('toolbar');
++
++    (document.activeElement as HTMLElement | null)?.focus();
++    editor.update({
++      config: {
++        ...config,
++        editor: { panels: { outline: false, inspector: false, toolbar: false } },
++      },
++      view: view(false),
++    });
++    await Promise.resolve();
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[data-focus-key="chart-heading"]'),
++    );
++    editor.destroy();
++  });
++
++  it('skips CSS-hidden toolbar triggers when comparison panel updates require focus fallback', async () => {
++    const originalBounds = HTMLElement.prototype.getBoundingClientRect;
++    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
++      this: HTMLElement,
++    ) {
++      return this.dataset['tellplot'] === 'editor'
++        ? ({
++            x: 0,
++            y: 0,
++            top: 0,
++            right: 1200,
++            bottom: 680,
++            left: 0,
++            width: 1200,
++            height: 680,
++            toJSON: () => ({}),
++          } as DOMRect)
++        : originalBounds.call(this);
++    });
++    const editor = createEditor(host, { config, view: view(false) });
++    const row = getByRole(editorRoot(), 'tree', { name: 'Structure outline' }).querySelector(
++      '[role="treeitem"]',
++    );
++    expect(row).not.toBeNull();
++    (row as HTMLElement).focus();
++
++    editor.update({
++      config: {
++        ...config,
++        editor: { panels: { outline: false, inspector: true, toolbar: true } },
++      },
++      view: view(false),
++    });
++    await Promise.resolve();
++
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[data-focus-key="chart-heading"]'),
++    );
++    expect(document.activeElement).not.toBe(
++      editorRoot().querySelector('[data-focus-key="toolbar-inspector"]'),
++    );
++    editor.destroy();
++  });
++
++  it('retains comparison focus across consecutive pure v3 presentation updates', async () => {
++    mockEditorBounds();
++    const editor = createEditor(host, { config, view: view(false) });
++    const west = editorRoot().querySelector<HTMLElement>(
++      '[role="treeitem"][data-node-id="west"]',
++    );
++    expect(west).not.toBeNull();
++    west?.focus();
++
++    editor.update({ config: { ...config, height: 700 }, view: view(false) });
++    editor.update({ config: { ...config, height: 720 }, view: view(false) });
++    await Promise.resolve();
++
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[role="treeitem"][data-node-id="west"]'),
++    );
++    editor.destroy();
++  });
++
++  it('retains comparison focus across a v2 to v3 transition and v3 presentation update', async () => {
++    mockEditorBounds();
++    const editor = createEditor(host, { config: scalarConfig, view: scalarView(false) });
++    const north = editorRoot().querySelector<HTMLElement>(
++      '[role="treeitem"][data-node-id="north"]',
++    );
++    expect(north).not.toBeNull();
++    north?.focus();
++
++    editor.update({ config, view: view(false) });
++    editor.update({ config: { ...config, height: 720 }, view: view(false) });
++    await Promise.resolve();
++
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[role="treeitem"][data-node-id="north"]'),
++    );
++    editor.destroy();
++  });
++
++  it('keeps comparison fallback pending across invalid state into a valid v2 update', async () => {
++    mockEditorBounds();
++    const editor = createEditor(host, { config, view: view(false) });
++    const comparisonGroup = editorRoot().querySelector<HTMLElement>(
++      '[role="treeitem"][data-node-id="group"]',
++    );
++    expect(comparisonGroup).not.toBeNull();
++    comparisonGroup?.focus();
++
++    const invalid = { ...config, appearance: { legend: 'yes' } } as unknown as ChartConfig;
++    editor.update({ config: invalid });
++    editor.update({ config: scalarConfig, view: scalarView(false) });
++    await Promise.resolve();
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[role="treeitem"][data-node-id="north"]'),
++    );
++
++    editor.destroy();
++  });
++
++  it('uses comparison fallback once when a v3 to v2 transition removes the focus key', async () => {
++    mockEditorBounds();
++    const editor = createEditor(host, { config, view: view(false) });
++    const comparisonGroup = editorRoot().querySelector<HTMLElement>(
++      '[role="treeitem"][data-node-id="group"]',
++    );
++    expect(comparisonGroup).not.toBeNull();
++    comparisonGroup?.focus();
++
++    editor.update({ config: scalarConfig, view: scalarView(false) });
++    editor.update({ config: { ...scalarConfig, height: 720 }, view: scalarView(false) });
++    await Promise.resolve();
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[role="treeitem"][data-node-id="north"]'),
++    );
++
++    const scalarNorth = document.activeElement;
++    expect(scalarNorth).toBeInstanceOf(HTMLElement);
++    editor.update({ config: scalarConfig, view: scalarView(true) });
++    await Promise.resolve();
++    expect(document.activeElement).toBe(editorRoot());
++    editor.destroy();
++  });
++
++  it.each([
++    {
++      name: 'pure v3 presentation',
++      initial: { config, view: view(false) },
++      focusNodeId: 'west',
++      first: { config: { ...config, height: 700 }, view: view(false) },
++      second: { config: { ...config, height: 720 }, view: view(false) },
++    },
++    {
++      name: 'v2 to v3 transition',
++      initial: { config: scalarConfig, view: scalarView(false) },
++      focusNodeId: 'north',
++      first: { config, view: view(false) },
++      second: { config: { ...config, height: 720 }, view: view(false) },
++    },
++    {
++      name: 'v3 through invalid to v2',
++      initial: { config, view: view(false) },
++      focusNodeId: 'group',
++      first: {
++        config: { ...config, appearance: { legend: 'yes' } } as unknown as ChartConfig,
++      },
++      second: { config: scalarConfig, view: scalarView(false) },
++    },
++  ] satisfies readonly {
++    readonly name: string;
++    readonly initial: EditorOptions;
++    readonly focusNodeId: string;
++    readonly first: EditorOptions;
++    readonly second: EditorOptions;
++  }[])('cancels the pending $name restore when the host explicitly takes focus', async scenario => {
++    mockEditorBounds();
++    const editor = createEditor(host, scenario.initial);
++    const focused = editorRoot().querySelector<HTMLElement>(
++      `[role="treeitem"][data-node-id="${scenario.focusNodeId}"]`,
++    );
++    expect(focused).not.toBeNull();
++    focused?.focus();
++
++    editor.update(scenario.first);
++    const external = document.createElement('button');
++    external.textContent = 'Host action';
++    document.body.append(external);
++    external.focus();
++    editor.update(scenario.second);
++    await Promise.resolve();
++
++    expect(document.activeElement).toBe(external);
++    editor.destroy();
++
++    const queuedEditor = createEditor(host, scenario.initial);
++    const queuedFocused = editorRoot().querySelector<HTMLElement>(
++      `[role="treeitem"][data-node-id="${scenario.focusNodeId}"]`,
++    );
++    expect(queuedFocused).not.toBeNull();
++    queuedFocused?.focus();
++
++    queuedEditor.update(scenario.first);
++    external.focus();
++    await Promise.resolve();
++
++    expect(document.activeElement).toBe(external);
++    queuedEditor.destroy();
++  });
++
++  it('preserves legacy focus timing across consecutive steady v2 updates', async () => {
++    mockEditorBounds();
++    const editor = createEditor(host, { config: scalarConfig, view: scalarView(true) });
++    const scalarGroup = editorRoot().querySelector<HTMLElement>(
++      '[role="treeitem"][data-node-id="scalar-group"]',
++    );
++    expect(scalarGroup).not.toBeNull();
++    scalarGroup?.focus();
++
++    editor.update({ config: scalarConfig, view: scalarView(false) });
++    editor.update({ config: { ...scalarConfig, height: 720 }, view: scalarView(false) });
++    await Promise.resolve();
++
++    expect(document.activeElement).toBe(document.body);
++    editor.destroy();
++  });
++
++  it('keeps a pending comparison restore through hostile atomic rejection', async () => {
++    mockEditorBounds();
++    const editor = createEditor(host, { config, view: view(false) });
++    const west = editorRoot().querySelector<HTMLElement>(
++      '[role="treeitem"][data-node-id="west"]',
++    );
++    expect(west).not.toBeNull();
++    west?.focus();
++
++    editor.update({ config: { ...config, height: 700 }, view: view(false) });
++    const hostileOptions = {
++      config,
++      get view(): CategoricalComparisonViewSpec {
++        throw new Error('private hostile value');
++      },
++    } as EditorOptions;
++    expect(() => editor.update(hostileOptions)).toThrowError(
++      expect.objectContaining({ code: 'EDITOR_RENDER_FAILED' }),
++    );
++    editor.update({ config: { ...config, height: 720 }, view: view(false) });
++    await Promise.resolve();
++
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[role="treeitem"][data-node-id="west"]'),
++    );
++    editor.destroy();
++  });
++
++  it('applies the v3 presentation and controlled-mode update matrix without synthetic callbacks', async () => {
++    const onCommand = vi.fn();
++    const onViewChange = vi.fn();
++    const onSelectionChange = vi.fn();
++    const onConfigRejected = vi.fn();
++    const initialView = { ...view(false), pinnedItemIds: [] };
++    const editor = createEditor(host, {
++      config,
++      defaultView: initialView,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++      onConfigRejected,
++    });
++    selectRow('west');
++    const focused = editorRoot().querySelector<HTMLElement>('[data-node-id="west"]');
++    focused?.focus();
++    const moved = editor.dispatch({
++      schemaVersion: '1.0.0',
++      id: 'comparison-presentation-history',
++      type: 'moveItem',
++      source: 'host',
++      baseRevision: 0,
++      payload: { itemId: 'west', target: { containerId: 'root', index: 0 } },
++    });
++    expect(moved?.ok).toBe(true);
++    onCommand.mockClear();
++    onViewChange.mockClear();
++    onSelectionChange.mockClear();
++
++    const presentationConfig = {
++      ...config,
++      locale: 'zh-CN',
++      height: 720,
++      appearance: {
++        title: 'Comparison presentation',
++        colors: { series: [{ seriesId: 'actual', color: '#123456' }] },
++        legend: true,
++        axes: { category: false, value: true },
++        labels: { value: 'never', group: 'never' },
++        tooltip: false,
++        animation: { enabled: false, duration: 0 },
++        groupRegion: { enabled: false, opacity: 0.1 },
++        numberFormat: { minimumFractionDigits: 0, maximumFractionDigits: 2 },
++      },
++      editor: {
++        panels: { outline: true, inspector: true, toolbar: true },
++        outline: { placement: 'right' },
++        inspector: { mode: 'tabs' },
++      },
++    } as const satisfies ChartConfig;
++    const movedView = editor.getView();
++    editor.update({
++      config: presentationConfig,
++      defaultView: view(true),
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++      onConfigRejected,
++    });
++    await Promise.resolve();
++    expect(editor.getView()).toEqual(movedView);
++    expect(editorRoot().dataset['viewRevision']).toBe('1');
++    expect(document.activeElement).toBe(
++      editorRoot().querySelector('[data-focus-key="toolbar-outline"]'),
++    );
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++
++    const controlledView = { ...movedView, revision: 7, rootOrder: ['group', 'west'] };
++    editor.update({
++      config: presentationConfig,
++      view: controlledView,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++      onConfigRejected,
++    });
++    expect(editor.getView()).toEqual(controlledView);
++    expect(editorRoot().dataset['viewRevision']).toBe('7');
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++
++    editor.update({
++      config: presentationConfig,
++      defaultView: view(true),
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++      onConfigRejected,
++    });
++    expect(editor.getView()).toEqual(controlledView);
++    expect(editor.undo()?.ok).toBe(false);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++
++    editor.update({
++      config: { ...presentationConfig, editor: { ...presentationConfig.editor, readOnly: true } },
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++      onConfigRejected,
++    });
++    expect(editorRoot().dataset['readOnly']).toBe('true');
++    expect(editor.getView()).toEqual(controlledView);
++    editor.update({
++      config: { ...presentationConfig, editor: { ...presentationConfig.editor, readOnly: false } },
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++      onConfigRejected,
++    });
++    expect(editorRoot().dataset['readOnly']).toBe('false');
++    expect(editor.getView()).toEqual(controlledView);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++    expect(onConfigRejected).not.toHaveBeenCalled();
++    editor.destroy();
++  });
++
++  it('distinguishes ordinary invalid v3 updates from hostile atomic rejection', async () => {
++    const onConfigRejected = vi.fn();
++    const onCommand = vi.fn();
++    const onSelectionChange = vi.fn();
++    const onViewChange = vi.fn();
++    const editor = createEditor(host, {
++      config,
++      onConfigRejected,
++      onCommand,
++      onSelectionChange,
++      onViewChange,
++    });
++    selectRow('west');
++    const acceptedRow = editorRoot().querySelector<HTMLElement>('[data-node-id="west"]');
++    expect(acceptedRow).not.toBeNull();
++    acceptedRow?.focus();
++    const acceptedView = editor.getView();
++    onSelectionChange.mockClear();
++    const hostileOptions = {
++      config,
++      get view(): CategoricalComparisonViewSpec {
++        throw new Error('private hostile value');
++      },
++      onConfigRejected,
++      onCommand,
++      onSelectionChange,
++      onViewChange,
++    } as EditorOptions;
++
++    expect(() => editor.update(hostileOptions)).toThrowError(
++      expect.objectContaining({ code: 'EDITOR_RENDER_FAILED' }),
++    );
++    expect(editor.getView()).toEqual(acceptedView);
++    expect(editorRoot().dataset['editorState']).toBe('ready');
++    expect(document.activeElement).toBe(acceptedRow);
++    expect(acceptedRow?.getAttribute('aria-selected')).toBe('true');
++    expect(onConfigRejected).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++
++    const invalid = { ...config, appearance: { legend: 'yes' } } as unknown as ChartConfig;
++    editor.update({
++      config: invalid,
++      onConfigRejected,
++      onCommand,
++      onSelectionChange,
++      onViewChange,
++    });
++    await Promise.resolve();
++    expect(editorRoot().dataset['editorState']).toBe('invalid');
++    expect(document.activeElement).toBe(editorRoot());
++    expect(editorRoot().querySelector('[data-node-id="west"]')).toBeNull();
++    expect(onConfigRejected).toHaveBeenCalledOnce();
++    expect(onSelectionChange).toHaveBeenCalledOnce();
++    expect(onSelectionChange).toHaveBeenLastCalledWith(null);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(() => editor.getView()).toThrowError(
++      expect.objectContaining({ code: 'VIEW_UNAVAILABLE' }),
++    );
++    editor.destroy();
++  });
++});
+diff --git a/packages/react/tests/ChartEditor.test.tsx b/packages/react/tests/ChartEditor.test.tsx
+index 1febdb2d5082469911731f5c4c229c0349a12cb8..b8129072463af088db34f065c295f3ced1b45373 100644
+--- a/packages/react/tests/ChartEditor.test.tsx
++++ b/packages/react/tests/ChartEditor.test.tsx
+@@ -48,6 +48,47 @@ const config: ChartConfig = {
+   },
+ };
+ 
++const comparisonConfig: ChartConfig = {
++  type: 'column',
++  data: {
++    schemaVersion: '3.0.0',
++    dataKind: 'categorical',
++    datasetId: 'react-comparison',
++    series: [
++      { id: 'current', label: 'Current' },
++      { id: 'plan', label: 'Plan' },
++    ],
++    items: [
++      {
++        id: 'a',
++        label: 'Alpha',
++        values: [
++          { seriesId: 'current', amount: 1 },
++          { seriesId: 'plan', amount: 2 },
++        ],
++      },
++    ],
++  },
++  editor: {
++    readOnly: true,
++    panels: { outline: false, inspector: true, toolbar: true },
++    inspector: { mode: 'tabs' },
++  },
++};
++
++const comparisonView: ViewSpec = {
++  schemaVersion: '3.0.0',
++  datasetId: 'react-comparison',
++  chartType: 'column',
++  revision: 1,
++  rootOrder: ['a'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++};
++
+ describe('React ChartEditor adapter', () => {
+   it('updates one imperative instance only for runtime inputs and keeps callbacks current', () => {
+     const handle = createRef<ChartEditorHandle>();
+@@ -100,6 +141,44 @@ describe('React ChartEditor adapter', () => {
+     expect(instance?.destroy).toHaveBeenCalledTimes(1);
+   });
+ 
++  it('submits a compatible comparison config and controlled view in one render', () => {
++    const rendered = render(<ChartEditor config={config} />);
++    const instance = runtime.instances.at(-1);
++
++    rendered.rerender(<ChartEditor config={comparisonConfig} view={comparisonView} />);
++
++    expect(instance?.update).toHaveBeenCalledOnce();
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.objectContaining({ config: comparisonConfig, view: comparisonView }),
++    );
++    rendered.unmount();
++  });
++
++  it('forwards standalone defaultView and both controlled-mode transitions', () => {
++    const rendered = render(<ChartEditor config={comparisonConfig} defaultView={comparisonView} />);
++    const instance = runtime.instances.at(-1);
++    expect(runtime.createEditor.mock.calls.at(-1)?.[1]).toEqual(
++      expect.objectContaining({ defaultView: comparisonView }),
++    );
++
++    rendered.rerender(<ChartEditor config={comparisonConfig} view={comparisonView} />);
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.not.objectContaining({ defaultView: expect.anything() }),
++    );
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.objectContaining({ view: comparisonView }),
++    );
++
++    rendered.rerender(<ChartEditor config={comparisonConfig} defaultView={comparisonView} />);
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.not.objectContaining({ view: expect.anything() }),
++    );
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.objectContaining({ defaultView: comparisonView }),
++    );
++    rendered.unmount();
++  });
++
+   it('cleans every Strict Mode mount', () => {
+     const start = runtime.instances.length;
+     const rendered = render(
+diff --git a/packages/vue/tests/ChartEditor.test.ts b/packages/vue/tests/ChartEditor.test.ts
+index b1395d52656000c5f321741f25479b73a8005a2f..1968ea47c111e9a4385cd0d9fedd613cc6b7e98c 100644
+--- a/packages/vue/tests/ChartEditor.test.ts
++++ b/packages/vue/tests/ChartEditor.test.ts
+@@ -39,6 +39,47 @@ const config: ChartConfig = {
+   },
+ };
+ 
++const comparisonConfig: ChartConfig = {
++  type: 'bar',
++  data: {
++    schemaVersion: '3.0.0',
++    dataKind: 'categorical',
++    datasetId: 'vue-comparison',
++    series: [
++      { id: 'current', label: 'Current' },
++      { id: 'plan', label: 'Plan' },
++    ],
++    items: [
++      {
++        id: 'a',
++        label: 'Alpha',
++        values: [
++          { seriesId: 'current', amount: 1 },
++          { seriesId: 'plan', amount: 2 },
++        ],
++      },
++    ],
++  },
++  editor: {
++    readOnly: true,
++    panels: { outline: true, inspector: false, toolbar: true },
++    inspector: { mode: 'tabs' },
++  },
++};
++
++const comparisonView: ViewSpec = {
++  schemaVersion: '3.0.0',
++  datasetId: 'vue-comparison',
++  chartType: 'bar',
++  revision: 1,
++  rootOrder: ['a'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++};
++
+ describe('Vue ChartEditor adapter', () => {
+   it('maps updates and update:view to one imperative instance', async () => {
+     const host = document.createElement('div');
+@@ -99,4 +140,75 @@ describe('Vue ChartEditor adapter', () => {
+     app.unmount();
+     expect(instance?.destroy).toHaveBeenCalledTimes(1);
+   });
++
++  it('submits a compatible comparison config and controlled view in one reactive flush', async () => {
++    const host = document.createElement('div');
++    const currentConfig = ref<ChartConfig>(config);
++    const currentView = ref<ViewSpec | undefined>();
++    const app = createApp(
++      defineComponent({
++        setup: () => () =>
++          h(ChartEditor, {
++            config: currentConfig.value,
++            ...(currentView.value === undefined ? {} : { view: currentView.value }),
++          }),
++      }),
++    );
++    app.mount(host);
++    const instance = runtime.instances.at(-1);
++
++    currentConfig.value = comparisonConfig;
++    currentView.value = comparisonView;
++    await nextTick();
++
++    expect(instance?.update).toHaveBeenCalledOnce();
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.objectContaining({ config: comparisonConfig, view: comparisonView }),
++    );
++    app.unmount();
++  });
++
++  it('forwards standalone defaultView and both controlled-mode transitions', async () => {
++    const host = document.createElement('div');
++    const currentView = ref<ViewSpec | undefined>();
++    const currentDefaultView = ref<ViewSpec | undefined>(comparisonView);
++    const app = createApp(
++      defineComponent({
++        setup: () => () =>
++          h(ChartEditor, {
++            config: comparisonConfig,
++            ...(currentView.value === undefined ? {} : { view: currentView.value }),
++            ...(currentDefaultView.value === undefined
++              ? {}
++              : { defaultView: currentDefaultView.value }),
++          }),
++      }),
++    );
++    app.mount(host);
++    const instance = runtime.instances.at(-1);
++    expect((instance as (typeof instance & { options: object }) | undefined)?.options).toEqual(
++      expect.objectContaining({ defaultView: comparisonView }),
++    );
++
++    currentDefaultView.value = undefined;
++    currentView.value = comparisonView;
++    await nextTick();
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.not.objectContaining({ defaultView: expect.anything() }),
++    );
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.objectContaining({ view: comparisonView }),
++    );
++
++    currentView.value = undefined;
++    currentDefaultView.value = comparisonView;
++    await nextTick();
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.not.objectContaining({ view: expect.anything() }),
++    );
++    expect(instance?.update).toHaveBeenLastCalledWith(
++      expect.objectContaining({ defaultView: comparisonView }),
++    );
++    app.unmount();
++  });
+ });

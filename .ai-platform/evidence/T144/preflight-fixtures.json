@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T144",
+  "result": "passed",
+  "execution": {
+    "kind": "hermetic_local_fixtures",
+    "suite": "packages/editor/tests/package/stable-release.test.ts",
+    "focusedSuiteResult": "31/31 passed",
+    "liveRegistryQueried": false,
+    "liveRemoteQueried": false,
+    "workflowDispatched": false
+  },
+  "fixtures": [
+    { "case": "clean local current-release state", "expected": "pass", "result": "passed" },
+    { "case": "clean CI annotated-tag state", "expected": "pass", "result": "passed" },
+    { "case": "dirty worktree", "expected": "fail_closed", "result": "passed" },
+    { "case": "wrong branch", "expected": "fail_closed", "result": "passed" },
+    { "case": "wrong or lightweight tag", "expected": "fail_closed", "result": "passed" },
+    { "case": "stale upstream or remote main", "expected": "fail_closed", "result": "passed" },
+    { "case": "missing or divergent remote annotated tag", "expected": "fail_closed", "result": "passed" },
+    { "case": "hostile Git URL rewrite and inherited configuration", "expected": "isolated", "result": "passed" },
+    { "case": "wrong Node or npm toolchain", "expected": "fail_closed", "result": "passed" },
+    { "case": "non-official npm registry", "expected": "fail_closed", "result": "passed" },
+    { "case": "missing artifact manifest or file", "expected": "fail_closed", "result": "passed" },
+    { "case": "wrong artifact SHA-256", "expected": "fail_closed", "result": "passed" },
+    { "case": "wrong GitHub event, visibility or workflow ref", "expected": "fail_closed", "result": "passed" },
+    { "case": "occupied package version", "expected": "fail_before_stage", "result": "passed" },
+    { "case": "registry query failure", "expected": "fail_before_stage", "result": "passed" },
+    { "case": "bootstrap-required package state", "expected": "fail_before_stage", "result": "passed" },
+    { "case": "missing exact human confirmation", "expected": "fail_before_stage", "result": "passed" },
+    { "case": "annotated tag in isolated bare remote", "expected": "pass", "result": "passed" },
+    { "case": "same isolated remote converted to lightweight tag", "expected": "fail_closed", "result": "passed" }
+  ],
+  "externalState": {
+    "remoteFreshness": "Not_Run_Not_Authorized",
+    "registryAvailability": "Not_Run_Not_Authorized",
+    "trustedPublisher": "Not_Run_Not_Authorized",
+    "githubEnvironment": "Not_Run_Not_Authorized"
+  }
+}

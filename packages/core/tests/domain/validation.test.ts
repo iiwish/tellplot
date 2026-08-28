@@ -133,7 +133,7 @@ describe('validateSourceData', () => {
     },
     {
       name: 'unsupported schema',
-      input: () => ({ ...cloneSource(), schemaVersion: '3.0.0' }),
+      input: () => ({ ...cloneSource(), schemaVersion: '4.0.0' }),
       expected: {
         code: 'UNSUPPORTED_SCHEMA_VERSION',
         reason: 'UNSUPPORTED_SCHEMA_VERSION',
@@ -588,7 +588,7 @@ describe('validateViewSpec', () => {
   }[] = [
     {
       name: 'unsupported schema',
-      mutate: view => void (view['schemaVersion'] = '3.0.0'),
+      mutate: view => void (view['schemaVersion'] = '4.0.0'),
       expected: {
         code: 'UNSUPPORTED_SCHEMA_VERSION',
         reason: 'UNSUPPORTED_SCHEMA_VERSION',

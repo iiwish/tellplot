@@ -58,15 +58,36 @@ TellPlot 让不同前端技术栈用简洁、稳定的 API 嵌入可编辑基础
 - Outcome: 类型和运行时配置校验、公开 facade、config/view 双文件工作台、迁移说明和发布候选回归。
 - Boundary: 不增加图表家族、schema、依赖、raw G2Spec 或第二套领域状态。
 
-## G003 基础图表扩展
+## G003 多序列分类比较
 
-- Status: Candidate
-- Goal: 根据明确使用需求增加下一组基础图表，并保持数据、配置、动画、交互和导出体验一致。
-- Entry criteria:
-  - 明确目标图表、使用场景和数据合同。
-  - 证明 G2 原生能力可以满足核心渲染与交互。
-  - 不要求公共 registry、第二渲染引擎或破坏现有 API。
-- Execution rule: 每个图表扩展目标包含设计、实现、测试、示例和兼容性验证，完成后整体验收。
+- Status: Accepted
+- Goal: 把分类叙事编辑从单序列提升为 2 至 4 个 series 的业务比较能力，并保持 category-only 编辑、
+  逐 series 数据正确性与屏幕/导出语义一致。
+- Version boundary: 本地 `tellplot@2.0.0` candidate；多序列 source/view 使用 closed schema `3.0.0`，
+  v1/v2 wire/runtime/persistence 保持兼容。
+- Included scope: grouped bar/column、dense matrix、逐 series compensated aggregation、只读 legend、shared
+  Tooltip、Outline/Inspector/a11y/export parity、DOM/React/Vue 同一 runtime。
+- Excluded scope: stacked、双轴、series/cell 编辑、legend filter、自动 variance/同比/排名、公共 registry、
+  第二 renderer、npm publish 与生产发布。
+- Current execution: 用户已批准产品范围、2.0/schema 3.0 方向、精确 public API/schema contract、TDR-025、
+  technical plan、T135-T141 work graph、TDR-025-A01、T140 amendment 与 T141-A003 amendment。T135-T141
+  和 G003 已由用户于 2026-08-28 完成目标级验收，三层终审为 Critical 0 / High 0 / Medium 0；200x2 performance、50x4
+  responsive、current/previous browser、a11y、coverage、package/framework/security、可复现 local 2.0 candidate
+  与目标级 evidence 均已完成。dependency、远程 Git、publish、tag、release 与
+  production promotion 仍是独立闸门。
+
+## G003-R1 TellPlot 2.0 发布准备
+
+- Status: Executing
+- Goal: 把 G003 已验证的本地 `tellplot@2.0.0` candidate 收敛为 exact current-release contract、隔离 clean
+  source、可复现 final artifact、fresh full release rehearsal 与人工发布授权材料。
+- Included scope: 2.0 structured release descriptor、`v2.0.0` fail-closed workflow definition、T131 历史
+  immutability、双语 README lineage 整合、两次 byte-identical tarball、完整本地质量矩阵和三层终审。
+- Boundary: 不执行远程 Git、stage/commit/push/PR/merge、tag、workflow dispatch、npm stage/publish、GitHub
+  Release、dist-tag 或生产变更；不改变 G003 public API/schema、dependency、lockfile 或图表行为。
+- Current execution: 用户已确认目标范围、验收 G003/T135-T141，并于 2026-08-28 明确批准 TDR-026、
+  Technical Plan 与 T142-T145 Work Graph。T142 已通过 focused gates 与三层终审并处于
+  `Needs_Review`；T143 为 `Running`，T144-T145 按串行前置推进。
 
 ## G004 首个稳定版 1.0 候选
 

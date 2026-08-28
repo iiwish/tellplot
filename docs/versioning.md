@@ -8,7 +8,7 @@
 
 版本字段描述候选内容。npm、Git tag、GitHub Release 和生产网站状态以公开 registry 与发布报告为准。
 
-## 1.x 公共表面
+## 2.x 公共表面
 
 - `tellplot` 与 `tellplot/core` 的 runtime exports、类型、schema、命令和稳定错误语义。
 - `tellplot` 的 `createEditor`、`EditorOptions`、`EditorInstance`、export 和 `styles.css` subpath。
@@ -38,6 +38,7 @@
 
 - legacy waterfall `1.0.0` 保持读取与序列化兼容。
 - waterfall/categorical `2.0.0` 保持严格 `dataKind` 和 chart type compatibility。
+- categorical comparison `3.0.0` 使用 2 至 4 个 source-ordered series，并只与 v3 bar/column view 配对。
 - TellPlot 不执行启发式 schema migration。
 - 新 schema generation 必须明确读取策略；无法兼容的变化进入新的 major。
 

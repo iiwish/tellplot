@@ -28,6 +28,16 @@ export interface EditorMessages {
   readonly locked: string;
   readonly editable: string;
   readonly groupedItems: string;
+  readonly seriesCount: (count: number) => string;
+  readonly selectedNodes: (count: number) => string;
+  readonly sourceCategories: (count: number) => string;
+  readonly expanded: string;
+  readonly collapsed: string;
+  readonly pinned: string;
+  readonly highlighted: string;
+  readonly muted: string;
+  readonly seriesRegistry: (labels: readonly string[]) => string;
+  readonly comparisonSummary: (clusterCount: number, seriesCount: number) => string;
   readonly annotation: string;
   readonly annotationPlaceholder: string;
   readonly saveAnnotation: string;
@@ -100,6 +110,17 @@ const ZH_CN: EditorMessages = {
   locked: '已锁定',
   editable: '可编辑',
   groupedItems: '项',
+  seriesCount: count => `${count} 个序列`,
+  selectedNodes: count => `已选 ${count} 个节点`,
+  sourceCategories: count => `${count} 个来源分类`,
+  expanded: '已展开',
+  collapsed: '已折叠',
+  pinned: '已固定',
+  highlighted: '已强调',
+  muted: '已弱化',
+  seriesRegistry: labels => `序列：${labels.join('、')}。`,
+  comparisonSummary: (clusterCount, seriesCount) =>
+    `共 ${clusterCount} 个可见分类或分组，${seriesCount} 个序列。`,
   annotation: '注释',
   annotationPlaceholder: '记录口径或汇报说明',
   saveAnnotation: '保存注释',
@@ -172,6 +193,17 @@ const EN_US: EditorMessages = {
   locked: 'Locked',
   editable: 'Editable',
   groupedItems: 'items',
+  seriesCount: count => `${count} series`,
+  selectedNodes: count => `${count} selected ${count === 1 ? 'node' : 'nodes'}`,
+  sourceCategories: count => `${count} source ${count === 1 ? 'category' : 'categories'}`,
+  expanded: 'Expanded',
+  collapsed: 'Collapsed',
+  pinned: 'Pinned',
+  highlighted: 'Highlighted',
+  muted: 'Muted',
+  seriesRegistry: labels => `Series registry: ${labels.join(', ')}.`,
+  comparisonSummary: (clusterCount, seriesCount) =>
+    `${clusterCount} visible ${clusterCount === 1 ? 'cluster' : 'clusters'} and ${seriesCount} series.`,
   annotation: 'Annotation',
   annotationPlaceholder: 'Add reporting context',
   saveAnnotation: 'Save annotation',

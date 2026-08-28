@@ -18,7 +18,7 @@ describe('single-package distribution', () => {
     const manifest = json('packages/tellplot/package.json');
 
     expect(manifest['name']).toBe('tellplot');
-    expect(manifest['version']).toBe('1.0.0');
+    expect(manifest['version']).toBe('2.0.0');
     expect(manifest['private']).not.toBe(true);
     expect(manifest['publishConfig']).toEqual({
       access: 'public',
@@ -63,13 +63,13 @@ describe('single-package distribution', () => {
     const artifactScript = text('scripts/release/package-artifact.mjs');
     const packageTestScript = text('scripts/release/test-packages.mjs');
 
-    expect(workflow).toContain('tellplot-1.0.0.tgz');
+    expect(workflow).toContain('tellplot-2.0.0.tgz');
     expect(workflow).toContain('npm stage publish');
-    expect(workflow).not.toContain('tellplot-core-1.0.0.tgz');
-    expect(workflow).not.toContain('tellplot-editor-1.0.0.tgz');
-    expect(workflow).not.toContain('tellplot-react-1.0.0.tgz');
-    expect(workflow).not.toContain('tellplot-vue-1.0.0.tgz');
-    expect(artifactScript).toContain("const packageDirectories = ['tellplot']");
+    expect(workflow).not.toContain('tellplot-core-2.0.0.tgz');
+    expect(workflow).not.toContain('tellplot-editor-2.0.0.tgz');
+    expect(workflow).not.toContain('tellplot-react-2.0.0.tgz');
+    expect(workflow).not.toContain('tellplot-vue-2.0.0.tgz');
+    expect(artifactScript).toContain('const packageDirectories = [currentRelease.packageName]');
     expect(packageTestScript).toContain("const packageNames = ['tellplot']");
   });
 

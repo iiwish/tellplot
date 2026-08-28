@@ -1,5 +1,8 @@
 import type {
   Annotation,
+  CategoricalComparisonChartAppearance,
+  CategoricalComparisonProjection,
+  CategoricalComparisonSeries,
   CategoricalProjection,
   ChartType,
   Emphasis,
@@ -15,6 +18,7 @@ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../cha
 import type { ExpandedGroupRegion } from '../charts/groupRegions';
 import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
 import type { EditorLocale } from '../editor/formatAmount';
+import { createComparisonExportSpec } from './comparisonExportSpec';
 import { exportError, type ExportResult, type NormalizedExportOptions } from './exportTypes';
 
 interface PngChartExportBaseRequest {
@@ -27,28 +31,66 @@ interface PngChartExportBaseRequest {
   readonly height: number;
   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
-  readonly appearance?: FinancialChartAppearance | undefined;
-  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
 }
 
 type PngChartExportRequest = PngChartExportBaseRequest &
   (
-    | { readonly chartType?: 'waterfall'; readonly projection: WaterfallProjection }
     | {
+        readonly chartType?: 'waterfall';
+        readonly projection: WaterfallProjection;
+        readonly appearance?: FinancialChartAppearance | undefined;
+        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+      }
+    | {
+        readonly generation: 'scalar';
         readonly chartType: Extract<ChartType, 'bar' | 'column'>;
         readonly projection: CategoricalProjection;
+        readonly appearance?: FinancialChartAppearance | undefined;
+        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+      }
+    | {
+        readonly generation: 'comparison';
+        readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+        readonly projection: CategoricalComparisonProjection;
+        readonly series: readonly CategoricalComparisonSeries[];
+        readonly appearance?: CategoricalComparisonChartAppearance | undefined;
+        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
       }
   );
 
 type CategoricalPngChartExportRequest = PngChartExportBaseRequest & {
+  readonly generation: 'scalar';
   readonly chartType: Extract<ChartType, 'bar' | 'column'>;
   readonly projection: CategoricalProjection;
+  readonly appearance?: FinancialChartAppearance | undefined;
+  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+};
+
+type ComparisonPngChartExportRequest = PngChartExportBaseRequest & {
+  readonly generation: 'comparison';
+  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+  readonly projection: CategoricalComparisonProjection;
+  readonly series: readonly CategoricalComparisonSeries[];
+  readonly appearance?: CategoricalComparisonChartAppearance | undefined;
+  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
 };
 
 function isCategoricalRequest(
   request: PngChartExportRequest,
 ): request is CategoricalPngChartExportRequest {
-  return request.chartType === 'bar' || request.chartType === 'column';
+  return (
+    (request.chartType === 'bar' || request.chartType === 'column') &&
+    request.generation === 'scalar'
+  );
+}
+
+function isComparisonRequest(
+  request: PngChartExportRequest,
+): request is ComparisonPngChartExportRequest {
+  return (
+    (request.chartType === 'bar' || request.chartType === 'column') &&
+    request.generation === 'comparison'
+  );
 }
 
 function canvasLogicalSize(canvas: HTMLCanvasElement): {
@@ -149,32 +191,45 @@ export async function exportPngChart(
         ...(request.signal === undefined ? {} : { signal: request.signal }),
         width,
         height,
-        spec: isCategoricalRequest(request)
-          ? createCategoricalChartSpec({
+        spec: isComparisonRequest(request)
+          ? createComparisonExportSpec({
               projection: request.projection,
+              series: request.series,
               chartType: request.chartType,
               title: request.title,
               locale: request.locale,
               currency: request.currency,
-              reducedMotion: true,
-              showValueLabels: shouldShowCategoricalValueLabels(request.projection),
               annotations: request.annotations,
               emphasis: request.emphasis,
               appearance: request.appearance,
               groupRegions: request.groupRegions,
             })
-          : createWaterfallChartSpec({
-              projection: request.projection,
-              title: request.title,
-              locale: request.locale,
-              currency: request.currency,
-              reducedMotion: true,
-              showValueLabels: shouldShowWaterfallValueLabels(request.projection),
-              annotations: request.annotations,
-              emphasis: request.emphasis,
-              appearance: request.appearance,
-              groupRegions: request.groupRegions,
-            }),
+          : isCategoricalRequest(request)
+            ? createCategoricalChartSpec({
+                projection: request.projection,
+                chartType: request.chartType,
+                title: request.title,
+                locale: request.locale,
+                currency: request.currency,
+                reducedMotion: true,
+                showValueLabels: shouldShowCategoricalValueLabels(request.projection),
+                annotations: request.annotations,
+                emphasis: request.emphasis,
+                appearance: request.appearance,
+                groupRegions: request.groupRegions,
+              })
+            : createWaterfallChartSpec({
+                projection: request.projection,
+                title: request.title,
+                locale: request.locale,
+                currency: request.currency,
+                reducedMotion: true,
+                showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+                annotations: request.annotations,
+                emphasis: request.emphasis,
+                appearance: request.appearance,
+                groupRegions: request.groupRegions,
+              }),
       },
       host => {
         const canvas = host.querySelector('canvas');

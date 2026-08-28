@@ -1,0 +1,4012 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index c0b8525..0f78195 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -5,6 +5,16 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或
+ 
+ ## Unreleased
+ 
++### 2.0.0 Local Candidate
++
++- 增加 schema `3.0.0` 的 2 至 4 序列 categorical comparison source/view、16 个 public types 与唯一 runtime
++  projector `projectCategoricalComparison`。
++- bar/column 的 screen、SVG 与 PNG 共享 source-ordered series registry、palette、legend、labels、group regions、
++  annotations 和 emphasis。
++- public unions 加入 v3 variant；exhaustive TypeScript consumer 必须按 migration guide 增加 schema 3 分支。
++- legacy v1 waterfall、current v2 waterfall 与 scalar v2 categorical wire/runtime/persistence 保持兼容。
++- 本节描述本地 candidate，不表示 registry、tag、GitHub Release 或 Production 发布。
++
+ ### Fixed
+ 
+ - 图表框选拖到绘图区外松开时仍会完成当前选区并打开分组命名弹窗；元素拖拽在图外松开仍保持取消语义。
+diff --git a/README.md b/README.md
+index ebccb53..6b82810 100644
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,7 @@
+ # TellPlot
+ 
+-TellPlot 是基于 AntV G2 的框架无关可编辑基础图表库。它提供瀑布图、分类条形图和分类柱状图，完整编辑器
++TellPlot 是基于 AntV G2 的框架无关可编辑基础图表库。它提供瀑布图、scalar 与 2 至 4 序列的分类条形图/
++柱状图，完整编辑器
+ 可直接挂载到任意 DOM 容器，也可通过 React 18/19 或 Vue 3 薄适配器接入。
+ 
+ ## 分发结构
+@@ -14,12 +15,15 @@ TellPlot 对外只发布 `tellplot`。根入口提供数据、命令与 imperati
+ 
+ ## 快速开始
+ 
+-在已有宿主项目中安装一个包。G2 使用 TellPlot 内部经过兼容与安全复核的精确版本：
++当前文档对应本地 `tellplot@2.0.0` candidate。在已有宿主项目中安装 candidate artifact；G2 使用 TellPlot
++内部经过兼容与安全复核的精确版本：
+ 
+ ```bash
+-pnpm add tellplot
++pnpm add ./tellplot-2.0.0.tgz
+ ```
+ 
++`2.0.0` 正式发布到 registry 后，宿主可以改用 `pnpm add tellplot@^2.0.0`。当前说明不表示 2.0 已发布。
++
+ 三种可复制示例、公共配置和受控状态说明见[入门与三种集成](docs/getting-started.md)。每个 UI 入口都需
+ 导入统一的 `tellplot/styles.css`；原生 DOM 接入还需在卸载时调用 `destroy()`。
+ 
+@@ -58,7 +62,8 @@ GitHub `main` 的 clean commit 构建静态产物，Cloudflare 保持权威 DNS
+ - [版本与兼容政策](docs/versioning.md)
+ - [产品设计 SSOT](.ai-platform/docs/product-design.md)
+ 
+-`tellplot@1.0.0` 的公开 npm、Git tag、GitHub Release 与官网 Production 均经过独立发布闸门。
++仓库当前生成本地 `tellplot@2.0.0` candidate；这不表示 npm、Git tag、GitHub Release 或 Production 已发布。
++已发布的 `tellplot@1.0.0` lineage 保持独立且不可改写。
+ 
+ ## License
+ 
+diff --git a/SUPPORT.md b/SUPPORT.md
+index a4878e7..274fa05 100644
+--- a/SUPPORT.md
++++ b/SUPPORT.md
+@@ -2,7 +2,8 @@
+ 
+ ## Stable Scope
+ 
+-1.x 支持 waterfall、单序列 bar、单序列 column，以及文档化的配置、编辑、持久化、SVG/PNG 和无障碍能力。
++2.x 支持 waterfall、scalar bar/column、2 至 4 序列 comparison bar/column，以及文档化的配置、编辑、
++持久化、SVG/PNG 和无障碍能力。v1/v2 wire/runtime compatibility 继续受支持。
+ 支持矩阵见 [docs/versioning.md](docs/versioning.md)。
+ 
+ ## Before Opening An Issue
+diff --git a/apps/playground/src/ExampleWorkbench.tsx b/apps/playground/src/ExampleWorkbench.tsx
+index d2cef2c..f63d7c4 100644
+--- a/apps/playground/src/ExampleWorkbench.tsx
++++ b/apps/playground/src/ExampleWorkbench.tsx
+@@ -44,7 +44,31 @@ function initialConfig(sourceData: SourceData, requestedChartType: 'bar' | undef
+     };
+   }
+   if (sourceData.schemaVersion === '3.0.0') {
+-    throw new Error('Comparison fixtures are not available in the playground yet.');
++    const type = requestedChartType ?? 'column';
++    return {
++      type,
++      appearance: {
++        title: sourceData.series.length === 2 ? '实际与预算' : '业务线情景比较',
++        colors: {
++          series: sourceData.series.map((series, index) => ({
++            seriesId: series.id,
++            color: ['#0072B2', '#D55E00', '#009E73', '#CC79A7'][index] ?? '#0072B2',
++          })),
++          group: '#7C5CFC',
++        },
++        legend: true,
++        labels: {
++          value: { display: 'auto', placement: 'outside', offset: 6 },
++          group: 'auto',
++        },
++        tooltip: true,
++        animation: { enabled: true, duration: 180 },
++      },
++      data: sourceData,
++      editor: DEFAULT_EDITOR,
++      locale: 'zh-CN',
++      height: '100%',
++    };
+   }
+   return {
+     type: 'waterfall',
+@@ -198,6 +222,7 @@ export function ExampleWorkbench(): React.JSX.Element {
+       const result = await editorRef.current?.exportImage({
+         format,
+         filename: config.data.datasetId,
++        background: '#ffffff',
+         ...(format === 'png' ? { pixelRatio: 2 } : {}),
+       });
+       if (result === undefined) {
+diff --git a/apps/playground/src/fixtures.ts b/apps/playground/src/fixtures.ts
+index 5d33712..0d76b85 100644
+--- a/apps/playground/src/fixtures.ts
++++ b/apps/playground/src/fixtures.ts
+@@ -99,6 +99,94 @@ const categoricalPerformanceFixture = {
+   })),
+ } satisfies SourceData;
+ 
++const actualVersusBudgetFixture = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: '2026-actual-versus-budget',
++  currency: 'CNY',
++  series: [
++    { id: 'actual', label: '实际' },
++    { id: 'budget', label: '预算' },
++  ],
++  items: [
++    {
++      id: 'enterprise',
++      label: '企业业务',
++      values: [
++        { seriesId: 'actual', amount: 1_680 },
++        { seriesId: 'budget', amount: 1_540 },
++      ],
++    },
++    {
++      id: 'consumer',
++      label: '消费者业务',
++      values: [
++        { seriesId: 'actual', amount: 1_120 },
++        { seriesId: 'budget', amount: 1_260 },
++      ],
++    },
++    {
++      id: 'services',
++      label: '专业服务',
++      values: [
++        { seriesId: 'actual', amount: 860 },
++        { seriesId: 'budget', amount: 820 },
++      ],
++    },
++    {
++      id: 'investment',
++      label: '新增投入',
++      values: [
++        { seriesId: 'actual', amount: -520 },
++        { seriesId: 'budget', amount: -460 },
++      ],
++    },
++  ],
++} as const satisfies SourceData;
++
++const fourSeriesFixture = {
++  ...actualVersusBudgetFixture,
++  datasetId: '2026-business-line-scenarios',
++  series: [
++    { id: 'actual', label: '实际' },
++    { id: 'budget', label: '预算' },
++    { id: 'forecast', label: '预测' },
++    { id: 'stretch', label: '挑战目标' },
++  ],
++  items: actualVersusBudgetFixture.items.map((item, index) => ({
++    ...item,
++    values: [
++      ...item.values,
++      { seriesId: 'forecast', amount: (item.values[0]?.amount ?? 0) + (index + 1) * 35 },
++      { seriesId: 'stretch', amount: (item.values[1]?.amount ?? 0) + (index + 1) * 80 },
++    ],
++  })),
++} satisfies SourceData;
++
++const emptyComparisonFixture = {
++  ...actualVersusBudgetFixture,
++  datasetId: 'empty-actual-versus-budget',
++  items: [],
++} as const satisfies SourceData;
++
++const allZeroComparisonFixture = {
++  ...actualVersusBudgetFixture,
++  datasetId: 'all-zero-actual-versus-budget',
++  items: actualVersusBudgetFixture.items.map(item => ({
++    ...item,
++    values: item.values.map(value => ({ ...value, amount: 0 })),
++  })),
++} satisfies SourceData;
++
++const allZeroFourSeriesFixture = {
++  ...fourSeriesFixture,
++  datasetId: 'all-zero-business-line-scenarios',
++  items: fourSeriesFixture.items.map(item => ({
++    ...item,
++    values: item.values.map(value => ({ ...value, amount: 0 })),
++  })),
++} satisfies SourceData;
++
+ /** Resolves deterministic visual fixtures without adding playground-only editor state. */
+ export function getPlaygroundFixture(search: string): SourceData {
+   const fixture = new URLSearchParams(search).get('fixture');
+@@ -123,10 +211,31 @@ export function getPlaygroundFixture(search: string): SourceData {
+   if (fixture === 'categorical-performance') {
+     return categoricalPerformanceFixture;
+   }
++  if (fixture === 'comparison-actual-budget' || fixture === 'comparison-actual-budget-bar') {
++    return actualVersusBudgetFixture;
++  }
++  if (fixture === 'comparison-four-series') {
++    return fourSeriesFixture;
++  }
++  if (fixture === 'comparison-empty') {
++    return emptyComparisonFixture;
++  }
++  if (fixture === 'comparison-all-zero') {
++    return allZeroComparisonFixture;
++  }
++  if (fixture === 'comparison-four-series-zero') {
++    return allZeroFourSeriesFixture;
++  }
+   return financialFixture;
+ }
+ 
+ /** Keeps fixture selection out of the editor while allowing an explicit horizontal layout. */
+ export function getPlaygroundChartType(search: string): 'bar' | undefined {
+-  return new URLSearchParams(search).get('fixture') === 'categorical-bar' ? 'bar' : undefined;
++  const fixture = new URLSearchParams(search).get('fixture');
++  const chart = new URLSearchParams(search).get('chart');
++  return fixture === 'categorical-bar' ||
++    fixture === 'comparison-actual-budget-bar' ||
++    chart === 'bar'
++    ? 'bar'
++    : undefined;
+ }
+diff --git a/apps/playground/tests/comparisonExamples.test.ts b/apps/playground/tests/comparisonExamples.test.ts
+new file mode 100644
+index 0000000..536adcb
+--- /dev/null
++++ b/apps/playground/tests/comparisonExamples.test.ts
+@@ -0,0 +1,32 @@
++import { createInitialViewSpec, projectCategoricalComparison } from 'tellplot';
++import { describe, expect, it } from 'vitest';
++
++import { getPlaygroundChartType, getPlaygroundFixture } from '../src/fixtures';
++
++describe('comparison playground journeys', () => {
++  it.each([
++    ['?fixture=comparison-actual-budget', 2, 'column'],
++    ['?fixture=comparison-actual-budget-bar', 2, 'bar'],
++    ['?fixture=comparison-four-series', 4, 'column'],
++  ] as const)('provides a public-only %s source with %i series', (search, count, type) => {
++    const source = getPlaygroundFixture(search);
++    expect(source.schemaVersion).toBe('3.0.0');
++    if (source.schemaVersion !== '3.0.0') throw new Error('Expected a comparison fixture.');
++    expect(source.series).toHaveLength(count);
++    const view = createInitialViewSpec(source, { chartType: type });
++    expect(view.ok).toBe(true);
++    if (!view.ok) throw new Error('Expected a comparison view.');
++    const projection = projectCategoricalComparison(source, view.value);
++    expect(projection.ok).toBe(true);
++    expect(getPlaygroundChartType(search) ?? 'column').toBe(type);
++  });
++
++  it('keeps legal empty comparison source and registry intact', () => {
++    const source = getPlaygroundFixture('?fixture=comparison-empty');
++    if (source.schemaVersion !== '3.0.0') throw new Error('Expected empty comparison source.');
++    expect(source.items).toEqual([]);
++    expect(source.series.map(series => series.label)).toEqual(['实际', '预算']);
++    const view = createInitialViewSpec(source, { chartType: 'column' });
++    expect(view).toMatchObject({ ok: true, value: { rootOrder: [] } });
++  });
++});
+diff --git a/apps/playground/tests/schemaV3Guards.test.ts b/apps/playground/tests/schemaV3Guards.test.ts
+new file mode 100644
+index 0000000..95e11b3
+--- /dev/null
++++ b/apps/playground/tests/schemaV3Guards.test.ts
+@@ -0,0 +1,23 @@
++import { readFileSync } from 'node:fs';
++import { describe, expect, it } from 'vitest';
++
++const workbenchSource = readFileSync(
++  new URL('../src/ExampleWorkbench.tsx', import.meta.url),
++  'utf8',
++);
++const showcaseSource = readFileSync(new URL('../src/ShowcaseChart.tsx', import.meta.url), 'utf8');
++
++describe('schema 3 playground compile guards', () => {
++  it('routes comparison data before the legacy waterfall fallback', () => {
++    expect(workbenchSource).toContain("sourceData.schemaVersion === '3.0.0'");
++    expect(workbenchSource).toContain('legend: true');
++    expect(showcaseSource).toContain("sourceData.schemaVersion === '1.0.0'");
++    expect(showcaseSource).toContain("sourceData.dataKind === 'waterfall'");
++  });
++
++  it('keeps comparison examples on public entrypoints without a private projector', () => {
++    expect(workbenchSource).toContain("from 'tellplot'");
++    expect(workbenchSource).not.toContain('projectCategoricalComparison');
++    expect(workbenchSource).not.toContain('@tellplot/');
++  });
++});
+diff --git a/docs/README.md b/docs/README.md
+index 58c60e7..3e15827 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -16,6 +16,7 @@
+ - [架构概览](architecture.md)
+ - [入门与集成](getting-started.md)
+ - [公共 API](api.md)
++- [数据合同](data-contract.md)
+ - [错误处理](errors.md)
+ - [图表配置边界](configuration.md)
+ - [迁移与兼容](migration.md)
+diff --git a/docs/api.md b/docs/api.md
+index 76500d8..4725430 100644
+--- a/docs/api.md
++++ b/docs/api.md
+@@ -1,10 +1,12 @@
+ # TellPlot 公共 API
+ 
+ ```bash
+-pnpm add tellplot
++pnpm add ./tellplot-2.0.0.tgz
+ ```
+ 
+-根入口、core、React 和 Vue 使用同一个版本与 tarball；只允许从下列声明的 subpath 导入。
++本文对应本地 `tellplot@2.0.0` candidate。根入口、core、React 和 Vue 使用同一个 candidate tarball；只允许
++从下列声明的 subpath 导入。`2.0.0` 正式发布到 registry 后才能改用
++`pnpm add tellplot@^2.0.0`；当前说明不表示 2.0 已发布。
+ 
+ ## `tellplot/core`
+ 
+@@ -28,7 +30,7 @@ core 入口不访问 DOM、G2 或 UI framework，导出：
+ | Store          | `createEditorStore`                                                                                                                                                                                                                                    | controlled/uncontrolled session、selection、callbacks 和订阅 |
+ | View tree      | `locateViewNode`、`containerChildren`、`ownGroup`、`groupContainsGroup`、`groupDepth`、`collectLeafSourceIds`                                                                                                                                          | 只读遍历递归分组树                                           |
+ | 不变量         | `validateEditorInvariants`                                                                                                                                                                                                                             | 校验 source/view 顺序、锚点、分组和引用完整性                |
+-| Projection     | `projectWaterfall`、`projectCategorical`                                                                                                                                                                                                               | 生成 renderer-neutral、确定性的可见 datum 序列               |
++| Projection     | `projectWaterfall`、`projectCategorical`、`projectCategoricalComparison`                                                                                                                                                                               | 生成 renderer-neutral、确定性的可见 datum 序列               |
+ | 配置解析       | `sourceDataKind`、`createNarrativeChartPolicy`、`resolveFinancialChartAppearance`、`toFinancialChartAppearance`                                                                                                                                        | 选择图表策略并解析安全显示语义                               |
+ | 配置常量       | `DEFAULT_FINANCIAL_CHART_PALETTE`、`DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT`                                                                                                                                                                             | 只读默认 palette 与 number format                            |
+ | 移动策略       | `buildMoveItemCommand`、`buildMoveNodeCommand`、`resolvePointerDropPlacement`、`resolvePointerMoveTarget`、`resolveKeyboardMoveTarget`                                                                                                                 | 将 DOM/framework 输入归一为确定性命令目标                    |
+@@ -43,14 +45,34 @@ core 入口不访问 DOM、G2 或 UI framework，导出：
+ - 配置：`ChartConfig` discriminated union、appearance/editor options 及 resolved financial appearance。
+ - 投影/交互：waterfall/categorical datum/projection、category bounds/hit/drop、selection、pointer/keyboard move types。
+ 
+-以上 named exports 都属于 1.x 公共表面；各字段的精确 readonly、union 和泛型签名以包内 `.d.ts` 为准。
++schema `3.0.0` 增加 16 个 named types：`ComparisonSchemaVersion`、`SeriesId`、
++`CategoricalComparisonSeries`、`CategoricalComparisonValue`、`CategoricalComparisonSourceItem`、
++`CategoricalComparisonSourceData`、`CategoricalComparisonViewSpec`、`CategoricalComparisonDatumKind`、
++`CategoricalComparisonSeriesValue`、`CategoricalComparisonDatum`、`CategoricalComparisonProjection`、
++`CategoricalComparisonProjectionResult`、`CategoricalComparisonSeriesColor`、
++`CategoricalComparisonChartColors`、`CategoricalComparisonChartAppearance` 和
++`CategoricalComparisonChartConfig`。唯一新增 runtime export 是 `projectCategoricalComparison`。
+ 
+ ## `tellplot`
+ 
+ 根入口包含 `tellplot/core` 的全部公共能力，并额外提供 framework-neutral imperative editor：
+ 
+-```ts
+-const editor = createEditor(container, options);
++```ts id=imperative-api mode=standalone
++import { createEditor, type ChartConfig } from 'tellplot';
++
++declare const container: HTMLElement;
++
++const config = {
++  type: 'column',
++  data: {
++    schemaVersion: '2.0.0',
++    dataKind: 'categorical',
++    datasetId: 'api-example',
++    items: [{ id: 'revenue', label: 'Revenue', amount: 12 }],
++  },
++} as const satisfies ChartConfig;
++
++export const editor = createEditor(container, { config });
+ ```
+ 
+ `EditorOptions`：
+@@ -113,9 +135,9 @@ Vue 的 `update:view` 驱动 `v-model:view`，`view-change` 同时提供候选 v
+ `ChartConfig` 以 `type` 区分 `waterfall | bar | column`。`ViewSpec` 只保存可编辑叙事状态。所有编辑入口
+ 产生封闭 `EditorCommand`，`CommandSource` 为 `direct | outline | keyboard | host`。
+ 
+-推荐 source 使用 `schemaVersion: '2.0.0'`：waterfall 还包含 `dataKind: 'waterfall'` 与
+-`start | contribution | subtotal | end` item kind；bar/column 共用 `dataKind: 'categorical'` 和无 kind item。
+-legacy waterfall `1.0.0` 只用于兼容现有持久化内容。
++waterfall 与 scalar categorical 使用 `schemaVersion: '2.0.0'`。comparison categorical 使用
++`schemaVersion: '3.0.0'`、2 至 4 个 source-ordered series，以及每个 category 的 dense values matrix。
++legacy waterfall `1.0.0` 继续用于读取现有持久化内容。完整 wire 见[数据合同](data-contract.md)。
+ 
+ `ViewSpec` 的持久化字段包括 `schemaVersion`、`datasetId`、`chartType`、`revision`、`rootOrder`、`groups`、
+ `collapsedGroupIds`、`pinnedItemIds`、`annotations` 和 `emphasis`。它必须与 source 的 dataset/schema/family
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 18ad232..9e3c5e1 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -19,7 +19,8 @@ flowchart LR
+ 
+ ## Core layer
+ 
+-`core` 包含 schema、配置校验、领域不变量、命令执行、undo/redo、持久化、waterfall/categorical
++`core` 包含 schema、配置校验、领域不变量、命令执行、undo/redo、持久化、waterfall/scalar categorical/
++comparison categorical
+ projection、pointer geometry 和 `EditorStore`。它不依赖 DOM、G2、React 或 Vue，Node/SSR import 不产生
+ 浏览器副作用。
+ 
+@@ -41,7 +42,9 @@ packages/editor/src/
+   styles/              # canonical workbench stylesheet
+ ```
+ 
+-G2 事件只在 `chartSurface` 边界转为稳定 point、datum 和 scene bounds。排序读取 G2 scene geometry，不猜测
++comparison screen、SVG 和 PNG 共享同一个 renderer-neutral projection、source-ordered series registry、palette
++resolver 与 private G2 spec factory；每次 image export 创建独立 offscreen G2 runtime。G2 事件只在
++`chartSurface` 边界转为稳定 point、datum 和 scene bounds。排序读取 G2 scene geometry，不猜测
+ 柱宽；waterfall/column 使用 X category axis，bar 使用 Y category axis。
+ 
+ ## Framework adapters
+diff --git a/docs/configuration.md b/docs/configuration.md
+index 14a3f76..0fa4cd3 100644
+--- a/docs/configuration.md
++++ b/docs/configuration.md
+@@ -5,7 +5,20 @@
+ `ChartConfig` 是 TellPlot 的声明式公共配置。它保持可序列化、可校验，并且不会开放可能破坏图表投影、
+ 拖拽命中、导出一致性或可访问性的 G2 内部字段。
+ 
+-```ts
++```ts id=waterfall-config mode=standalone
++import type { ChartConfig, WaterfallSourceData } from 'tellplot';
++
++const sourceData = {
++  schemaVersion: '2.0.0',
++  dataKind: 'waterfall',
++  datasetId: 'operating-bridge',
++  items: [
++    { id: 'start', label: '期初', amount: 100, kind: 'start' },
++    { id: 'growth', label: '增长', amount: 20, kind: 'contribution' },
++    { id: 'end', label: '期末', amount: 120, kind: 'end' },
++  ],
++} as const satisfies WaterfallSourceData;
++
+ const config = {
+   type: 'waterfall',
+   data: sourceData,
+@@ -88,6 +101,10 @@ const config = {
+ | `backgroundColor`   | 是       | 是       | 十六进制颜色                                        |
+ | `backgroundOpacity` | 是       | 是       | `0` 至 `1`                                          |
+ 
++comparison 的 `colors.series` 是 `{ seriesId, color }[]`，override 按 ID 应用；未覆盖项按 source ordinal
++使用稳定默认 palette。`legend` 默认为 `true`，只读且严格保持 source order；关闭时 screen 与 export 都不
++输出 legend。comparison 不接受 positive/negative 语义色槽。
++
+ `auto` 位置保留每类图表经过验证的默认放置；`inside` 与 `outside` 按数值方向自动翻转对齐，不要求宿主
+ 区分 bar 的转置坐标。背景默认关闭，开启时使用紧凑内边距和圆角，不改变柱形命中。
+ 
+@@ -128,7 +145,11 @@ TellPlot 的 `auto` 策略管理；碰撞选项暂不开放，避免提供一个
+ 
+ TypeScript 推荐使用 `satisfies ChartConfig`。JavaScript、不可信 JSON 或跨边界数据使用：
+ 
+-```ts
++```ts id=validate-config mode=standalone
++import { validateChartConfig } from 'tellplot';
++
++declare const input: unknown;
++
+ const result = validateChartConfig(input);
+ if (!result.ok) {
+   console.error(result.errors[0]?.code, result.errors[0]?.path);
+diff --git a/docs/data-contract.md b/docs/data-contract.md
+new file mode 100644
+index 0000000..87833ee
+--- /dev/null
++++ b/docs/data-contract.md
+@@ -0,0 +1,65 @@
++# TellPlot 数据合同
++
++TellPlot 使用 schema generation 区分持久化 wire。`1.0.0` 表示 legacy waterfall，`2.0.0` 表示带
++`dataKind` 的 waterfall 或单序列 categorical，`3.0.0` 表示 2 至 4 个序列的 categorical comparison。
++source 是宿主持有的不可变事实；编辑动作只生成新的 `ViewSpec`。
++
++## 多序列 source
++
++```ts id=comparison-source mode=standalone
++import type { CategoricalComparisonSourceData } from 'tellplot';
++
++export const source = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'actual-versus-budget',
++  currency: 'CNY',
++  series: [
++    { id: 'actual', label: '实际' },
++    { id: 'budget', label: '预算' },
++  ],
++  items: [
++    {
++      id: 'enterprise',
++      label: '企业业务',
++      values: [
++        { seriesId: 'actual', amount: 1680 },
++        { seriesId: 'budget', amount: 1540 },
++      ],
++    },
++  ],
++} as const satisfies CategoricalComparisonSourceData;
++```
++
++`series` 的 source order 是 marks、legend、shared Tooltip、数值标签、Inspector、摘要和导出的唯一顺序。
++每个 item 必须为每个 series 提供恰好一个 value，且 `values` 顺序与 registry 一致。series 数量只能为
++2、3 或 4；categories 可以为空。ID 在各自 registry 内唯一，金额必须是有限安全数。
++
++## 多序列 view
++
++```ts id=comparison-view mode=standalone
++import type { CategoricalComparisonViewSpec } from 'tellplot';
++
++export const view = {
++  schemaVersion: '3.0.0',
++  datasetId: 'actual-versus-budget',
++  chartType: 'column',
++  revision: 0,
++  rootOrder: ['enterprise'],
++  groups: {},
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++} as const satisfies CategoricalComparisonViewSpec;
++```
++
++`ViewSpec` 只改变 category narrative：顺序、递归分组、折叠、固定、注释和强调。series 不是 view node，
++不能单独排序、分组、固定或注释。collapsed group 按每个 series 分别聚合；任何不安全聚合都会让整个投影
++原子失败。
++
++## 兼容边界
++
++source 与 view 必须具有相同 schema、dataset 和 chart family。schema `3.0.0` 只接受 `bar` 或 `column` 的
++schema `3.0.0` view。`parseViewSpec` 不跨 generation 迁移，v1/v2 wire 和 runtime 保持原样。需要从 scalar
++数据构造 comparison 时，由宿主明确提供 series 语义并选择[迁移路径](migration.md)。
+diff --git a/docs/errors.md b/docs/errors.md
+index ce3e7d9..045b733 100644
+--- a/docs/errors.md
++++ b/docs/errors.md
+@@ -104,6 +104,7 @@ try {
+ - 图表无样式：确认应用入口导入所用包的 `styles.css` subpath。
+ - 图表配置无效：先调用 `validateChartConfig`，按 issue 的 `code` 与 `path` 修正公开配置。
+ - 图表显示 data/view 冲突：重新用当前 data 调用 `createInitialViewSpec`，或校验恢复的 view。
+-- 条形图初始化失败：只有 current categorical source 可以使用 `bar` 或 `column`。
++- 条形图初始化失败：scalar v2 或 comparison v3 categorical source 才能使用 `bar` 或 `column`，source/view
++  schema 必须一致。
+ - SSR 阶段缺少 DOM：在客户端挂载编辑器；服务端只处理纯验证与持久化函数。
+ - 导出不可用：确认调用发生在已挂载、支持 Canvas/SVG 的浏览器环境。
+diff --git a/docs/migration.md b/docs/migration.md
+index b7b5979..cb95de5 100644
+--- a/docs/migration.md
++++ b/docs/migration.md
+@@ -1,39 +1,273 @@
+-# TellPlot 包选择与状态迁移
++# TellPlot 2.0 包与 schema 迁移
+ 
+ ## 包选择
+ 
+-所有场景安装同一个 `tellplot` 包：
++所有场景安装同一个 `tellplot` 包。纯数据校验与 SSR 使用 `tellplot/core`；imperative DOM 使用根入口；
++React 18/19 与 Vue 3 分别使用 `tellplot/react` 和 `tellplot/vue`。export map 与 1.x 相同，framework adapters
++仍只代理同一个 imperative editor。
+ 
+-| 场景                               | 公共入口                          |
+-| ---------------------------------- | --------------------------------- |
+-| 纯数据校验、命令或 SSR             | `tellplot/core`                   |
+-| 原生 DOM、Web Component 或其他框架 | `tellplot` 的 `createEditor`      |
+-| React 18/19                        | `tellplot/react` 的 `ChartEditor` |
+-| Vue 3                              | `tellplot/vue` 的 `ChartEditor`   |
++## Runtime 兼容
+ 
+-React/Vue adapters 依赖同一个 imperative editor，不需要把状态或命令迁移到另一套实现。
++legacy v1 waterfall、current v2 waterfall 和 scalar v2 categorical 的 wire、校验、投影、持久化、编辑与导出
++保持原样，不需要把现有 JSON 转成 schema `3.0.0`。`parseViewSpec` 永不跨 schema generation 迁移。
+ 
+-## ViewSpec 迁移
++2.0 的 source break 来自 `SourceData`、`ViewSpec` 和 `ChartConfig` public union 加入 v3 variant。对公开联合做
++exhaustive narrowing 的 TypeScript consumer 必须增加明确分支：
+ 
+-持久化内容始终与原始 `SourceData` 一起校验：
++```ts id=exhaustive-before mode=expected-diagnostic:TS2322
++import type { SourceData } from 'tellplot';
+ 
+-```ts
+-import { parseViewSpec } from 'tellplot/core';
++export function generationName(source: SourceData): string {
++  if (source.schemaVersion === '1.0.0') return 'legacy-waterfall';
++  if (source.schemaVersion === '2.0.0') return source.dataKind;
++  const exhaustive: never = source;
++  return exhaustive;
++}
++```
++
++```ts id=exhaustive-after mode=standalone
++import type { SourceData } from 'tellplot';
++
++export function generationName(source: SourceData): string {
++  if (source.schemaVersion === '1.0.0') return 'legacy-waterfall';
++  if (source.schemaVersion === '2.0.0') return source.dataKind;
++  if (source.schemaVersion === '3.0.0') return 'categorical-comparison';
++  const exhaustive: never = source;
++  return exhaustive;
++}
++```
++
++## 路径一：创建全新 v3 view
++
++宿主已明确提供 2 至 4 个 series 和完整 values matrix 时，可以创建新的 v3 view。该路径有意丢弃旧
++category narrative state。
++
++```ts id=fresh-comparison-view mode=standalone
++import {
++  createInitialViewSpec,
++  type CategoricalComparisonSourceData,
++  type CategoricalComparisonViewSpec,
++} from 'tellplot';
++
++export function createComparisonView(
++  source: CategoricalComparisonSourceData,
++): CategoricalComparisonViewSpec {
++  const created = createInitialViewSpec(source, { chartType: 'column' });
++  if (!created.ok || created.value.schemaVersion !== '3.0.0') {
++    throw new Error('Comparison view validation failed');
++  }
++  return created.value;
++}
++```
++
++## 路径二：显式保留 category narrative
++
++只有 old scalar source/view、target comparison config 都通过公共 validator，dataset ID、chart type 与 category
++ID set 完全兼容时，才可保留 root order、groups、collapse、pin、annotations 和 emphasis。source order 可以不同。
++以下函数是 host-side reference，不是 TellPlot runtime export，也不猜测 series label 或业务映射。成功结果使用
++revision `0` 和独立 arrays/records；任何 mismatch 都只返回统一失败结果，不产生 partial view。
++
++```ts id=preserve-comparison-view mode=compose-runtime:preserve-comparison
++import {
++  validateChartConfig,
++  validateSourceData,
++  validateViewSpec,
++  viewMatchesChartConfig,
++  type CategoricalComparisonChartConfig,
++  type CategoricalComparisonSourceData,
++  type CategoricalComparisonViewSpec,
++  type CategoricalSourceData,
++  type ViewSpec,
++} from 'tellplot';
++
++type PreserveNarrativeResult =
++  | { readonly ok: true; readonly value: CategoricalComparisonViewSpec }
++  | { readonly ok: false; readonly reason: 'INCOMPATIBLE_NARRATIVE' };
++
++function sameCategoryIdSet(
++  oldSource: CategoricalSourceData,
++  targetSource: CategoricalComparisonSourceData,
++): boolean {
++  if (oldSource.items.length !== targetSource.items.length) return false;
++  const targetIds = new Set(targetSource.items.map(item => item.id));
++  return oldSource.items.every(item => targetIds.has(item.id));
++}
++
++export function preserveCategoricalNarrative(
++  oldSource: CategoricalSourceData,
++  oldView: ViewSpec,
++  targetConfig: CategoricalComparisonChartConfig,
++): PreserveNarrativeResult {
++  const oldSourceValidation = validateSourceData(oldSource);
++  const targetValidation = validateChartConfig(targetConfig);
++  if (
++    !oldSourceValidation.ok ||
++    !targetValidation.ok ||
++    oldSourceValidation.value.schemaVersion !== '2.0.0' ||
++    oldSourceValidation.value.dataKind !== 'categorical'
++  ) {
++    return { ok: false, reason: 'INCOMPATIBLE_NARRATIVE' };
++  }
++  const validatedOldSource = oldSourceValidation.value;
++  const oldValidation = validateViewSpec(oldView, validatedOldSource);
++  if (!oldValidation.ok) {
++    return { ok: false, reason: 'INCOMPATIBLE_NARRATIVE' };
++  }
++  const currentView = oldValidation.value;
++  if (
++    currentView.schemaVersion !== '2.0.0' ||
++    (currentView.chartType !== 'bar' && currentView.chartType !== 'column') ||
++    currentView.datasetId !== targetConfig.data.datasetId ||
++    currentView.chartType !== targetConfig.type ||
++    !sameCategoryIdSet(validatedOldSource, targetConfig.data)
++  ) {
++    return { ok: false, reason: 'INCOMPATIBLE_NARRATIVE' };
++  }
++
++  const candidate: CategoricalComparisonViewSpec = {
++    schemaVersion: '3.0.0',
++    datasetId: currentView.datasetId,
++    chartType: currentView.chartType,
++    revision: 0,
++    rootOrder: [...currentView.rootOrder],
++    groups: Object.fromEntries(
++      Object.entries(currentView.groups).map(([id, group]) => [
++        id,
++        { ...group, childIds: [...group.childIds] },
++      ]),
++    ),
++    collapsedGroupIds: [...currentView.collapsedGroupIds],
++    pinnedItemIds: [...currentView.pinnedItemIds],
++    annotations: { ...currentView.annotations },
++    emphasis: { ...currentView.emphasis },
++  };
++
++  const migrated = validateViewSpec(candidate, targetConfig.data);
++  return migrated.ok && viewMatchesChartConfig(migrated.value, targetConfig)
++    ? { ok: true, value: candidate }
++    : { ok: false, reason: 'INCOMPATIBLE_NARRATIVE' };
++}
++```
++
++下面的可执行 fixture 使用重排后的 target source 证明成功路径，检查每个 mutable container 都已 clone，并证明
++dataset、chart type 与 category set mismatch 原子失败且不改写任一输入。
++
++```ts id=preserve-comparison-runtime mode=compose-runtime:preserve-comparison
++const oldSource = {
++  schemaVersion: '2.0.0',
++  dataKind: 'categorical',
++  datasetId: 'regional-revenue',
++  items: [
++    { id: 'north', label: 'North', amount: 120 },
++    { id: 'south', label: 'South', amount: 96 },
++  ],
++} as const satisfies CategoricalSourceData;
++
++const oldView = {
++  schemaVersion: '2.0.0',
++  datasetId: 'regional-revenue',
++  chartType: 'column',
++  revision: 7,
++  rootOrder: ['region'],
++  groups: {
++    region: { id: 'region', label: 'Region', childIds: ['north', 'south'] },
++  },
++  collapsedGroupIds: ['region'],
++  pinnedItemIds: [],
++  annotations: { region: 'Reviewed' },
++  emphasis: { region: 'highlight' },
++} as const satisfies ViewSpec;
++
++const targetSource = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'regional-revenue',
++  series: [
++    { id: 'actual', label: 'Actual' },
++    { id: 'budget', label: 'Budget' },
++  ],
++  items: [
++    {
++      id: 'south',
++      label: 'South',
++      values: [
++        { seriesId: 'actual', amount: 96 },
++        { seriesId: 'budget', amount: 100 },
++      ],
++    },
++    {
++      id: 'north',
++      label: 'North',
++      values: [
++        { seriesId: 'actual', amount: 120 },
++        { seriesId: 'budget', amount: 125 },
++      ],
++    },
++  ],
++} as const satisfies CategoricalComparisonSourceData;
++
++const targetConfig = {
++  type: 'column',
++  data: targetSource,
++} as const satisfies CategoricalComparisonChartConfig;
++
++function assert(condition: boolean, message: string): asserts condition {
++  if (!condition) throw new Error(message);
++}
++
++const inputReceipt = JSON.stringify({ oldSource, oldView, targetConfig });
++const preserved = preserveCategoricalNarrative(oldSource, oldView, targetConfig);
++assert(preserved.ok, 'compatible narrative must be preserved');
++assert(preserved.value.revision === 0, 'migration starts a fresh revision');
++assert(preserved.value.rootOrder !== oldView.rootOrder, 'rootOrder must be cloned');
++assert(preserved.value.groups !== oldView.groups, 'groups record must be cloned');
++assert(
++  preserved.value.groups['region']?.childIds !== oldView.groups.region.childIds,
++  'group childIds must be cloned',
++);
++assert(
++  preserved.value.collapsedGroupIds !== oldView.collapsedGroupIds,
++  'collapsedGroupIds must be cloned',
++);
++assert(preserved.value.pinnedItemIds !== oldView.pinnedItemIds, 'pinnedItemIds must be cloned');
++assert(preserved.value.annotations !== oldView.annotations, 'annotations must be cloned');
++assert(preserved.value.emphasis !== oldView.emphasis, 'emphasis must be cloned');
++assert(
++  JSON.stringify({ oldSource, oldView, targetConfig }) === inputReceipt,
++  'successful migration must not mutate inputs',
++);
++
++const mismatches: readonly CategoricalComparisonChartConfig[] = [
++  { ...targetConfig, data: { ...targetSource, datasetId: 'different-dataset' } },
++  { ...targetConfig, type: 'bar' },
++  {
++    ...targetConfig,
++    data: {
++      ...targetSource,
++      items: [targetSource.items[0], { ...targetSource.items[1], id: 'east' }],
++    },
++  },
++];
+ 
+-const restored = parseViewSpec(serialized, sourceData);
+-if (restored.ok) {
+-  editor.update({ config, view: restored.value, onViewChange });
++for (const mismatch of mismatches) {
++  const before = JSON.stringify({ oldSource, oldView, mismatch });
++  const rejected = preserveCategoricalNarrative(oldSource, oldView, mismatch);
++  assert(!rejected.ok, 'incompatible narrative must be rejected');
++  assert(rejected.reason === 'INCOMPATIBLE_NARRATIVE', 'failure reason must stay closed');
++  assert(
++    JSON.stringify({ oldSource, oldView, mismatch }) === before,
++    'mismatch rejection must be atomic',
++  );
+ }
+ ```
+ 
+-TellPlot 不执行启发式 schema migration。dataset、schema generation、chart type 或 source family 不兼容时，
+-宿主应执行明确的数据迁移，或用 `createInitialViewSpec` 创建新视图。
++迁移前必须由宿主验证业务含义，不能把单个 scalar amount 自动复制为多个 series，不能猜测 Actual/Budget
++名称，也不能把旧 revision/history 伪装为一次 v3 command。只有 `ok: true` 的结果可以使用；任何 precondition
++或 validator failure 都原子终止迁移。
+ 
+ ## 接入检查
+ 
+-1. 只从 `tellplot` 声明的 package exports 导入，不导入 `src/` 或 `dist/`。
+-2. UI 接入只引入一次 `tellplot/styles.css`。
+-3. 受控模式只传 `view`，非受控模式可传 `defaultView`，两者互斥。
+-4. React/Vue 卸载由 adapter 自动销毁；imperative 接入显式调用 `destroy`。
+-5. 宿主命令使用唯一 ID、当前 `baseRevision` 和 `source: 'host'`。
+-6. 升级后运行 TypeScript strict、关键交互、导出与无障碍测试。
++1. 只从声明的 package exports 导入，不导入 `src/` 或 `dist/`。
++2. UI 只引入一次 `tellplot/styles.css`。
++3. 升级后运行 TypeScript strict，修复 exhaustive union 分支。
++4. 分别回归 legacy v1、current v2 和 comparison v3 的校验、持久化、编辑与 image export。
+diff --git a/docs/versioning.md b/docs/versioning.md
+index 6a07c3a..f0e5e80 100644
+--- a/docs/versioning.md
++++ b/docs/versioning.md
+@@ -8,7 +8,7 @@
+ 
+ 版本字段描述候选内容。npm、Git tag、GitHub Release 和生产网站状态以公开 registry 与发布报告为准。
+ 
+-## 1.x 公共表面
++## 2.x 公共表面
+ 
+ - `tellplot` 与 `tellplot/core` 的 runtime exports、类型、schema、命令和稳定错误语义。
+ - `tellplot` 的 `createEditor`、`EditorOptions`、`EditorInstance`、export 和 `styles.css` subpath。
+@@ -38,6 +38,7 @@
+ 
+ - legacy waterfall `1.0.0` 保持读取与序列化兼容。
+ - waterfall/categorical `2.0.0` 保持严格 `dataKind` 和 chart type compatibility。
++- categorical comparison `3.0.0` 使用 2 至 4 个 source-ordered series，并只与 v3 bar/column view 配对。
+ - TellPlot 不执行启发式 schema migration。
+ - 新 schema generation 必须明确读取策略；无法兼容的变化进入新的 major。
+ 
+diff --git a/e2e/comparison-export.spec.ts b/e2e/comparison-export.spec.ts
+new file mode 100644
+index 0000000..6ca18d1
+--- /dev/null
++++ b/e2e/comparison-export.spec.ts
+@@ -0,0 +1,475 @@
++import { readFile } from 'node:fs/promises';
++
++import { expect, test, type Download, type Page } from '@playwright/test';
++
++import { activateInspectorPanel, activateOutlinePanel } from './editorPanels';
++
++const EDITOR = '[data-tellplot="editor"]';
++const MULTI_SELECT_MODIFIER: 'Meta' | 'Control' =
++  process.platform === 'darwin' ? 'Meta' : 'Control';
++const palettes = {
++  2: ['rgb(0, 114, 178)', 'rgb(213, 94, 0)'],
++  4: ['rgb(0, 114, 178)', 'rgb(213, 94, 0)', 'rgb(0, 158, 115)', 'rgb(204, 121, 167)'],
++} as const;
++
++interface SvgBox {
++  readonly x: number;
++  readonly y: number;
++  readonly width: number;
++  readonly height: number;
++}
++
++function categoryCenter(box: SvgBox, chartType: 'bar' | 'column'): number {
++  return chartType === 'column' ? box.x + box.width / 2 : box.y + box.height / 2;
++}
++
++function expectSameCategoryAnchor(label: SvgBox, interval: SvgBox, chartType: 'bar' | 'column') {
++  expect(
++    Math.abs(categoryCenter(label, chartType) - categoryCenter(interval, chartType)),
++  ).toBeLessThanOrEqual(1.5);
++}
++
++function expectPositiveValueEndpointAnchor(
++  label: SvgBox,
++  interval: SvgBox,
++  chartType: 'bar' | 'column',
++) {
++  const labelAnchor =
++    chartType === 'column' ? label.y + label.height / 2 : label.x + label.width / 2;
++  const intervalEndpoint = chartType === 'column' ? interval.y : interval.x + interval.width;
++  expect(Math.abs(labelAnchor - intervalEndpoint)).toBeLessThanOrEqual(8);
++}
++
++async function openComparison(
++  page: Page,
++  fixture: string,
++  chartType: 'bar' | 'column',
++  editorState: 'ready' | 'empty' = 'ready',
++) {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto(`/playground?fixture=${fixture}${chartType === 'bar' ? '&chart=bar' : ''}`);
++  const editor = page.locator(EDITOR);
++  await expect(editor).toHaveAttribute('data-editor-state', editorState);
++  await expect(editor).toHaveAttribute('data-chart-type', chartType);
++  if (editorState === 'ready') {
++    await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
++      'data-render-state',
++      'ready',
++    );
++  } else {
++    await expect(page.getByText('暂无分类项')).toBeVisible();
++  }
++}
++
++async function chooseExport(
++  page: Page,
++  name: 'SVG 图像' | 'PNG 图像' | 'ViewSpec JSON',
++): Promise<Download> {
++  await page.getByRole('button', { name: '导出' }).click();
++  const download = page.waitForEvent('download');
++  await page.getByRole('menuitem', { name }).click();
++  return download;
++}
++
++async function readDownload(download: Download): Promise<Buffer> {
++  const path = await download.path();
++  if (path === null) throw new Error('Expected a local export download.');
++  return readFile(path);
++}
++
++async function inspectSvg(
++  page: Page,
++  svgSource: string,
++  labels: readonly string[],
++  colors: readonly string[],
++) {
++  return page.evaluate(
++    value => {
++      const host = document.createElement('div');
++      host.style.position = 'fixed';
++      host.style.inset = '0 auto auto 0';
++      host.style.background = '#ffffff';
++      host.innerHTML = value.svgSource;
++      document.body.append(host);
++      try {
++        const svg = host.querySelector('svg');
++        if (!(svg instanceof SVGSVGElement)) return null;
++        const all = Array.from(svg.querySelectorAll('*'));
++        const texts = Array.from(svg.querySelectorAll('text'));
++        const svgBox = svg.getBoundingClientRect();
++        const boxOf = (node: SVGGraphicsElement) => {
++          const localBox = node.getBBox();
++          const box = node.getBoundingClientRect();
++          return {
++            x: box.left - svgBox.left,
++            y: box.top - svgBox.top,
++            width: box.width,
++            height: box.height,
++            localWidth: localBox.width,
++            localHeight: localBox.height,
++          };
++        };
++        const legend = value.labels.map(label => {
++          const node = texts.find(text => text.textContent?.trim() === label);
++          if (!(node instanceof SVGGraphicsElement)) return null;
++          return { label, ...boxOf(node) };
++        });
++        const palette = value.colors.map(color => {
++          const boxes = all.flatMap(element => {
++            const style = getComputedStyle(element);
++            if (style.fill !== color && style.stroke !== color) return [];
++            if (!(element instanceof SVGGraphicsElement)) return [];
++            return [boxOf(element)];
++          });
++          return { color, boxes };
++        });
++        const textBoxes = texts.flatMap(text => {
++          const content = text.textContent?.trim() ?? '';
++          if (content === '' || !(text instanceof SVGGraphicsElement)) return [];
++          return [{ text: content, ...boxOf(text) }];
++        });
++        const intervals = all.flatMap(element => {
++          if (!(element instanceof SVGGraphicsElement)) return [];
++          const color = getComputedStyle(element).fill;
++          if (
++            !element.classList.contains('element') ||
++            element.closest('g.main-layer') === null ||
++            !value.colors.includes(color)
++          ) {
++            return [];
++          }
++          return [{ color, ...boxOf(element) }];
++        });
++        const helperLabels = texts.flatMap(text => {
++          const content = text.textContent?.trim() ?? '';
++          if (
++            content === '' ||
++            !(text instanceof SVGGraphicsElement) ||
++            text.closest('g.label') === null ||
++            text.classList.contains('g2-axis-label-item') ||
++            text.classList.contains('g2-legend-label')
++          ) {
++            return [];
++          }
++          return [{ text: content, ...boxOf(text) }];
++        });
++        return {
++          width: svg.getAttribute('width'),
++          height: svg.getAttribute('height'),
++          viewBox: svg.getAttribute('viewBox'),
++          background: all.some(element => getComputedStyle(element).fill === 'rgb(255, 255, 255)'),
++          legend,
++          palette,
++          textBoxes,
++          intervals,
++          helperLabels,
++          text: texts.map(text => text.textContent?.trim() ?? '').filter(Boolean),
++          unsafe: svg.querySelectorAll(
++            'script,foreignObject,iframe,object,embed,image,use,animate,animateMotion,animateTransform,set',
++          ).length,
++          external: all.filter(element =>
++            Array.from(element.attributes).some(attribute =>
++              /(?:https?:|javascript:|data:|file:|ftp:)/iu.test(attribute.value),
++            ),
++          ).length,
++          interactive: all.filter(element =>
++            Array.from(element.attributes).some(
++              attribute => attribute.name.startsWith('on') || attribute.name.startsWith('data-'),
++            ),
++          ).length,
++        };
++      } finally {
++        host.remove();
++      }
++    },
++    { svgSource, labels, colors },
++  );
++}
++
++async function setComparisonLegend(page: Page, legend: boolean) {
++  const input = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
++  const config = JSON.parse(await input.inputValue()) as {
++    appearance?: { legend?: boolean };
++  };
++  config.appearance = { ...config.appearance, legend };
++  await input.fill(JSON.stringify(config, null, 2));
++  await page.getByRole('button', { name: '立即应用图表配置' }).click();
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('LIVE_SYNCED');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-editor-state', 'empty');
++}
++
++async function inspectPng(page: Page, png: Buffer) {
++  return page.evaluate(async base64 => {
++    const response = await fetch(`data:image/png;base64,${base64}`);
++    const bitmap = await createImageBitmap(await response.blob());
++    const canvas = document.createElement('canvas');
++    canvas.width = bitmap.width;
++    canvas.height = bitmap.height;
++    const context = canvas.getContext('2d');
++    if (context === null) return null;
++    context.drawImage(bitmap, 0, 0);
++    bitmap.close();
++    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
++    let nonwhite = 0;
++    let opaque = 0;
++    for (let offset = 0; offset < pixels.length; offset += 4) {
++      const red = pixels[offset] ?? 255;
++      const green = pixels[offset + 1] ?? 255;
++      const blue = pixels[offset + 2] ?? 255;
++      const alpha = pixels[offset + 3] ?? 0;
++      if (alpha === 255) opaque += 1;
++      if (alpha > 0 && (red < 245 || green < 245 || blue < 245)) nonwhite += 1;
++    }
++    return { width: canvas.width, height: canvas.height, nonwhite, opaque };
++  }, png.toString('base64'));
++}
++
++const matrix = [
++  { fixture: 'comparison-actual-budget', series: 2, sign: 'mixed' },
++  { fixture: 'comparison-four-series', series: 4, sign: 'mixed' },
++  { fixture: 'comparison-all-zero', series: 2, sign: 'all-zero' },
++  { fixture: 'comparison-four-series-zero', series: 4, sign: 'all-zero' },
++] as const;
++
++for (const chartType of ['column', 'bar'] as const) {
++  test(`${chartType} canonical comparison axis keeps real category labels`, async ({ page }) => {
++    await openComparison(page, 'comparison-actual-budget', chartType);
++
++    const svg = (await readDownload(await chooseExport(page, 'SVG 图像'))).toString('utf8');
++    const receipt = await inspectSvg(page, svg, ['企业业务', '消费者业务'], []);
++
++    expect(
++      receipt?.legend.every(label => label !== null && label.width > 0 && label.height > 0),
++    ).toBe(true);
++  });
++}
++
++for (const chartType of ['column', 'bar'] as const) {
++  for (const scenario of matrix) {
++    test(`${chartType} ${scenario.series}-series ${scenario.sign} exports real SVG and PNG`, async ({
++      page,
++    }) => {
++      await openComparison(page, scenario.fixture, chartType);
++      const labels =
++        scenario.series === 2 ? ['实际', '预算'] : ['实际', '预算', '预测', '挑战目标'];
++      const colors = palettes[scenario.series];
++
++      const svg = (await readDownload(await chooseExport(page, 'SVG 图像'))).toString('utf8');
++      const receipt = await inspectSvg(page, svg, labels, colors);
++      expect(receipt).not.toBeNull();
++      expect(receipt).toMatchObject({ background: true, unsafe: 0, external: 0, interactive: 0 });
++      expect(receipt?.width).toMatch(/^\d+$/u);
++      expect(receipt?.height).toMatch(/^\d+$/u);
++      expect(
++        receipt?.legend.every(label => label !== null && label.width > 0 && label.height > 0),
++      ).toBe(true);
++      expect(receipt?.palette.every(entry => entry.boxes.length > 0)).toBe(true);
++      expect(receipt?.intervals).toHaveLength(4 * scenario.series);
++      expect(receipt?.helperLabels).toHaveLength(4 * scenario.series);
++      expect(
++        receipt?.intervals.every(interval => interval.localWidth + interval.localHeight > 0),
++      ).toBe(true);
++      expect(
++        receipt?.helperLabels.every(label => label.localWidth > 0 && label.localHeight > 0),
++      ).toBe(true);
++      for (let index = 0; index < 4 * scenario.series; index += 1) {
++        const interval = receipt?.intervals[index];
++        const label = receipt?.helperLabels[index];
++        expect(interval?.color).toBe(colors[index % scenario.series]);
++        expect(label).toBeDefined();
++        if (interval !== undefined && label !== undefined) {
++          expectSameCategoryAnchor(label, interval, chartType);
++        }
++      }
++      if (scenario.sign === 'mixed') {
++        expect(
++          receipt?.palette.every(entry => entry.boxes.some(box => box.width * box.height > 40)),
++        ).toBe(true);
++      } else {
++        expect(receipt?.text.some(text => /(?:^|\D)0(?:\D|$)/u.test(text))).toBe(true);
++      }
++
++      const png = await readDownload(await chooseExport(page, 'PNG 图像'));
++      expect(png.subarray(0, 8)).toEqual(
++        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
++      );
++      const pngReceipt = await inspectPng(page, png);
++      expect(pngReceipt).not.toBeNull();
++      expect(pngReceipt?.width).toBeGreaterThan(600);
++      expect(pngReceipt?.height).toBeGreaterThan(500);
++      expect(pngReceipt?.opaque).toBe(pngReceipt?.width * pngReceipt?.height);
++      expect(pngReceipt?.nonwhite).toBeGreaterThan(500);
++    });
++  }
++}
++
++for (const journey of [
++  { fixture: 'comparison-actual-budget', series: 2 },
++  { fixture: 'comparison-four-series', series: 4 },
++] as const) {
++  test(`public ${journey.series}-series workbench completes edit, collapse, ViewSpec, SVG and PNG`, async ({
++    page,
++  }) => {
++    const groupLabel = `核心业务 ${journey.series}序列`;
++    const annotation = `已复核 ${journey.series}序列比较口径`;
++    await openComparison(page, journey.fixture, 'column');
++    await activateOutlinePanel(page);
++    await page.getByRole('treeitem', { name: /企业业务/ }).click();
++    await page
++      .getByRole('treeitem', { name: /消费者业务/ })
++      .click({ modifiers: [MULTI_SELECT_MODIFIER] });
++    const inspector = await activateInspectorPanel(page);
++    await inspector.getByRole('textbox', { name: '分组名称' }).fill(groupLabel);
++    await inspector.getByRole('button', { name: '创建分组' }).click();
++    await activateOutlinePanel(page);
++    const group = page.getByRole('treeitem', { name: new RegExp(groupLabel, 'u') });
++    await expect(group).toBeVisible();
++    const disclosure = group.getByRole('button', { name: /展开|折叠/ });
++    if ((await disclosure.getAttribute('aria-expanded')) === 'false') await disclosure.click();
++    await expect(disclosure).toHaveAttribute('aria-expanded', 'true');
++
++    const labels = journey.series === 2 ? ['实际', '预算'] : ['实际', '预算', '预测', '挑战目标'];
++    const expandedSvg = (await readDownload(await chooseExport(page, 'SVG 图像'))).toString('utf8');
++    const expandedReceipt = await inspectSvg(page, expandedSvg, labels, palettes[journey.series]);
++    const expandedGroupLabel = expandedReceipt?.helperLabels.find(
++      label => label.text === groupLabel,
++    );
++    const firstMemberCluster = expandedReceipt?.intervals.slice(0, journey.series);
++    expect(expandedGroupLabel).toBeDefined();
++    expect(expandedGroupLabel?.localWidth).toBeGreaterThan(0);
++    expect(expandedGroupLabel?.localHeight).toBeGreaterThan(0);
++    expect(firstMemberCluster).toHaveLength(journey.series);
++    if (expandedGroupLabel !== undefined && firstMemberCluster !== undefined) {
++      const clusterCenter =
++        firstMemberCluster.reduce((sum, interval) => sum + categoryCenter(interval, 'column'), 0) /
++        firstMemberCluster.length;
++      expect(
++        Math.abs(categoryCenter(expandedGroupLabel, 'column') - clusterCenter),
++      ).toBeLessThanOrEqual(1.5);
++      const valueInterval = firstMemberCluster[journey.series === 2 ? 0 : 2];
++      expect(valueInterval).toBeDefined();
++      if (valueInterval !== undefined) {
++        expectPositiveValueEndpointAnchor(expandedGroupLabel, valueInterval, 'column');
++      }
++    }
++    expect(expandedSvg).not.toContain('data-node-id');
++
++    await disclosure.click();
++    await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
++    await group.click();
++    const activeInspector = await activateInspectorPanel(page);
++    await activeInspector.getByRole('textbox', { name: '注释' }).fill(annotation);
++    await activeInspector.getByRole('button', { name: '保存注释' }).click();
++
++    const guide = page.getByRole('complementary', { name: '在项目中使用 TellPlot' });
++    await guide.getByRole('tab', { name: '视图状态' }).click();
++    await expect(page.getByRole('textbox', { name: 'TellPlot 视图状态' })).toHaveValue(
++      new RegExp(annotation, 'u'),
++    );
++
++    const viewJson = (await readDownload(await chooseExport(page, 'ViewSpec JSON'))).toString(
++      'utf8',
++    );
++    const exportedView = JSON.parse(viewJson) as {
++      readonly schemaVersion: string;
++      readonly groups: Readonly<Record<string, { readonly label: string }>>;
++      readonly collapsedGroupIds: readonly string[];
++      readonly annotations: Readonly<Record<string, string>>;
++    };
++    const [groupId] = exportedView.collapsedGroupIds;
++    expect(exportedView.schemaVersion).toBe('3.0.0');
++    expect(groupId).toBeDefined();
++    expect(groupId === undefined ? undefined : exportedView.groups[groupId]?.label).toBe(
++      groupLabel,
++    );
++    expect(groupId === undefined ? undefined : exportedView.annotations[groupId]).toBe(annotation);
++
++    await activateOutlinePanel(page);
++    const changedGroup = page.getByRole('treeitem', { name: new RegExp(groupLabel, 'u') });
++    const changedDisclosure = changedGroup.getByRole('button', { name: /展开|折叠/ });
++    await changedDisclosure.click();
++    await expect(changedDisclosure).toHaveAttribute('aria-expanded', 'true');
++    await changedGroup.click();
++    const changedInspector = await activateInspectorPanel(page);
++    await changedInspector
++      .getByRole('textbox', { name: '注释' })
++      .fill(`临时覆盖 ${journey.series}序列`);
++    await changedInspector.getByRole('button', { name: '保存注释' }).click();
++
++    await page.getByLabel('导入 ViewSpec 文件').setInputFiles({
++      name: `comparison-${journey.series}-series-view.json`,
++      mimeType: 'application/json',
++      buffer: Buffer.from(viewJson),
++    });
++    await expect(page.getByRole('status', { name: '文件状态' })).toContainText('VIEW_IMPORTED');
++
++    await activateOutlinePanel(page);
++    const restoredGroup = page.getByRole('treeitem', { name: new RegExp(groupLabel, 'u') });
++    const restoredDisclosure = restoredGroup.getByRole('button', { name: /展开|折叠/ });
++    await expect(restoredDisclosure).toHaveAttribute('aria-expanded', 'false');
++    await restoredGroup.click();
++    const restoredInspector = await activateInspectorPanel(page);
++    await expect(restoredInspector.getByRole('textbox', { name: '注释' })).toHaveValue(annotation);
++    const restoredViewJson = (
++      await readDownload(await chooseExport(page, 'ViewSpec JSON'))
++    ).toString('utf8');
++    expect(restoredViewJson).toBe(viewJson);
++
++    const svg = (await readDownload(await chooseExport(page, 'SVG 图像'))).toString('utf8');
++    const receipt = await inspectSvg(page, svg, labels, palettes[journey.series]);
++    const annotationBox = receipt?.helperLabels.find(box => box.text === annotation);
++    expect(annotationBox).toMatchObject({ width: expect.any(Number), height: expect.any(Number) });
++    expect(annotationBox?.width).toBeGreaterThan(0);
++    expect(annotationBox?.height).toBeGreaterThan(0);
++    expect(annotationBox?.localWidth).toBeGreaterThan(0);
++    expect(annotationBox?.localHeight).toBeGreaterThan(0);
++    expect(receipt?.intervals).toHaveLength(3 * journey.series);
++    const annotatedInterval = receipt?.intervals[journey.series === 2 ? 0 : 3];
++    expect(annotatedInterval?.color).toBe(palettes[journey.series][journey.series === 2 ? 0 : 3]);
++    if (annotationBox !== undefined && annotatedInterval !== undefined) {
++      expectSameCategoryAnchor(annotationBox, annotatedInterval, 'column');
++      expectPositiveValueEndpointAnchor(annotationBox, annotatedInterval, 'column');
++      for (const interval of receipt?.intervals.slice(0, journey.series) ?? []) {
++        if (interval === annotatedInterval) continue;
++        expect(
++          Math.abs(categoryCenter(annotationBox, 'column') - categoryCenter(interval, 'column')),
++        ).toBeGreaterThan(5);
++      }
++    }
++    expect(svg).not.toContain('data-node-id');
++
++    const png = await readDownload(await chooseExport(page, 'PNG 图像'));
++    expect(png.subarray(0, 8)).toEqual(
++      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
++    );
++    const pngReceipt = await inspectPng(page, png);
++    expect(pngReceipt?.width).toBeGreaterThan(600);
++    expect(pngReceipt?.height).toBeGreaterThan(500);
++    expect(pngReceipt?.nonwhite).toBeGreaterThan(500);
++  });
++}
++
++for (const legend of [true, false] as const) {
++  test(`legal empty comparison exports real SVG and PNG with legend=${legend}`, async ({
++    page,
++  }) => {
++    await openComparison(page, 'comparison-empty', 'column', 'empty');
++    if (!legend) await setComparisonLegend(page, false);
++
++    const svg = (await readDownload(await chooseExport(page, 'SVG 图像'))).toString('utf8');
++    const receipt = await inspectSvg(page, svg, ['实际', '预算'], palettes[2]);
++    expect(receipt).toMatchObject({ background: true, unsafe: 0, external: 0, interactive: 0 });
++    expect(receipt?.text).toContain('实际与预算');
++    expect(receipt?.legend.every(label => (legend ? label !== null : label === null))).toBe(true);
++
++    const png = await readDownload(await chooseExport(page, 'PNG 图像'));
++    expect(png.subarray(0, 8)).toEqual(
++      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
++    );
++    const pngReceipt = await inspectPng(page, png);
++    expect(pngReceipt?.width).toBeGreaterThan(600);
++    expect(pngReceipt?.height).toBeGreaterThan(500);
++    expect(pngReceipt?.opaque).toBe(pngReceipt?.width * pngReceipt?.height);
++    expect(pngReceipt?.nonwhite).toBeGreaterThan(100);
++  });
++}
+diff --git a/package.json b/package.json
+index fe0a8d3..1fa1f81 100644
+--- a/package.json
++++ b/package.json
+@@ -27,6 +27,7 @@
+     "test:coverage": "vitest run --coverage --maxWorkers=4",
+     "test:package": "node scripts/release/test-packages.mjs",
+     "test:framework-matrix": "pnpm --filter @tellplot/react test && pnpm --filter @tellplot/vue test && node packages/editor/tests/react-matrix/run-react-matrix.mjs",
++    "test:docs:typescript": "node scripts/release/test-doc-code.mjs",
+     "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
+     "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
+     "test:a11y": "playwright test e2e/accessibility.spec.ts",
+@@ -46,7 +47,10 @@
+     "release:preflight": "node scripts/release/preflight-public.mjs",
+     "release:preflight:ci": "node scripts/release/preflight-public.mjs --ci",
+     "release:public:preflight": "pnpm release:preflight",
+-    "release:rehearse": "node scripts/release/rehearse-source.mjs"
++    "release:rehearse": "node scripts/release/rehearse-source.mjs",
++    "release:candidate:audit": "node scripts/release/audit-candidate.mjs",
++    "release:candidate:artifact": "node scripts/release/package-candidate-artifact.mjs",
++    "release:candidate:rehearse": "node scripts/release/rehearse-candidate-source.mjs"
+   },
+   "devDependencies": {
+     "@arethetypeswrong/cli": "0.18.5",
+diff --git a/packages/core/README.md b/packages/core/README.md
+index c65ecc9..88029a0 100644
+--- a/packages/core/README.md
++++ b/packages/core/README.md
+@@ -1,7 +1,8 @@
+ # TellPlot core workspace layer
+ 
+ 本目录是 TellPlot 的私有、框架无关领域层，包含配置、数据、视图、命令、历史、投影、持久化、交互策略和
+-`EditorStore`。它不访问 DOM、G2、React 或 Vue，并由 `tellplot` 与 `tellplot/core` 公共入口统一分发。
++`EditorStore`，包括 schema 3 comparison projector。它不访问 DOM、G2、React 或 Vue，并由 `tellplot` 与
++`tellplot/core` 公共入口统一分发。
+ 
+ 消费者应安装 `tellplot`，不得依赖本 workspace package 名称或内部源码路径。公共合同见
+ [API 文档](../../docs/api.md)。
+diff --git a/packages/editor/README.md b/packages/editor/README.md
+index 2710540..40d9859 100644
+--- a/packages/editor/README.md
++++ b/packages/editor/README.md
+@@ -1,7 +1,7 @@
+ # TellPlot editor workspace layer
+ 
+ 本目录是 TellPlot 的私有 imperative DOM/G2 编辑器层。完整 toolbar、outline、chart、inspector、交互、
+-历史、无障碍语义和 SVG/PNG 导出都由该层唯一实现。
++历史、无障碍语义和共享 comparison SVG/PNG 导出都由该层唯一实现。
+ 
+ 消费者应安装 `tellplot` 并从根入口使用 `createEditor`；本 workspace package 不独立发布。React/Vue 子路径
+ 只映射本层生命周期，不复制编辑状态或 G2 runtime。公共合同见 [API 文档](../../docs/api.md)。
+diff --git a/packages/editor/src/charts/categorical/comparisonSpec.ts b/packages/editor/src/charts/categorical/comparisonSpec.ts
+index 8556a7f..eeb5a6f 100644
+--- a/packages/editor/src/charts/categorical/comparisonSpec.ts
++++ b/packages/editor/src/charts/categorical/comparisonSpec.ts
+@@ -25,6 +25,7 @@ import {
+ } from './comparisonLabels';
+ 
+ export const COMPARISON_INTERVAL_MARK_KEY = 'categorical-comparison-interval';
++const COMPARISON_HELPER_SCALE_PREFIX = 'categorical-comparison-helper';
+ const DENSE_CANVAS_THRESHOLD = 80;
+ const VALUE_LABEL_THRESHOLD = 40;
+ 
+@@ -94,34 +95,12 @@ export function shouldShowComparisonValueLabels(
+   );
+ }
+ 
+-function mainInterval(
++function componentGuides(
+   options: ComparisonChartSpecOptions,
+-  data: readonly ComparisonMarkDatum[],
+-  scales: {
+-    readonly x: Readonly<Record<string, unknown>>;
+-    readonly y: Readonly<Record<string, unknown>>;
+-    readonly series: Readonly<Record<string, unknown>>;
+-    readonly color: Readonly<Record<string, unknown>>;
+-  },
+   seriesLabelById: ReadonlyMap<SeriesId, string>,
+   resolved: ReturnType<typeof resolveComparisonAppearance>,
+-  denseCanvas: boolean,
+-): Mark {
+-  const transposed = options.chartType === 'bar';
+-  const value = {
+-    key: COMPARISON_INTERVAL_MARK_KEY,
+-    type: 'interval',
+-    data: [...data],
+-    ...(transposed ? { coordinate: { transform: [{ type: 'transpose' as const }] } } : {}),
+-    encode: {
+-      x: 'nodeId',
+-      y: 'amount',
+-      series: 'seriesId',
+-      color: 'seriesId',
+-      key: 'elementKey',
+-    },
+-    transform: [{ type: 'dodgeX' as const, groupBy: 'x' as const, padding: 0.08 }],
+-    scale: scales,
++) {
++  return {
+     axis:
+       options.chartType === 'column'
+         ? {
+@@ -184,6 +163,39 @@ function mainInterval(
+           }
+         : false,
+     },
++  };
++}
++
++function mainInterval(
++  options: ComparisonChartSpecOptions,
++  data: readonly ComparisonMarkDatum[],
++  scales: {
++    readonly x: Readonly<Record<string, unknown>>;
++    readonly y: Readonly<Record<string, unknown>>;
++    readonly series: Readonly<Record<string, unknown>>;
++    readonly color: Readonly<Record<string, unknown>>;
++  },
++  guides: ReturnType<typeof componentGuides>,
++  resolved: ReturnType<typeof resolveComparisonAppearance>,
++  denseCanvas: boolean,
++): Mark {
++  const transposed = options.chartType === 'bar';
++  const value = {
++    key: COMPARISON_INTERVAL_MARK_KEY,
++    type: 'interval',
++    data: [...data],
++    ...(transposed ? { coordinate: { transform: [{ type: 'transpose' as const }] } } : {}),
++    encode: {
++      x: 'nodeId',
++      y: 'amount',
++      series: 'seriesId',
++      color: 'seriesId',
++      key: 'elementKey',
++    },
++    transform: [{ type: 'dodgeX' as const, groupBy: 'x' as const, padding: 0.08 }],
++    scale: scales,
++    axis: guides.axis,
++    legend: guides.legend,
+     labels: [],
+     style: {
+       fillOpacity: (datum: ComparisonMarkDatum) =>
+@@ -287,7 +299,12 @@ export function createComparisonChartSpec(options: ComparisonChartSpecOptions):
+       range: [...resolved.seriesRange],
+     },
+   } as const;
+-  const labelScales = { x: scales.x, y: scales.y, series: scales.series };
++  const labelScales = {
++    x: { ...scales.x, key: `${COMPARISON_HELPER_SCALE_PREFIX}-x` },
++    y: { ...scales.y, key: `${COMPARISON_HELPER_SCALE_PREFIX}-y` },
++    series: { ...scales.series, key: `${COMPARISON_HELPER_SCALE_PREFIX}-series` },
++  };
++  const guides = componentGuides(options, seriesLabelById, resolved);
+   const displayValueLabels =
+     resolved.common.valueLabels === 'always' ||
+     (resolved.common.valueLabels === 'auto' && options.showValueLabels);
+@@ -333,6 +350,13 @@ export function createComparisonChartSpec(options: ComparisonChartSpecOptions):
+     transposed,
+     activeGroupId: options.activeGroupRegionId,
+   });
++  const isolatedGroupLabel =
++    groupLabel === undefined
++      ? undefined
++      : ({
++          ...(groupLabel as unknown as Readonly<Record<string, unknown>>),
++          scale: { x: labelScales.x, y: labelScales.y },
++        } as unknown as Mark);
+ 
+   return {
+     key: 'categorical-comparison-view',
+@@ -355,10 +379,10 @@ export function createComparisonChartSpec(options: ComparisonChartSpecOptions):
+     ),
+     children: [
+       ...(groupRegion === undefined ? [] : [groupRegion]),
+-      mainInterval(options, data, scales, seriesLabelById, resolved, denseCanvas),
++      mainInterval(options, data, scales, guides, resolved, denseCanvas),
+       ...(valueLabels === undefined ? [] : [valueLabels]),
+       ...annotationMarks,
+-      ...(groupLabel === undefined ? [] : [groupLabel]),
++      ...(isolatedGroupLabel === undefined ? [] : [isolatedGroupLabel]),
+     ],
+   } as G2Spec;
+ }
+diff --git a/packages/editor/src/editor/domEditor.ts b/packages/editor/src/editor/domEditor.ts
+index 57d27bb..c347ecd 100644
+--- a/packages/editor/src/editor/domEditor.ts
++++ b/packages/editor/src/editor/domEditor.ts
+@@ -26,7 +26,10 @@ import {
+   type ViewNodeId,
+   type ViewSpec,
+ } from '@tellplot/core';
+-import { projectExpandedGroupRegions } from '../charts/groupRegions';
++import {
++  projectComparisonExpandedGroupRegions,
++  projectExpandedGroupRegions,
++} from '../charts/groupRegions';
+ import { normalizeExportOptions } from '../export/exportOptions';
+ import { exportPngChart } from '../export/pngExport';
+ import { exportSvgChart } from '../export/svgExport';
+@@ -643,8 +646,7 @@ export function createEditor(
+     }
+     focusRestoreVersion += 1;
+     const version = focusRestoreVersion;
+-    pendingComparisonFocusRestoreVersion =
+-      useComparisonFocus && state !== null ? version : null;
++    pendingComparisonFocusRestoreVersion = useComparisonFocus && state !== null ? version : null;
+     if (state === null) {
+       return;
+     }
+@@ -2718,10 +2720,13 @@ export function createEditor(
+       throw exportError('EXPORT_UNAVAILABLE', '/export');
+     }
+     const projected = projectEditorChart(snapshot.config, snapshot.view);
+-    if (!projected.ok || projected.value.projection.length === 0) {
++    if (!projected.ok) {
+       throw exportError('EXPORT_UNAVAILABLE', '/export');
+     }
+-    if (projected.value.family === 'categorical' && projected.value.generation === 'comparison') {
++    if (
++      projected.value.projection.length === 0 &&
++      !(projected.value.family === 'categorical' && projected.value.generation === 'comparison')
++    ) {
+       throw exportError('EXPORT_UNAVAILABLE', '/export');
+     }
+     const plot = chartSurface.element.querySelector<HTMLElement>('[data-testid="tellplot-chart"]');
+@@ -2748,34 +2753,90 @@ export function createEditor(
+       height,
+       annotations: snapshot.view.annotations,
+       emphasis: snapshot.view.emphasis,
+-      appearance: toFinancialChartAppearance(snapshot.config),
+-      groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
+     };
+     try {
+       if (normalized.format === 'png') {
+-        return await (projected.value.family === 'categorical'
+-          ? exportPngChart(
++        if (projected.value.family === 'categorical') {
++          if (projected.value.generation === 'comparison') {
++            if (snapshot.config.data.schemaVersion !== '3.0.0') {
++              throw exportError('EXPORT_UNAVAILABLE', '/export');
++            }
++            return await exportPngChart(
+               {
+                 ...common,
++                generation: 'comparison',
+                 chartType: projected.value.chartType,
+                 projection: projected.value.projection,
++                series: snapshot.config.data.series,
++                appearance: snapshot.config.appearance,
++                groupRegions: projectComparisonExpandedGroupRegions(
++                  snapshot.view,
++                  projected.value.projection,
++                ),
+               },
+               normalized,
+-            )
+-          : exportPngChart({ ...common, projection: projected.value.projection }, normalized));
++            );
++          }
++          return await exportPngChart(
++            {
++              ...common,
++              generation: 'scalar',
++              chartType: projected.value.chartType,
++              projection: projected.value.projection,
++              appearance: toFinancialChartAppearance(snapshot.config),
++              groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
++            },
++            normalized,
++          );
++        }
++        return await exportPngChart(
++          {
++            ...common,
++            projection: projected.value.projection,
++            appearance: toFinancialChartAppearance(snapshot.config),
++            groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
++          },
++          normalized,
++        );
+       }
+       const svgOptions = {
+         ...common,
+         background: normalized.background,
+         suggestedFilename: normalized.suggestedFilename,
+       };
+-      return await (projected.value.family === 'categorical'
+-        ? exportSvgChart({
++      if (projected.value.family === 'categorical') {
++        if (projected.value.generation === 'comparison') {
++          if (snapshot.config.data.schemaVersion !== '3.0.0') {
++            throw exportError('EXPORT_UNAVAILABLE', '/export');
++          }
++          return await exportSvgChart({
+             ...svgOptions,
++            generation: 'comparison',
+             chartType: projected.value.chartType,
+             projection: projected.value.projection,
+-          })
+-        : exportSvgChart({ ...svgOptions, projection: projected.value.projection }));
++            series: snapshot.config.data.series,
++            appearance: snapshot.config.appearance,
++            groupRegions: projectComparisonExpandedGroupRegions(
++              snapshot.view,
++              projected.value.projection,
++            ),
++          });
++        }
++        return await exportSvgChart({
++          ...svgOptions,
++          generation: 'scalar',
++          chartType: projected.value.chartType,
++          projection: projected.value.projection,
++          appearance: toFinancialChartAppearance(snapshot.config),
++          groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
++        });
++      }
++      return await exportSvgChart({
++        ...svgOptions,
++        projection: projected.value.projection,
++        appearance: toFinancialChartAppearance(snapshot.config),
++        groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
++      });
+     } finally {
+       activeExportControllers.delete(controller);
+     }
+diff --git a/packages/editor/src/export/comparisonExportSpec.ts b/packages/editor/src/export/comparisonExportSpec.ts
+new file mode 100644
+index 0000000..cd384f4
+--- /dev/null
++++ b/packages/editor/src/export/comparisonExportSpec.ts
+@@ -0,0 +1,43 @@
++import type {
++  Annotation,
++  CategoricalComparisonChartAppearance,
++  CategoricalComparisonProjection,
++  CategoricalComparisonSeries,
++  Emphasis,
++  ViewNodeId,
++} from '@tellplot/core';
++import {
++  createComparisonChartSpec,
++  shouldShowComparisonValueLabels,
++} from '../charts/categorical/comparisonSpec';
++import type { ExpandedGroupRegion } from '../charts/groupRegions';
++import type { EditorLocale } from '../editor/formatAmount';
++
++export interface ComparisonExportSpecOptions {
++  readonly projection: CategoricalComparisonProjection;
++  readonly series: readonly CategoricalComparisonSeries[];
++  readonly chartType: 'bar' | 'column';
++  readonly title: string;
++  readonly locale: EditorLocale;
++  readonly currency: string | undefined;
++  readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
++  readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
++  readonly appearance?: CategoricalComparisonChartAppearance | undefined;
++  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++}
++
++/** Builds export output from the canonical comparison spec with all interaction and motion disabled. */
++export function createComparisonExportSpec(
++  options: ComparisonExportSpecOptions,
++): ReturnType<typeof createComparisonChartSpec> {
++  return createComparisonChartSpec({
++    ...options,
++    reducedMotion: true,
++    showValueLabels: shouldShowComparisonValueLabels(options.projection),
++    appearance: {
++      ...options.appearance,
++      tooltip: false,
++      animation: { ...options.appearance?.animation, enabled: false },
++    },
++  });
++}
+diff --git a/packages/editor/src/export/pngExport.ts b/packages/editor/src/export/pngExport.ts
+index 9444491..6a5a9fa 100644
+--- a/packages/editor/src/export/pngExport.ts
++++ b/packages/editor/src/export/pngExport.ts
+@@ -1,5 +1,8 @@
+ import type {
+   Annotation,
++  CategoricalComparisonChartAppearance,
++  CategoricalComparisonProjection,
++  CategoricalComparisonSeries,
+   CategoricalProjection,
+   ChartType,
+   Emphasis,
+@@ -15,6 +18,7 @@ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../cha
+ import type { ExpandedGroupRegion } from '../charts/groupRegions';
+ import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
+ import type { EditorLocale } from '../editor/formatAmount';
++import { createComparisonExportSpec } from './comparisonExportSpec';
+ import { exportError, type ExportResult, type NormalizedExportOptions } from './exportTypes';
+ 
+ interface PngChartExportBaseRequest {
+@@ -27,28 +31,66 @@ interface PngChartExportBaseRequest {
+   readonly height: number;
+   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
+   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+-  readonly appearance?: FinancialChartAppearance | undefined;
+-  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+ }
+ 
+ type PngChartExportRequest = PngChartExportBaseRequest &
+   (
+-    | { readonly chartType?: 'waterfall'; readonly projection: WaterfallProjection }
+     | {
++        readonly chartType?: 'waterfall';
++        readonly projection: WaterfallProjection;
++        readonly appearance?: FinancialChartAppearance | undefined;
++        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++      }
++    | {
++        readonly generation: 'scalar';
+         readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+         readonly projection: CategoricalProjection;
++        readonly appearance?: FinancialChartAppearance | undefined;
++        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++      }
++    | {
++        readonly generation: 'comparison';
++        readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++        readonly projection: CategoricalComparisonProjection;
++        readonly series: readonly CategoricalComparisonSeries[];
++        readonly appearance?: CategoricalComparisonChartAppearance | undefined;
++        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+       }
+   );
+ 
+ type CategoricalPngChartExportRequest = PngChartExportBaseRequest & {
++  readonly generation: 'scalar';
+   readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+   readonly projection: CategoricalProjection;
++  readonly appearance?: FinancialChartAppearance | undefined;
++  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++};
++
++type ComparisonPngChartExportRequest = PngChartExportBaseRequest & {
++  readonly generation: 'comparison';
++  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++  readonly projection: CategoricalComparisonProjection;
++  readonly series: readonly CategoricalComparisonSeries[];
++  readonly appearance?: CategoricalComparisonChartAppearance | undefined;
++  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+ };
+ 
+ function isCategoricalRequest(
+   request: PngChartExportRequest,
+ ): request is CategoricalPngChartExportRequest {
+-  return request.chartType === 'bar' || request.chartType === 'column';
++  return (
++    (request.chartType === 'bar' || request.chartType === 'column') &&
++    request.generation === 'scalar'
++  );
++}
++
++function isComparisonRequest(
++  request: PngChartExportRequest,
++): request is ComparisonPngChartExportRequest {
++  return (
++    (request.chartType === 'bar' || request.chartType === 'column') &&
++    request.generation === 'comparison'
++  );
+ }
+ 
+ function canvasLogicalSize(canvas: HTMLCanvasElement): {
+@@ -149,32 +191,45 @@ export async function exportPngChart(
+         ...(request.signal === undefined ? {} : { signal: request.signal }),
+         width,
+         height,
+-        spec: isCategoricalRequest(request)
+-          ? createCategoricalChartSpec({
++        spec: isComparisonRequest(request)
++          ? createComparisonExportSpec({
+               projection: request.projection,
++              series: request.series,
+               chartType: request.chartType,
+               title: request.title,
+               locale: request.locale,
+               currency: request.currency,
+-              reducedMotion: true,
+-              showValueLabels: shouldShowCategoricalValueLabels(request.projection),
+               annotations: request.annotations,
+               emphasis: request.emphasis,
+               appearance: request.appearance,
+               groupRegions: request.groupRegions,
+             })
+-          : createWaterfallChartSpec({
+-              projection: request.projection,
+-              title: request.title,
+-              locale: request.locale,
+-              currency: request.currency,
+-              reducedMotion: true,
+-              showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+-              annotations: request.annotations,
+-              emphasis: request.emphasis,
+-              appearance: request.appearance,
+-              groupRegions: request.groupRegions,
+-            }),
++          : isCategoricalRequest(request)
++            ? createCategoricalChartSpec({
++                projection: request.projection,
++                chartType: request.chartType,
++                title: request.title,
++                locale: request.locale,
++                currency: request.currency,
++                reducedMotion: true,
++                showValueLabels: shouldShowCategoricalValueLabels(request.projection),
++                annotations: request.annotations,
++                emphasis: request.emphasis,
++                appearance: request.appearance,
++                groupRegions: request.groupRegions,
++              })
++            : createWaterfallChartSpec({
++                projection: request.projection,
++                title: request.title,
++                locale: request.locale,
++                currency: request.currency,
++                reducedMotion: true,
++                showValueLabels: shouldShowWaterfallValueLabels(request.projection),
++                annotations: request.annotations,
++                emphasis: request.emphasis,
++                appearance: request.appearance,
++                groupRegions: request.groupRegions,
++              }),
+       },
+       host => {
+         const canvas = host.querySelector('canvas');
+diff --git a/packages/editor/src/export/svgExport.ts b/packages/editor/src/export/svgExport.ts
+index d0a2cee..bda15f3 100644
+--- a/packages/editor/src/export/svgExport.ts
++++ b/packages/editor/src/export/svgExport.ts
+@@ -1,5 +1,8 @@
+ import type {
+   Annotation,
++  CategoricalComparisonChartAppearance,
++  CategoricalComparisonProjection,
++  CategoricalComparisonSeries,
+   CategoricalProjection,
+   ChartType,
+   Emphasis,
+@@ -15,6 +18,7 @@ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../cha
+ import type { ExpandedGroupRegion } from '../charts/groupRegions';
+ import { withOffscreenG2Render } from '../rendering/g2/exportRuntime';
+ import type { EditorLocale } from '../editor/formatAmount';
++import { createComparisonExportSpec } from './comparisonExportSpec';
+ import { exportError, type ExportResult } from './exportTypes';
+ 
+ interface SvgResultOptions {
+@@ -36,28 +40,66 @@ interface SvgChartExportBaseRequest {
+   readonly suggestedFilename: string;
+   readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
+   readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
+-  readonly appearance?: FinancialChartAppearance | undefined;
+-  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+ }
+ 
+ type SvgChartExportRequest = SvgChartExportBaseRequest &
+   (
+-    | { readonly chartType?: 'waterfall'; readonly projection: WaterfallProjection }
+     | {
++        readonly chartType?: 'waterfall';
++        readonly projection: WaterfallProjection;
++        readonly appearance?: FinancialChartAppearance | undefined;
++        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++      }
++    | {
++        readonly generation: 'scalar';
+         readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+         readonly projection: CategoricalProjection;
++        readonly appearance?: FinancialChartAppearance | undefined;
++        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++      }
++    | {
++        readonly generation: 'comparison';
++        readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++        readonly projection: CategoricalComparisonProjection;
++        readonly series: readonly CategoricalComparisonSeries[];
++        readonly appearance?: CategoricalComparisonChartAppearance | undefined;
++        readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+       }
+   );
+ 
+ type CategoricalSvgChartExportRequest = SvgChartExportBaseRequest & {
++  readonly generation: 'scalar';
+   readonly chartType: Extract<ChartType, 'bar' | 'column'>;
+   readonly projection: CategoricalProjection;
++  readonly appearance?: FinancialChartAppearance | undefined;
++  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++};
++
++type ComparisonSvgChartExportRequest = SvgChartExportBaseRequest & {
++  readonly generation: 'comparison';
++  readonly chartType: Extract<ChartType, 'bar' | 'column'>;
++  readonly projection: CategoricalComparisonProjection;
++  readonly series: readonly CategoricalComparisonSeries[];
++  readonly appearance?: CategoricalComparisonChartAppearance | undefined;
++  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
+ };
+ 
+ function isCategoricalRequest(
+   request: SvgChartExportRequest,
+ ): request is CategoricalSvgChartExportRequest {
+-  return request.chartType === 'bar' || request.chartType === 'column';
++  return (
++    (request.chartType === 'bar' || request.chartType === 'column') &&
++    request.generation === 'scalar'
++  );
++}
++
++function isComparisonRequest(
++  request: SvgChartExportRequest,
++): request is ComparisonSvgChartExportRequest {
++  return (
++    (request.chartType === 'bar' || request.chartType === 'column') &&
++    request.generation === 'comparison'
++  );
+ }
+ 
+ const REMOVED_ELEMENT_NAMES: ReadonlySet<string> = new Set([
+@@ -210,32 +252,45 @@ export async function exportSvgChart(request: SvgChartExportRequest): Promise<Ex
+         ...(request.signal === undefined ? {} : { signal: request.signal }),
+         width,
+         height,
+-        spec: isCategoricalRequest(request)
+-          ? createCategoricalChartSpec({
++        spec: isComparisonRequest(request)
++          ? createComparisonExportSpec({
+               projection: request.projection,
++              series: request.series,
+               chartType: request.chartType,
+               title: request.title,
+               locale: request.locale,
+               currency: request.currency,
+-              reducedMotion: true,
+-              showValueLabels: shouldShowCategoricalValueLabels(request.projection),
+               annotations: request.annotations,
+               emphasis: request.emphasis,
+               appearance: request.appearance,
+               groupRegions: request.groupRegions,
+             })
+-          : createWaterfallChartSpec({
+-              projection: request.projection,
+-              title: request.title,
+-              locale: request.locale,
+-              currency: request.currency,
+-              reducedMotion: true,
+-              showValueLabels: shouldShowWaterfallValueLabels(request.projection),
+-              annotations: request.annotations,
+-              emphasis: request.emphasis,
+-              appearance: request.appearance,
+-              groupRegions: request.groupRegions,
+-            }),
++          : isCategoricalRequest(request)
++            ? createCategoricalChartSpec({
++                projection: request.projection,
++                chartType: request.chartType,
++                title: request.title,
++                locale: request.locale,
++                currency: request.currency,
++                reducedMotion: true,
++                showValueLabels: shouldShowCategoricalValueLabels(request.projection),
++                annotations: request.annotations,
++                emphasis: request.emphasis,
++                appearance: request.appearance,
++                groupRegions: request.groupRegions,
++              })
++            : createWaterfallChartSpec({
++                projection: request.projection,
++                title: request.title,
++                locale: request.locale,
++                currency: request.currency,
++                reducedMotion: true,
++                showValueLabels: shouldShowWaterfallValueLabels(request.projection),
++                annotations: request.annotations,
++                emphasis: request.emphasis,
++                appearance: request.appearance,
++                groupRegions: request.groupRegions,
++              }),
+       },
+       host => {
+         const svg = host.querySelector('svg');
+diff --git a/packages/editor/tests/export/categorical-export.test.ts b/packages/editor/tests/export/categorical-export.test.ts
+index a301033..2c41661 100644
+--- a/packages/editor/tests/export/categorical-export.test.ts
++++ b/packages/editor/tests/export/categorical-export.test.ts
+@@ -82,6 +82,7 @@ beforeEach(() => {
+ describe('categorical SVG export', () => {
+   it('uses the canonical categorical spec and preserves top-to-bottom bar order', async () => {
+     const result = await exportSvgChart({
++      generation: 'scalar',
+       chartType: 'bar',
+       ownerDocument: document,
+       projection,
+@@ -113,6 +114,7 @@ describe('categorical SVG export', () => {
+ 
+   it('passes expanded group regions into the transposed SVG spec', async () => {
+     await exportSvgChart({
++      generation: 'scalar',
+       chartType: 'bar',
+       ownerDocument: document,
+       projection,
+diff --git a/packages/editor/tests/export/comparison-chart-spec.test.ts b/packages/editor/tests/export/comparison-chart-spec.test.ts
+index 4474b43..a53ccf7 100644
+--- a/packages/editor/tests/export/comparison-chart-spec.test.ts
++++ b/packages/editor/tests/export/comparison-chart-spec.test.ts
+@@ -230,6 +230,68 @@ describe('comparison G2 screen spec', () => {
+     },
+   );
+ 
++  it('keeps the original paint order with the main interval as the only guide owner', () => {
++    const spec = createComparisonChartSpec({
++      projection,
++      series,
++      chartType: 'column',
++      locale: 'en-US',
++      currency: 'USD',
++      reducedMotion: true,
++      showValueLabels: true,
++      annotations: { 'north:west': 'Watch', zero: 'At baseline' },
++      emphasis: {},
++      appearance,
++      groupRegions: [
++        {
++          regionId: 'group-region:comparison',
++          groupId: 'comparison',
++          label: 'Comparison',
++          depth: 1,
++          startNodeId: 'north:west',
++          endNodeId: 'zero',
++          valueStart: -8,
++          valueEnd: 12,
++          labelValue: 12,
++        },
++      ],
++    });
++    const marks = children(spec);
++    const interval = mark(spec, COMPARISON_INTERVAL_MARK_KEY);
++    const intervalIndex = marks.indexOf(interval);
++    const helperKeys = [
++      'categorical-comparison-value-labels',
++      'categorical-comparison-annotation-endpoint',
++      'categorical-comparison-annotation-baseline',
++      'categorical-comparison-group-labels',
++    ];
++    const helpers = helperKeys.map(key => mark(spec, key));
++
++    expect(marks.filter(candidate => candidate.key === COMPARISON_INTERVAL_MARK_KEY)).toEqual([
++      interval,
++    ]);
++    expect(marks[0]?.type).toBe('range');
++    expect(intervalIndex).toBe(1);
++    expect(marks.slice(intervalIndex + 1).map(candidate => candidate.key)).toEqual(helperKeys);
++    expect(marks.some(candidate => candidate.key === 'categorical-comparison-guide-owner')).toBe(
++      false,
++    );
++    expect(interval.axis).not.toBe(false);
++    expect(interval.legend).not.toBe(false);
++    for (const helper of helpers) {
++      expect(helper.axis).toBe(false);
++      expect(helper.legend).toBe(false);
++      for (const channel of ['x', 'y'] as const) {
++        expect(helper.scale?.[channel]?.['key']).toBe(`categorical-comparison-helper-${channel}`);
++        expect(helper.scale?.[channel]?.['key']).not.toBe(interval.scale?.[channel]?.['key']);
++      }
++      if (helper.encode?.['series'] !== undefined) {
++        expect(helper.scale?.['series']?.['key']).toBe('categorical-comparison-helper-series');
++        expect(helper.scale?.['series']?.['key']).not.toBe(interval.scale?.['series']?.['key']);
++      }
++    }
++  });
++
+   it('uses point-attached value and annotation labels with isolated identities and transform order', () => {
+     const spec = createComparisonChartSpec({
+       projection,
+@@ -263,10 +325,14 @@ describe('comparison G2 screen spec', () => {
+     }
+     expect(value.encode).toMatchObject({ x: 'nodeId', y: 'amount', series: 'seriesId' });
+     expect(value.transform).toEqual([{ type: 'dodgeX', groupBy: 'x', padding: 0.08 }]);
+-    expect(value.scale?.['x']).toEqual(mark(spec, COMPARISON_INTERVAL_MARK_KEY).scale?.['x']);
+-    expect(value.scale?.['series']).toEqual(
+-      mark(spec, COMPARISON_INTERVAL_MARK_KEY).scale?.['series'],
+-    );
++    expect(value.scale?.['x']).toEqual({
++      ...mark(spec, COMPARISON_INTERVAL_MARK_KEY).scale?.['x'],
++      key: 'categorical-comparison-helper-x',
++    });
++    expect(value.scale?.['series']).toEqual({
++      ...mark(spec, COMPARISON_INTERVAL_MARK_KEY).scale?.['series'],
++      key: 'categorical-comparison-helper-series',
++    });
+     expect(value.data?.map(datum => datum['helperKey'])).toEqual([
+       JSON.stringify(['comparison-value-label', 'north:west', 'actual']),
+       JSON.stringify(['comparison-value-label', 'north:west', 'budget']),
+diff --git a/packages/editor/tests/export/comparison-export.test.ts b/packages/editor/tests/export/comparison-export.test.ts
+new file mode 100644
+index 0000000..76177b4
+--- /dev/null
++++ b/packages/editor/tests/export/comparison-export.test.ts
+@@ -0,0 +1,243 @@
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++import type { CategoricalComparisonProjection, CategoricalComparisonSeries } from '@tellplot/core';
++import { exportPngChart } from '../../src/export/pngExport';
++import { exportSvgChart } from '../../src/export/svgExport';
++
++const g2Mock = vi.hoisted(() => {
++  class Chart {
++    static specs: unknown[] = [];
++
++    readonly container: HTMLElement;
++    readonly renderer: unknown;
++    spec: unknown;
++
++    constructor(config: { readonly container: HTMLElement; readonly renderer?: unknown }) {
++      this.container = config.container;
++      this.renderer = config.renderer;
++    }
++
++    options(spec: unknown): this {
++      this.spec = spec;
++      Chart.specs.push(spec);
++      return this;
++    }
++
++    render(): Promise<void> {
++      if (this.renderer !== undefined) {
++        const svg = this.container.ownerDocument.createElementNS(
++          'http://www.w3.org/2000/svg',
++          'svg',
++        );
++        const title = (this.spec as { readonly title?: { readonly title?: string } }).title?.title;
++        if (title !== undefined) {
++          const text = this.container.ownerDocument.createElementNS(
++            'http://www.w3.org/2000/svg',
++            'text',
++          );
++          text.textContent = title;
++          svg.append(text);
++        }
++        this.container.append(svg);
++      } else {
++        const canvas = this.container.ownerDocument.createElement('canvas');
++        canvas.width = 640;
++        canvas.height = 360;
++        this.container.append(canvas);
++      }
++      return Promise.resolve();
++    }
++
++    destroy(): void {
++      return;
++    }
++  }
++  return { Chart };
++});
++
++vi.mock('@antv/g2', () => ({ Chart: g2Mock.Chart }));
++vi.mock('@antv/g-svg', () => ({
++  Renderer: class Renderer {
++    readonly kind = 'svg';
++  },
++}));
++
++const series = [
++  { id: 'actual', label: 'Actual' },
++  { id: 'budget', label: 'Budget' },
++] as const satisfies readonly CategoricalComparisonSeries[];
++
++const projection = [
++  {
++    nodeId: 'north',
++    label: 'North',
++    values: [
++      { seriesId: 'actual', label: 'Actual', amount: 12 },
++      { seriesId: 'budget', label: 'Budget', amount: -8 },
++    ],
++    kind: 'category',
++    sourceIds: ['north'],
++    locked: false,
++    order: 0,
++  },
++] as const satisfies CategoricalComparisonProjection;
++
++function intervalSpec(): {
++  readonly data?: readonly { readonly nodeId: string; readonly seriesId: string }[];
++  readonly scale?: {
++    readonly color?: { readonly domain?: readonly string[]; readonly range?: readonly string[] };
++  };
++  readonly legend?: unknown;
++  readonly tooltip?: unknown;
++  readonly animate?: unknown;
++} {
++  const spec = g2Mock.Chart.specs.at(-1) as {
++    readonly children?: readonly {
++      readonly key?: string;
++      readonly data?: readonly { readonly nodeId: string; readonly seriesId: string }[];
++      readonly scale?: {
++        readonly color?: {
++          readonly domain?: readonly string[];
++          readonly range?: readonly string[];
++        };
++      };
++      readonly legend?: unknown;
++      readonly tooltip?: unknown;
++      readonly animate?: unknown;
++    }[];
++  };
++  const interval = spec.children?.find(child => child.key === 'categorical-comparison-interval');
++  if (interval === undefined) {
++    throw new Error('Expected canonical comparison interval spec.');
++  }
++  return interval;
++}
++
++beforeEach(() => {
++  g2Mock.Chart.specs = [];
++});
++
++describe('comparison image export', () => {
++  it.each(['column', 'bar'] as const)(
++    'routes %s through the canonical comparison SVG spec with export-only interaction disabled',
++    async chartType => {
++      const result = await exportSvgChart({
++        generation: 'comparison',
++        chartType,
++        ownerDocument: document,
++        projection,
++        series,
++        title: 'Actual versus budget',
++        locale: 'en-US',
++        currency: 'USD',
++        width: 640,
++        height: 360,
++        background: '#ffffff',
++        suggestedFilename: 'comparison.svg',
++        annotations: { north: 'Watch' },
++        emphasis: { north: 'highlight' },
++        appearance: {
++          legend: true,
++          tooltip: true,
++          animation: { enabled: true, duration: 200 },
++          colors: { series: [{ seriesId: 'budget', color: '#123456' }] },
++        },
++      });
++
++      const interval = intervalSpec();
++      expect(interval.data?.map(datum => [datum.nodeId, datum.seriesId])).toEqual([
++        ['north', 'actual'],
++        ['north', 'budget'],
++      ]);
++      expect(interval.scale?.color).toEqual({
++        type: 'ordinal',
++        domain: ['actual', 'budget'],
++        range: ['#0072B2', '#123456'],
++      });
++      expect(interval.legend).not.toBe(false);
++      expect(interval.tooltip).toBe(false);
++      expect(interval.animate).toBe(false);
++      expect(await result.blob.text()).toContain('Actual versus budget');
++      expect(document.querySelector('[data-tellplot-offscreen-chart]')).toBeNull();
++    },
++  );
++
++  it.each([true, false] as const)(
++    'allows a legal empty comparison projection with legend=%s and explicit series domain',
++    async legend => {
++      const result = await exportSvgChart({
++        generation: 'comparison',
++        chartType: 'column',
++        ownerDocument: document,
++        projection: [],
++        series,
++        title: 'Empty comparison',
++        locale: 'en-US',
++        currency: undefined,
++        width: 480,
++        height: 320,
++        background: '#fefefe',
++        suggestedFilename: 'empty.svg',
++        annotations: {},
++        emphasis: {},
++        appearance: { legend },
++      });
++
++      expect(intervalSpec().scale?.color?.domain).toEqual(['actual', 'budget']);
++      expect(intervalSpec().legend).toEqual({
++        color: legend ? { labelFormatter: expect.any(Function) } : false,
++      });
++      expect(await result.blob.text()).toContain('Empty comparison');
++      expect(result).toMatchObject({ width: 480, height: 320 });
++    },
++  );
++
++  it('renders comparison PNG from a fresh offscreen spec instead of a screen canvas', async () => {
++    const createElement = document.createElement.bind(document);
++    vi.spyOn(document, 'createElement').mockImplementation(tagName => {
++      const element = createElement(tagName);
++      if (tagName.toLowerCase() === 'canvas') {
++        const canvas = element as HTMLCanvasElement;
++        vi.spyOn(canvas, 'getContext').mockReturnValue({
++          fillStyle: '',
++          fillRect: vi.fn(),
++          drawImage: vi.fn(),
++        } as unknown as CanvasRenderingContext2D);
++        Object.defineProperty(canvas, 'toBlob', {
++          configurable: true,
++          value: (callback: BlobCallback) =>
++            callback(new Blob(['nonblank-png'], { type: 'image/png' })),
++        });
++      }
++      return element;
++    });
++
++    const result = await exportPngChart(
++      {
++        generation: 'comparison',
++        chartType: 'column',
++        ownerDocument: document,
++        projection,
++        series,
++        title: 'Comparison PNG',
++        locale: 'en-US',
++        currency: 'USD',
++        width: 640,
++        height: 360,
++        annotations: {},
++        emphasis: {},
++        appearance: { legend: false },
++      },
++      {
++        format: 'png',
++        pixelRatio: 2,
++        background: '#ffffff',
++        suggestedFilename: 'comparison.png',
++      },
++    );
++
++    expect(intervalSpec().legend).toEqual({ color: false });
++    expect(result).toMatchObject({ mimeType: 'image/png', width: 1280, height: 720 });
++    expect(result.blob.size).toBeGreaterThan(0);
++  });
++});
+diff --git a/packages/editor/tests/package/candidate-tools.test.ts b/packages/editor/tests/package/candidate-tools.test.ts
+new file mode 100644
+index 0000000..85ceb28
+--- /dev/null
++++ b/packages/editor/tests/package/candidate-tools.test.ts
+@@ -0,0 +1,264 @@
++import {
++  copyFileSync,
++  existsSync,
++  mkdirSync,
++  mkdtempSync,
++  readFileSync,
++  realpathSync,
++  rmSync,
++  symlinkSync,
++  writeFileSync,
++} from 'node:fs';
++import { tmpdir } from 'node:os';
++import { resolve } from 'node:path';
++import { spawnSync } from 'node:child_process';
++
++import { describe, expect, it } from 'vitest';
++
++const root = resolve(process.cwd());
++const scripts = [
++  'scripts/release/audit-candidate.mjs',
++  'scripts/release/package-candidate-artifact.mjs',
++  'scripts/release/rehearse-candidate-source.mjs',
++] as const;
++
++function run(
++  script: (typeof scripts)[number],
++  args: readonly string[],
++  env: Readonly<Record<string, string>> = {},
++) {
++  const result = spawnSync(process.execPath, [resolve(root, script), ...args], {
++    cwd: root,
++    encoding: 'utf8',
++    env: { ...process.env, ...env },
++  });
++  return { status: result.status, output: `${result.stdout}${result.stderr}` };
++}
++
++describe('local 2.0 candidate tooling', () => {
++  it('provides three isolated candidate-only commands', () => {
++    for (const script of scripts) {
++      expect(existsSync(resolve(root, script)), script).toBe(true);
++    }
++  });
++
++  it.each(scripts)('%s fails closed for missing, duplicate and unsupported arguments', script => {
++    const invalidArguments = [
++      [],
++      ['--candidate-version', '2.0.0'],
++      ['--evidence-task', 'T140'],
++      ['--candidate-version', '1.0.0', '--evidence-task', 'T140'],
++      ['--candidate-version', '2.0.0', '--evidence-task', 'T139'],
++      ['--candidate-version', '2.0.0', '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++      ['--candidate-version', '2.0.0', '--evidence-task', 'T140', '--evidence-task', 'T140'],
++      ['--candidate-version=2.0.0', '--evidence-task', 'T140'],
++      ['--candidate-version', '2.0.0', '--evidence-task', '../T140'],
++      ['--candidate-version', '2.0.0', '--evidence-task', 'T140/T141'],
++      ['--candidate-version', '2.0.0', '--evidence-task', 'T140%2f..%2fT131'],
++      ['--candidate-version', '2.0.0', '--evidence-task', '.'],
++      [
++        '--candidate-version',
++        '2.0.0',
++        '--evidence-task',
++        resolve(root, '.ai-platform/evidence/T140'),
++      ],
++    ];
++
++    for (const args of invalidArguments) {
++      const result = run(script, args);
++      expect(result.status, `${script} ${args.join(' ')}\n${result.output}`).not.toBe(0);
++      expect(result.output).toContain('Candidate arguments rejected.');
++    }
++  });
++
++  it('fails closed before every candidate command can follow a symlinked evidence root', () => {
++    const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-symlink-'));
++    const fakeRoot = resolve(realpathSync(temporaryRoot), 'repository');
++    const fakeScripts = resolve(fakeRoot, 'scripts/release');
++    const evidenceBase = resolve(fakeRoot, '.ai-platform/evidence');
++    try {
++      mkdirSync(fakeScripts, { recursive: true });
++      mkdirSync(evidenceBase, { recursive: true });
++      const outside = resolve(temporaryRoot, 'outside');
++      mkdirSync(outside);
++      symlinkSync(outside, resolve(evidenceBase, 'T140'), 'dir');
++      symlinkSync(resolve(root, 'node_modules'), resolve(fakeRoot, 'node_modules'), 'dir');
++      for (const filename of [
++        'audit-candidate.mjs',
++        'canonical-gzip.mjs',
++        'package-candidate-artifact.mjs',
++        'package-contracts.json',
++        'package-contracts.mjs',
++        'rehearse-candidate-source.mjs',
++        'release-utils.mjs',
++      ]) {
++        copyFileSync(resolve(root, 'scripts/release', filename), resolve(fakeScripts, filename));
++      }
++
++      for (const script of scripts) {
++        const result = spawnSync(
++          process.execPath,
++          [resolve(fakeRoot, script), '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++          { cwd: fakeRoot, encoding: 'utf8' },
++        );
++        const output = `${result.stdout}${result.stderr}`;
++        expect(result.status, `${script}\n${output}`).not.toBe(0);
++        expect(output).toContain('Candidate arguments rejected.');
++      }
++    } finally {
++      rmSync(temporaryRoot, { recursive: true, force: true });
++    }
++  });
++
++  it('fails closed when the evidence base directory is itself a symlink', () => {
++    const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-base-symlink-'));
++    const fakeRoot = resolve(realpathSync(temporaryRoot), 'repository');
++    const fakeScripts = resolve(fakeRoot, 'scripts/release');
++    const aiPlatform = resolve(fakeRoot, '.ai-platform');
++    const outsideEvidence = resolve(temporaryRoot, 'outside-evidence');
++    try {
++      mkdirSync(fakeScripts, { recursive: true });
++      mkdirSync(aiPlatform, { recursive: true });
++      mkdirSync(resolve(outsideEvidence, 'T140'), { recursive: true });
++      symlinkSync(outsideEvidence, resolve(aiPlatform, 'evidence'), 'dir');
++      symlinkSync(resolve(root, 'node_modules'), resolve(fakeRoot, 'node_modules'), 'dir');
++      writeFileSync(resolve(fakeRoot, '.nvmrc'), `${process.versions.node}\n`);
++      for (const filename of [
++        'audit-candidate.mjs',
++        'canonical-gzip.mjs',
++        'package-candidate-artifact.mjs',
++        'package-contracts.json',
++        'package-contracts.mjs',
++        'rehearse-candidate-source.mjs',
++        'release-utils.mjs',
++      ]) {
++        copyFileSync(resolve(root, 'scripts/release', filename), resolve(fakeScripts, filename));
++      }
++
++      for (const script of scripts) {
++        const result = spawnSync(
++          process.execPath,
++          [resolve(fakeRoot, script), '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++          { cwd: fakeRoot, encoding: 'utf8', timeout: 5_000 },
++        );
++        const output = `${result.stdout}${result.stderr}`;
++        expect(result.status, `${script}\n${output}`).not.toBe(0);
++        expect(output).toContain('Candidate arguments rejected.');
++        expect(output).not.toContain(fakeRoot);
++        expect(output).not.toContain(outsideEvidence);
++      }
++    } finally {
++      rmSync(temporaryRoot, { recursive: true, force: true });
++    }
++  });
++
++  it.each(scripts.slice(1))(
++    '%s compares the actual runtime with .nvmrc and ignores environment overrides',
++    script => {
++      const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-runtime-'));
++      const fakeRoot = resolve(realpathSync(temporaryRoot), 'repository');
++      const fakeScripts = resolve(fakeRoot, 'scripts/release');
++      const evidenceRoot = resolve(fakeRoot, '.ai-platform/evidence/T140');
++      try {
++        mkdirSync(fakeScripts, { recursive: true });
++        mkdirSync(evidenceRoot, { recursive: true });
++        symlinkSync(resolve(root, 'node_modules'), resolve(fakeRoot, 'node_modules'), 'dir');
++        writeFileSync(resolve(fakeRoot, '.nvmrc'), '0.0.0-test\n');
++        for (const filename of [
++          'audit-candidate.mjs',
++          'canonical-gzip.mjs',
++          'package-candidate-artifact.mjs',
++          'package-contracts.json',
++          'package-contracts.mjs',
++          'rehearse-candidate-source.mjs',
++          'release-utils.mjs',
++        ]) {
++          copyFileSync(resolve(root, 'scripts/release', filename), resolve(fakeScripts, filename));
++        }
++
++        const result = spawnSync(
++          process.execPath,
++          [resolve(fakeRoot, script), '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++          {
++            cwd: fakeRoot,
++            encoding: 'utf8',
++            env: { ...process.env, TELLPLOT_CANDIDATE_NODE_VERSION: '0.0.0-test' },
++            timeout: 5_000,
++          },
++        );
++        const output = `${result.stdout}${result.stderr}`;
++        expect(result.status, output).not.toBe(0);
++        expect(output).toContain('Candidate arguments rejected.');
++        expect(output).not.toContain(fakeRoot);
++      } finally {
++        rmSync(temporaryRoot, { recursive: true, force: true });
++      }
++    },
++  );
++
++  it('rejects nested artifact and receipt symlinks without writing through them', () => {
++    const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-nested-symlink-'));
++    const fakeRoot = resolve(realpathSync(temporaryRoot), 'repository');
++    const fakeScripts = resolve(fakeRoot, 'scripts/release');
++    const evidenceRoot = resolve(fakeRoot, '.ai-platform/evidence/T140');
++    const outside = resolve(temporaryRoot, 'outside');
++    try {
++      mkdirSync(fakeScripts, { recursive: true });
++      mkdirSync(evidenceRoot, { recursive: true });
++      mkdirSync(outside);
++      symlinkSync(resolve(root, 'node_modules'), resolve(fakeRoot, 'node_modules'), 'dir');
++      writeFileSync(resolve(fakeRoot, '.nvmrc'), `${process.versions.node}\n`);
++      for (const filename of [
++        'audit-candidate.mjs',
++        'canonical-gzip.mjs',
++        'package-candidate-artifact.mjs',
++        'package-contracts.json',
++        'package-contracts.mjs',
++        'rehearse-candidate-source.mjs',
++        'release-utils.mjs',
++      ]) {
++        copyFileSync(resolve(root, 'scripts/release', filename), resolve(fakeScripts, filename));
++      }
++
++      const artifactSentinel = resolve(outside, 'artifact-sentinel');
++      mkdirSync(artifactSentinel);
++      symlinkSync(artifactSentinel, resolve(evidenceRoot, 'artifacts'), 'dir');
++      const artifact = spawnSync(
++        process.execPath,
++        [resolve(fakeRoot, scripts[1]), '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++        { cwd: fakeRoot, encoding: 'utf8' },
++      );
++      expect(artifact.status, `${artifact.stdout}${artifact.stderr}`).not.toBe(0);
++      expect(`${artifact.stdout}${artifact.stderr}`).toContain('Candidate arguments rejected.');
++      expect(existsSync(resolve(artifactSentinel, 'tellplot-2.0.0.tgz'))).toBe(false);
++
++      rmSync(resolve(evidenceRoot, 'artifacts'));
++      const manifestSentinel = resolve(outside, 'manifest-sentinel');
++      writeFileSync(manifestSentinel, 'unchanged');
++      symlinkSync(manifestSentinel, resolve(evidenceRoot, 'tarball-manifest.json'), 'file');
++      const manifest = spawnSync(
++        process.execPath,
++        [resolve(fakeRoot, scripts[1]), '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++        { cwd: fakeRoot, encoding: 'utf8' },
++      );
++      expect(manifest.status, `${manifest.stdout}${manifest.stderr}`).not.toBe(0);
++      expect(`${manifest.stdout}${manifest.stderr}`).toContain('Candidate arguments rejected.');
++      expect(readFileSync(manifestSentinel, 'utf8')).toBe('unchanged');
++      rmSync(resolve(evidenceRoot, 'tarball-manifest.json'));
++
++      const receiptSentinel = resolve(outside, 'receipt-sentinel');
++      writeFileSync(receiptSentinel, 'unchanged');
++      symlinkSync(receiptSentinel, resolve(evidenceRoot, 'isolated-source-receipt.md'));
++      const rehearsal = spawnSync(
++        process.execPath,
++        [resolve(fakeRoot, scripts[2]), '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++        { cwd: fakeRoot, encoding: 'utf8' },
++      );
++      expect(rehearsal.status, `${rehearsal.stdout}${rehearsal.stderr}`).not.toBe(0);
++      expect(`${rehearsal.stdout}${rehearsal.stderr}`).toContain('Candidate arguments rejected.');
++      expect(readFileSync(receiptSentinel, 'utf8')).toBe('unchanged');
++    } finally {
++      rmSync(temporaryRoot, { recursive: true, force: true });
++    }
++  });
++});
+diff --git a/packages/editor/tests/package/fixtures/exhaustive-after.ts b/packages/editor/tests/package/fixtures/exhaustive-after.ts
+new file mode 100644
+index 0000000..fab4125
+--- /dev/null
++++ b/packages/editor/tests/package/fixtures/exhaustive-after.ts
+@@ -0,0 +1,9 @@
++import type { SourceData } from 'tellplot';
++
++export function generationName(source: SourceData): string {
++  if (source.schemaVersion === '1.0.0') return 'legacy-waterfall';
++  if (source.schemaVersion === '2.0.0') return source.dataKind;
++  if (source.schemaVersion === '3.0.0') return 'categorical-comparison';
++  const exhaustive: never = source;
++  return exhaustive;
++}
+diff --git a/packages/editor/tests/package/fixtures/exhaustive-before.ts b/packages/editor/tests/package/fixtures/exhaustive-before.ts
+new file mode 100644
+index 0000000..f64b141
+--- /dev/null
++++ b/packages/editor/tests/package/fixtures/exhaustive-before.ts
+@@ -0,0 +1,8 @@
++import type { SourceData } from 'tellplot';
++
++export function generationName(source: SourceData): string {
++  if (source.schemaVersion === '1.0.0') return 'legacy-waterfall';
++  if (source.schemaVersion === '2.0.0') return source.dataKind;
++  const exhaustive: never = source;
++  return exhaustive;
++}
+diff --git a/packages/editor/tests/package/fixtures/tsconfig.after.json b/packages/editor/tests/package/fixtures/tsconfig.after.json
+new file mode 100644
+index 0000000..4c6f1af
+--- /dev/null
++++ b/packages/editor/tests/package/fixtures/tsconfig.after.json
+@@ -0,0 +1,4 @@
++{
++  "extends": "./tsconfig.base.json",
++  "include": ["exhaustive-after.ts"]
++}
+diff --git a/packages/editor/tests/package/fixtures/tsconfig.base.json b/packages/editor/tests/package/fixtures/tsconfig.base.json
+new file mode 100644
+index 0000000..6a576d7
+--- /dev/null
++++ b/packages/editor/tests/package/fixtures/tsconfig.base.json
+@@ -0,0 +1,11 @@
++{
++  "extends": "../../../../../tsconfig.base.json",
++  "compilerOptions": {
++    "noEmit": true,
++    "strict": true,
++    "baseUrl": "../../../../tellplot",
++    "paths": {
++      "tellplot": ["dist/index.d.ts"]
++    }
++  }
++}
+diff --git a/packages/editor/tests/package/fixtures/tsconfig.before.json b/packages/editor/tests/package/fixtures/tsconfig.before.json
+new file mode 100644
+index 0000000..f587c35
+--- /dev/null
++++ b/packages/editor/tests/package/fixtures/tsconfig.before.json
+@@ -0,0 +1,4 @@
++{
++  "extends": "./tsconfig.base.json",
++  "include": ["exhaustive-before.ts"]
++}
+diff --git a/packages/editor/tests/package/generation-compatibility.test.ts b/packages/editor/tests/package/generation-compatibility.test.ts
+new file mode 100644
+index 0000000..eb72a77
+--- /dev/null
++++ b/packages/editor/tests/package/generation-compatibility.test.ts
+@@ -0,0 +1,128 @@
++import { spawnSync } from 'node:child_process';
++import { resolve } from 'node:path';
++
++import {
++  createInitialViewSpec,
++  parseViewSpec,
++  projectCategorical,
++  projectCategoricalComparison,
++  projectWaterfall,
++  serializeViewSpec,
++  validateChartConfig,
++  type ChartConfig,
++  type SourceData,
++} from '../../../tellplot/src/index';
++import { describe, expect, it } from 'vitest';
++
++const root = resolve(process.cwd());
++
++const generations = [
++  {
++    name: 'legacy-v1-waterfall',
++    config: {
++      type: 'waterfall',
++      data: {
++        schemaVersion: '1.0.0',
++        datasetId: 'legacy-v1-waterfall',
++        items: [
++          { id: 'start', label: 'Start', amount: 10, kind: 'start' },
++          { id: 'change', label: 'Change', amount: 2, kind: 'contribution' },
++          { id: 'end', label: 'End', amount: 12, kind: 'end' },
++        ],
++      },
++    },
++    project: projectWaterfall,
++  },
++  {
++    name: 'current-v2-waterfall',
++    config: {
++      type: 'waterfall',
++      data: {
++        schemaVersion: '2.0.0',
++        dataKind: 'waterfall',
++        datasetId: 'current-v2-waterfall',
++        items: [
++          { id: 'start', label: 'Start', amount: 10, kind: 'start' },
++          { id: 'change', label: 'Change', amount: -2, kind: 'contribution' },
++          { id: 'end', label: 'End', amount: 8, kind: 'end' },
++        ],
++      },
++    },
++    project: projectWaterfall,
++  },
++  {
++    name: 'scalar-v2-categorical',
++    config: {
++      type: 'column',
++      data: {
++        schemaVersion: '2.0.0',
++        dataKind: 'categorical',
++        datasetId: 'scalar-v2-categorical',
++        items: [{ id: 'revenue', label: 'Revenue', amount: 10 }],
++      },
++    },
++    project: projectCategorical,
++  },
++] as const satisfies readonly {
++  readonly name: string;
++  readonly config: ChartConfig;
++  readonly project: typeof projectWaterfall | typeof projectCategorical;
++}[];
++
++describe('public package generation compatibility', () => {
++  it.each(generations)('$name compiles, runs and round-trips without a wire migration', fixture => {
++    expect(validateChartConfig(fixture.config)).toEqual({
++      ok: true,
++      value: fixture.config,
++      errors: [],
++    });
++    const initial = createInitialViewSpec(fixture.config.data, { chartType: fixture.config.type });
++    expect(initial.ok).toBe(true);
++    if (!initial.ok) throw new Error('Expected a concrete legacy/current view.');
++    expect(fixture.project(fixture.config.data, initial.value).ok).toBe(true);
++    expect(parseViewSpec(serializeViewSpec(initial.value), fixture.config.data)).toEqual(initial);
++  });
++
++  it('constructs, projects and round-trips a strict comparison-v3 consumer', () => {
++    const source = {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: 'comparison-v3',
++      series: [
++        { id: 'actual', label: 'Actual' },
++        { id: 'budget', label: 'Budget' },
++      ],
++      items: [
++        {
++          id: 'revenue',
++          label: 'Revenue',
++          values: [
++            { seriesId: 'actual', amount: 10 },
++            { seriesId: 'budget', amount: 12 },
++          ],
++        },
++      ],
++    } as const satisfies SourceData;
++    const initial = createInitialViewSpec(source, { chartType: 'column' });
++    expect(initial.ok).toBe(true);
++    if (!initial.ok) throw new Error('Expected a comparison view.');
++    expect(projectCategoricalComparison(source, initial.value)).toMatchObject({ ok: true });
++    expect(parseViewSpec(serializeViewSpec(initial.value), source)).toEqual(initial);
++  });
++
++  it('proves the exhaustive-union source break and the explicit schema-3 migration', () => {
++    const run = (config: string) =>
++      spawnSync('pnpm', ['exec', 'tsc', '-p', config, '--pretty', 'false'], {
++        cwd: root,
++        encoding: 'utf8',
++      });
++    const before = run('packages/editor/tests/package/fixtures/tsconfig.before.json');
++    const after = run('packages/editor/tests/package/fixtures/tsconfig.after.json');
++
++    expect(before.status).not.toBe(0);
++    expect(`${before.stdout}${before.stderr}`).toMatch(
++      /error TS2322: Type 'CategoricalComparisonSourceData' is not assignable to type 'never'/u,
++    );
++    expect(after.status, `${after.stdout}${after.stderr}`).toBe(0);
++  });
++});
+diff --git a/packages/editor/tests/package/single-package-distribution.test.ts b/packages/editor/tests/package/single-package-distribution.test.ts
+index 0288906..9702e01 100644
+--- a/packages/editor/tests/package/single-package-distribution.test.ts
++++ b/packages/editor/tests/package/single-package-distribution.test.ts
+@@ -18,7 +18,7 @@ describe('single-package distribution', () => {
+     const manifest = json('packages/tellplot/package.json');
+ 
+     expect(manifest['name']).toBe('tellplot');
+-    expect(manifest['version']).toBe('1.0.0');
++    expect(manifest['version']).toBe('2.0.0');
+     expect(manifest['private']).not.toBe(true);
+     expect(manifest['publishConfig']).toEqual({
+       access: 'public',
+diff --git a/packages/editor/tests/package/stable-release.test.ts b/packages/editor/tests/package/stable-release.test.ts
+index 15f3e02..14ae7f8 100644
+--- a/packages/editor/tests/package/stable-release.test.ts
++++ b/packages/editor/tests/package/stable-release.test.ts
+@@ -67,7 +67,7 @@ describe('1.0 stable release contract', () => {
+       expect(packageManifest['publishConfig']).toBeUndefined();
+     }
+     expect(publicPackageManifest['name']).toBe('tellplot');
+-    expect(publicPackageManifest['version']).toBe('1.0.0');
++    expect(publicPackageManifest['version']).toBe('2.0.0');
+     expect(publicPackageManifest['publishConfig']).toEqual({
+       access: 'public',
+       registry: 'https://registry.npmjs.org/',
+@@ -959,7 +959,7 @@ describe('1.0 stable release contract', () => {
+     expect(errors).toContain('销毁后的精确行为');
+   });
+ 
+-  it('passes the executable architecture and public release audits', () => {
++  it('passes architecture gates while keeping the accepted 1.0 audit strict', () => {
+     const lock = runScript('scripts/release/audit-dependencies.mjs', ['--lock-only']);
+     const dependencies = runScript('scripts/release/audit-dependencies.mjs');
+     const architecture = runScript('scripts/release/check-architecture.mjs');
+@@ -969,7 +969,8 @@ describe('1.0 stable release contract', () => {
+     expect(lock.output).toContain('"scope": "lockfile"');
+     expect(dependencies, dependencies.output).toMatchObject({ status: 0 });
+     expect(architecture, architecture.output).toMatchObject({ status: 0 });
+-    expect(release, release.output).toMatchObject({ status: 0 });
++    expect(release.status, release.output).not.toBe(0);
++    expect(release.output).toContain('tellplot version must be stable 1.0.0');
+   });
+ 
+   it('rejects unreviewed AntV versions and install-time compromise indicators', () => {
+diff --git a/packages/editor/tests/react-matrix/consumer/src/main.mjs b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+index 2c0aebb..0431e38 100644
+--- a/packages/editor/tests/react-matrix/consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/consumer/src/main.mjs
+@@ -163,9 +163,8 @@ const waitForView = async (expected, phase) => {
+   while (Date.now() < deadline) {
+     await new Promise(resolve => requestAnimationFrame(resolve));
+     const current = editorRef.current?.getView();
+-    stableSamples = current !== undefined && viewReceipt(current) === expectedReceipt
+-      ? stableSamples + 1
+-      : 0;
++    stableSamples =
++      current !== undefined && viewReceipt(current) === expectedReceipt ? stableSamples + 1 : 0;
+     if (stableSamples === 2) {
+       return current;
+     }
+@@ -210,6 +209,19 @@ globalThis.__tellplotFrameworkMatrix = {
+       svg: await result.blob.text(),
+     };
+   },
++  async exportComparisonSvg() {
++    const result = await editorRef.current?.exportImage({ format: 'svg', filename: 'comparison' });
++    if (result === undefined) {
++      throw new Error('React matrix editor ref is unavailable');
++    }
++    return {
++      mimeType: result.mimeType,
++      suggestedFilename: result.suggestedFilename,
++      width: result.width,
++      height: result.height,
++      svg: await result.blob.text(),
++    };
++  },
+   async runScenario() {
+     const row = host.querySelector('[data-node-id="sales-growth"]');
+     if (!(row instanceof HTMLElement)) {
+@@ -290,10 +302,7 @@ globalThis.__tellplotFrameworkMatrix = {
+     const standaloneView = await waitForView(hostView, 'host-controlled annotation');
+     comparisonViewMode = 'uncontrolled';
+     renderEditor({ legend: true, animation: { enabled: false } }, true);
+-    const uncontrolledView = await waitForView(
+-      standaloneView,
+-      'controlled to uncontrolled seed',
+-    );
++    const uncontrolledView = await waitForView(standaloneView, 'controlled to uncontrolled seed');
+     return {
+       movedOrder,
+       undoOrder,
+@@ -361,6 +370,26 @@ globalThis.__tellplotFrameworkMatrix = {
+       view: editorRef.current.getView(),
+     };
+   },
++  async emptyComparison() {
++    comparisonConfig = {
++      ...comparisonConfig,
++      data: { ...comparisonConfig.data, items: [] },
++    };
++    hostView = {
++      ...structuredClone(editorRef.current.getView()),
++      rootOrder: [],
++      groups: {},
++      collapsedGroupIds: [],
++      pinnedItemIds: [],
++      annotations: {},
++      emphasis: {},
++    };
++    comparisonViewMode = 'controlled';
++    renderEditor({ legend: true, animation: { enabled: false } }, true);
++    await waitForView(hostView, 'empty comparison');
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    return { view: editorRef.current.getView() };
++  },
+   unmount() {
+     root.unmount();
+     host.dataset.unmounted = 'true';
+diff --git a/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs b/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
+index 4bd7e4f..af0b801 100644
+--- a/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/imperative-consumer/src/main.mjs
+@@ -187,6 +187,16 @@ globalThis.__tellplotFrameworkMatrix = {
+       svg: await result.blob.text(),
+     };
+   },
++  async exportComparisonSvg() {
++    const result = await editor.exportImage({ format: 'svg', filename: 'comparison' });
++    return {
++      mimeType: result.mimeType,
++      suggestedFilename: result.suggestedFilename,
++      width: result.width,
++      height: result.height,
++      svg: await result.blob.text(),
++    };
++  },
+   async runScenario() {
+     const row = host.querySelector('[data-node-id="sales-growth"]');
+     if (!(row instanceof HTMLElement)) {
+@@ -264,10 +274,7 @@ globalThis.__tellplotFrameworkMatrix = {
+     const standaloneView = await waitForView(currentView, 'host-controlled annotation');
+     viewMode = 'uncontrolled';
+     editor.update(options());
+-    const uncontrolledView = await waitForView(
+-      standaloneView,
+-      'controlled to uncontrolled seed',
+-    );
++    const uncontrolledView = await waitForView(standaloneView, 'controlled to uncontrolled seed');
+     return {
+       movedOrder,
+       undoOrder,
+@@ -337,6 +344,26 @@ globalThis.__tellplotFrameworkMatrix = {
+       view: editor.getView(),
+     };
+   },
++  async emptyComparison() {
++    currentConfig = {
++      ...currentConfig,
++      data: { ...currentConfig.data, items: [] },
++    };
++    currentView = {
++      ...structuredClone(editor.getView()),
++      rootOrder: [],
++      groups: {},
++      collapsedGroupIds: [],
++      pinnedItemIds: [],
++      annotations: {},
++      emphasis: {},
++    };
++    viewMode = 'controlled';
++    editor.update(options());
++    await waitForView(currentView, 'empty comparison');
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    return { view: editor.getView() };
++  },
+   unmount() {
+     editor.destroy();
+     host.dataset.unmounted = 'true';
+diff --git a/packages/editor/tests/react-matrix/run-react-matrix.mjs b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+index 40f31e2..3fbc001 100644
+--- a/packages/editor/tests/react-matrix/run-react-matrix.mjs
++++ b/packages/editor/tests/react-matrix/run-react-matrix.mjs
+@@ -307,6 +307,75 @@ async function svgSemantics(page, exported) {
+   }, exported);
+ }
+ 
++async function visibleSvgReceipt(page, exported, labels, colors) {
++  return page.evaluate(
++    value => {
++      const host = document.createElement('div');
++      host.style.position = 'fixed';
++      host.style.left = '0';
++      host.style.top = '0';
++      host.style.width = `${value.exported.width}px`;
++      host.style.height = `${value.exported.height}px`;
++      host.style.background = '#ffffff';
++      host.innerHTML = value.exported.svg;
++      document.body.append(host);
++      try {
++        const svg = host.querySelector('svg');
++        if (!(svg instanceof SVGSVGElement)) return null;
++        const texts = Array.from(svg.querySelectorAll('text'));
++        const legend = value.labels.map(label => {
++          const element = texts.find(text => text.textContent?.trim() === label);
++          if (!(element instanceof SVGGraphicsElement)) return null;
++          const box = element.getBBox();
++          return { label, x: box.x, y: box.y, width: box.width, height: box.height };
++        });
++        const elements = Array.from(svg.querySelectorAll('*'));
++        const paintCounts = value.colors.map(
++          color =>
++            elements.filter(element => {
++              const style = getComputedStyle(element);
++              return style.fill === color || style.stroke === color;
++            }).length,
++        );
++        return { legend, paintCounts };
++      } finally {
++        host.remove();
++      }
++    },
++    { exported, labels, colors },
++  );
++}
++
++async function assertComparisonSvg(page, consumerId, labels, colors) {
++  const exported = await page.evaluate(() =>
++    globalThis.__tellplotFrameworkMatrix?.exportComparisonSvg(),
++  );
++  assert.notEqual(exported, null, `${consumerId} comparison SVG must return a result`);
++  assert.notEqual(exported, undefined, `${consumerId} comparison SVG must return a result`);
++  const semantics = await svgSemantics(page, exported);
++  assert.equal(semantics.mimeType, 'image/svg+xml');
++  assert.equal(semantics.rootName, 'svg');
++  assert.equal(semantics.unsafeElements, 0);
++  assert.equal(semantics.externalReferences, 0);
++  const visible = await visibleSvgReceipt(page, exported, labels, colors);
++  assert.notEqual(visible, null, `${consumerId} comparison SVG must mount visibly`);
++  assert.ok(
++    visible.legend.every(receipt => receipt !== null && receipt.width > 0 && receipt.height > 0),
++    `${consumerId} comparison legend labels must have visible SVG bboxes`,
++  );
++  const ordered = visible.legend.map(receipt => [receipt.y, receipt.x]);
++  assert.deepEqual(
++    [...ordered].sort((left, right) => left[0] - right[0] || left[1] - right[1]),
++    ordered,
++    `${consumerId} comparison legend must retain source order`,
++  );
++  assert.ok(
++    visible.paintCounts.every(count => count > 0),
++    `${consumerId} comparison SVG palette must be visible`,
++  );
++  return { semantics, visible };
++}
++
+ async function verifyConsumer(browser, consumer, directory) {
+   const port = await availablePort();
+   const url = `http://127.0.0.1:${port}`;
+@@ -490,6 +559,12 @@ async function verifyConsumer(browser, consumer, directory) {
+         twoSeriesPalette.every(receipt => receipt.count > 0),
+         `${consumer.id} initial comparison palette must be visible on Canvas`,
+       );
++      const initialSvg = await assertComparisonSvg(
++        page,
++        consumer.id,
++        ['Current', 'Plan'],
++        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)'],
++      );
+ 
+       const reordered = await page.evaluate(() =>
+         globalThis.__tellplotFrameworkMatrix?.reorderComparisonRegistry(),
+@@ -509,6 +584,12 @@ async function verifyConsumer(browser, consumer, directory) {
+         reorderedPalette.every(receipt => receipt.count > 0),
+         `${consumer.id} reordered comparison palette and legend must remain visible`,
+       );
++      const reorderedSvg = await assertComparisonSvg(
++        page,
++        consumer.id,
++        ['Plan', 'Current'],
++        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)'],
++      );
+ 
+       const fourSeries = await page.evaluate(() =>
+         globalThis.__tellplotFrameworkMatrix?.expandComparisonRegistry(),
+@@ -534,6 +615,23 @@ async function verifyConsumer(browser, consumer, directory) {
+         fourSeriesPalette.every(receipt => receipt.count > 0),
+         `${consumer.id} four-series palette and legend must be visible on Canvas`,
+       );
++      const fourSeriesSvg = await assertComparisonSvg(
++        page,
++        consumer.id,
++        ['Plan', 'Current', 'Forecast', 'Stretch'],
++        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)', 'rgb(0, 158, 115)', 'rgb(204, 121, 167)'],
++      );
++
++      const empty = await page.evaluate(() =>
++        globalThis.__tellplotFrameworkMatrix?.emptyComparison(),
++      );
++      assert.deepEqual(empty.view.rootOrder, []);
++      const emptySvg = await assertComparisonSvg(
++        page,
++        consumer.id,
++        ['Plan', 'Current', 'Forecast', 'Stretch'],
++        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)', 'rgb(0, 158, 115)', 'rgb(204, 121, 167)'],
++      );
+ 
+       await page.evaluate(() => globalThis.__tellplotFrameworkMatrix?.unmount());
+       await page.locator('#root[data-unmounted="true"]').waitFor({ state: 'attached' });
+@@ -541,7 +639,7 @@ async function verifyConsumer(browser, consumer, directory) {
+       await page.waitForFunction(() => document.querySelector('[data-tellplot="editor"]') === null);
+       assert.deepEqual(runtimeErrors, []);
+       console.log(
+-        `[framework-matrix:${consumer.id}] ${consumer.framework} ${runtime.frameworkVersion}, legacy move/undo and SVG ${semantics.width}x${semantics.height}, v3 move/undo plus reordered/four-series registry on real G2, clean unmount`,
++        `[framework-matrix:${consumer.id}] ${consumer.framework} ${runtime.frameworkVersion}, legacy move/undo and SVG ${semantics.width}x${semantics.height}, v3 2/reordered/4-series/empty SVG parity on real G2, clean unmount`,
+       );
+       return {
+         scenario,
+@@ -549,6 +647,7 @@ async function verifyConsumer(browser, consumer, directory) {
+         comparison,
+         reordered,
+         fourSeries,
++        comparisonSvg: { initialSvg, reorderedSvg, fourSeriesSvg, emptySvg },
+         signatures: {
+           initial: initialComparison.signature,
+           reordered: reorderedComparison.signature,
+diff --git a/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+index ff16298..55dea7f 100644
+--- a/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
++++ b/packages/editor/tests/react-matrix/vue-consumer/src/main.mjs
+@@ -153,9 +153,8 @@ const waitForView = async (expected, phase) => {
+   while (Date.now() < deadline) {
+     await new Promise(resolve => requestAnimationFrame(resolve));
+     const current = editorRef.value?.getView();
+-    stableSamples = current !== undefined && viewReceipt(current) === expectedReceipt
+-      ? stableSamples + 1
+-      : 0;
++    stableSamples =
++      current !== undefined && viewReceipt(current) === expectedReceipt ? stableSamples + 1 : 0;
+     if (stableSamples === 2) {
+       return current;
+     }
+@@ -200,6 +199,19 @@ globalThis.__tellplotFrameworkMatrix = {
+       svg: await result.blob.text(),
+     };
+   },
++  async exportComparisonSvg() {
++    const result = await editorRef.value?.exportImage({ format: 'svg', filename: 'comparison' });
++    if (result === undefined) {
++      throw new Error('Vue matrix editor expose is unavailable');
++    }
++    return {
++      mimeType: result.mimeType,
++      suggestedFilename: result.suggestedFilename,
++      width: result.width,
++      height: result.height,
++      svg: await result.blob.text(),
++    };
++  },
+   async runScenario() {
+     const row = host.querySelector('[data-node-id="sales-growth"]');
+     if (!(row instanceof HTMLElement)) {
+@@ -281,10 +293,7 @@ globalThis.__tellplotFrameworkMatrix = {
+     const standaloneView = await waitForView(view.value, 'host-controlled annotation');
+     viewMode.value = 'uncontrolled';
+     await nextTick();
+-    const uncontrolledView = await waitForView(
+-      standaloneView,
+-      'controlled to uncontrolled seed',
+-    );
++    const uncontrolledView = await waitForView(standaloneView, 'controlled to uncontrolled seed');
+     return {
+       movedOrder,
+       undoOrder,
+@@ -352,6 +361,26 @@ globalThis.__tellplotFrameworkMatrix = {
+       view: editorRef.value.getView(),
+     };
+   },
++  async emptyComparison() {
++    config.value = {
++      ...config.value,
++      data: { ...config.value.data, items: [] },
++    };
++    view.value = {
++      ...structuredClone(editorRef.value.getView()),
++      rootOrder: [],
++      groups: {},
++      collapsedGroupIds: [],
++      pinnedItemIds: [],
++      annotations: {},
++      emphasis: {},
++    };
++    viewMode.value = 'controlled';
++    await nextTick();
++    await waitForView(view.value, 'empty comparison');
++    await waitForRegistry(['Plan', 'Current', 'Forecast', 'Stretch']);
++    return { view: editorRef.value.getView() };
++  },
+   unmount() {
+     app.unmount();
+     host.dataset.unmounted = 'true';
+diff --git a/packages/tellplot/README.md b/packages/tellplot/README.md
+index 9727aaf..4072b96 100644
+--- a/packages/tellplot/README.md
++++ b/packages/tellplot/README.md
+@@ -1,10 +1,18 @@
+ # tellplot
+ 
+ TellPlot 是基于 AntV G2 的框架无关可编辑图表库。一个包提供 imperative DOM、React、Vue 和无 DOM
+-数据/命令能力，完整编辑器只实现一次。
++数据/命令能力，支持 waterfall、scalar categorical 与 2 至 4 序列 comparison categorical，完整编辑器只实现一次。
++
++当前仓库中的 `tellplot@2.0.0` 是本地 candidate。候选验证使用生成的 tarball：
++
++```bash
++pnpm add ./tellplot-2.0.0.tgz
++```
++
++`2.0.0` 正式发布到 registry 后，可以安装明确的 2.x 版本：
+ 
+ ```bash
+-pnpm add tellplot
++pnpm add tellplot@^2.0.0
+ ```
+ 
+ ```ts
+@@ -18,10 +26,21 @@ const editor = createEditor(host, {
+   config: {
+     type: 'column',
+     data: {
+-      schemaVersion: '2.0.0',
++      schemaVersion: '3.0.0',
+       dataKind: 'categorical',
+-      datasetId: 'revenue',
+-      items: [{ id: 'north', label: 'North', amount: 128 }],
++      datasetId: 'actual-versus-budget',
++      series: [
++        { id: 'actual', label: 'Actual' },
++        { id: 'budget', label: 'Budget' },
++      ],
++      items: [{
++        id: 'north',
++        label: 'North',
++        values: [
++          { seriesId: 'actual', amount: 128 },
++          { seriesId: 'budget', amount: 135 },
++        ],
++      }],
+     },
+   },
+ });
+diff --git a/packages/tellplot/package.json b/packages/tellplot/package.json
+index 125652a..8b0123c 100644
+--- a/packages/tellplot/package.json
++++ b/packages/tellplot/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "tellplot",
+-  "version": "1.0.0",
++  "version": "2.0.0",
+   "description": "Framework-neutral editable charts for DOM, React and Vue, built on AntV G2",
+   "license": "MIT",
+   "homepage": "https://tellplot.com",
+diff --git a/packages/tellplot/tests/package/pack-contract.mjs b/packages/tellplot/tests/package/pack-contract.mjs
+index f4e05d3..65dbce4 100644
+--- a/packages/tellplot/tests/package/pack-contract.mjs
++++ b/packages/tellplot/tests/package/pack-contract.mjs
+@@ -40,8 +40,8 @@ const requiredPaths = [
+ if (manifest.name !== 'tellplot') {
+   throw new Error(`Unexpected package name: ${manifest.name}`);
+ }
+-if (manifest.version !== '1.0.0') {
+-  throw new Error(`Unexpected stable version: ${manifest.version}`);
++if (manifest.version !== '2.0.0') {
++  throw new Error(`Unexpected candidate version: ${manifest.version}`);
+ }
+ for (const path of requiredPaths) {
+   if (!paths.includes(path)) {
+diff --git a/scripts/release/audit-candidate.mjs b/scripts/release/audit-candidate.mjs
+new file mode 100644
+index 0000000..db8b18b
+--- /dev/null
++++ b/scripts/release/audit-candidate.mjs
+@@ -0,0 +1,256 @@
++import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
++import { isAbsolute, relative, resolve, sep } from 'node:path';
++import { pathToFileURL } from 'node:url';
++
++import {
++  collectPublicSurface,
++  expectedPackageSurface,
++  packageContracts,
++  validatePackageContract,
++  workspacePackageEntries,
++} from './package-contracts.mjs';
++import { fail, repositoryRoot } from './release-utils.mjs';
++
++const CANDIDATE_REJECTION = 'Candidate arguments rejected.';
++
++function reject() {
++  const error = new Error(CANDIDATE_REJECTION);
++  error.name = 'CandidateArgumentsRejected';
++  throw error;
++}
++
++export function runCandidateCommand(command) {
++  try {
++    command();
++  } catch (error) {
++    if (error instanceof Error && error.name === 'CandidateArgumentsRejected') {
++      process.stderr.write(`${CANDIDATE_REJECTION}\n`);
++      process.exitCode = 1;
++      return;
++    }
++    throw error;
++  }
++}
++
++function lstatIfPresent(path) {
++  try {
++    return lstatSync(path);
++  } catch (error) {
++    if (error?.code === 'ENOENT') return undefined;
++    reject();
++  }
++}
++
++function decoded(value) {
++  try {
++    return decodeURIComponent(value);
++  } catch {
++    reject();
++  }
++}
++
++function assertCandidateDirectoryInside(root, directory) {
++  let rootReal;
++  let directoryReal;
++  try {
++    const stats = lstatSync(directory);
++    if (stats.isSymbolicLink() || !stats.isDirectory()) reject();
++    rootReal = realpathSync(root);
++    directoryReal = realpathSync(directory);
++  } catch {
++    reject();
++  }
++  const realRelative = relative(rootReal, directoryReal);
++  if (
++    realRelative === '' ||
++    realRelative === '..' ||
++    realRelative.startsWith(`..${sep}`) ||
++    isAbsolute(realRelative)
++  ) {
++    reject();
++  }
++}
++
++export function parseCandidateArguments(args) {
++  const normalizedArgs = args[0] === '--' ? args.slice(1) : args;
++  if (normalizedArgs.length !== 4 || normalizedArgs.some(value => value.includes('='))) reject();
++  const values = new Map();
++  for (let index = 0; index < normalizedArgs.length; index += 2) {
++    const key = normalizedArgs[index];
++    const value = normalizedArgs[index + 1];
++    if (
++      value === undefined ||
++      (key !== '--candidate-version' && key !== '--evidence-task') ||
++      values.has(key)
++    ) {
++      reject();
++    }
++    values.set(key, value);
++  }
++  const candidateVersion = values.get('--candidate-version');
++  const evidenceTask = values.get('--evidence-task');
++  if (candidateVersion !== '2.0.0' || (evidenceTask !== 'T140' && evidenceTask !== 'T141')) {
++    reject();
++  }
++  for (const raw of values.values()) {
++    const value = decoded(raw);
++    if (
++      isAbsolute(value) ||
++      value === '.' ||
++      value === '..' ||
++      value.includes('/') ||
++      value.includes('\\') ||
++      value.split(/[\\/]/u).some(segment => segment === '.' || segment === '..')
++    ) {
++      reject();
++    }
++  }
++  const aiPlatformRoot = resolve(repositoryRoot, '.ai-platform');
++  const evidenceBase = resolve(aiPlatformRoot, 'evidence');
++  assertCandidateDirectoryInside(repositoryRoot, aiPlatformRoot);
++  assertCandidateDirectoryInside(repositoryRoot, evidenceBase);
++  const evidenceRoot = resolve(evidenceBase, evidenceTask);
++  const relativePath = relative(evidenceBase, evidenceRoot);
++  if (relativePath.startsWith('..') || relativePath.includes(sep) || relativePath === '') reject();
++  try {
++    const baseReal = realpathSync(evidenceBase);
++    if (lstatSync(evidenceRoot).isSymbolicLink()) reject();
++    const realRelative = relative(baseReal, realpathSync(evidenceRoot));
++    if (realRelative.startsWith('..') || isAbsolute(realRelative)) reject();
++  } catch (error) {
++    if (error?.code !== 'ENOENT') reject();
++  }
++  return { candidateVersion, evidenceTask, evidenceRoot };
++}
++
++export function assertPinnedCandidateNode() {
++  let pinnedVersion;
++  try {
++    pinnedVersion = readFileSync(resolve(repositoryRoot, '.nvmrc'), 'utf8').trim();
++  } catch {
++    reject();
++  }
++  if (pinnedVersion === '' || process.versions.node !== pinnedVersion) reject();
++}
++
++export function assertCandidateOutputPath(evidenceRoot, target) {
++  const rootStats = lstatIfPresent(evidenceRoot);
++  if (rootStats === undefined || rootStats.isSymbolicLink() || !rootStats.isDirectory()) reject();
++
++  let realEvidenceRoot;
++  try {
++    realEvidenceRoot = realpathSync(evidenceRoot);
++  } catch {
++    reject();
++  }
++  const targetRelative = relative(evidenceRoot, target);
++  if (
++    targetRelative === '' ||
++    isAbsolute(targetRelative) ||
++    targetRelative === '..' ||
++    targetRelative.startsWith(`..${sep}`)
++  ) {
++    reject();
++  }
++
++  const segments = targetRelative.split(sep);
++  let current = evidenceRoot;
++  for (const [index, segment] of segments.entries()) {
++    if (segment === '' || segment === '.' || segment === '..') reject();
++    current = resolve(current, segment);
++    const stats = lstatIfPresent(current);
++    if (stats === undefined) return;
++    if (stats.isSymbolicLink() || (index < segments.length - 1 && !stats.isDirectory())) reject();
++    let realCurrent;
++    try {
++      realCurrent = realpathSync(current);
++    } catch {
++      reject();
++    }
++    const realRelative = relative(realEvidenceRoot, realCurrent);
++    if (realRelative === '..' || realRelative.startsWith(`..${sep}`) || isAbsolute(realRelative)) {
++      reject();
++    }
++  }
++}
++
++function auditCandidate() {
++  const { candidateVersion, evidenceTask } = parseCandidateArguments(process.argv.slice(2));
++  const findings = [];
++  const contractDocument = JSON.parse(
++    readFileSync(resolve(repositoryRoot, 'scripts/release/package-contracts.json'), 'utf8'),
++  );
++  const expectedDelta = {
++    runtimeExports: ['projectCategoricalComparison'],
++    typeExports: [
++      'ComparisonSchemaVersion',
++      'SeriesId',
++      'CategoricalComparisonSeries',
++      'CategoricalComparisonValue',
++      'CategoricalComparisonSourceItem',
++      'CategoricalComparisonSourceData',
++      'CategoricalComparisonViewSpec',
++      'CategoricalComparisonDatumKind',
++      'CategoricalComparisonSeriesValue',
++      'CategoricalComparisonDatum',
++      'CategoricalComparisonProjection',
++      'CategoricalComparisonProjectionResult',
++      'CategoricalComparisonSeriesColor',
++      'CategoricalComparisonChartColors',
++      'CategoricalComparisonChartAppearance',
++      'CategoricalComparisonChartConfig',
++    ],
++  };
++  if (
++    contractDocument.candidateVersion !== candidateVersion ||
++    JSON.stringify(contractDocument.candidatePublicDelta) !== JSON.stringify(expectedDelta)
++  ) {
++    findings.push('candidate public delta must be exactly 16 types and one runtime projector');
++  }
++  const packageEntries = workspacePackageEntries(repositoryRoot);
++  const publicContract = packageContracts.find(contract => contract.name === 'tellplot');
++  if (publicContract === undefined) throw new Error('Candidate package contract is unavailable.');
++
++  for (const contract of packageContracts) {
++    const packageRoot = resolve(repositoryRoot, 'packages', contract.directory);
++    const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
++    const surface = collectPublicSurface(resolve(packageRoot, contract.entry), { packageEntries });
++    findings.push(...validatePackageContract(manifest, surface, contract));
++    if (contract.public === true) {
++      if (manifest.version !== candidateVersion || manifest.name !== 'tellplot') {
++        findings.push('tellplot manifest must be the selected 2.0.0 candidate');
++      }
++      const exportKeys = Object.keys(manifest.exports ?? {}).sort();
++      if (
++        JSON.stringify(exportKeys) !==
++        JSON.stringify(['.', './core', './package.json', './react', './styles.css', './vue'])
++      ) {
++        findings.push('tellplot export map must remain unchanged');
++      }
++    } else if (manifest.private !== true || manifest.version !== '0.0.0') {
++      findings.push(`${contract.name} must remain private 0.0.0`);
++    }
++  }
++
++  for (const path of ['README.md', 'docs/api.md', 'docs/configuration.md', 'docs/migration.md']) {
++    if (!existsSync(resolve(repositoryRoot, path))) {
++      findings.push(`missing candidate documentation: ${path}`);
++    }
++  }
++  if (findings.length > 0) {
++    fail('TellPlot candidate audit failed', [...new Set(findings)].sort());
++  } else {
++    process.stdout.write(
++      `${JSON.stringify({
++        status: 'passed',
++        version: candidateVersion,
++        evidenceTask,
++        publicSurface: expectedPackageSurface(publicContract),
++      })}\n`,
++    );
++  }
++}
++
++if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
++  runCandidateCommand(auditCandidate);
++}
+diff --git a/scripts/release/package-candidate-artifact.mjs b/scripts/release/package-candidate-artifact.mjs
+new file mode 100644
+index 0000000..bd4c736
+--- /dev/null
++++ b/scripts/release/package-candidate-artifact.mjs
+@@ -0,0 +1,83 @@
++import { createHash } from 'node:crypto';
++import {
++  copyFileSync,
++  mkdirSync,
++  mkdtempSync,
++  readFileSync,
++  rmSync,
++  statSync,
++  writeFileSync,
++} from 'node:fs';
++import { tmpdir } from 'node:os';
++import { resolve } from 'node:path';
++
++import { canonicalizeNpmTarball } from './canonical-gzip.mjs';
++import {
++  assertCandidateOutputPath,
++  assertPinnedCandidateNode,
++  parseCandidateArguments,
++  runCandidateCommand,
++} from './audit-candidate.mjs';
++import { repositoryRoot, run } from './release-utils.mjs';
++
++function packageCandidateArtifact() {
++  const { candidateVersion, evidenceTask, evidenceRoot } = parseCandidateArguments(
++    process.argv.slice(2),
++  );
++  assertPinnedCandidateNode();
++  const filename = `tellplot-${candidateVersion}.tgz`;
++  const artifactsRoot = resolve(evidenceRoot, 'artifacts');
++  const artifactTarget = resolve(artifactsRoot, filename);
++  const manifestTarget = resolve(evidenceRoot, 'tarball-manifest.json');
++  assertCandidateOutputPath(evidenceRoot, artifactsRoot);
++  assertCandidateOutputPath(evidenceRoot, artifactTarget);
++  assertCandidateOutputPath(evidenceRoot, manifestTarget);
++  const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-artifact-'));
++
++  try {
++    const packageRoot = resolve(repositoryRoot, 'packages/tellplot');
++    const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
++    if (manifest.name !== 'tellplot' || manifest.version !== candidateVersion) {
++      throw new Error('Candidate manifest does not match the selected version.');
++    }
++    run('pnpm', ['build'], { cwd: packageRoot, inherit: true });
++    run('pnpm', ['pack', '--pack-destination', temporaryRoot], { cwd: packageRoot });
++    const temporaryArtifact = resolve(temporaryRoot, filename);
++    canonicalizeNpmTarball(temporaryArtifact);
++    const packManifest = JSON.parse(
++      run('pnpm', ['pack', '--dry-run', '--json'], { cwd: packageRoot }),
++    );
++    const files = packManifest.files
++      .map(file => (typeof file === 'string' ? file : file.path))
++      .sort()
++      .map(path => ({ path }));
++    const sha256 = createHash('sha256').update(readFileSync(temporaryArtifact)).digest('hex');
++    const receipt = {
++      version: candidateVersion,
++      evidenceTask,
++      nodeVersion: process.versions.node,
++      packages: [
++        {
++          name: manifest.name,
++          version: manifest.version,
++          filename,
++          sizeBytes: statSync(temporaryArtifact).size,
++          sha256,
++          files,
++        },
++      ],
++    };
++    mkdirSync(artifactsRoot, { recursive: true });
++    assertCandidateOutputPath(evidenceRoot, artifactsRoot);
++    assertCandidateOutputPath(evidenceRoot, artifactTarget);
++    assertCandidateOutputPath(evidenceRoot, manifestTarget);
++    copyFileSync(temporaryArtifact, artifactTarget);
++    assertCandidateOutputPath(evidenceRoot, manifestTarget);
++    writeFileSync(manifestTarget, `${JSON.stringify(receipt, null, 2)}\n`);
++    process.stdout.write(`${JSON.stringify({ status: 'passed', ...receipt })}\n`);
++  } finally {
++    rmSync(temporaryRoot, { recursive: true, force: true });
++  }
++}
++
++runCandidateCommand(packageCandidateArtifact);
+diff --git a/scripts/release/package-contracts.json b/scripts/release/package-contracts.json
+index c0041eb..2e8750f 100644
+--- a/scripts/release/package-contracts.json
++++ b/scripts/release/package-contracts.json
+@@ -1,5 +1,27 @@
+ {
+   "schemaVersion": 1,
++  "candidateVersion": "2.0.0",
++  "candidatePublicDelta": {
++    "runtimeExports": ["projectCategoricalComparison"],
++    "typeExports": [
++      "ComparisonSchemaVersion",
++      "SeriesId",
++      "CategoricalComparisonSeries",
++      "CategoricalComparisonValue",
++      "CategoricalComparisonSourceItem",
++      "CategoricalComparisonSourceData",
++      "CategoricalComparisonViewSpec",
++      "CategoricalComparisonDatumKind",
++      "CategoricalComparisonSeriesValue",
++      "CategoricalComparisonDatum",
++      "CategoricalComparisonProjection",
++      "CategoricalComparisonProjectionResult",
++      "CategoricalComparisonSeriesColor",
++      "CategoricalComparisonChartColors",
++      "CategoricalComparisonChartAppearance",
++      "CategoricalComparisonChartConfig"
++    ]
++  },
+   "packages": [
+     {
+       "directory": "core",
+diff --git a/scripts/release/rehearse-candidate-source.mjs b/scripts/release/rehearse-candidate-source.mjs
+new file mode 100644
+index 0000000..0338ad3
+--- /dev/null
++++ b/scripts/release/rehearse-candidate-source.mjs
+@@ -0,0 +1,102 @@
++import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { basename, relative, resolve, sep } from 'node:path';
++
++import {
++  assertCandidateOutputPath,
++  assertPinnedCandidateNode,
++  parseCandidateArguments,
++  runCandidateCommand,
++} from './audit-candidate.mjs';
++import { repositoryRoot, run, walkFiles } from './release-utils.mjs';
++
++const excluded = new Set([
++  '.git',
++  '.copyright-application',
++  'node_modules',
++  'dist',
++  'coverage',
++  'playwright-report',
++  'test-results',
++  'blob-report',
++  'tmp',
++]);
++
++function includeSource(source) {
++  const relativePath = relative(repositoryRoot, source);
++  const segments = relativePath.split(sep);
++  return (
++    !segments.some(segment => excluded.has(segment)) &&
++    !(segments[0] === '.ai-platform' && segments[1] === 'evidence')
++  );
++}
++
++function rehearseCandidateSource() {
++  const { candidateVersion, evidenceTask, evidenceRoot } = parseCandidateArguments(
++    process.argv.slice(2),
++  );
++  assertPinnedCandidateNode();
++  const receiptTarget = resolve(evidenceRoot, 'isolated-source-receipt.md');
++  assertCandidateOutputPath(evidenceRoot, receiptTarget);
++  const targetRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-source-'));
++
++  try {
++    for (const entry of readdirSync(repositoryRoot)) {
++      if (excluded.has(entry)) continue;
++      const source = resolve(repositoryRoot, entry);
++      if (!includeSource(source)) continue;
++      cpSync(source, resolve(targetRoot, basename(source)), {
++        recursive: true,
++        filter: includeSource,
++      });
++    }
++    mkdirSync(resolve(targetRoot, '.ai-platform/evidence', evidenceTask), { recursive: true });
++    const gates = [
++      ['pnpm', ['install', '--frozen-lockfile']],
++      ['pnpm', ['build']],
++      ['pnpm', ['test:package']],
++      [
++        'pnpm',
++        [
++          'release:candidate:audit',
++          '--',
++          '--candidate-version',
++          candidateVersion,
++          '--evidence-task',
++          evidenceTask,
++        ],
++      ],
++    ];
++    for (const [command, args] of gates) {
++      run(command, [...args], { cwd: targetRoot, inherit: true });
++    }
++    const sourceFiles = walkFiles(targetRoot, { excludedNames: ['node_modules', 'dist'] }).length;
++    const receipt = [
++      '# Isolated Candidate Source Receipt',
++      '',
++      `- Candidate: tellplot@${candidateVersion}`,
++      `- Evidence task: ${evidenceTask}`,
++      `- Node runtime: ${process.versions.node} (matches .nvmrc)`,
++      '- Isolated root: redacted temporary directory',
++      `- Source files: ${sourceFiles}`,
++      '- Frozen install: passed',
++      '- Candidate build/package/audit gates: passed',
++      '',
++    ].join('\n');
++    assertCandidateOutputPath(evidenceRoot, receiptTarget);
++    writeFileSync(receiptTarget, receipt);
++    process.stdout.write(
++      JSON.stringify({
++        status: 'passed',
++        version: candidateVersion,
++        evidenceTask,
++        nodeVersion: process.versions.node,
++        sourceFiles,
++      }) + '\n',
++    );
++  } finally {
++    rmSync(targetRoot, { recursive: true, force: true });
++  }
++}
++
++runCandidateCommand(rehearseCandidateSource);
+diff --git a/scripts/release/test-doc-code.mjs b/scripts/release/test-doc-code.mjs
+new file mode 100644
+index 0000000..35ab642
+--- /dev/null
++++ b/scripts/release/test-doc-code.mjs
+@@ -0,0 +1,149 @@
++import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { resolve } from 'node:path';
++import { spawnSync } from 'node:child_process';
++
++import { repositoryRoot } from './release-utils.mjs';
++
++const documents = [
++  'docs/data-contract.md',
++  'docs/api.md',
++  'docs/configuration.md',
++  'docs/migration.md',
++];
++const fencePattern = /```(?:ts|typescript|tsx)\s+([^\n]+)\n([\s\S]*?)```/gu;
++const identifierPattern = /^[a-z][a-z0-9-]*$/u;
++const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-doc-types-'));
++const receipts = [];
++mkdirSync(resolve(temporaryRoot, 'node_modules'), { recursive: true });
++symlinkSync(
++  resolve(repositoryRoot, 'packages/tellplot'),
++  resolve(temporaryRoot, 'node_modules/tellplot'),
++  'dir',
++);
++writeFileSync(resolve(temporaryRoot, 'package.json'), '{"type":"module"}\n');
++
++function metadata(raw, documentPath) {
++  const entries = Object.fromEntries(
++    raw
++      .trim()
++      .split(/\s+/u)
++      .map(token => {
++        const separator = token.indexOf('=');
++        if (separator <= 0) throw new Error(`${documentPath}: invalid TypeScript fence metadata`);
++        return [token.slice(0, separator), token.slice(separator + 1)];
++      }),
++  );
++  if (
++    Object.keys(entries).sort().join(',') !== 'id,mode' ||
++    !identifierPattern.test(entries.id ?? '') ||
++    !/^(?:standalone|compose(?:-runtime)?:[a-z][a-z0-9-]*|expected-diagnostic:TS\d+)$/u.test(
++      entries.mode ?? '',
++    )
++  ) {
++    throw new Error(`${documentPath}: every TypeScript fence needs exact id and mode metadata`);
++  }
++  return entries;
++}
++
++function compile(id, source, expectedDiagnostic, execute = false) {
++  const sourcePath = resolve(temporaryRoot, `${id}.ts`);
++  const configPath = resolve(temporaryRoot, `${id}.json`);
++  const outputRoot = resolve(temporaryRoot, `runtime-${id}`);
++  writeFileSync(sourcePath, source);
++  writeFileSync(
++    configPath,
++    `${JSON.stringify({
++      extends: resolve(repositoryRoot, 'tsconfig.base.json'),
++      compilerOptions: {
++        noEmit: !execute,
++        ...(execute ? { outDir: outputRoot } : {}),
++        strict: true,
++        baseUrl: repositoryRoot,
++        paths: {
++          tellplot: ['packages/tellplot/dist/index.d.ts'],
++          'tellplot/core': ['packages/tellplot/dist/core.d.ts'],
++          'tellplot/react': ['packages/tellplot/dist/react.d.ts'],
++          'tellplot/vue': ['packages/tellplot/dist/vue.d.ts'],
++        },
++      },
++      files: [sourcePath],
++    })}\n`,
++  );
++  const result = spawnSync('pnpm', ['exec', 'tsc', '-p', configPath, '--pretty', 'false'], {
++    cwd: repositoryRoot,
++    encoding: 'utf8',
++  });
++  const output = `${result.stdout}${result.stderr}`;
++  if (expectedDiagnostic === undefined) {
++    if (result.status !== 0) throw new Error(`${id}: TypeScript fence failed\n${output}`);
++  } else if (result.status === 0 || !output.includes(`error ${expectedDiagnostic}:`)) {
++    throw new Error(`${id}: expected only ${expectedDiagnostic}\n${output}`);
++  } else {
++    const diagnostics = [...output.matchAll(/error (TS\d+):/gu)].map(match => match[1]);
++    if (diagnostics.some(code => code !== expectedDiagnostic)) {
++      throw new Error(`${id}: unexpected TypeScript diagnostic\n${output}`);
++    }
++  }
++  if (execute) {
++    const runtime = spawnSync(process.execPath, [resolve(outputRoot, `${id}.js`)], {
++      cwd: temporaryRoot,
++      encoding: 'utf8',
++    });
++    if (runtime.status !== 0) {
++      throw new Error(`${id}: TypeScript fence runtime failed\n${runtime.stdout}${runtime.stderr}`);
++    }
++  }
++}
++
++try {
++  const seen = new Set();
++  const compositions = new Map();
++  for (const documentPath of documents) {
++    const source = readFileSync(resolve(repositoryRoot, documentPath), 'utf8');
++    const rawTypeFenceCount = [...source.matchAll(/```(?:ts|typescript|tsx)(?:\s|\n)/gu)].length;
++    const fences = [...source.matchAll(fencePattern)];
++    if (fences.length !== rawTypeFenceCount) {
++      throw new Error(`${documentPath}: a TypeScript fence is missing explicit metadata`);
++    }
++    for (const fence of fences) {
++      const fields = metadata(fence[1] ?? '', documentPath);
++      const id = fields.id;
++      const mode = fields.mode;
++      if (id === undefined || mode === undefined || seen.has(id)) {
++        throw new Error(`${documentPath}: duplicate or unreadable TypeScript fence id`);
++      }
++      seen.add(id);
++      const code = fence[2] ?? '';
++      if (mode.startsWith('compose:') || mode.startsWith('compose-runtime:')) {
++        const runtime = mode.startsWith('compose-runtime:');
++        const group = mode.slice(runtime ? 'compose-runtime:'.length : 'compose:'.length);
++        const existing = compositions.get(group);
++        if (existing !== undefined && existing.runtime !== runtime) {
++          throw new Error(`${documentPath}: composition runtime mode must stay consistent`);
++        }
++        compositions.set(group, {
++          runtime,
++          parts: [...(existing?.parts ?? []), code],
++        });
++      } else {
++        compile(id, code, mode.startsWith('expected-diagnostic:') ? mode.slice(20) : undefined);
++      }
++      receipts.push({ document: documentPath, id, mode });
++    }
++  }
++  for (const [group, composition] of compositions) {
++    compile(`composition-${group}`, composition.parts.join('\n'), undefined, composition.runtime);
++  }
++  process.stdout.write(
++    `${JSON.stringify({
++      status: 'passed',
++      documents: documents.length,
++      fences: receipts.length,
++      compositions: compositions.size,
++      receipts,
++    })}\n`,
++  );
++} finally {
++  rmSync(temporaryRoot, { recursive: true, force: true });
++}

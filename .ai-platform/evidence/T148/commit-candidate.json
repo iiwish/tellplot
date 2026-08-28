@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T148",
+  "status": "needs_review",
+  "branch": "codex/g003-r2a",
+  "expectedParent": "4d754cc9d635d097370b674633c972fb0ac199a1",
+  "commitSubject": "feat!: add multi-series categorical comparisons",
+  "stagedPaths": {
+    "total": 248,
+    "source": 154,
+    "evidence": 94,
+    "unexpectedSource": 0,
+    "missingSource": 0,
+    "forbidden": 0
+  },
+  "sourceManifest": {
+    "count": 462,
+    "sha256": "fc167c6800dd5474293fedf293e3448f29aeb0d865ed3e03a179d179a4e1958a",
+    "mismatchCount": 0
+  },
+  "release": {
+    "artifactSha256": "44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca",
+    "descriptorSha256": "729bf4a1e67d8249d1146ebf5e961f0376f059ff8aa14750127c99c565570182",
+    "workflowSha256": "d85da954fee1e5696ddfd6bd678f68ead50f2d4d815ecda45ca9e9d2ea53ac63"
+  },
+  "commitIdentitySource": "refs/heads/codex/g003-r2a",
+  "remoteWritesPerformed": false,
+  "publicReleaseActionsPerformed": false
+}

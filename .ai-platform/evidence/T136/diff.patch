@@ -1,0 +1,2353 @@
+diff --git a/.ai-platform/specs/015-multi-series-categorical-comparison/tasks.md b/.ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+index 213dd28..36d4639 100644
+--- a/.ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
++++ b/.ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+@@ -151,7 +151,7 @@ persistence与canonical fingerprint基础，同时让旧projectors和内部consu
+ 
+ ## T136 - 实现 Comparison Projection 与 State Invariants
+ 
+-- Status: Ready
++- Status: Needs_Review
+ - Priority: P0
+ - Depends on: T135 Needs_Review且spec-compliance review通过
+ - Blocks: T137-T141
+diff --git a/packages/core/src/charts/categorical/comparisonProjection.ts b/packages/core/src/charts/categorical/comparisonProjection.ts
+new file mode 100644
+index 0000000..482b707
+--- /dev/null
++++ b/packages/core/src/charts/categorical/comparisonProjection.ts
+@@ -0,0 +1,356 @@
++import { validationFailure, validationIssue, validationSuccess } from '../../domain/errors';
++import type { ViewNodeId } from '../../domain/ids';
++import type {
++  CategoricalComparisonSourceData,
++  CategoricalComparisonSourceItem,
++  SourceData,
++  ViewGroup,
++  ViewSpec,
++} from '../../domain/model';
++import { validateViewSpec } from '../../domain/validation';
++import { collectLeafSourceIds } from '../../domain/viewTree';
++import type {
++  CategoricalComparisonDatum,
++  CategoricalComparisonProjectionResult,
++  CategoricalComparisonSeriesValue,
++} from './comparisonTypes';
++
++interface CompensatedAccumulator {
++  sum: number;
++  correction: number;
++}
++
++interface IndexedComparisonSource {
++  readonly itemsById: ReadonlyMap<string, CategoricalComparisonSourceItem>;
++  readonly sourceIndexById: ReadonlyMap<string, number>;
++}
++
++const COMPARISON_SOURCE_KEYS = [
++  'schemaVersion',
++  'dataKind',
++  'datasetId',
++  'currency',
++  'series',
++  'items',
++] as const;
++const COMPARISON_SERIES_KEYS = ['id', 'label', 'metadata'] as const;
++const COMPARISON_ITEM_KEYS = ['id', 'label', 'sourceRef', 'metadata', 'values'] as const;
++const COMPARISON_VALUE_KEYS = ['seriesId', 'amount', 'sourceRef', 'metadata'] as const;
++const VIEW_KEYS = [
++  'schemaVersion',
++  'datasetId',
++  'chartType',
++  'revision',
++  'rootOrder',
++  'groups',
++  'collapsedGroupIds',
++  'pinnedItemIds',
++  'annotations',
++  'emphasis',
++] as const;
++const GROUP_KEYS = ['id', 'label', 'childIds'] as const;
++
++type UnknownRecord = Record<string, unknown>;
++
++function descriptorValue(record: object, key: PropertyKey): unknown {
++  const descriptor = Object.getOwnPropertyDescriptor(record, key);
++  return descriptor !== undefined && 'value' in descriptor ? descriptor.value : undefined;
++}
++
++function snapshotArray(value: unknown, snapshotEntry: (entry: unknown) => unknown): unknown[] {
++  const array = value as readonly unknown[];
++  const lengthDescriptor = Object.getOwnPropertyDescriptor(array, 'length');
++  const length = (lengthDescriptor as PropertyDescriptor & { readonly value: number }).value;
++  const snapshot = new Array<unknown>(length);
++  for (let index = 0; index < length; index += 1) {
++    snapshot[index] = snapshotEntry(descriptorValue(array, String(index)));
++  }
++  return snapshot;
++}
++
++function snapshotRecord(record: object, keys: readonly string[]): UnknownRecord {
++  return Object.fromEntries(keys.map(key => [key, descriptorValue(record, key)]));
++}
++
++function snapshotDynamicRecord(value: unknown): unknown {
++  if (value === undefined) {
++    return undefined;
++  }
++  const record = value as UnknownRecord;
++  return Object.fromEntries(
++    Object.getOwnPropertyNames(record).map(key => [key, descriptorValue(record, key)]),
++  );
++}
++
++function snapshotSeries(value: unknown): unknown {
++  const record = value as object;
++  const snapshot = snapshotRecord(record, COMPARISON_SERIES_KEYS);
++  return { ...snapshot, metadata: snapshotDynamicRecord(snapshot['metadata']) };
++}
++
++function snapshotComparisonValue(value: unknown): unknown {
++  const record = value as object;
++  const snapshot = snapshotRecord(record, COMPARISON_VALUE_KEYS);
++  return { ...snapshot, metadata: snapshotDynamicRecord(snapshot['metadata']) };
++}
++
++function snapshotComparisonItem(value: unknown): unknown {
++  const record = value as object;
++  const snapshot = snapshotRecord(record, COMPARISON_ITEM_KEYS);
++  return {
++    ...snapshot,
++    metadata: snapshotDynamicRecord(snapshot['metadata']),
++    values: snapshotArray(snapshot['values'], snapshotComparisonValue),
++  };
++}
++
++function snapshotComparisonSource(sourceData: SourceData): UnknownRecord {
++  const snapshot = snapshotRecord(sourceData, COMPARISON_SOURCE_KEYS);
++  return {
++    ...snapshot,
++    series: snapshotArray(snapshot['series'], snapshotSeries),
++    items: snapshotArray(snapshot['items'], snapshotComparisonItem),
++  };
++}
++
++function snapshotGroup(value: unknown): unknown {
++  const snapshot = snapshotRecord(value as object, GROUP_KEYS);
++  return {
++    ...snapshot,
++    childIds: snapshotArray((snapshot as UnknownRecord)['childIds'], entry => entry),
++  };
++}
++
++function snapshotGroups(value: unknown): UnknownRecord {
++  const record = value as UnknownRecord;
++  return Object.fromEntries(
++    Object.getOwnPropertyNames(record).map(key => [
++      key,
++      snapshotGroup(descriptorValue(record, key)),
++    ]),
++  );
++}
++
++function snapshotView(viewSpec: ViewSpec): UnknownRecord {
++  const snapshot = snapshotRecord(viewSpec, VIEW_KEYS);
++  return {
++    ...snapshot,
++    rootOrder: snapshotArray(snapshot['rootOrder'], entry => entry),
++    groups: snapshotGroups(snapshot['groups']),
++    collapsedGroupIds: snapshotArray(snapshot['collapsedGroupIds'], entry => entry),
++    pinnedItemIds: snapshotArray(snapshot['pinnedItemIds'], entry => entry),
++    annotations: snapshotDynamicRecord(snapshot['annotations']),
++    emphasis: snapshotDynamicRecord(snapshot['emphasis']),
++  };
++}
++
++function createAccumulator(): CompensatedAccumulator {
++  return { sum: 0, correction: 0 };
++}
++
++function add(accumulator: CompensatedAccumulator, value: number): void {
++  const next = accumulator.sum + value;
++  accumulator.correction +=
++    Math.abs(accumulator.sum) >= Math.abs(value)
++      ? accumulator.sum - next + value
++      : value - next + accumulator.sum;
++  accumulator.sum = next;
++}
++
++function canonicalAmount(value: number): number {
++  return value === 0 ? 0 : value;
++}
++
++function total(accumulator: CompensatedAccumulator): number {
++  return canonicalAmount(accumulator.sum + accumulator.correction);
++}
++
++function isSafe(accumulator: CompensatedAccumulator): boolean {
++  const value = total(accumulator);
++  return Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER;
++}
++
++function indexSource(sourceData: CategoricalComparisonSourceData): IndexedComparisonSource {
++  const itemsById = new Map<string, CategoricalComparisonSourceItem>();
++  const sourceIndexById = new Map<string, number>();
++  sourceData.items.forEach((item, index) => {
++    itemsById.set(item.id, item);
++    sourceIndexById.set(item.id, index);
++  });
++  return { itemsById, sourceIndexById };
++}
++
++function getGroup(viewSpec: ViewSpec, nodeId: ViewNodeId): ViewGroup | undefined {
++  const descriptor = Object.getOwnPropertyDescriptor(viewSpec.groups, nodeId);
++  return descriptor !== undefined && 'value' in descriptor
++    ? (descriptor.value as ViewGroup)
++    : undefined;
++}
++
++function numericFailure(
++  sourceIndex: number,
++  seriesIndex: number,
++): CategoricalComparisonProjectionResult {
++  return validationFailure([
++    validationIssue(
++      'INVALID_SOURCE_DATA',
++      'UNSAFE_AMOUNT',
++      `/items/${sourceIndex}/values/${seriesIndex}/amount`,
++      { operation: 'groupAggregate', sourceIndex, seriesIndex },
++    ),
++  ]);
++}
++
++function categoryValues(
++  sourceData: CategoricalComparisonSourceData,
++  item: CategoricalComparisonSourceItem,
++): readonly CategoricalComparisonSeriesValue[] {
++  return sourceData.series.map((series, seriesIndex) => ({
++    seriesId: series.id,
++    label: series.label,
++    amount: canonicalAmount(item.values[seriesIndex]?.amount as number),
++  }));
++}
++
++function aggregateValues(
++  sourceData: CategoricalComparisonSourceData,
++  source: IndexedComparisonSource,
++  sourceIds: readonly string[],
++):
++  | { readonly ok: true; readonly values: readonly CategoricalComparisonSeriesValue[] }
++  | { readonly ok: false; readonly result: CategoricalComparisonProjectionResult } {
++  const accumulators = sourceData.series.map(() => createAccumulator());
++
++  for (const sourceId of sourceIds) {
++    const item = source.itemsById.get(sourceId) as CategoricalComparisonSourceItem;
++    const sourceIndex = source.sourceIndexById.get(sourceId) as number;
++    for (let seriesIndex = 0; seriesIndex < sourceData.series.length; seriesIndex += 1) {
++      const accumulator = accumulators[seriesIndex] as CompensatedAccumulator;
++      add(accumulator, item.values[seriesIndex]?.amount as number);
++      if (!isSafe(accumulator)) {
++        return { ok: false, result: numericFailure(sourceIndex, seriesIndex) };
++      }
++    }
++  }
++
++  return {
++    ok: true,
++    values: sourceData.series.map((series, seriesIndex) => ({
++      seriesId: series.id,
++      label: series.label,
++      amount: total(accumulators[seriesIndex] as CompensatedAccumulator),
++    })),
++  };
++}
++
++function projectValidated(
++  sourceData: CategoricalComparisonSourceData,
++  viewSpec: ViewSpec,
++): CategoricalComparisonProjectionResult {
++  const source = indexSource(sourceData);
++  const pinnedIds = new Set(viewSpec.pinnedItemIds);
++  const collapsedGroupIds = new Set(viewSpec.collapsedGroupIds);
++  const projection: CategoricalComparisonDatum[] = [];
++
++  const push = (datum: Omit<CategoricalComparisonDatum, 'order'>): void => {
++    projection.push({ ...datum, order: projection.length });
++  };
++
++  const projectNode = (nodeId: ViewNodeId): CategoricalComparisonProjectionResult | undefined => {
++    const group = getGroup(viewSpec, nodeId);
++    if (group !== undefined) {
++      if (collapsedGroupIds.has(group.id)) {
++        const sourceIds = collectLeafSourceIds(viewSpec, group.id);
++        const aggregated = aggregateValues(sourceData, source, sourceIds);
++        if (!aggregated.ok) {
++          return aggregated.result;
++        }
++        push({
++          nodeId: group.id,
++          label: group.label,
++          values: aggregated.values,
++          kind: 'group',
++          sourceIds: [...sourceIds],
++          locked: sourceIds.some(sourceId => pinnedIds.has(sourceId)),
++        });
++        return undefined;
++      }
++      for (const childId of group.childIds) {
++        const failure = projectNode(childId);
++        if (failure !== undefined) {
++          return failure;
++        }
++      }
++      return undefined;
++    }
++
++    const item = source.itemsById.get(nodeId) as CategoricalComparisonSourceItem;
++    push({
++      nodeId: item.id,
++      label: item.label,
++      values: categoryValues(sourceData, item),
++      kind: 'category',
++      sourceIds: [item.id],
++      locked: pinnedIds.has(item.id),
++    });
++    return undefined;
++  };
++
++  for (const nodeId of viewSpec.rootOrder) {
++    const failure = projectNode(nodeId);
++    if (failure !== undefined) {
++      return failure;
++    }
++  }
++  return validationSuccess(projection);
++}
++
++/** Projects comparison source and category-only narrative state into a renderer-neutral sequence. */
++export function projectCategoricalComparison(
++  sourceData: SourceData,
++  viewSpec: ViewSpec,
++): CategoricalComparisonProjectionResult {
++  const compatibilityValidation = validateViewSpec(viewSpec, sourceData);
++  if (!compatibilityValidation.ok) {
++    return compatibilityValidation;
++  }
++
++  try {
++    let validatedSchemaVersion: unknown;
++    try {
++      validatedSchemaVersion = descriptorValue(sourceData, 'schemaVersion');
++    } catch {
++      return validationFailure([validationIssue('INVALID_SOURCE_DATA', 'UNREADABLE_INPUT', '/')]);
++    }
++    if (validatedSchemaVersion !== '3.0.0') {
++      return validationFailure([
++        validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_PROJECTOR_GENERATION', '/schemaVersion'),
++      ]);
++    }
++    const viewSnapshot = snapshotView(viewSpec);
++    let sourceSnapshot: UnknownRecord;
++    try {
++      sourceSnapshot = snapshotComparisonSource(sourceData);
++    } catch {
++      return validationFailure([validationIssue('INVALID_SOURCE_DATA', 'UNREADABLE_INPUT', '/')]);
++    }
++    const snapshotValidation = validateViewSpec(
++      viewSnapshot,
++      sourceSnapshot as unknown as SourceData,
++    );
++    if (!snapshotValidation.ok) {
++      return snapshotValidation;
++    }
++    if (sourceSnapshot['schemaVersion'] !== '3.0.0') {
++      return validationFailure([
++        validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_PROJECTOR_GENERATION', '/schemaVersion'),
++      ]);
++    }
++    return projectValidated(
++      sourceSnapshot as unknown as CategoricalComparisonSourceData,
++      snapshotValidation.value,
++    );
++  } catch {
++    return validationFailure([validationIssue('INVALID_VIEW_SPEC', 'UNREADABLE_INPUT', '/')]);
++  }
++}
+diff --git a/packages/core/src/index.ts b/packages/core/src/index.ts
+index eba9011..38a4535 100644
+--- a/packages/core/src/index.ts
++++ b/packages/core/src/index.ts
+@@ -1,5 +1,6 @@
+ export * from './charts/categorical/projection';
+ export * from './charts/categorical/types';
++export * from './charts/categorical/comparisonProjection';
+ export type * from './charts/categorical/comparisonTypes';
+ export * from './charts/waterfall/projection';
+ export * from './charts/waterfall/types';
+diff --git a/packages/core/src/store/editorStore.ts b/packages/core/src/store/editorStore.ts
+index 0c1aa66..76cc8db 100644
+--- a/packages/core/src/store/editorStore.ts
++++ b/packages/core/src/store/editorStore.ts
+@@ -397,6 +397,25 @@ function reconcileSelection(
+     : { ...selection, sourceIds: nextSourceIds };
+ }
+ 
++function crossesComparisonBoundary(
++  previousConfig: ChartConfig | null,
++  nextConfig: ChartConfig,
++): boolean {
++  if (previousConfig === null) {
++    return false;
++  }
++  const previousComparison = previousConfig.data.schemaVersion === '3.0.0';
++  const nextComparison = nextConfig.data.schemaVersion === '3.0.0';
++  if (!previousComparison && !nextComparison) {
++    return false;
++  }
++  return (
++    previousConfig.data.schemaVersion !== nextConfig.data.schemaVersion ||
++    previousConfig.data.datasetId !== nextConfig.data.datasetId ||
++    previousConfig.type !== nextConfig.type
++  );
++}
++
+ function snapshot(state: ActiveState, destroyed: boolean): EditorStoreSnapshot {
+   if (destroyed) {
+     return {
+@@ -704,6 +723,7 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
+             : created.session;
+       const visibleView =
+         mode === 'controlled' ? (requestedView ?? null) : retainedSession.viewSpec;
++      const preserveSelection = !crossesComparisonBoundary(previousState.config, config);
+       pendingControlledSession = null;
+       pendingControlledActionIds.clear();
+       state = {
+@@ -711,7 +731,9 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
+         session: retainedSession,
+         controlledView: mode === 'controlled' ? requestedView : undefined,
+         issues: [],
+-        selection: reconcileSelection(previousState.selection, config, visibleView),
++        selection: preserveSelection
++          ? reconcileSelection(previousState.selection, config, visibleView)
++          : null,
+         mode,
+       };
+       if (acceptedOptions.defaultView === undefined) {
+@@ -769,6 +791,7 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
+       if (destroyed) {
+         return;
+       }
++      const previousSelection = internalSnapshot().selection;
+       const requestedSelection =
+         nextSelection === null
+           ? null
+@@ -791,9 +814,11 @@ export function createEditorStore(initialOptions: EditorStoreOptions): EditorSto
+       if (visibleSelection === null && pendingSelection !== null) {
+         return;
+       }
+-      const publicSelection = detachedFrozen(visibleSelection);
+-      invokeCallback('onSelectionChange', () => options.onSelectionChange?.(publicSelection));
+-      notify();
++      if (!sameSelection(previousSelection, visibleSelection)) {
++        const publicSelection = detachedFrozen(visibleSelection);
++        invokeCallback('onSelectionChange', () => options.onSelectionChange?.(publicSelection));
++        notify();
++      }
+     },
+     destroy(): void {
+       if (destroyed) {
+diff --git a/packages/core/tests/categorical/comparison-invariants.test.ts b/packages/core/tests/categorical/comparison-invariants.test.ts
+new file mode 100644
+index 0000000..6616ec9
+--- /dev/null
++++ b/packages/core/tests/categorical/comparison-invariants.test.ts
+@@ -0,0 +1,355 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  executeCommand,
++  parseEditorCommand,
++  projectCategoricalComparison,
++  redoSession,
++  undoSession,
++  validateEditorInvariants,
++  type CategoricalComparisonSourceData,
++  type EditorCommand,
++  type EditorSession,
++  type ViewSpec,
++} from '../../src';
++
++const source = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'comparison-command-invariants',
++  series: [
++    { id: 'actual', label: 'Actual' },
++    { id: 'budget', label: 'Budget' },
++  ],
++  items: [
++    {
++      id: 'alpha',
++      label: 'Alpha',
++      values: [
++        { seriesId: 'actual', amount: 8 },
++        { seriesId: 'budget', amount: 80 },
++      ],
++    },
++    {
++      id: 'beta',
++      label: 'Beta',
++      values: [
++        { seriesId: 'actual', amount: -3 },
++        { seriesId: 'budget', amount: 7 },
++      ],
++    },
++    {
++      id: 'gamma',
++      label: 'Gamma',
++      values: [
++        { seriesId: 'actual', amount: 5 },
++        { seriesId: 'budget', amount: -2 },
++      ],
++    },
++  ],
++} as const satisfies CategoricalComparisonSourceData;
++
++function session(): EditorSession {
++  const result = createEditorSession(source);
++  if (!result.ok) {
++    throw new Error('Expected a comparison session');
++  }
++  return result.value;
++}
++
++function command(input: Omit<EditorCommand, 'schemaVersion' | 'source'>): EditorCommand {
++  return { ...input, schemaVersion: '1.0.0', source: 'host' } as EditorCommand;
++}
++
++function viewContent(view: ViewSpec): unknown {
++  return { ...view, revision: 0 };
++}
++
++describe('comparison narrative invariants', () => {
++  it('keeps commands, history and projection category/group-only without mutating source', () => {
++    const initial = session();
++    expect(initial.sourceData).toBe(source);
++    const sourceSnapshot = structuredClone(source);
++
++    const grouped = executeCommand(
++      initial,
++      command({
++        id: 'group-alpha-beta',
++        type: 'createGroup',
++        baseRevision: 0,
++        payload: {
++          groupId: 'alpha-beta',
++          label: 'Alpha and beta',
++          nodeIds: ['alpha', 'beta'],
++          initiallyCollapsed: true,
++        },
++      }),
++    );
++    expect(grouped.ok).toBe(true);
++    if (!grouped.ok) {
++      throw new Error('Expected group command to succeed');
++    }
++    expect(grouped.session.sourceData).toBe(source);
++    expect(validateEditorInvariants(source, grouped.viewSpec).ok).toBe(true);
++
++    const projection = projectCategoricalComparison(source, grouped.viewSpec);
++    expect(projection).toMatchObject({
++      ok: true,
++      value: [
++        {
++          nodeId: 'alpha-beta',
++          kind: 'group',
++          sourceIds: ['alpha', 'beta'],
++          values: [
++            { seriesId: 'actual', amount: 5 },
++            { seriesId: 'budget', amount: 87 },
++          ],
++        },
++        { nodeId: 'gamma', kind: 'category', sourceIds: ['gamma'] },
++      ],
++    });
++    if (projection.ok) {
++      expect(projection.value.every(datum => !Object.hasOwn(datum, 'amount'))).toBe(true);
++      expect(projection.value.flatMap(datum => datum.sourceIds).some(id => id === 'actual')).toBe(
++        false,
++      );
++    }
++
++    const pinned = executeCommand(
++      grouped.session,
++      command({
++        id: 'pin-gamma',
++        type: 'pinItem',
++        baseRevision: 1,
++        payload: { itemId: 'gamma' },
++      }),
++    );
++    expect(pinned.ok).toBe(true);
++    if (!pinned.ok) {
++      throw new Error('Expected pin command to succeed');
++    }
++    expect(pinned.session.sourceData).toBe(source);
++
++    const undone = undoSession(pinned.session, {
++      id: 'undo-pin-gamma',
++      source: 'keyboard',
++      baseRevision: 2,
++    });
++    expect(undone.ok).toBe(true);
++    if (undone.ok) {
++      expect(undone.session.sourceData).toBe(source);
++      expect(viewContent(undone.viewSpec)).toEqual(viewContent(grouped.viewSpec));
++    }
++    expect(source).toEqual(sourceSnapshot);
++  });
++
++  it('does not promote series identifiers or commands into narrative state', () => {
++    const initial = session();
++    const seriesCommand = command({
++      id: 'pin-series',
++      type: 'pinItem',
++      baseRevision: 0,
++      payload: { itemId: 'actual' },
++    });
++
++    const result = executeCommand(initial, seriesCommand);
++    expect(result).toMatchObject({
++      ok: false,
++      error: {
++        code: 'ITEM_NOT_FOUND',
++        path: '/payload/itemId',
++      },
++    });
++    expect(result.session).toBe(initial);
++    expect(result.session.sourceData).toBe(source);
++
++    expect(
++      parseEditorCommand({
++        schemaVersion: '1.0.0',
++        id: 'select-series',
++        type: 'selectSeries',
++        source: 'host',
++        baseRevision: 0,
++        payload: { seriesId: 'actual' },
++      }),
++    ).toMatchObject({
++      ok: false,
++      error: { code: 'INVALID_COMMAND', reason: 'INVALID_TYPE', path: '/type' },
++    });
++  });
++
++  it('keeps category and series namespaces distinct when their string identifiers match', () => {
++    const sharedNamespaceSource = {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: 'comparison-shared-namespace',
++      series: [
++        { id: 'actual', label: 'Actual series' },
++        { id: 'budget', label: 'Budget series' },
++      ],
++      items: [
++        {
++          id: 'actual',
++          label: 'Actual category',
++          values: [
++            { seriesId: 'actual', amount: 4 },
++            { seriesId: 'budget', amount: 9 },
++          ],
++        },
++        {
++          id: 'other',
++          label: 'Other category',
++          values: [
++            { seriesId: 'actual', amount: 2 },
++            { seriesId: 'budget', amount: 3 },
++          ],
++        },
++      ],
++    } as const satisfies CategoricalComparisonSourceData;
++    const created = createEditorSession(sharedNamespaceSource);
++    if (!created.ok) {
++      throw new Error('Expected a shared-namespace session');
++    }
++
++    const pinned = executeCommand(
++      created.value,
++      command({
++        id: 'pin-shared-category',
++        type: 'pinItem',
++        baseRevision: 0,
++        payload: { itemId: 'actual' },
++      }),
++    );
++    expect(pinned.ok).toBe(true);
++    if (!pinned.ok) {
++      throw new Error('Expected the category identifier to remain pinnable');
++    }
++    const projected = projectCategoricalComparison(sharedNamespaceSource, pinned.viewSpec);
++    expect(projected).toMatchObject({
++      ok: true,
++      value: [
++        {
++          nodeId: 'actual',
++          sourceIds: ['actual'],
++          locked: true,
++          values: [
++            { seriesId: 'actual', label: 'Actual series', amount: 4 },
++            { seriesId: 'budget', label: 'Budget series', amount: 9 },
++          ],
++        },
++        { nodeId: 'other', sourceIds: ['other'] },
++      ],
++    });
++
++    const seriesOnly = executeCommand(
++      pinned.session,
++      command({
++        id: 'pin-series-only',
++        type: 'pinItem',
++        baseRevision: 1,
++        payload: { itemId: 'budget' },
++      }),
++    );
++    expect(seriesOnly).toMatchObject({
++      ok: false,
++      error: { code: 'ITEM_NOT_FOUND', path: '/payload/itemId' },
++    });
++  });
++
++  it('preserves nested comparison groups through moveGroup, undo and redo', () => {
++    const nestedSource = {
++      ...source,
++      datasetId: 'comparison-nested-history',
++      items: [
++        ...source.items,
++        {
++          id: 'delta',
++          label: 'Delta',
++          values: [
++            { seriesId: 'actual', amount: 1 },
++            { seriesId: 'budget', amount: 2 },
++          ],
++        },
++      ],
++    } as const satisfies CategoricalComparisonSourceData;
++    const created = createEditorSession(nestedSource);
++    if (!created.ok) {
++      throw new Error('Expected a nested comparison session');
++    }
++    const inner = executeCommand(
++      created.value,
++      command({
++        id: 'create-inner',
++        type: 'createGroup',
++        baseRevision: 0,
++        payload: {
++          groupId: 'inner',
++          label: 'Inner',
++          nodeIds: ['alpha', 'beta'],
++          initiallyCollapsed: false,
++        },
++      }),
++    );
++    if (!inner.ok) {
++      throw new Error('Expected inner group creation');
++    }
++    const outer = executeCommand(
++      inner.session,
++      command({
++        id: 'create-outer',
++        type: 'createGroup',
++        baseRevision: 1,
++        payload: {
++          groupId: 'outer',
++          label: 'Outer',
++          nodeIds: ['inner', 'gamma'],
++          initiallyCollapsed: false,
++        },
++      }),
++    );
++    if (!outer.ok) {
++      throw new Error('Expected outer group creation');
++    }
++    expect(outer.viewSpec.groups['outer']?.childIds).toEqual(['inner', 'gamma']);
++
++    const moved = executeCommand(
++      outer.session,
++      command({
++        id: 'move-outer',
++        type: 'moveGroup',
++        baseRevision: 2,
++        payload: { groupId: 'outer', target: { containerId: 'root', index: 1 } },
++      }),
++    );
++    expect(moved.ok).toBe(true);
++    if (!moved.ok) {
++      throw new Error('Expected nested group move');
++    }
++    expect(moved.viewSpec.rootOrder).toEqual(['delta', 'outer']);
++    expect(moved.session.sourceData).toBe(nestedSource);
++
++    const undone = undoSession(moved.session, {
++      id: 'undo-move-outer',
++      source: 'keyboard',
++      baseRevision: 3,
++    });
++    expect(undone.ok).toBe(true);
++    if (!undone.ok) {
++      throw new Error('Expected nested move undo');
++    }
++    expect(viewContent(undone.viewSpec)).toEqual(viewContent(outer.viewSpec));
++
++    const redone = redoSession(undone.session, {
++      id: 'redo-move-outer',
++      source: 'keyboard',
++      baseRevision: 4,
++    });
++    expect(redone.ok).toBe(true);
++    if (redone.ok) {
++      expect(redone.viewSpec.rootOrder).toEqual(['delta', 'outer']);
++      expect(redone.session.sourceData).toBe(nestedSource);
++      expect(validateEditorInvariants(nestedSource, redone.viewSpec).ok).toBe(true);
++    }
++  });
++});
+diff --git a/packages/core/tests/categorical/comparison-property-sequences.test.ts b/packages/core/tests/categorical/comparison-property-sequences.test.ts
+new file mode 100644
+index 0000000..4ae00e9
+--- /dev/null
++++ b/packages/core/tests/categorical/comparison-property-sequences.test.ts
+@@ -0,0 +1,263 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createEditorSession,
++  executeCommand,
++  projectCategoricalComparison,
++  redoSession,
++  undoSession,
++  validateViewSpec,
++  type CategoricalComparisonSourceData,
++  type EditorCommand,
++  type EditorSession,
++  type SessionActionMeta,
++  type ViewNodeId,
++} from '../../src';
++
++const source = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'comparison-property-sequences',
++  series: [
++    { id: 'actual', label: 'Actual' },
++    { id: 'budget', label: 'Budget' },
++    { id: 'forecast', label: 'Forecast' },
++  ],
++  items: [
++    {
++      id: 'a',
++      label: 'A',
++      values: [
++        { seriesId: 'actual', amount: 11 },
++        { seriesId: 'budget', amount: 101 },
++        { seriesId: 'forecast', amount: -9 },
++      ],
++    },
++    {
++      id: 'b',
++      label: 'B',
++      values: [
++        { seriesId: 'actual', amount: -3 },
++        { seriesId: 'budget', amount: 17 },
++        { seriesId: 'forecast', amount: 23 },
++      ],
++    },
++    {
++      id: 'c',
++      label: 'C',
++      values: [
++        { seriesId: 'actual', amount: 5 },
++        { seriesId: 'budget', amount: -7 },
++        { seriesId: 'forecast', amount: 29 },
++      ],
++    },
++    {
++      id: 'd',
++      label: 'D',
++      values: [
++        { seriesId: 'actual', amount: 2 },
++        { seriesId: 'budget', amount: 31 },
++        { seriesId: 'forecast', amount: -13 },
++      ],
++    },
++  ],
++} as const satisfies CategoricalComparisonSourceData;
++const sourceSnapshot: CategoricalComparisonSourceData = structuredClone(source);
++
++function prng(seed: number): () => number {
++  let state = seed >>> 0;
++  return () => {
++    state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
++    return state / 0x1_0000_0000;
++  };
++}
++
++function initialSession(): EditorSession {
++  const result = createEditorSession(source, { historyLimit: 32 });
++  if (!result.ok) {
++    throw new Error('Expected a comparison session');
++  }
++  return result.value;
++}
++
++function envelope<T extends Omit<EditorCommand, 'schemaVersion' | 'source'>>(
++  input: T,
++): EditorCommand {
++  return { ...input, schemaVersion: '1.0.0', source: 'host' } as EditorCommand;
++}
++
++function commandFor(step: number, session: EditorSession, random: () => number): EditorCommand {
++  const baseRevision = session.viewSpec.revision;
++  const group = session.viewSpec.groups['property-group'];
++  const rootItems = session.viewSpec.rootOrder.filter(nodeId =>
++    source.items.some(item => item.id === nodeId),
++  );
++  const choice = Math.floor(random() * 7);
++
++  if (choice === 0 && group === undefined && rootItems.length >= 2) {
++    return envelope({
++      id: `group-${step}`,
++      type: 'createGroup',
++      baseRevision,
++      payload: {
++        groupId: 'property-group',
++        label: 'Property group',
++        nodeIds: rootItems.slice(0, 2),
++        initiallyCollapsed: false,
++      },
++    });
++  }
++  if (choice === 1 && group !== undefined) {
++    return envelope({
++      id: `collapse-${step}`,
++      type: session.viewSpec.collapsedGroupIds.includes(group.id) ? 'expandGroup' : 'collapseGroup',
++      baseRevision,
++      payload: { groupId: group.id },
++    } as Omit<EditorCommand, 'schemaVersion' | 'source'>);
++  }
++  if (choice === 2 && group !== undefined) {
++    return envelope({
++      id: `ungroup-${step}`,
++      type: 'ungroup',
++      baseRevision,
++      payload: { groupId: group.id },
++    });
++  }
++  if (choice === 3) {
++    return envelope({
++      id: `pin-${step}`,
++      type: 'pinItem',
++      baseRevision,
++      payload: { itemId: 'd' },
++    });
++  }
++  if (choice === 4) {
++    return envelope({
++      id: `unpin-${step}`,
++      type: 'unpinItem',
++      baseRevision,
++      payload: { itemId: 'd' },
++    });
++  }
++  if (choice === 5) {
++    return envelope({
++      id: `note-${step}`,
++      type: 'setAnnotation',
++      baseRevision,
++      payload: { nodeId: 'a', text: step % 2 === 0 ? `note-${step}` : null },
++    });
++  }
++  const itemId = rootItems[Math.floor(random() * rootItems.length)] ?? 'a';
++  return envelope({
++    id: `move-${step}`,
++    type: 'moveItem',
++    baseRevision,
++    payload: {
++      itemId,
++      target: { containerId: 'root', index: Math.floor(random() * (rootItems.length + 1)) },
++    },
++  });
++}
++
++function action(id: string, session: EditorSession): SessionActionMeta {
++  return { id, source: 'host', baseRevision: session.viewSpec.revision };
++}
++
++function assertProjectionInvariants(session: EditorSession): void {
++  const result = projectCategoricalComparison(source, session.viewSpec);
++  expect(result.ok).toBe(true);
++  if (!result.ok) {
++    return;
++  }
++
++  const projectedSourceIds = result.value.flatMap(datum => datum.sourceIds);
++  expect([...projectedSourceIds].sort()).toEqual(source.items.map(item => item.id).sort());
++  expect(new Set(projectedSourceIds).size).toBe(source.items.length);
++
++  for (const [order, datum] of result.value.entries()) {
++    expect(datum.order).toBe(order);
++    expect(datum.values.map(value => value.seriesId)).toEqual(
++      source.series.map(series => series.id),
++    );
++    expect(datum).not.toHaveProperty('amount');
++    for (const [seriesIndex, value] of datum.values.entries()) {
++      const expected = datum.sourceIds.reduce((sum, sourceId) => {
++        const item = source.items.find(candidate => candidate.id === sourceId);
++        return sum + (item?.values[seriesIndex]?.amount ?? 0);
++      }, 0);
++      expect(value.amount).toBe(expected === 0 ? 0 : expected);
++    }
++  }
++}
++
++function runSeed(seed: number): EditorSession {
++  const random = prng(seed);
++  let current = initialSession();
++
++  for (let step = 0; step < 100; step += 1) {
++    const before = current;
++    const sourceBefore = structuredClone(before.sourceData);
++    const viewBefore = structuredClone(before.viewSpec);
++    const operation = Math.floor(random() * 10);
++    const result =
++      operation === 8
++        ? undoSession(current, action(`undo-${step}`, current))
++        : operation === 9
++          ? redoSession(current, action(`redo-${step}`, current))
++          : executeCommand(current, commandFor(step, current, random));
++
++    if (result.ok) {
++      current = result.session;
++    } else {
++      expect(result.session).toBe(before);
++    }
++    expect(before.sourceData).toEqual(sourceBefore);
++    expect(before.viewSpec).toEqual(viewBefore);
++    expect(current.sourceData).toBe(source);
++    expect(validateViewSpec(current.viewSpec, source).ok).toBe(true);
++    assertProjectionInvariants(current);
++  }
++
++  expect(source).toEqual(sourceSnapshot);
++
++  return current;
++}
++
++describe('comparison seeded command sequences', () => {
++  it('leaves the property fixture and supplied view deep-equal after projection', () => {
++    const current = initialSession();
++    const sourceBefore = structuredClone(source);
++    const viewBefore = structuredClone(current.viewSpec);
++
++    expect(projectCategoricalComparison(source, current.viewSpec).ok).toBe(true);
++
++    expect(source).toEqual(sourceBefore);
++    expect(current.viewSpec).toEqual(viewBefore);
++    expect(current.sourceData).toBe(source);
++  });
++
++  it('preserves source identity and independent per-series coverage under replay', () => {
++    for (let seed = 1; seed <= 12; seed += 1) {
++      const first = runSeed(seed);
++      const second = runSeed(seed);
++      expect(second.viewSpec).toEqual(first.viewSpec);
++      expect(second.undoStack).toEqual(first.undoStack);
++      expect(second.redoStack).toEqual(first.redoStack);
++      expect(second.processedActionIds).toEqual(first.processedActionIds);
++    }
++  });
++
++  it('keeps every projected source identifier in narrative order, never series space', () => {
++    const current = runSeed(41);
++    const result = projectCategoricalComparison(source, current.viewSpec);
++    if (!result.ok) {
++      throw new Error('Expected a comparison projection');
++    }
++    const seriesIds = new Set(source.series.map(series => series.id));
++    expect(
++      result.value
++        .flatMap(datum => datum.sourceIds as readonly ViewNodeId[])
++        .every(sourceId => !seriesIds.has(sourceId)),
++    ).toBe(true);
++  });
++});
+diff --git a/packages/core/tests/categorical/projectCategoricalComparison.test.ts b/packages/core/tests/categorical/projectCategoricalComparison.test.ts
+new file mode 100644
+index 0000000..c75e8b5
+--- /dev/null
++++ b/packages/core/tests/categorical/projectCategoricalComparison.test.ts
+@@ -0,0 +1,785 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  createInitialViewSpec,
++  projectCategoricalComparison,
++  validateSourceData,
++  type CategoricalComparisonSourceData,
++  type CategoricalComparisonViewSpec,
++  type CategoricalSourceData,
++  type CurrentViewSpec,
++  type SourceData,
++} from '../../src';
++
++const comparisonSource = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'comparison-projection',
++  series: [
++    { id: 'actual', label: 'Actual' },
++    { id: 'budget', label: 'Budget' },
++    { id: 'forecast', label: 'Forecast' },
++  ],
++  items: [
++    {
++      id: 'north',
++      label: 'North',
++      values: [
++        { seriesId: 'actual', amount: 10 },
++        { seriesId: 'budget', amount: 20 },
++        { seriesId: 'forecast', amount: -5 },
++      ],
++    },
++    {
++      id: 'south',
++      label: 'South',
++      values: [
++        { seriesId: 'actual', amount: -4 },
++        { seriesId: 'budget', amount: 3 },
++        { seriesId: 'forecast', amount: 7 },
++      ],
++    },
++    {
++      id: 'zero',
++      label: 'Zero',
++      values: [
++        { seriesId: 'actual', amount: -0 },
++        { seriesId: 'budget', amount: 0 },
++        { seriesId: 'forecast', amount: -0 },
++      ],
++    },
++    {
++      id: 'tail',
++      label: 'Tail',
++      values: [
++        { seriesId: 'actual', amount: 1 },
++        { seriesId: 'budget', amount: 2 },
++        { seriesId: 'forecast', amount: 3 },
++      ],
++    },
++  ],
++} as const satisfies CategoricalComparisonSourceData;
++
++function initialView(
++  source: CategoricalComparisonSourceData = comparisonSource,
++): CategoricalComparisonViewSpec {
++  const result = createInitialViewSpec(source);
++  if (!result.ok || result.value.schemaVersion !== '3.0.0') {
++    throw new Error('Expected a comparison view');
++  }
++  return result.value;
++}
++
++function recursiveView(
++  collapsedGroupIds: readonly ('inner' | 'outer')[],
++): CategoricalComparisonViewSpec {
++  return {
++    ...initialView(),
++    rootOrder: ['outer', 'tail'],
++    groups: {
++      inner: { id: 'inner', label: 'Inner', childIds: ['north', 'south'] },
++      outer: { id: 'outer', label: 'Outer', childIds: ['inner', 'zero'] },
++    },
++    collapsedGroupIds,
++    pinnedItemIds: ['south'],
++  };
++}
++
++describe('projectCategoricalComparison', () => {
++  it('projects category-major values in declared series order and canonicalizes signed zero', () => {
++    const result = projectCategoricalComparison(comparisonSource, initialView());
++
++    expect(result).toEqual({
++      ok: true,
++      value: [
++        {
++          nodeId: 'north',
++          label: 'North',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 10 },
++            { seriesId: 'budget', label: 'Budget', amount: 20 },
++            { seriesId: 'forecast', label: 'Forecast', amount: -5 },
++          ],
++          kind: 'category',
++          sourceIds: ['north'],
++          locked: false,
++          order: 0,
++        },
++        {
++          nodeId: 'south',
++          label: 'South',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: -4 },
++            { seriesId: 'budget', label: 'Budget', amount: 3 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 7 },
++          ],
++          kind: 'category',
++          sourceIds: ['south'],
++          locked: false,
++          order: 1,
++        },
++        {
++          nodeId: 'zero',
++          label: 'Zero',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 0 },
++            { seriesId: 'budget', label: 'Budget', amount: 0 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 0 },
++          ],
++          kind: 'category',
++          sourceIds: ['zero'],
++          locked: false,
++          order: 2,
++        },
++        {
++          nodeId: 'tail',
++          label: 'Tail',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 1 },
++            { seriesId: 'budget', label: 'Budget', amount: 2 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 3 },
++          ],
++          kind: 'category',
++          sourceIds: ['tail'],
++          locked: false,
++          order: 3,
++        },
++      ],
++      errors: [],
++    });
++    if (!result.ok) {
++      throw new Error('Expected a comparison projection');
++    }
++    expect(result.value[2]?.values.every(value => Object.is(value.amount, 0))).toBe(true);
++    expect(result.value).not.toBe(comparisonSource.items);
++    expect(Object.is(comparisonSource.items[2]?.values[0]?.amount, -0)).toBe(true);
++    expect(Object.is(comparisonSource.items[2]?.values[2]?.amount, -0)).toBe(true);
++  });
++
++  it('projects empty sources and expanded or collapsed recursive groups deterministically', () => {
++    const emptySource = {
++      ...comparisonSource,
++      datasetId: 'empty-comparison-projection',
++      items: [],
++    } as const satisfies CategoricalComparisonSourceData;
++    expect(projectCategoricalComparison(emptySource, initialView(emptySource))).toEqual({
++      ok: true,
++      value: [],
++      errors: [],
++    });
++
++    expect(projectCategoricalComparison(comparisonSource, recursiveView(['inner']))).toEqual({
++      ok: true,
++      value: [
++        {
++          nodeId: 'inner',
++          label: 'Inner',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 6 },
++            { seriesId: 'budget', label: 'Budget', amount: 23 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 2 },
++          ],
++          kind: 'group',
++          sourceIds: ['north', 'south'],
++          locked: true,
++          order: 0,
++        },
++        {
++          nodeId: 'zero',
++          label: 'Zero',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 0 },
++            { seriesId: 'budget', label: 'Budget', amount: 0 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 0 },
++          ],
++          kind: 'category',
++          sourceIds: ['zero'],
++          locked: false,
++          order: 1,
++        },
++        {
++          nodeId: 'tail',
++          label: 'Tail',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 1 },
++            { seriesId: 'budget', label: 'Budget', amount: 2 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 3 },
++          ],
++          kind: 'category',
++          sourceIds: ['tail'],
++          locked: false,
++          order: 2,
++        },
++      ],
++      errors: [],
++    });
++
++    const first = projectCategoricalComparison(comparisonSource, recursiveView(['outer']));
++    const second = projectCategoricalComparison(comparisonSource, recursiveView(['outer']));
++    expect(first).toEqual(second);
++    expect(first).toEqual({
++      ok: true,
++      value: [
++        {
++          nodeId: 'outer',
++          label: 'Outer',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 6 },
++            { seriesId: 'budget', label: 'Budget', amount: 23 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 2 },
++          ],
++          kind: 'group',
++          sourceIds: ['north', 'south', 'zero'],
++          locked: true,
++          order: 0,
++        },
++        {
++          nodeId: 'tail',
++          label: 'Tail',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 1 },
++            { seriesId: 'budget', label: 'Budget', amount: 2 },
++            { seriesId: 'forecast', label: 'Forecast', amount: 3 },
++          ],
++          kind: 'category',
++          sourceIds: ['tail'],
++          locked: false,
++          order: 1,
++        },
++      ],
++      errors: [],
++    });
++  });
++
++  it('uses one independent compensated accumulator per series', () => {
++    const source = {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: 'comparison-compensation',
++      series: [
++        { id: 'first', label: 'First' },
++        { id: 'second', label: 'Second' },
++      ],
++      items: [
++        {
++          id: 'large-positive',
++          label: 'Large positive',
++          values: [
++            { seriesId: 'first', amount: 1_000_000_000_000_000 },
++            { seriesId: 'second', amount: -1_000_000_000_000_000 },
++          ],
++        },
++        {
++          id: 'small',
++          label: 'Small',
++          values: [
++            { seriesId: 'first', amount: 0.1 },
++            { seriesId: 'second', amount: 0.2 },
++          ],
++        },
++        {
++          id: 'large-negative',
++          label: 'Large negative',
++          values: [
++            { seriesId: 'first', amount: -1_000_000_000_000_000 },
++            { seriesId: 'second', amount: 1_000_000_000_000_000 },
++          ],
++        },
++      ],
++    } as const satisfies CategoricalComparisonSourceData;
++    const view: CategoricalComparisonViewSpec = {
++      ...initialView(source),
++      rootOrder: ['all'],
++      groups: {
++        all: {
++          id: 'all',
++          label: 'All',
++          childIds: ['large-positive', 'small', 'large-negative'],
++        },
++      },
++      collapsedGroupIds: ['all'],
++    };
++
++    const result = projectCategoricalComparison(source, view);
++    expect(result.ok).toBe(true);
++    if (result.ok) {
++      expect(result.value[0]?.values.map(value => value.amount)).toEqual([0.1, 0.2]);
++      expect(result.value[0]).not.toHaveProperty('amount');
++    }
++  });
++
++  it('fails atomically at the triggering source value when one series becomes unsafe', () => {
++    const source = {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: 'comparison-overflow',
++      series: [
++        { id: 'safe', label: 'Safe' },
++        { id: 'unsafe', label: 'Unsafe' },
++      ],
++      items: [
++        {
++          id: 'maximum',
++          label: 'Maximum',
++          values: [
++            { seriesId: 'safe', amount: 1 },
++            { seriesId: 'unsafe', amount: Number.MAX_SAFE_INTEGER },
++          ],
++        },
++        {
++          id: 'overflow',
++          label: 'Overflow',
++          values: [
++            { seriesId: 'safe', amount: 2 },
++            { seriesId: 'unsafe', amount: 1 },
++          ],
++        },
++        {
++          id: 'tail',
++          label: 'Tail',
++          values: [
++            { seriesId: 'safe', amount: 3 },
++            { seriesId: 'unsafe', amount: 4 },
++          ],
++        },
++      ],
++    } as const satisfies CategoricalComparisonSourceData;
++    const view: CategoricalComparisonViewSpec = {
++      ...initialView(source),
++      rootOrder: ['unsafe-group', 'tail'],
++      groups: {
++        'unsafe-group': {
++          id: 'unsafe-group',
++          label: 'Unsafe group',
++          childIds: ['maximum', 'overflow'],
++        },
++      },
++      collapsedGroupIds: ['unsafe-group'],
++    };
++
++    const result = projectCategoricalComparison(source, view);
++    expect(result).toEqual({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'UNSAFE_AMOUNT',
++          path: '/items/1/values/1/amount',
++          details: { operation: 'groupAggregate', sourceIndex: 1, seriesIndex: 1 },
++        }),
++      ],
++    });
++    expect(result).not.toHaveProperty('value');
++    expect(JSON.stringify(result)).not.toContain('Maximum');
++    expect(JSON.stringify(result)).not.toContain(String(Number.MAX_SAFE_INTEGER));
++  });
++
++  it('preserves validation precedence across v2/v3 source-view pairings', () => {
++    const scalarSource = {
++      schemaVersion: '2.0.0',
++      dataKind: 'categorical',
++      datasetId: comparisonSource.datasetId,
++      items: comparisonSource.items.map(item => ({
++        id: item.id,
++        label: item.label,
++        amount: item.values[0]?.amount ?? 0,
++      })),
++    } as const satisfies CategoricalSourceData;
++    const scalarViewResult = createInitialViewSpec(scalarSource);
++    if (!scalarViewResult.ok || scalarViewResult.value.schemaVersion !== '2.0.0') {
++      throw new Error('Expected a scalar categorical view');
++    }
++    const scalarView: CurrentViewSpec = scalarViewResult.value;
++    const comparisonView = initialView();
++
++    expect(projectCategoricalComparison(comparisonSource, comparisonView).ok).toBe(true);
++    expect(projectCategoricalComparison(scalarSource, scalarView)).toMatchObject({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'SOURCE_CONFLICT',
++          reason: 'INCOMPATIBLE_PROJECTOR_GENERATION',
++          path: '/schemaVersion',
++        }),
++      ],
++    });
++    expect(projectCategoricalComparison(scalarSource, comparisonView)).toMatchObject({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'SOURCE_CONFLICT',
++          reason: 'SCHEMA_VERSION_MISMATCH',
++          path: '/schemaVersion',
++        }),
++      ],
++    });
++    expect(projectCategoricalComparison(comparisonSource, scalarView)).toMatchObject({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'SOURCE_CONFLICT',
++          reason: 'SCHEMA_VERSION_MISMATCH',
++          path: '/schemaVersion',
++        }),
++      ],
++    });
++
++    const invalidSource = {
++      ...comparisonSource,
++      series: [comparisonSource.series[0]],
++    } as unknown as SourceData;
++    const invalidResult = projectCategoricalComparison(invalidSource, comparisonView);
++    expect(invalidResult.ok).toBe(false);
++    if (!invalidResult.ok) {
++      expect(invalidResult.errors).toEqual(
++        expect.arrayContaining([
++          expect.objectContaining({
++            code: 'INVALID_SOURCE_DATA',
++            reason: 'INVALID_SERIES_COUNT',
++            path: '/series',
++          }),
++        ]),
++      );
++    }
++  });
++
++  it('projects only descriptor-snapshotted source values when root reads disagree with validation', () => {
++    const poisonedItems = comparisonSource.items.map((item, itemIndex) => ({
++      ...item,
++      values: item.values.map((value, seriesIndex) => ({
++        ...value,
++        amount: itemIndex === 0 && seriesIndex === 0 ? Number.NaN : value.amount,
++      })),
++    }));
++    const rootProxy = new Proxy(comparisonSource, {
++      get(target, property) {
++        if (property === 'items') {
++          return poisonedItems;
++        }
++        return Reflect.get(target, property);
++      },
++    }) as CategoricalComparisonSourceData;
++
++    const result = projectCategoricalComparison(rootProxy, initialView());
++
++    expect(result.ok).toBe(true);
++    if (result.ok) {
++      expect(result.value[0]?.values[0]?.amount).toBe(10);
++      expect(
++        result.value.every(datum => datum.values.every(value => Number.isFinite(value.amount))),
++      ).toBe(true);
++    }
++  });
++
++  it('projects only descriptor-validated values from nested source proxies', () => {
++    const firstItem = comparisonSource.items[0];
++    let valuesReadCount = 0;
++    const nestedProxy = new Proxy(firstItem, {
++      get(target, property, receiver) {
++        if (property === 'values') {
++          valuesReadCount += 1;
++          if (valuesReadCount === 1) {
++            return target.values;
++          }
++          return target.values.map((value, index) => ({
++            ...value,
++            amount: index === 0 ? Number.POSITIVE_INFINITY : value.amount,
++          }));
++        }
++        return Reflect.get(target, property, receiver);
++      },
++    });
++    const nestedSource = {
++      ...comparisonSource,
++      items: [nestedProxy, ...comparisonSource.items.slice(1)],
++    } as CategoricalComparisonSourceData;
++    const view = initialView();
++
++    const result = projectCategoricalComparison(nestedSource, view);
++
++    expect(result.ok).toBe(true);
++    if (result.ok) {
++      expect(result.value[0]?.values[0]?.amount).toBe(10);
++      expect(
++        result.value.every(datum => datum.values.every(value => Number.isFinite(value.amount))),
++      ).toBe(true);
++    }
++  });
++
++  it('projects only a descriptor-snapshotted view when ordinary reads are hostile', () => {
++    const validView = recursiveView(['outer']);
++    const viewProxy = new Proxy(validView, {
++      get(target, property) {
++        if (property === 'rootOrder') {
++          return ['missing'];
++        }
++        if (property === 'groups') {
++          return {};
++        }
++        if (property === 'pinnedItemIds') {
++          return ['missing'];
++        }
++        return Reflect.get(target, property);
++      },
++    }) as CategoricalComparisonViewSpec;
++
++    const result = projectCategoricalComparison(comparisonSource, viewProxy);
++
++    expect(result.ok).toBe(true);
++    if (result.ok) {
++      expect(result.value.map(datum => datum.nodeId)).toEqual(['outer', 'tail']);
++      expect(result.value[0]?.locked).toBe(true);
++      expect(
++        result.value.every(datum => datum.values.every(value => Number.isFinite(value.amount))),
++      ).toBe(true);
++    }
++  });
++
++  it('fails closed when snapshotted source descriptors are invalid', () => {
++    const firstValue = comparisonSource.items[0].values[0];
++    const descriptorProxy = new Proxy(firstValue, {
++      getOwnPropertyDescriptor(target, property) {
++        const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
++        if (property === 'amount' && descriptor !== undefined && 'value' in descriptor) {
++          return { ...descriptor, value: Number.NaN };
++        }
++        return descriptor;
++      },
++    });
++    const source = {
++      ...comparisonSource,
++      items: [
++        {
++          ...comparisonSource.items[0],
++          values: [descriptorProxy, ...comparisonSource.items[0].values.slice(1)],
++        },
++        ...comparisonSource.items.slice(1),
++      ],
++    } as CategoricalComparisonSourceData;
++
++    const result = projectCategoricalComparison(source, initialView());
++
++    expect(result).toMatchObject({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'NON_FINITE_AMOUNT',
++          path: '/items/0/values/0/amount',
++        }),
++      ],
++    });
++    expect(result).not.toHaveProperty('value');
++  });
++
++  it('does not throw or expose hostile source or view details', () => {
++    const hostile = new Proxy(
++      {},
++      {
++        getOwnPropertyDescriptor() {
++          throw new Error('private comparison value');
++        },
++      },
++    ) as SourceData;
++
++    const result = projectCategoricalComparison(hostile, initialView());
++    expect(result.ok).toBe(false);
++    expect(JSON.stringify(result)).not.toContain('private comparison value');
++
++    const hostileView = new Proxy(initialView(), {
++      getOwnPropertyDescriptor() {
++        throw new Error('private comparison view');
++      },
++    });
++    const viewResult = projectCategoricalComparison(comparisonSource, hostileView);
++    expect(viewResult.ok).toBe(false);
++    expect(JSON.stringify(viewResult)).not.toContain('private comparison view');
++  });
++
++  it('contains stateful descriptor traps reached after the compatibility pass', () => {
++    const validView = initialView();
++    let throwLateSourceTrap = false;
++    const statefulSource = new Proxy(comparisonSource, {
++      getOwnPropertyDescriptor(target, property) {
++        if (throwLateSourceTrap) {
++          throw new Error('private late source trap');
++        }
++        return Reflect.getOwnPropertyDescriptor(target, property);
++      },
++    }) as CategoricalComparisonSourceData;
++    const statefulView = new Proxy(validView, {
++      getOwnPropertyDescriptor(target, property) {
++        const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
++        if (property === 'emphasis') {
++          throwLateSourceTrap = true;
++        }
++        return descriptor;
++      },
++    }) as CategoricalComparisonViewSpec;
++
++    let sourceResult: ReturnType<typeof projectCategoricalComparison> | undefined;
++    expect(() => {
++      sourceResult = projectCategoricalComparison(statefulSource, statefulView);
++    }).not.toThrow();
++    expect(sourceResult).toMatchObject({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          reason: 'UNREADABLE_INPUT',
++          path: '/',
++        }),
++      ],
++    });
++    expect(JSON.stringify(sourceResult)).not.toContain('private late source trap');
++  });
++
++  it('classifies snapshot-only source reflection traps as unreadable source data', () => {
++    const validView = initialView();
++    let afterCompatibility = false;
++    const statefulSource = new Proxy(comparisonSource, {
++      ownKeys(target) {
++        return Reflect.ownKeys(target);
++      },
++      getOwnPropertyDescriptor(target, property) {
++        if (afterCompatibility) {
++          throw new Error('private snapshot source trap');
++        }
++        return Reflect.getOwnPropertyDescriptor(target, property);
++      },
++    }) as CategoricalComparisonSourceData;
++    const phaseView = new Proxy(validView, {
++      ownKeys(target) {
++        afterCompatibility = true;
++        return Reflect.ownKeys(target);
++      },
++    }) as CategoricalComparisonViewSpec;
++
++    const result = projectCategoricalComparison(statefulSource, phaseView);
++
++    expect(result).toMatchObject({
++      ok: false,
++      errors: [
++        expect.objectContaining({
++          code: 'INVALID_SOURCE_DATA',
++          reason: 'UNREADABLE_INPUT',
++          path: '/',
++        }),
++      ],
++    });
++    expect(JSON.stringify(result)).not.toContain('private snapshot source trap');
++  });
++
++  it('covers comparison validation failures for malformed matrix records', () => {
++    const malformedCases: readonly SourceData[] = [
++      { ...comparisonSource, series: undefined } as unknown as SourceData,
++      { ...comparisonSource, series: [null, comparisonSource.series[1]] } as unknown as SourceData,
++      {
++        ...comparisonSource,
++        series: [{ id: 1, label: 'Actual' }, comparisonSource.series[1]],
++      } as unknown as SourceData,
++      {
++        ...comparisonSource,
++        series: [{ id: '', label: 'Actual' }, comparisonSource.series[1]],
++      } as SourceData,
++      {
++        ...comparisonSource,
++        series: [{ id: 'actual', label: 1 }, comparisonSource.series[1]],
++      } as unknown as SourceData,
++      {
++        ...comparisonSource,
++        series: [{ id: 'actual', label: '' }, comparisonSource.series[1]],
++      } as SourceData,
++      { ...comparisonSource, items: [null, ...comparisonSource.items.slice(1)] } as SourceData,
++      {
++        ...comparisonSource,
++        items: [{ ...comparisonSource.items[0], id: 1 }, comparisonSource.items[1]],
++      } as unknown as SourceData,
++      {
++        ...comparisonSource,
++        items: [{ ...comparisonSource.items[0], id: '' }, comparisonSource.items[1]],
++      } as SourceData,
++      {
++        ...comparisonSource,
++        items: [comparisonSource.items[0], { ...comparisonSource.items[1], id: 'north' }],
++      } as SourceData,
++      {
++        ...comparisonSource,
++        items: [{ ...comparisonSource.items[0], label: 1 }, comparisonSource.items[1]],
++      } as unknown as SourceData,
++      {
++        ...comparisonSource,
++        items: [{ ...comparisonSource.items[0], label: '' }, comparisonSource.items[1]],
++      } as SourceData,
++      {
++        ...comparisonSource,
++        items: [{ ...comparisonSource.items[0], sourceRef: 1 }, comparisonSource.items[1]],
++      } as unknown as SourceData,
++      {
++        ...comparisonSource,
++        items: [
++          {
++            ...comparisonSource.items[0],
++            values: [null, ...comparisonSource.items[0].values.slice(1)],
++          },
++          comparisonSource.items[1],
++        ],
++      } as SourceData,
++      {
++        ...comparisonSource,
++        items: [
++          {
++            ...comparisonSource.items[0],
++            values: [
++              { ...comparisonSource.items[0].values[0], seriesId: 1 },
++              ...comparisonSource.items[0].values.slice(1),
++            ],
++          },
++          comparisonSource.items[1],
++        ],
++      } as unknown as SourceData,
++      {
++        ...comparisonSource,
++        items: [
++          {
++            ...comparisonSource.items[0],
++            values: [
++              { ...comparisonSource.items[0].values[0], seriesId: '' },
++              ...comparisonSource.items[0].values.slice(1),
++            ],
++          },
++          comparisonSource.items[1],
++        ],
++      } as SourceData,
++      {
++        ...comparisonSource,
++        items: [
++          {
++            ...comparisonSource.items[0],
++            values: [
++              { ...comparisonSource.items[0].values[0], amount: Number.MAX_SAFE_INTEGER + 1 },
++              ...comparisonSource.items[0].values.slice(1),
++            ],
++          },
++          comparisonSource.items[1],
++        ],
++      } as SourceData,
++      {
++        ...comparisonSource,
++        items: [
++          {
++            ...comparisonSource.items[0],
++            values: [
++              { ...comparisonSource.items[0].values[0], sourceRef: 1 },
++              ...comparisonSource.items[0].values.slice(1),
++            ],
++          },
++          comparisonSource.items[1],
++        ],
++      } as unknown as SourceData,
++    ];
++
++    for (const source of malformedCases) {
++      expect(validateSourceData(source).ok).toBe(false);
++    }
++  });
++});
+diff --git a/packages/core/tests/editorStore.test.ts b/packages/core/tests/editorStore.test.ts
+index a109a82..9909f1f 100644
+--- a/packages/core/tests/editorStore.test.ts
++++ b/packages/core/tests/editorStore.test.ts
+@@ -21,6 +21,47 @@ const config: ChartConfig = {
+   },
+ };
+ 
++const comparisonConfig = {
++  type: 'column',
++  data: {
++    schemaVersion: '3.0.0',
++    dataKind: 'categorical',
++    datasetId: 'comparison-store-fixture',
++    currency: 'CNY',
++    series: [
++      { id: 'actual', label: 'Actual', metadata: { signed: -0 } },
++      { id: 'budget', label: 'Budget' },
++    ],
++    items: [
++      {
++        id: 'a',
++        label: 'A',
++        values: [
++          { seriesId: 'actual', amount: 10 },
++          { seriesId: 'budget', amount: 12 },
++        ],
++      },
++      {
++        id: 'b',
++        label: 'B',
++        values: [
++          { seriesId: 'actual', amount: 20 },
++          { seriesId: 'budget', amount: 18 },
++        ],
++      },
++      {
++        id: 'c',
++        label: 'C',
++        metadata: { signed: -0 },
++        values: [
++          { seriesId: 'actual', amount: -0, metadata: { signed: -0 } },
++          { seriesId: 'budget', amount: 0 },
++        ],
++      },
++    ],
++  },
++} as const satisfies ChartConfig;
++
+ function moveCommand(itemId: 'a' | 'b' = 'a', targetIndex = 1, baseRevision = 0): EditorCommand {
+   return {
+     schemaVersion: '1.0.0',
+@@ -654,6 +695,392 @@ describe('createEditorStore', () => {
+     expect(store.getSnapshot()).toMatchObject({ status: 'ready', mode: 'uncontrolled' });
+   });
+ 
++  it('retains comparison session, history and selection for presentation and zero-sign updates', () => {
++    const onCommand = vi.fn();
++    const onViewChange = vi.fn();
++    const onSelectionChange = vi.fn();
++    const store = createEditorStore({
++      config: comparisonConfig,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++    expect(store.dispatch(moveCommand())?.ok).toBe(true);
++    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
++    const originalSession = store.getSnapshot().session;
++    expect(originalSession?.undoStack).toHaveLength(1);
++    expect(originalSession?.processedActionIds).toEqual(['move-a-1-0']);
++    onCommand.mockClear();
++    onViewChange.mockClear();
++    onSelectionChange.mockClear();
++
++    const presentationConfig = {
++      ...comparisonConfig,
++      appearance: { title: 'Comparison', legend: false },
++    } as const satisfies ChartConfig;
++    store.update({
++      config: presentationConfig,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++    expect(store.getSnapshot().session?.sourceFingerprint).toBe(originalSession?.sourceFingerprint);
++    expect(store.getSnapshot().session?.processedActionIds).toEqual(['move-a-1-0']);
++    expect(store.getSnapshot().canUndo).toBe(true);
++    expect(store.getSnapshot().selection?.nodeId).toBe('a');
++
++    const positiveZeroConfig = {
++      ...presentationConfig,
++      data: {
++        ...presentationConfig.data,
++        series: presentationConfig.data.series.map((series, index) =>
++          index === 0 ? { ...series, metadata: { signed: 0 } } : series,
++        ),
++        items: presentationConfig.data.items.map(item =>
++          item.id === 'c'
++            ? {
++                ...item,
++                metadata: { signed: 0 },
++                values: item.values.map((value, index) =>
++                  index === 0 ? { ...value, amount: 0, metadata: { signed: 0 } } : value,
++                ),
++              }
++            : item,
++        ),
++      },
++    } as const satisfies ChartConfig;
++    store.update({
++      config: positiveZeroConfig,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++
++    expect(store.getSnapshot().session?.sourceFingerprint).toBe(originalSession?.sourceFingerprint);
++    expect(store.getSnapshot().session?.processedActionIds).toEqual(['move-a-1-0']);
++    expect(store.getSnapshot().canUndo).toBe(true);
++    expect(store.getSnapshot().selection?.nodeId).toBe('a');
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++  });
++
++  it('rebuilds comparison sessions for semantic source updates while preserving valid narrative state', () => {
++    const onCommand = vi.fn();
++    const onViewChange = vi.fn();
++    const onSelectionChange = vi.fn();
++    const store = createEditorStore({
++      config: comparisonConfig,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++    expect(store.dispatch(moveCommand())?.ok).toBe(true);
++    expect(store.dispatch(moveCommand('a', 0, 1))?.ok).toBe(true);
++    expect(store.undo()?.ok).toBe(true);
++    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
++    const before = store.getSnapshot();
++    expect(before.session?.undoStack.length).toBeGreaterThan(0);
++    expect(before.session?.redoStack.length).toBeGreaterThan(0);
++    expect(before.session?.processedActionIds.length).toBeGreaterThan(0);
++    onCommand.mockClear();
++    onViewChange.mockClear();
++    onSelectionChange.mockClear();
++
++    const reorderedSeriesConfig = {
++      ...comparisonConfig,
++      data: {
++        ...comparisonConfig.data,
++        series: [...comparisonConfig.data.series].reverse(),
++        items: comparisonConfig.data.items.map(item => ({
++          ...item,
++          values: [...item.values].reverse(),
++        })),
++      },
++    } as const satisfies ChartConfig;
++    store.update({
++      config: reorderedSeriesConfig,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++
++    const afterSeries = store.getSnapshot();
++    expect(afterSeries.session?.sourceFingerprint).not.toBe(before.session?.sourceFingerprint);
++    expect(afterSeries.session?.undoStack).toEqual([]);
++    expect(afterSeries.session?.redoStack).toEqual([]);
++    expect(afterSeries.session?.processedActionIds).toEqual([]);
++    expect(afterSeries.view?.rootOrder).toEqual(['b', 'a', 'c']);
++    expect(afterSeries.selection).toEqual({
++      nodeId: 'a',
++      nodeIds: ['a'],
++      sourceIds: ['a'],
++    });
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++
++    const changedAmountConfig = {
++      ...reorderedSeriesConfig,
++      data: {
++        ...reorderedSeriesConfig.data,
++        items: reorderedSeriesConfig.data.items.map(item =>
++          item.id === 'b'
++            ? {
++                ...item,
++                values: item.values.map((value, index) =>
++                  index === 0 ? { ...value, amount: value.amount + 1 } : value,
++                ),
++              }
++            : item,
++        ),
++      },
++    } as const satisfies ChartConfig;
++    store.update({ config: changedAmountConfig, onSelectionChange });
++    expect(store.getSnapshot().session?.sourceFingerprint).not.toBe(
++      afterSeries.session?.sourceFingerprint,
++    );
++    expect(store.getSnapshot().selection?.nodeId).toBe('a');
++    expect(onSelectionChange).not.toHaveBeenCalled();
++  });
++
++  it('accepts a compatible controlled v3 view with a category-ID replacement in one update', () => {
++    const seed = createEditorStore({ config: comparisonConfig });
++    const view = seed.getSnapshot().view as ViewSpec;
++    seed.destroy();
++    const onCommand = vi.fn();
++    const onViewChange = vi.fn();
++    const onSelectionChange = vi.fn();
++    const store = createEditorStore({
++      config: comparisonConfig,
++      view,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
++    onSelectionChange.mockClear();
++
++    const replacementConfig = {
++      ...comparisonConfig,
++      data: {
++        ...comparisonConfig.data,
++        items: comparisonConfig.data.items.map(item =>
++          item.id === 'a' ? { ...item, id: 'replacement', label: 'Replacement' } : item,
++        ),
++      },
++    } as const satisfies ChartConfig;
++    const replacementSeed = createEditorStore({ config: replacementConfig });
++    const replacementView = replacementSeed.getSnapshot().view as ViewSpec;
++    replacementSeed.destroy();
++
++    store.update({
++      config: replacementConfig,
++      view: replacementView,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++
++    expect(store.getSnapshot()).toMatchObject({
++      status: 'ready',
++      mode: 'controlled',
++      selection: null,
++      canUndo: false,
++      canRedo: false,
++    });
++    expect(store.getSnapshot().view?.rootOrder).toEqual(['replacement', 'b', 'c']);
++    expect(store.getSnapshot().session?.processedActionIds).toEqual([]);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).toHaveBeenCalledOnce();
++    expect(onSelectionChange).toHaveBeenCalledWith(null);
++  });
++
++  it('uses a valid v3 defaultView for an uncontrolled category-ID replacement', () => {
++    const onCommand = vi.fn();
++    const onViewChange = vi.fn();
++    const onSelectionChange = vi.fn();
++    const store = createEditorStore({
++      config: comparisonConfig,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++    expect(store.dispatch(moveCommand())?.ok).toBe(true);
++    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
++    onCommand.mockClear();
++    onViewChange.mockClear();
++    onSelectionChange.mockClear();
++
++    const replacementConfig = {
++      ...comparisonConfig,
++      data: {
++        ...comparisonConfig.data,
++        items: comparisonConfig.data.items.map(item =>
++          item.id === 'a' ? { ...item, id: 'replacement', label: 'Replacement' } : item,
++        ),
++      },
++    } as const satisfies ChartConfig;
++    const replacementSeed = createEditorStore({ config: replacementConfig });
++    const replacementInitial = replacementSeed.getSnapshot().view as ViewSpec;
++    replacementSeed.destroy();
++    const defaultView = {
++      ...replacementInitial,
++      revision: 7,
++      rootOrder: ['c', 'replacement', 'b'],
++    } as ViewSpec;
++
++    store.update({
++      config: replacementConfig,
++      defaultView,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++
++    expect(store.getSnapshot()).toMatchObject({
++      status: 'ready',
++      mode: 'uncontrolled',
++      selection: null,
++      canUndo: false,
++      canRedo: false,
++    });
++    expect(store.getSnapshot().view).toEqual(defaultView);
++    expect(store.getSnapshot().session?.processedActionIds).toEqual([]);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).toHaveBeenCalledOnce();
++    expect(onSelectionChange).toHaveBeenCalledWith(null);
++  });
++
++  it('preserves narrative order for source-order-only updates and clears an invalid selection once', () => {
++    const onCommand = vi.fn();
++    const onViewChange = vi.fn();
++    const onSelectionChange = vi.fn();
++    const store = createEditorStore({
++      config: comparisonConfig,
++      onCommand,
++      onViewChange,
++      onSelectionChange,
++    });
++    expect(store.dispatch(moveCommand())?.ok).toBe(true);
++    store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
++    const beforeOrderUpdate = store.getSnapshot().session;
++    onCommand.mockClear();
++    onViewChange.mockClear();
++    onSelectionChange.mockClear();
++
++    const sourceOrderConfig = {
++      ...comparisonConfig,
++      data: {
++        ...comparisonConfig.data,
++        items: [...comparisonConfig.data.items].reverse(),
++      },
++    } as const satisfies ChartConfig;
++    store.update({ config: sourceOrderConfig, onCommand, onViewChange, onSelectionChange });
++
++    expect(store.getSnapshot().session?.sourceFingerprint).not.toBe(
++      beforeOrderUpdate?.sourceFingerprint,
++    );
++    expect(store.getSnapshot().view?.rootOrder).toEqual(['b', 'a', 'c']);
++    expect(store.getSnapshot().selection?.nodeId).toBe('a');
++    expect(store.getSnapshot().canUndo).toBe(false);
++    expect(onCommand).not.toHaveBeenCalled();
++    expect(onViewChange).not.toHaveBeenCalled();
++    expect(onSelectionChange).not.toHaveBeenCalled();
++
++    const removedCategoryConfig = {
++      ...sourceOrderConfig,
++      data: {
++        ...sourceOrderConfig.data,
++        items: sourceOrderConfig.data.items.filter(item => item.id !== 'a'),
++      },
++    } as const satisfies ChartConfig;
++    store.update({ config: removedCategoryConfig, onSelectionChange });
++
++    expect(store.getSnapshot().view?.rootOrder).toEqual(['c', 'b']);
++    expect(store.getSnapshot().selection).toBeNull();
++    expect(onSelectionChange).toHaveBeenCalledOnce();
++    expect(onSelectionChange).toHaveBeenCalledWith(null);
++  });
++
++  it('emits selection changes only when normalized comparison selection actually changes', () => {
++    const onSelectionChange = vi.fn();
++    const store = createEditorStore({ config: comparisonConfig, onSelectionChange });
++    const selection = { nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] } as const;
++
++    store.select(selection);
++    store.select({ ...selection, nodeIds: [...selection.nodeIds], sourceIds: ['wrong'] });
++
++    expect(store.getSnapshot().selection).toEqual(selection);
++    expect(onSelectionChange).toHaveBeenCalledOnce();
++    expect(onSelectionChange).toHaveBeenCalledWith(selection);
++  });
++
++  it.each([
++    {
++      name: 'comparison layout',
++      initialConfig: comparisonConfig as ChartConfig,
++      nextConfig: { ...comparisonConfig, type: 'bar' } as ChartConfig,
++    },
++    {
++      name: 'comparison dataset with matching category IDs',
++      initialConfig: comparisonConfig as ChartConfig,
++      nextConfig: {
++        ...comparisonConfig,
++        data: { ...comparisonConfig.data, datasetId: 'comparison-store-replacement' },
++      } as ChartConfig,
++    },
++    {
++      name: 'schema generation with matching category IDs',
++      initialConfig: {
++        type: 'column',
++        data: {
++          schemaVersion: '2.0.0',
++          dataKind: 'categorical',
++          datasetId: comparisonConfig.data.datasetId,
++          items: comparisonConfig.data.items.map(item => ({
++            id: item.id,
++            label: item.label,
++            amount: item.values[0]?.amount ?? 0,
++          })),
++        },
++      } as ChartConfig,
++      nextConfig: comparisonConfig as ChartConfig,
++    },
++  ])(
++    'clears comparison selection and session state once across a $name boundary',
++    ({ initialConfig, nextConfig }) => {
++      const onCommand = vi.fn();
++      const onViewChange = vi.fn();
++      const onSelectionChange = vi.fn();
++      const store = createEditorStore({
++        config: initialConfig,
++        onCommand,
++        onViewChange,
++        onSelectionChange,
++      });
++      expect(store.dispatch(moveCommand())?.ok).toBe(true);
++      store.select({ nodeId: 'a', nodeIds: ['a'], sourceIds: ['a'] });
++      onCommand.mockClear();
++      onViewChange.mockClear();
++      onSelectionChange.mockClear();
++
++      store.update({ config: nextConfig, onCommand, onViewChange, onSelectionChange });
++
++      expect(store.getSnapshot().status).toBe('ready');
++      expect(store.getSnapshot().selection).toBeNull();
++      expect(store.getSnapshot().session?.undoStack).toEqual([]);
++      expect(store.getSnapshot().session?.redoStack).toEqual([]);
++      expect(store.getSnapshot().session?.processedActionIds).toEqual([]);
++      expect(onCommand).not.toHaveBeenCalled();
++      expect(onViewChange).not.toHaveBeenCalled();
++      expect(onSelectionChange).toHaveBeenCalledOnce();
++      expect(onSelectionChange).toHaveBeenCalledWith(null);
++    },
++  );
++
+   it('releases subscribers and rejects mutations after destroy', () => {
+     const store = createEditorStore({ config });
+     const listener = vi.fn();
+diff --git a/packages/core/tests/public-api.mjs b/packages/core/tests/public-api.mjs
+index 29a01cc..e80e6d1 100644
+--- a/packages/core/tests/public-api.mjs
++++ b/packages/core/tests/public-api.mjs
+@@ -37,9 +37,9 @@ for (const name of rendererInternals) {
+   assert.equal(Object.hasOwn(core, name), false, `${name} must not be a core runtime export`);
+ }
+ assert.equal(
+-  Object.hasOwn(core, 'projectCategoricalComparison'),
+-  false,
+-  'T135 must not export the comparison runtime projector',
++  typeof core.projectCategoricalComparison,
++  'function',
++  'T136 must export the comparison runtime projector',
+ );
+ 
+ const declarations = await readFile(new URL('../dist/index.d.ts', import.meta.url), 'utf8');
+diff --git a/scripts/release/package-contracts.json b/scripts/release/package-contracts.json
+index 9a31292..c0041eb 100644
+--- a/scripts/release/package-contracts.json
++++ b/scripts/release/package-contracts.json
+@@ -35,6 +35,7 @@
+         "parseSessionActionMeta",
+         "parseViewSpec",
+         "projectCategorical",
++        "projectCategoricalComparison",
+         "projectChartCategoryBounds",
+         "projectChartCategorySourceGroupBounds",
+         "projectWaterfall",

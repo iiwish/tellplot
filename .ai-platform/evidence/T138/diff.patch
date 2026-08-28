@@ -1,0 +1,3914 @@
+diff --git a/e2e/comparison-interaction.spec.ts b/e2e/comparison-interaction.spec.ts
+new file mode 100644
+index 0000000..4897dd8
+--- /dev/null
++++ b/e2e/comparison-interaction.spec.ts
+@@ -0,0 +1,698 @@
++import { expect, test, type Locator, type Page } from '@playwright/test';
++
++const EDITOR = '[data-tellplot="editor"]';
++const PALETTE = ['#0072B2', '#D55E00'] as const;
++type ComparisonMode =
++  'positive' | 'zero-negative' | 'zero-positive' | 'positive-three' | 'global-zero';
++
++interface PaintedComponent {
++  readonly color: string;
++  readonly minX: number;
++  readonly minY: number;
++  readonly maxX: number;
++  readonly maxY: number;
++  readonly centerX: number;
++  readonly centerY: number;
++  readonly area: number;
++}
++
++function rasterPixelSpan(
++  min: number,
++  max: number,
++  scale: number,
++  offset: number,
++): { readonly min: number; readonly max: number; readonly center: number } {
++  return {
++    min: offset + min * scale,
++    max: offset + (max + 1) * scale,
++    center: offset + ((min + max + 1) / 2) * scale,
++  };
++}
++
++function config(
++  chartType: 'bar' | 'column',
++  mode: ComparisonMode = 'positive',
++  options: { readonly datasetSuffix?: string; readonly tooltip?: boolean } = {},
++): Record<string, unknown> {
++  return {
++    type: chartType,
++    data: {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: `comparison-interaction-${chartType}-${mode}${options.datasetSuffix ?? ''}`,
++      series: [
++        { id: 'actual', label: 'Actual' },
++        { id: 'budget', label: 'Budget' },
++      ],
++      items: [
++        {
++          id: 'alpha',
++          label: 'Alpha',
++          values: [
++            {
++              seriesId: 'actual',
++              amount: mode === 'positive' || mode === 'positive-three' ? 80 : 0,
++            },
++            {
++              seriesId: 'budget',
++              amount: mode === 'positive' || mode === 'positive-three' ? 60 : 0,
++            },
++          ],
++        },
++        {
++          id: 'beta',
++          label: 'Beta',
++          values: [
++            {
++              seriesId: 'actual',
++              amount: mode === 'global-zero' ? 0 : mode === 'zero-negative' ? -80 : 45,
++            },
++            {
++              seriesId: 'budget',
++              amount: mode === 'global-zero' ? 0 : mode === 'zero-negative' ? -60 : 30,
++            },
++          ],
++        },
++        ...(mode !== 'positive'
++          ? [
++              {
++                id: 'gamma',
++                label: 'Gamma',
++                values: [
++                  {
++                    seriesId: 'actual',
++                    amount: mode === 'global-zero' ? 0 : mode === 'zero-negative' ? -45 : 25,
++                  },
++                  {
++                    seriesId: 'budget',
++                    amount: mode === 'global-zero' ? 0 : mode === 'zero-negative' ? -30 : 15,
++                  },
++                ],
++              },
++            ]
++          : []),
++      ],
++    },
++    appearance: {
++      colors: {
++        series: [
++          { seriesId: 'actual', color: PALETTE[0] },
++          { seriesId: 'budget', color: PALETTE[1] },
++        ],
++      },
++      axes: { category: false, value: false },
++      labels: { value: 'never', group: 'never' },
++      legend: false,
++      tooltip: options.tooltip ?? false,
++      animation: { enabled: false },
++    },
++    editor: {
++      readOnly: false,
++      panels: { outline: true, inspector: true, toolbar: true },
++      outline: { placement: 'right' },
++      inspector: { mode: 'tabs' },
++    },
++    locale: 'en-US',
++    height: '100%',
++  };
++}
++
++function categoryClusters(
++  components: readonly PaintedComponent[],
++  chartType: 'bar' | 'column',
++): readonly { readonly center: number; readonly area: number }[] {
++  const ordered = [...components].sort((left, right) =>
++    chartType === 'column' ? left.centerX - right.centerX : left.centerY - right.centerY,
++  );
++  const result: { center: number; area: number }[] = [];
++  for (let index = 0; index < ordered.length; index += 2) {
++    const pair = ordered.slice(index, index + 2);
++    if (pair.length !== 2) {
++      return [];
++    }
++    result.push({
++      center:
++        pair.reduce(
++          (sum, component) =>
++            sum + (chartType === 'column' ? component.centerX : component.centerY),
++          0,
++        ) / pair.length,
++      area: pair.reduce((sum, component) => sum + component.area, 0),
++    });
++  }
++  return result;
++}
++
++function sourceOrderedCategoryClusters(
++  clusters: readonly { readonly center: number; readonly area: number }[],
++): readonly { readonly center: number; readonly area: number }[] {
++  return [...clusters].sort((left, right) => left.center - right.center);
++}
++
++function valueAxisPoint(
++  chartType: 'bar' | 'column',
++  category: number,
++  baseline: number,
++  direction: 1 | -1,
++  distance: number,
++): { readonly x: number; readonly y: number } {
++  return chartType === 'column'
++    ? { x: category, y: baseline + direction * distance }
++    : { x: baseline + direction * distance, y: category };
++}
++
++function paintedZeroBaseline(
++  components: readonly PaintedComponent[],
++  chartType: 'bar' | 'column',
++  domain: 'negative' | 'positive',
++): number {
++  return chartType === 'column'
++    ? domain === 'negative'
++      ? Math.min(...components.map(component => component.minY))
++      : Math.max(...components.map(component => component.maxY))
++    : domain === 'negative'
++      ? Math.max(...components.map(component => component.maxX)) + 1
++      : Math.min(...components.map(component => component.minX)) - 1;
++}
++
++async function openEditor(page: Page): Promise<void> {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto('/playground');
++  await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
++}
++
++async function applyConfig(page: Page, value: Record<string, unknown>): Promise<Locator> {
++  const input = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
++  await input.fill(JSON.stringify(value, null, 2));
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++  const stage = page.getByTestId('tellplot-chart-stage');
++  await expect(stage).toHaveAttribute('data-render-state', 'ready');
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await page.evaluate(
++    () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))),
++  );
++  return canvas;
++}
++
++async function paintedComponents(canvas: Locator): Promise<readonly PaintedComponent[]> {
++  const local = await canvas.evaluate((element, colors) => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return [];
++    }
++    const context = element.getContext('2d');
++    if (context === null) {
++      return [];
++    }
++    const requested = colors.map(color => ({
++      color,
++      red: Number.parseInt(color.slice(1, 3), 16),
++      green: Number.parseInt(color.slice(3, 5), 16),
++      blue: Number.parseInt(color.slice(5, 7), 16),
++    }));
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    const result: PaintedComponent[] = [];
++    for (const target of requested) {
++      const matching = new Uint8Array(element.width * element.height);
++      for (let index = 0; index < matching.length; index += 1) {
++        const offset = index * 4;
++        if (
++          (pixels[offset + 3] ?? 0) > 120 &&
++          Math.abs((pixels[offset] ?? 0) - target.red) <= 6 &&
++          Math.abs((pixels[offset + 1] ?? 0) - target.green) <= 6 &&
++          Math.abs((pixels[offset + 2] ?? 0) - target.blue) <= 6
++        ) {
++          matching[index] = 1;
++        }
++      }
++      const visited = new Uint8Array(matching.length);
++      for (let start = 0; start < matching.length; start += 1) {
++        if (matching[start] !== 1 || visited[start] === 1) {
++          continue;
++        }
++        visited[start] = 1;
++        const queue = [start];
++        let area = 0;
++        let minX = element.width;
++        let minY = element.height;
++        let maxX = 0;
++        let maxY = 0;
++        while (queue.length > 0) {
++          const index = queue.pop();
++          if (index === undefined) {
++            break;
++          }
++          const x = index % element.width;
++          const y = Math.floor(index / element.width);
++          area += 1;
++          minX = Math.min(minX, x);
++          minY = Math.min(minY, y);
++          maxX = Math.max(maxX, x);
++          maxY = Math.max(maxY, y);
++          const neighbors = [index - 1, index + 1, index - element.width, index + element.width];
++          for (const neighbor of neighbors) {
++            if (
++              neighbor >= 0 &&
++              neighbor < matching.length &&
++              matching[neighbor] === 1 &&
++              visited[neighbor] === 0 &&
++              Math.abs((neighbor % element.width) - x) <= 1
++            ) {
++              visited[neighbor] = 1;
++              queue.push(neighbor);
++            }
++          }
++        }
++        if (area >= 2) {
++          result.push({
++            color: target.color,
++            area,
++            minX,
++            minY,
++            maxX,
++            maxY,
++            centerX: (minX + maxX) / 2,
++            centerY: (minY + maxY) / 2,
++          });
++        }
++      }
++    }
++    return result;
++  }, PALETTE);
++  const box = await canvas.boundingBox();
++  const pixels = await canvas.evaluate(element => ({
++    width: element instanceof HTMLCanvasElement ? element.width : 0,
++    height: element instanceof HTMLCanvasElement ? element.height : 0,
++  }));
++  if (box === null || pixels.width <= 0 || pixels.height <= 0) {
++    return [];
++  }
++  const scaleX = box.width / pixels.width;
++  const scaleY = box.height / pixels.height;
++  return local.map(component => {
++    const x = rasterPixelSpan(component.minX, component.maxX, scaleX, box.x);
++    const y = rasterPixelSpan(component.minY, component.maxY, scaleY, box.y);
++    return {
++      ...component,
++      minX: x.min,
++      minY: y.min,
++      maxX: x.max,
++      maxY: y.max,
++      centerX: x.center,
++      centerY: y.center,
++    };
++  });
++}
++
++async function rootOrder(page: Page): Promise<readonly string[]> {
++  let tree = page.locator('[role="tree"]:visible').first();
++  if ((await tree.count()) === 0) {
++    await page.getByRole('button', { name: /打开结构大纲|Open structure outline/ }).click();
++    tree = page.locator('[role="tree"]:visible').first();
++    await expect(tree).toBeVisible();
++  }
++  return tree
++    .locator('[role="treeitem"][aria-level="1"][data-node-id]')
++    .evaluateAll(rows =>
++      rows
++        .map(row => row.getAttribute('data-node-id'))
++        .filter((nodeId): nodeId is string => nodeId !== null),
++    );
++}
++
++test('maps inclusive raster pixel indexes to CSS pixel cell edges', () => {
++  expect(rasterPixelSpan(2, 4, 2, 10)).toEqual({ min: 14, max: 20, center: 17 });
++});
++
++test('keeps visible category clusters in source-axis order independent of area', () => {
++  expect(
++    sourceOrderedCategoryClusters([
++      { center: 100, area: 10 },
++      { center: 200, area: 100 },
++    ]).map(cluster => cluster.center),
++  ).toEqual([100, 200]);
++});
++
++test('recovers the transposed zero baseline from the baseline-facing painted edge', () => {
++  const components = [
++    {
++      color: PALETTE[0],
++      minX: 451,
++      minY: 100,
++      maxX: 700,
++      maxY: 140,
++      centerX: 575.5,
++      centerY: 120,
++      area: 1_000,
++    },
++  ];
++  expect(paintedZeroBaseline(components, 'bar', 'positive')).toBe(450);
++  expect(paintedZeroBaseline(components, 'bar', 'negative')).toBe(701);
++});
++
++async function probeComparisonHit(
++  page: Page,
++  chartType: 'bar' | 'column',
++  point: { readonly x: number; readonly y: number },
++  expected: 'hit' | 'padding' | 'outside',
++): Promise<void> {
++  await page.mouse.move(point.x, point.y);
++  await page.mouse.down();
++  const state = (): Promise<string | null> =>
++    page.locator(EDITOR).getAttribute('data-interaction-state');
++  const message = `${chartType} ${expected} probe at (${point.x}, ${point.y})`;
++  if (expected === 'hit') {
++    await page.mouse.move(
++      point.x + (chartType === 'column' ? 6 : 0),
++      point.y + (chartType === 'bar' ? 6 : 0),
++      { steps: 3 },
++    );
++    await expect.poll(state, { message }).toBe('dragging');
++  } else {
++    if (expected === 'padding') {
++      await expect.poll(state, { message }).toBe('selecting');
++    } else {
++      await expect.poll(state, { message }).not.toBe('dragging');
++    }
++  }
++  await page.keyboard.press('Escape');
++  await page.mouse.up();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
++  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
++    'data-render-state',
++    'ready',
++  );
++  await page.evaluate(
++    () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))),
++  );
++}
++
++for (const chartType of ['column', 'bar'] as const) {
++  test(`${chartType} maps each series interval to the same category move`, async ({ page }) => {
++    await openEditor(page);
++    for (const seriesIndex of [0, 1] as const) {
++      const canvas = await applyConfig(
++        page,
++        config(chartType, 'positive', { datasetSuffix: `-series-${seriesIndex}` }),
++      );
++      await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
++      const components = (await paintedComponents(canvas)).filter(
++        component => component.area > 100,
++      );
++      const ordered = [...components].sort((left, right) =>
++        chartType === 'column' ? left.centerX - right.centerX : left.centerY - right.centerY,
++      );
++      expect(ordered).toHaveLength(4);
++      const source = ordered[seriesIndex];
++      const target = ordered[2];
++      expect(source).toBeDefined();
++      expect(target).toBeDefined();
++      if (source === undefined || target === undefined) {
++        return;
++      }
++
++      await page.mouse.move(source.centerX, source.centerY);
++      await page.mouse.down();
++      await page.mouse.move(target.centerX, target.centerY, { steps: 8 });
++      await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++      await expect(page.getByTestId('chart-drag-overlay')).toBeVisible();
++      await page.mouse.up();
++
++      await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++      expect(await rootOrder(page)).toEqual(['beta', 'alpha']);
++      const undo = page.getByRole('button', { name: /撤销|Undo/ });
++      await expect(undo).toBeEnabled();
++      await undo.click();
++      expect(await rootOrder(page)).toEqual(['alpha', 'beta']);
++    }
++  });
++}
++
++test('comparison drag survives valid to invalid to valid preview and commits once', async ({
++  page,
++}) => {
++  await openEditor(page);
++  const canvas = await applyConfig(page, config('column', 'positive', { datasetSuffix: '-reentry' }));
++  await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
++  const components = [...(await paintedComponents(canvas))]
++    .filter(component => component.area > 100)
++    .sort((left, right) => left.centerX - right.centerX);
++  const source = components[0];
++  const target = components[2];
++  expect(source).toBeDefined();
++  expect(target).toBeDefined();
++  if (source === undefined || target === undefined) {
++    return;
++  }
++
++  await page.mouse.move(source.centerX, source.centerY);
++  await page.mouse.down();
++  await page.mouse.move(target.centerX, target.centerY, { steps: 8 });
++  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++
++  await page.mouse.move(source.centerX + 8, source.centerY, { steps: 6 });
++  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
++
++  await page.mouse.move(target.centerX, target.centerY, { steps: 8 });
++  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++  await page.mouse.up();
++
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++  expect(await rootOrder(page)).toEqual(['beta', 'alpha']);
++  const undo = page.getByRole('button', { name: /撤销|Undo/ });
++  await expect(undo).toBeEnabled();
++  await undo.click();
++  expect(await rootOrder(page)).toEqual(['alpha', 'beta']);
++  await expect(undo).toBeDisabled();
++});
++
++test('comparison marquee deduplicates both series rectangles into category selection', async ({
++  page,
++}) => {
++  await openEditor(page);
++  const canvas = await applyConfig(page, config('column'));
++  await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
++  const components = (await paintedComponents(canvas)).filter(component => component.area > 100);
++  expect(components).toHaveLength(4);
++  const box = await canvas.boundingBox();
++  expect(box).not.toBeNull();
++  if (box === null || components.length !== 4) {
++    return;
++  }
++  const start = {
++    x: Math.max(box.x + 2, Math.min(...components.map(component => component.minX)) - 8),
++    y: Math.max(box.y + 2, Math.min(...components.map(component => component.minY)) - 8),
++  };
++  const end = {
++    x: Math.min(
++      box.x + box.width - 2,
++      Math.max(...components.map(component => component.maxX)) + 8,
++    ),
++    y: Math.min(
++      box.y + box.height - 2,
++      Math.max(...components.map(component => component.maxY)) + 8,
++    ),
++  };
++
++  await page.mouse.move(start.x, start.y);
++  await page.mouse.down();
++  await page.mouse.move(end.x, end.y, { steps: 8 });
++  await expect(page.getByTestId('chart-marquee')).toBeVisible();
++  await page.mouse.up();
++
++  await expect(
++    page.getByRole('dialog', { name: /创建折叠分组|Create collapsed group/ }),
++  ).toBeVisible();
++  const selectedIds = await page
++    .getByRole('tree')
++    .locator('[role="treeitem"][aria-selected="true"][data-node-id]')
++    .evaluateAll(rows => rows.map(row => row.getAttribute('data-node-id')));
++  expect(selectedIds).toEqual(['alpha', 'beta']);
++});
++
++test('comparison Tooltip is dismissed by resize and update and can show again', async ({
++  page,
++}) => {
++  await openEditor(page);
++  const canvas = await applyConfig(page, config('column', 'positive', { tooltip: true }));
++  await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
++  const components = (await paintedComponents(canvas)).filter(component => component.area > 100);
++  const first = components[0];
++  const second = components[1];
++  expect(first).toBeDefined();
++  expect(second).toBeDefined();
++  if (first === undefined || second === undefined) {
++    return;
++  }
++  const visibleTooltip = page.locator('.g2-tooltip').filter({ visible: true });
++
++  await page.mouse.move(first.centerX, first.centerY);
++  await expect(visibleTooltip).toBeVisible();
++  await page.setViewportSize({ width: 1200, height: 760 });
++  await expect(visibleTooltip).toHaveCount(0);
++
++  await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
++  const resized = (await paintedComponents(canvas)).filter(component => component.area > 100)[1];
++  expect(resized).toBeDefined();
++  if (resized === undefined) {
++    return;
++  }
++  await page.mouse.move(2, 2);
++  await page.mouse.move(resized.centerX, resized.centerY);
++  await expect(visibleTooltip).toBeVisible();
++  await applyConfig(
++    page,
++    config('column', 'positive', { datasetSuffix: '-updated', tooltip: true }),
++  );
++  await expect(visibleTooltip).toHaveCount(0);
++});
++
++for (const chartType of ['column', 'bar'] as const) {
++  for (const domain of ['negative', 'positive'] as const) {
++    test(`${chartType} all-${domain} renderer band exposes only the local all-zero 32px target`, async ({
++      page,
++    }) => {
++      await openEditor(page);
++      const canvas = await applyConfig(
++        page,
++        config(chartType, domain === 'negative' ? 'zero-negative' : 'zero-positive'),
++      );
++      await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
++      const components = (await paintedComponents(canvas)).filter(
++        component => component.area > 100,
++      );
++      const clusters = sourceOrderedCategoryClusters(categoryClusters(components, chartType));
++      expect(clusters).toHaveLength(2);
++      const beta = clusters[0];
++      const gamma = clusters[1];
++      expect(beta).toBeDefined();
++      expect(gamma).toBeDefined();
++      if (beta === undefined || gamma === undefined) {
++        return;
++      }
++      const alphaCenter = beta.center + (beta.center - gamma.center);
++      const baseline = paintedZeroBaseline(components, chartType, domain);
++      const direction: 1 | -1 =
++        chartType === 'column' ? (domain === 'negative' ? 1 : -1) : domain === 'negative' ? -1 : 1;
++      const stripCenterDistance = 16;
++      for (const distance of [stripCenterDistance - 15, stripCenterDistance + 15]) {
++        await test.step(`hit at strip distance ${distance}`, async () =>
++          probeComparisonHit(
++            page,
++            chartType,
++            valueAxisPoint(chartType, alphaCenter, baseline, direction, distance),
++            'hit',
++          ));
++      }
++      for (const distance of [stripCenterDistance - 17, stripCenterDistance + 17]) {
++        await test.step(`${distance < 0 ? 'outside' : 'padding'} at strip distance ${distance}`, async () =>
++          probeComparisonHit(
++            page,
++            chartType,
++            valueAxisPoint(chartType, alphaCenter, baseline, direction, distance),
++            distance < 0 ? 'outside' : 'padding',
++          ));
++      }
++      await test.step('padding at adjacent category midpoint', async () =>
++        probeComparisonHit(
++          page,
++          chartType,
++          valueAxisPoint(
++            chartType,
++            (alphaCenter + beta.center) / 2,
++            baseline,
++            direction,
++            stripCenterDistance,
++          ),
++          'padding',
++        ));
++    });
++  }
++}
++
++for (const chartType of ['column', 'bar'] as const) {
++  test(`${chartType} global all-zero target keeps the renderer category gap inactive`, async ({
++    page,
++  }) => {
++    await openEditor(page);
++    let canvas = await applyConfig(page, config(chartType, 'positive-three'));
++    await expect.poll(() => paintedComponents(canvas)).toHaveLength(6);
++    const components = (await paintedComponents(canvas)).filter(component => component.area > 100);
++    const clusters = sourceOrderedCategoryClusters(categoryClusters(components, chartType));
++    expect(clusters).toHaveLength(3);
++    const alphaCluster = clusters[0];
++    const betaCluster = clusters[1];
++    expect(alphaCluster).toBeDefined();
++    expect(betaCluster).toBeDefined();
++    if (alphaCluster === undefined || betaCluster === undefined) {
++      return;
++    }
++    const baseline = paintedZeroBaseline(components, chartType, 'positive');
++    const direction: 1 | -1 = chartType === 'column' ? -1 : 1;
++
++    canvas = await applyConfig(page, config(chartType, 'global-zero'));
++    await expect.poll(() => paintedComponents(canvas)).toHaveLength(0);
++    const stripCenterDistance = 16;
++    for (const distance of [stripCenterDistance - 15, stripCenterDistance + 15]) {
++      await probeComparisonHit(
++        page,
++        chartType,
++        valueAxisPoint(chartType, alphaCluster.center, baseline, direction, distance),
++        'hit',
++      );
++    }
++    for (const distance of [stripCenterDistance - 17, stripCenterDistance + 17]) {
++      await probeComparisonHit(
++        page,
++        chartType,
++        valueAxisPoint(chartType, alphaCluster.center, baseline, direction, distance),
++        distance < 0 ? 'outside' : 'padding',
++      );
++    }
++    await probeComparisonHit(
++      page,
++      chartType,
++      valueAxisPoint(
++        chartType,
++        (alphaCluster.center + betaCluster.center) / 2,
++        baseline,
++        direction,
++        stripCenterDistance,
++      ),
++      'padding',
++    );
++  });
++}
++
++test('resize invalidates an active comparison drag without command or history', async ({
++  page,
++}) => {
++  await openEditor(page);
++  const canvas = await applyConfig(page, config('column'));
++  await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
++  const components = [...(await paintedComponents(canvas))]
++    .filter(component => component.area > 100)
++    .sort((left, right) => left.centerX - right.centerX);
++  const source = components[1];
++  const target = components[3];
++  expect(source).toBeDefined();
++  expect(target).toBeDefined();
++  if (source === undefined || target === undefined) {
++    return;
++  }
++  await page.mouse.move(source.centerX, source.centerY);
++  await page.mouse.down();
++  await page.mouse.move(target.centerX, target.centerY, { steps: 6 });
++  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++
++  await page.setViewportSize({ width: 1200, height: 760 });
++
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '0');
++  await expect(page.getByTestId('chart-drag-overlay')).toHaveCount(0);
++  await expect(page.getByRole('button', { name: /撤销|Undo/ })).toBeDisabled();
++  expect(await rootOrder(page)).toEqual(['alpha', 'beta']);
++  await page.mouse.up();
++});
+diff --git a/packages/core/tests/interactions/categoryAxis.test.ts b/packages/core/tests/interactions/categoryAxis.test.ts
+index baf70ff..6bda289 100644
+--- a/packages/core/tests/interactions/categoryAxis.test.ts
++++ b/packages/core/tests/interactions/categoryAxis.test.ts
+@@ -336,4 +336,19 @@ describe('category-axis minimum pointer target', () => {
+       reason: 'INVALID_INPUT',
+     });
+   });
++
++  it('partitions overlapping minimum targets at the axis midpoint with earlier-order ties', () => {
++    const bounds = [
++      { nodeId: 'earlier', minX: 100, minY: 100, maxX: 108, maxY: 110 },
++      { nodeId: 'later', minX: 120, minY: 100, maxX: 128, maxY: 110 },
++    ];
++    expect(resolveChartCategoryMinimumTargetHit({ x: 114, y: 105 }, bounds, 32, 'x')).toEqual({
++      ok: true,
++      hit: { nodeId: 'earlier', edge: 'after', min: 100, max: 108, target: 108 },
++    });
++    expect(resolveChartCategoryMinimumTargetHit({ x: 114.01, y: 105 }, bounds, 32, 'x')).toEqual({
++      ok: true,
++      hit: { nodeId: 'later', edge: 'before', min: 120, max: 128, target: 120 },
++    });
++  });
+ });
+diff --git a/packages/editor/src/editor/chartSurface.ts b/packages/editor/src/editor/chartSurface.ts
+index 4974765..3a904ac 100644
+--- a/packages/editor/src/editor/chartSurface.ts
++++ b/packages/editor/src/editor/chartSurface.ts
+@@ -35,11 +35,18 @@ import {
+ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
+ import { createG2ChartRuntime, type G2ChartRuntime } from '../rendering/g2/chartRuntime';
+ import {
++  readComparisonChartCategoryElementPointer,
+   readChartCategoryElementPointer,
+   readChartElementBounds,
+   type ChartSceneElementBounds,
+   type ChartPointerPoint,
+ } from '../rendering/g2/chartPointer';
++import {
++  createComparisonSceneReceipt,
++  hitComparisonSceneReceipt,
++  marqueeComparisonSceneReceipt,
++  type ComparisonSceneReceipt,
++} from '../rendering/g2/comparisonSceneReceipt';
+ import { button, element, setOptionalAttribute } from './dom';
+ import type { EditorLocale } from './formatAmount';
+ import type { EditorLayoutMode } from './layout';
+@@ -116,6 +123,7 @@ interface ChartRenderRequestValue {
+   readonly chart: EditorChartProjection;
+   readonly authoritative: boolean;
+   readonly interactionSignature: string;
++  readonly renderRevision: number;
+ }
+ 
+ const CHART_RENDER_ISSUE = Object.freeze<ChartRenderIssue>({
+@@ -179,8 +187,13 @@ function axisFor(chart: EditorChartProjection): CategoryAxis {
+   return chart.chartType === 'bar' ? 'y' : 'x';
+ }
+ 
+-function interactionSignature(chart: EditorChartProjection): string {
+-  return JSON.stringify(chart);
++function interactionSignature(state: ChartSurfaceState, layoutMode: EditorLayoutMode): string {
++  return JSON.stringify({
++    chart: state.chart,
++    config: state.config,
++    view: state.view,
++    layoutMode,
++  });
+ }
+ 
+ function isDraggable(chart: EditorChartProjection, nodeId: ViewNodeId): boolean {
+@@ -352,14 +365,23 @@ export function createChartSurface(
+   let currentInteractionSignature: string | undefined;
+   let interactiveSceneSignature: string | undefined;
+   let interactionBlockedUntilCompatibleSettlement = false;
++  let comparisonReceipt: ComparisonSceneReceipt | undefined;
++  let comparisonPreviewActive = false;
++
++  const isComparison = (state: ChartSurfaceState | undefined = current): boolean =>
++    state?.chart.family === 'categorical' && state.chart.generation === 'comparison';
+ 
+   const renderAllowsInteraction = (): boolean =>
+     current !== undefined &&
+-    !(current.chart.family === 'categorical' && current.chart.generation === 'comparison') &&
+     !renderErrorActive &&
+     stage.dataset['renderState'] !== 'error' &&
+     !interactionBlockedUntilCompatibleSettlement &&
+-    interactiveSceneSignature === currentInteractionSignature;
++    interactiveSceneSignature === currentInteractionSignature &&
++    (!isComparison() ||
++      (comparisonReceipt !== undefined &&
++        comparisonReceipt.renderSignature === currentInteractionSignature &&
++        comparisonReceipt.renderRevision === current.view.revision &&
++        comparisonReceipt.generation === runtime.getGeneration()));
+ 
+   const hideActions = (): void => {
+     actions.hidden = true;
+@@ -378,6 +400,7 @@ export function createChartSurface(
+   };
+ 
+   const clearInteraction = (notify = true): void => {
++    runtime.dismissTooltip();
+     drag = null;
+     marqueeSession = null;
+     stage.dataset['interactionState'] = 'idle';
+@@ -401,9 +424,6 @@ export function createChartSurface(
+     if (session === null || active === undefined) {
+       return;
+     }
+-    if (active.chart.family === 'categorical' && active.chart.generation === 'comparison') {
+-      return;
+-    }
+     const datum = active.chart.projection.find(candidate => candidate.nodeId === nodeId);
+     if (datum === undefined) {
+       return;
+@@ -433,7 +453,12 @@ export function createChartSurface(
+         toFinancialChartAppearance(active.config),
+         '',
+       ).palette;
+-      dragOverlay.style.setProperty('--tp-chart-drag-fill', palette[datum.kind]);
++      dragOverlay.style.setProperty(
++        '--tp-chart-drag-fill',
++        active.chart.family === 'categorical' && active.chart.generation === 'comparison'
++          ? '#5F6B65'
++          : palette[datum.kind as keyof typeof palette],
++      );
+       shell.insertBefore(dragOverlay, actions);
+     }
+     const markBounds = session.markBounds;
+@@ -466,9 +491,10 @@ export function createChartSurface(
+       return;
+     }
+     const groupActions = actionGroups(current.chart, current.view, nodeId);
+-    const bounds = readChartElementBounds(runtime.getContext()).find(
+-      value => value.nodeId === nodeId,
+-    );
++    const comparisonBounds = comparisonReceipt?.categories.find(value => value.nodeId === nodeId);
++    const bounds = isComparison()
++      ? (comparisonBounds?.pointerBounds ?? comparisonBounds?.ghostBounds)
++      : readChartElementBounds(runtime.getContext()).find(value => value.nodeId === nodeId);
+     if (groupActions === null || bounds === undefined) {
+       hideActions();
+       return;
+@@ -661,24 +687,63 @@ export function createChartSurface(
+           .filter(datum => isDraggable(activeState.chart, datum.nodeId))
+           .map(datum => datum.nodeId) ?? [],
+       );
+-      const ids = readChartElementBounds(runtime.getContext())
+-        .filter(
+-          bounds =>
+-            bounds.maxX >= left &&
+-            bounds.minX <= right &&
+-            bounds.maxY >= top &&
+-            bounds.minY <= bottom,
+-        )
+-        .map(bounds => bounds.nodeId)
+-        .filter(
+-          (nodeId, index, values) => selectable.has(nodeId) && values.indexOf(nodeId) === index,
+-        );
++      const ids = isComparison()
++        ? (comparisonReceipt === undefined
++            ? []
++            : marqueeComparisonSceneReceipt(comparisonReceipt, {
++                minX: left,
++                minY: top,
++                maxX: right,
++                maxY: bottom,
++              })
++          ).filter(nodeId => selectable.has(nodeId))
++        : readChartElementBounds(runtime.getContext())
++            .filter(
++              bounds =>
++                bounds.maxX >= left &&
++                bounds.minX <= right &&
++                bounds.maxY >= top &&
++                bounds.minY <= bottom,
++            )
++            .map(bounds => bounds.nodeId)
++            .filter(
++              (nodeId, index, values) => selectable.has(nodeId) && values.indexOf(nodeId) === index,
++            );
+       if (ids.length > 0) {
+         callbacks.onMarqueeSelection(ids);
+       }
+     }
+   };
+ 
++  const refreshComparisonReceipt = (): ComparisonSceneReceipt | undefined => {
++    const active = current;
++    const settled = comparisonReceipt;
++    if (
++      active === undefined ||
++      settled === undefined ||
++      active.chart.family !== 'categorical' ||
++      active.chart.generation !== 'comparison' ||
++      active.config.data.schemaVersion !== '3.0.0' ||
++      currentInteractionSignature === undefined
++    ) {
++      comparisonReceipt = undefined;
++      return undefined;
++    }
++    comparisonReceipt = createComparisonSceneReceipt({
++      context: runtime.getContext(),
++      projection: active.chart.projection,
++      series: active.config.data.series,
++      axis: axisFor(active.chart),
++      renderSignature: settled.renderSignature,
++      currentRenderSignature: currentInteractionSignature,
++      renderRevision: settled.renderRevision,
++      currentRenderRevision: active.view.revision,
++      generation: settled.generation,
++      currentGeneration: runtime.getGeneration(),
++    });
++    return comparisonReceipt;
++  };
++
+   const beginElementInteraction = (nodeId: ViewNodeId, point: ChartPointerPoint): void => {
+     if (
+       current === undefined ||
+@@ -689,6 +754,7 @@ export function createChartSurface(
+     ) {
+       return;
+     }
++    runtime.dismissTooltip();
+     const axis = axisFor(current.chart);
+     hideActions();
+     actions.classList.remove('tp-chart-group-actions');
+@@ -704,7 +770,8 @@ export function createChartSurface(
+       callbacks.onCancel('item-locked');
+       return;
+     }
+-    const sceneBounds = readChartElementBounds(runtime.getContext());
++    const activeReceipt = isComparison() ? comparisonReceipt : undefined;
++    const sceneBounds = isComparison() ? [] : readChartElementBounds(runtime.getContext());
+     const boundsByNode = new Map(
+       sceneBounds
+         .map(bounds => {
+@@ -715,10 +782,21 @@ export function createChartSurface(
+           (value): value is readonly [ViewNodeId, ChartCategoryBounds] => value !== undefined,
+         ),
+     );
+-    const orderedBounds = current.chart.projection.flatMap(datum => {
+-      const bounds = boundsByNode.get(datum.nodeId);
+-      return bounds === undefined ? [] : [bounds];
+-    });
++    const orderedBounds = isComparison()
++      ? (activeReceipt?.categories.map(category => category.axisBounds) ?? [])
++      : current.chart.projection.flatMap(datum => {
++          const bounds = boundsByNode.get(datum.nodeId);
++          return bounds === undefined ? [] : [bounds];
++        });
++    const markBounds = isComparison()
++      ? activeReceipt?.categories.find(category => category.nodeId === nodeId)?.ghostBounds
++      : sceneBounds.find(bounds => bounds.nodeId === nodeId);
++    if (
++      (isComparison() && orderedBounds.length !== current.chart.projection.length) ||
++      markBounds === undefined
++    ) {
++      return;
++    }
+     drag = {
+       pointerId: point.pointerId,
+       itemId: nodeId,
+@@ -727,7 +805,7 @@ export function createChartSurface(
+       current: point,
+       orderedBounds,
+       sourceGroupBounds: projectChartCategorySourceGroupBounds(current.view, nodeId, orderedBounds),
+-      markBounds: sceneBounds.find(bounds => bounds.nodeId === nodeId),
++      markBounds,
+       revision: current.view.revision,
+       moved: false,
+       target: null,
+@@ -744,8 +822,14 @@ export function createChartSurface(
+       return;
+     }
+     runtime.finishAnimations();
+-    const pointer = readChartCategoryElementPointer(event, axisFor(current.chart));
+-    if (pointer.ok) {
++    const activeReceipt = isComparison() ? refreshComparisonReceipt() : undefined;
++    const pointer =
++      isComparison() && activeReceipt !== undefined
++        ? readComparisonChartCategoryElementPointer(event, activeReceipt)
++        : isComparison()
++          ? undefined
++          : readChartCategoryElementPointer(event, axisFor(current.chart));
++    if (pointer?.ok === true) {
+       beginElementInteraction(pointer.value.nodeId, pointer.value);
+     }
+   };
+@@ -775,18 +859,29 @@ export function createChartSurface(
+     if (point === undefined) {
+       return;
+     }
+-    const elementBounds = readChartElementBounds(runtime.getContext());
+-    if (current.chart.projection.length > 0 && elementBounds.length === 0) {
++    const activeReceipt = isComparison() ? refreshComparisonReceipt() : undefined;
++    const elementBounds = isComparison() ? [] : readChartElementBounds(runtime.getContext());
++    if (
++      current.chart.projection.length > 0 &&
++      (isComparison() ? activeReceipt === undefined : elementBounds.length === 0)
++    ) {
+       return;
+     }
+-    const hitsMark = elementBounds.some(
+-      bounds =>
+-        point.x >= bounds.minX &&
+-        point.x <= bounds.maxX &&
+-        point.y >= bounds.minY &&
+-        point.y <= bounds.maxY,
+-    );
+-    if (!hitsMark) {
++    const comparisonHit =
++      activeReceipt === undefined ? undefined : hitComparisonSceneReceipt(activeReceipt, point);
++    const hitsMark = isComparison()
++      ? comparisonHit !== undefined
++      : elementBounds.some(
++          bounds =>
++            point.x >= bounds.minX &&
++            point.x <= bounds.maxX &&
++            point.y >= bounds.minY &&
++            point.y <= bounds.maxY,
++        );
++    if (comparisonHit !== undefined) {
++      beginElementInteraction(comparisonHit.nodeId, point);
++    } else if (!hitsMark) {
++      runtime.dismissTooltip();
+       marqueeSession = { pointerId: point.pointerId, start: point, current: point };
+       stage.dataset['interactionState'] = 'selecting';
+       callbacks.onInteractionChange({ state: 'selecting' });
+@@ -803,8 +898,13 @@ export function createChartSurface(
+           if (current === undefined || drag !== null || !renderAllowsInteraction()) {
+             return;
+           }
+-          const pointer = readChartCategoryElementPointer(event, axisFor(current.chart));
+-          if (pointer.ok) {
++          const pointer = isComparison()
++            ? comparisonReceipt === undefined
++              ? undefined
++              : readComparisonChartCategoryElementPointer(event, comparisonReceipt)
++            : readChartCategoryElementPointer(event, axisFor(current.chart));
++          if (pointer?.ok === true) {
++            runtime.dismissTooltip();
+             renderActions(pointer.value.nodeId);
+           }
+         },
+@@ -887,16 +987,62 @@ export function createChartSurface(
+         },
+       },
+     ],
++    onGeometryInvalidated: () => {
++      if (!isComparison()) {
++        return;
++      }
++      runtime.dismissTooltip();
++      comparisonReceipt = undefined;
++      interactiveSceneSignature = undefined;
++      interactionBlockedUntilCompatibleSettlement = true;
++      const hadActiveInteraction = drag !== null || marqueeSession !== null;
++      clearInteraction(hadActiveInteraction);
++    },
+     onRenderSettled: settlement => {
+       if (!settlement.latest || destroyed) {
+         return;
+       }
++      const geometryAuthoritative = settlement.geometryAuthoritative !== false;
+       if (settlement.status === 'success') {
+-        interactiveSceneSignature = settlement.value.interactionSignature;
++        if (!settlement.value.authoritative) {
++          return;
++        }
++        const comparisonGeometryBlocked = isComparison() && !geometryAuthoritative;
++        interactiveSceneSignature = comparisonGeometryBlocked
++          ? undefined
++          : settlement.value.interactionSignature;
+         interactionBlockedUntilCompatibleSettlement =
++          comparisonGeometryBlocked ||
+           current === undefined ||
+           settlement.value.interactionSignature !== currentInteractionSignature;
++        if (comparisonGeometryBlocked) {
++          comparisonReceipt = undefined;
++        }
++        if (
++          geometryAuthoritative &&
++          settlement.value.authoritative &&
++          current !== undefined &&
++          current.chart.family === 'categorical' &&
++          current.chart.generation === 'comparison' &&
++          current.config.data.schemaVersion === '3.0.0' &&
++          currentInteractionSignature !== undefined
++        ) {
++          comparisonReceipt = createComparisonSceneReceipt({
++            context: runtime.getContext(),
++            projection: current.chart.projection,
++            series: current.config.data.series,
++            axis: axisFor(current.chart),
++            renderSignature: settlement.value.interactionSignature,
++            currentRenderSignature: currentInteractionSignature,
++            renderRevision: settlement.value.renderRevision,
++            currentRenderRevision: current.view.revision,
++            generation: settlement.generation,
++            currentGeneration: runtime.getGeneration(),
++          });
++          interactionBlockedUntilCompatibleSettlement ||= comparisonReceipt === undefined;
++        }
+       } else {
++        comparisonReceipt = undefined;
+         interactionBlockedUntilCompatibleSettlement = true;
+       }
+       if (settlement.status === 'failure') {
+@@ -915,7 +1061,7 @@ export function createChartSurface(
+         if (!settlement.value.authoritative) {
+           requestRender(current);
+         }
+-      } else if (settlement.value.authoritative) {
++      } else if (settlement.value.authoritative && (!isComparison() || geometryAuthoritative)) {
+         stage.dataset['renderState'] = 'ready';
+         renderError.hidden = true;
+         if (renderErrorActive) {
+@@ -942,26 +1088,37 @@ export function createChartSurface(
+     }
+     runtime.finishAnimations();
+     const point = pointFromPointerEvent(event, canvas);
+-    const elementBounds = readChartElementBounds(runtime.getContext());
+-    if (current.chart.projection.length > 0 && elementBounds.length === 0) {
++    const activeReceipt = isComparison() ? refreshComparisonReceipt() : undefined;
++    const elementBounds = isComparison() ? [] : readChartElementBounds(runtime.getContext());
++    if (
++      current.chart.projection.length > 0 &&
++      (isComparison() ? activeReceipt === undefined : elementBounds.length === 0)
++    ) {
+       return;
+     }
+-    const exactHit = elementBounds.find(
+-      bounds =>
+-        point.x >= bounds.minX &&
+-        point.x <= bounds.maxX &&
+-        point.y >= bounds.minY &&
+-        point.y <= bounds.maxY,
+-    );
++    const comparisonHit =
++      activeReceipt === undefined ? undefined : hitComparisonSceneReceipt(activeReceipt, point);
++    const exactHit = isComparison()
++      ? undefined
++      : elementBounds.find(
++          bounds =>
++            point.x >= bounds.minX &&
++            point.x <= bounds.maxX &&
++            point.y >= bounds.minY &&
++            point.y <= bounds.maxY,
++        );
+     const minimumHit =
+-      exactHit === undefined && layoutMode === 'narrow'
++      !isComparison() && exactHit === undefined && layoutMode === 'narrow'
+         ? resolveChartCategoryMinimumTargetHit(point, elementBounds, 32, axisFor(current.chart))
+         : undefined;
+     const nodeId =
+-      exactHit?.nodeId ?? (minimumHit?.ok === true ? minimumHit.hit.nodeId : undefined);
++      comparisonHit?.nodeId ??
++      exactHit?.nodeId ??
++      (minimumHit?.ok === true ? minimumHit.hit.nodeId : undefined);
+     if (nodeId !== undefined) {
+       beginElementInteraction(nodeId, point);
+     } else if (current.config.editor?.readOnly !== true) {
++      runtime.dismissTooltip();
+       marqueeSession = { pointerId: point.pointerId, start: point, current: point };
+       stage.dataset['interactionState'] = 'selecting';
+       callbacks.onInteractionChange({ state: 'selecting' });
+@@ -1014,14 +1171,19 @@ export function createChartSurface(
+       eventTargetsPlot(event)
+     ) {
+       const point = pointFromPointerEvent(event, canvas);
+-      const hit = readChartElementBounds(runtime.getContext()).find(
+-        bounds =>
+-          point.x >= bounds.minX &&
+-          point.x <= bounds.maxX &&
+-          point.y >= bounds.minY &&
+-          point.y <= bounds.maxY,
+-      );
++      const hit = isComparison()
++        ? comparisonReceipt === undefined
++          ? undefined
++          : hitComparisonSceneReceipt(comparisonReceipt, point)
++        : readChartElementBounds(runtime.getContext()).find(
++            bounds =>
++              point.x >= bounds.minX &&
++              point.x <= bounds.maxX &&
++              point.y >= bounds.minY &&
++              point.y <= bounds.maxY,
++          );
+       if (hit !== undefined) {
++        runtime.dismissTooltip();
+         renderActions(hit.nodeId);
+       }
+     }
+@@ -1063,13 +1225,18 @@ export function createChartSurface(
+   document.addEventListener('keydown', handleKeyDown);
+   ownerWindow?.addEventListener('blur', handleWindowBlur);
+ 
+-  const requestRender = (renderState: ChartSurfaceState | undefined = current): void => {
++  const requestRender = (
++    renderState: ChartSurfaceState | undefined = current,
++    authoritative = renderState === current,
++  ): void => {
+     if (renderState === undefined || destroyed) {
+       return;
+     }
++    if (authoritative) {
++      comparisonPreviewActive = false;
++    }
+     const { chart, config, view } = renderState;
+-    const authoritative = renderState === current;
+-    const nextInteractionSignature = interactionSignature(chart);
++    const nextInteractionSignature = interactionSignature(renderState, layoutMode);
+     if (!hasRenderRequest) {
+       hasRenderRequest = true;
+       interactiveSceneSignature = nextInteractionSignature;
+@@ -1133,9 +1300,15 @@ export function createChartSurface(
+       });
+     }
+     runtime.request({
+-      value: { chart, authoritative, interactionSignature: nextInteractionSignature },
++      value: {
++        chart,
++        authoritative,
++        interactionSignature: nextInteractionSignature,
++        renderRevision: view.revision,
++      },
+       spec,
+       structuralIdentity,
++      invalidateGeometry: authoritative,
+     });
+   };
+   retryRender.addEventListener('click', () => requestRender());
+@@ -1149,7 +1322,7 @@ export function createChartSurface(
+         return;
+       }
+       current = state;
+-      currentInteractionSignature = interactionSignature(state.chart);
++      currentInteractionSignature = interactionSignature(state, layoutMode);
+       clearInteraction();
+       const locale = state.config.locale ?? 'zh-CN';
+       const copy = chartCopy(locale, state.chart.family);
+@@ -1193,11 +1366,28 @@ export function createChartSurface(
+       requestRender();
+     },
+     preview(state): void {
+-      requestRender(state ?? current);
++      if (state === null && isComparison()) {
++        if (!comparisonPreviewActive) {
++          return;
++        }
++        if (drag !== null) {
++          requestRender(current, false);
++          return;
++        }
++        requestRender(current, true);
++        return;
++      }
++      if (state !== null && isComparison(state)) {
++        comparisonPreviewActive = true;
++      }
++      requestRender(state ?? current, state === null);
+     },
+     setLayoutMode(mode): void {
+       if (!destroyed && mode !== layoutMode) {
+         layoutMode = mode;
++        if (current !== undefined) {
++          currentInteractionSignature = interactionSignature(current, layoutMode);
++        }
+         requestRender();
+       }
+     },
+@@ -1211,6 +1401,7 @@ export function createChartSurface(
+         return;
+       }
+       destroyed = true;
++      comparisonPreviewActive = false;
+       current = undefined;
+       currentInteractionSignature = undefined;
+       clearInteraction();
+diff --git a/packages/editor/src/rendering/g2/chartPointer.ts b/packages/editor/src/rendering/g2/chartPointer.ts
+index d12fd46..24c4f55 100644
+--- a/packages/editor/src/rendering/g2/chartPointer.ts
++++ b/packages/editor/src/rendering/g2/chartPointer.ts
+@@ -6,6 +6,7 @@ import {
+   type MoveTargetEdge,
+   type ViewNodeId,
+ } from '@tellplot/core';
++import type { ComparisonSceneReceipt } from './comparisonSceneReceipt';
+ 
+ export interface ChartPointerPoint {
+   readonly pointerId: number;
+@@ -148,6 +149,68 @@ export function readChartCategoryElementPointer(
+   };
+ }
+ 
++/** Maps a comparison interval event only through an already-authoritative receipt. */
++export function readComparisonChartCategoryElementPointer(
++  event: unknown,
++  receipt: ComparisonSceneReceipt,
++): ChartCategoryPointerResult {
++  const point = readChartPointerPoint(event);
++  if (point === undefined || categoryCoordinate(point, receipt.axis) === undefined) {
++    return { ok: false, reason: 'INVALID_INPUT' };
++  }
++  const record = asRecord(event);
++  const data = asRecord(read(record, 'data'));
++  const datum = asRecord(read(data, 'data'));
++  const nodeId = read(datum, 'nodeId');
++  const seriesId = read(datum, 'seriesId');
++  const elementKey = read(datum, 'elementKey');
++  if (
++    typeof nodeId !== 'string' ||
++    typeof seriesId !== 'string' ||
++    typeof elementKey !== 'string'
++  ) {
++    return { ok: false, reason: 'SOURCE_NOT_FOUND' };
++  }
++  const element = receipt.elements.find(
++    candidate =>
++      candidate.nodeId === nodeId &&
++      candidate.seriesId === seriesId &&
++      candidate.elementKey === elementKey,
++  );
++  const category = receipt.categories.find(candidate => candidate.nodeId === nodeId);
++  if (element === undefined || category === undefined) {
++    return { ok: false, reason: 'SOURCE_NOT_FOUND' };
++  }
++  const bounds = category.allZero ? category.pointerBounds : element;
++  if (
++    bounds === undefined ||
++    point.x < bounds.minX ||
++    point.x > bounds.maxX ||
++    point.y < bounds.minY ||
++    point.y > bounds.maxY
++  ) {
++    return { ok: false, reason: 'INVALID_BOUNDS' };
++  }
++  const coordinate = categoryCoordinate(point, receipt.axis);
++  if (coordinate === undefined) {
++    return { ok: false, reason: 'INVALID_BOUNDS' };
++  }
++  const edge: MoveTargetEdge =
++    coordinate < category.axisBounds.center ? 'before' : 'after';
++  return {
++    ok: true,
++    value: {
++      ...point,
++      axis: receipt.axis,
++      nodeId,
++      edge,
++      min: category.axisBounds.min,
++      max: category.axisBounds.max,
++      target: edge === 'before' ? category.axisBounds.min : category.axisBounds.max,
++    },
++  };
++}
++
+ /** Reads renderer-owned element bounds for internal hit testing and overlay placement. */
+ export function readChartElementBounds(context: unknown): readonly ChartSceneElementBounds[] {
+   const contextRecord = asRecord(context);
+diff --git a/packages/editor/src/rendering/g2/chartRuntime.ts b/packages/editor/src/rendering/g2/chartRuntime.ts
+index 432ec09..475bfa6 100644
+--- a/packages/editor/src/rendering/g2/chartRuntime.ts
++++ b/packages/editor/src/rendering/g2/chartRuntime.ts
+@@ -30,26 +30,39 @@ export interface G2ChartRenderRequest<Value> {
+   readonly value: Value;
+   readonly spec: G2Spec;
+   readonly structuralIdentity?: string | undefined;
++  readonly invalidateGeometry?: boolean | undefined;
+ }
+ 
+ export interface G2ChartRenderSettlement<Value> {
+   readonly value: Value;
+   readonly status: 'success' | 'failure';
+   readonly latest: boolean;
++  readonly generation: number;
++  readonly origin: 'render' | 'resize';
++  readonly geometryAuthoritative: boolean;
++}
++
++export interface G2ChartGeometryInvalidation {
++  readonly generation: number;
++  readonly reason: 'render' | 'resize' | 'dispose';
+ }
+ 
+ export interface G2ChartRuntimeOptions<Value> {
+   readonly container: HTMLElement;
+   readonly events: readonly G2ChartEventRegistration[];
+   readonly onRenderSettled: (settlement: G2ChartRenderSettlement<Value>) => void;
++  readonly onGeometryInvalidated?:
++    ((invalidation: G2ChartGeometryInvalidation) => void) | undefined;
+   readonly onCallbackError?: (() => void) | undefined;
+   readonly onCleanupError?: (() => void) | undefined;
+ }
+ 
+ export interface G2ChartRuntime<Value> {
+   request(request: G2ChartRenderRequest<Value>): void;
++  dismissTooltip(): void;
+   finishAnimations(): void;
+   getContext(): unknown;
++  getGeneration(): number;
+   dispose(): void;
+ }
+ 
+@@ -67,6 +80,16 @@ function finishAnimations(chart: G2Chart): void {
+   }
+ }
+ 
++function dismissTooltip(container: HTMLElement): void {
++  try {
++    for (const tooltip of container.querySelectorAll<HTMLElement>('.g2-tooltip')) {
++      tooltip.style.visibility = 'hidden';
++    }
++  } catch {
++    // Tooltip cleanup is best effort and must not interrupt renderer progress.
++  }
++}
++
+ /** Owns the shared G2 constructor, render queue, event and teardown lifecycle. */
+ export function createG2ChartRuntime<Value>(
+   options: G2ChartRuntimeOptions<Value>,
+@@ -80,6 +103,7 @@ export function createG2ChartRuntime<Value>(
+   let resizingGeneration: number | undefined;
+   let requestId = 0;
+   let attemptedRequestId = 0;
++  let successfullyRenderedRequestId = 0;
+   let latestRequest:
+     | (G2ChartRenderRequest<Value> & {
+         readonly id: number;
+@@ -90,6 +114,7 @@ export function createG2ChartRuntime<Value>(
+   let scheduleToken = 0;
+   let resizeObserver: ResizeObserver | undefined;
+   let resizePending = false;
++  let observedSize: { readonly width: number; readonly height: number } | undefined;
+ 
+   const notifyCallbackError = (): void => {
+     try {
+@@ -107,6 +132,15 @@ export function createG2ChartRuntime<Value>(
+     }
+   };
+ 
++  const notifyGeometryInvalidated = (reason: G2ChartGeometryInvalidation['reason']): void => {
++    dismissTooltip(options.container);
++    try {
++      options.onGeometryInvalidated?.({ generation, reason });
++    } catch {
++      notifyCallbackError();
++    }
++  };
++
+   const cancelScheduledFlush = (): void => {
+     scheduleToken += 1;
+     if (scheduledFrame !== undefined) {
+@@ -117,6 +151,7 @@ export function createG2ChartRuntime<Value>(
+ 
+   const disconnectResizeObserver = (): void => {
+     resizePending = false;
++    observedSize = undefined;
+     resizeObserver?.disconnect();
+     resizeObserver = undefined;
+   };
+@@ -165,14 +200,36 @@ export function createG2ChartRuntime<Value>(
+     }
+     resizePending = false;
+     resizingGeneration = activeGeneration;
++    let geometryAuthoritative = false;
+     try {
+       await activeChart.forceFit();
++      geometryAuthoritative = true;
+     } catch {
+-      // A later render request or resize can recover from a transient fit failure.
++      geometryAuthoritative = false;
+     } finally {
+       if (resizingGeneration === activeGeneration) {
+         resizingGeneration = undefined;
+       }
++      const settledRequest =
++        latestRequest?.id === attemptedRequestId &&
++        successfullyRenderedRequestId === attemptedRequestId
++          ? latestRequest
++          : undefined;
++      if (
++        !disposed &&
++        generation === activeGeneration &&
++        chart === activeChart &&
++        settledRequest !== undefined
++      ) {
++        notifySettlement({
++          value: settledRequest.value,
++          status: 'success',
++          latest: true,
++          generation: activeGeneration,
++          origin: 'resize',
++          geometryAuthoritative: geometryAuthoritative && !resizePending,
++        });
++      }
+       if (!disposed && generation === activeGeneration && chart === activeChart && resizePending) {
+         void flushResize();
+       }
+@@ -213,6 +270,7 @@ export function createG2ChartRuntime<Value>(
+           activeChart.options(request.spec);
+           await activeChart.render();
+           status = 'success';
++          successfullyRenderedRequestId = request.id;
+         } catch {
+           status = 'failure';
+         }
+@@ -222,7 +280,14 @@ export function createG2ChartRuntime<Value>(
+ 
+         attemptedRequestId = request.id;
+         const latest = latestRequest?.id === request.id;
+-        notifySettlement({ value: request.value, status, latest });
++        notifySettlement({
++          value: request.value,
++          status,
++          latest,
++          generation: activeGeneration,
++          origin: 'render',
++          geometryAuthoritative: status === 'success' && !resizePending,
++        });
+         if (!latest) {
+           continue;
+         }
+@@ -298,8 +363,31 @@ export function createG2ChartRuntime<Value>(
+       }
+       const ResizeObserver = options.container.ownerDocument.defaultView?.ResizeObserver;
+       if (ResizeObserver !== undefined) {
+-        resizeObserver = new ResizeObserver(() => {
++        try {
++          const bounds = options.container.getBoundingClientRect();
++          if (Number.isFinite(bounds.width) && Number.isFinite(bounds.height)) {
++            observedSize = { width: bounds.width, height: bounds.height };
++          }
++        } catch {
++          observedSize = undefined;
++        }
++        resizeObserver = new ResizeObserver(entries => {
+           if (!disposed && generation === activeGeneration && chart === created) {
++            const entry = entries.find(candidate => candidate.target === options.container);
++            const bounds = entry?.contentRect ?? options.container.getBoundingClientRect();
++            const nextSize = { width: bounds.width, height: bounds.height };
++            if (!Number.isFinite(nextSize.width) || !Number.isFinite(nextSize.height)) {
++              return;
++            }
++            if (observedSize === undefined) {
++              observedSize = nextSize;
++              return;
++            }
++            if (observedSize.width === nextSize.width && observedSize.height === nextSize.height) {
++              return;
++            }
++            observedSize = nextSize;
++            notifyGeometryInvalidated('resize');
+             resizePending = true;
+             void flushResize();
+           }
+@@ -315,7 +403,14 @@ export function createG2ChartRuntime<Value>(
+       const request = latestRequest;
+       if (request !== undefined) {
+         attemptedRequestId = request.id;
+-        notifySettlement({ value: request.value, status: 'failure', latest: true });
++        notifySettlement({
++          value: request.value,
++          status: 'failure',
++          latest: true,
++          generation: activeGeneration,
++          origin: 'render',
++          geometryAuthoritative: false,
++        });
+       }
+     } finally {
+       if (initializingGeneration === activeGeneration) {
+@@ -346,6 +441,9 @@ export function createG2ChartRuntime<Value>(
+         cancelScheduledFlush();
+         releaseChart();
+       }
++      if (request.invalidateGeometry !== false) {
++        notifyGeometryInvalidated('render');
++      }
+       requestId += 1;
+       latestRequest = { ...request, id: requestId };
+       if (chart === undefined) {
+@@ -354,6 +452,9 @@ export function createG2ChartRuntime<Value>(
+         scheduleFlush();
+       }
+     },
++    dismissTooltip(): void {
++      dismissTooltip(options.container);
++    },
+     finishAnimations(): void {
+       if (chart !== undefined && !disposed) {
+         finishAnimations(chart);
+@@ -369,12 +470,17 @@ export function createG2ChartRuntime<Value>(
+         return undefined;
+       }
+     },
++    getGeneration(): number {
++      return generation;
++    },
+     dispose(): void {
+       if (disposed) {
+         return;
+       }
+       disposed = true;
+       generation += 1;
++      dismissTooltip(options.container);
++      notifyGeometryInvalidated('dispose');
+       latestRequest = undefined;
+       cancelScheduledFlush();
+       releaseChart();
+diff --git a/packages/editor/src/rendering/g2/comparisonSceneReceipt.ts b/packages/editor/src/rendering/g2/comparisonSceneReceipt.ts
+new file mode 100644
+index 0000000..f2c9898
+--- /dev/null
++++ b/packages/editor/src/rendering/g2/comparisonSceneReceipt.ts
+@@ -0,0 +1,664 @@
++import type {
++  CategoryAxis,
++  ChartAxisPoint,
++  ChartCategoryBounds,
++  ChartSceneRectangle,
++  CategoricalComparisonProjection,
++  CategoricalComparisonSeries,
++  SeriesId,
++  ViewNodeId,
++} from '@tellplot/core';
++
++const COMPARISON_VIEW_KEY = 'categorical-comparison-view';
++const COMPARISON_INTERVAL_MARK_KEY = 'categorical-comparison-interval';
++const ALL_ZERO_TARGET_SIZE = 32;
++
++type UnknownRecord = Readonly<Record<string, unknown>>;
++
++interface ReadResult {
++  readonly ok: boolean;
++  readonly value?: unknown;
++}
++
++export interface ComparisonSceneElementReceipt extends ChartSceneRectangle {
++  readonly seriesId: SeriesId;
++  readonly elementKey: string;
++}
++
++export interface ComparisonCategorySceneReceipt {
++  readonly nodeId: ViewNodeId;
++  readonly rectangles: readonly ComparisonSceneElementReceipt[];
++  readonly axisBounds: ChartCategoryBounds;
++  readonly ghostBounds: ChartSceneRectangle;
++  readonly pointerBounds: ChartSceneRectangle | undefined;
++  readonly allZero: boolean;
++}
++
++export interface ComparisonSceneReceipt {
++  readonly renderSignature: string;
++  readonly renderRevision: number;
++  readonly generation: number;
++  readonly axis: CategoryAxis;
++  readonly elements: readonly ComparisonSceneElementReceipt[];
++  readonly categories: readonly ComparisonCategorySceneReceipt[];
++}
++
++export interface ComparisonSceneReceiptInput {
++  readonly context: unknown;
++  readonly projection: CategoricalComparisonProjection;
++  readonly series: readonly CategoricalComparisonSeries[];
++  readonly axis: CategoryAxis;
++  readonly renderSignature: string;
++  readonly currentRenderSignature: string;
++  readonly renderRevision: number;
++  readonly currentRenderRevision: number;
++  readonly generation: number;
++  readonly currentGeneration: number;
++}
++
++export interface ComparisonMarqueeRectangle {
++  readonly minX: number;
++  readonly minY: number;
++  readonly maxX: number;
++  readonly maxY: number;
++}
++
++function asRecord(value: unknown): UnknownRecord | undefined {
++  return (typeof value === 'object' && value !== null) || typeof value === 'function'
++    ? (value as UnknownRecord)
++    : undefined;
++}
++
++function read(record: UnknownRecord | undefined, key: string): ReadResult {
++  if (record === undefined) {
++    return { ok: false };
++  }
++  try {
++    return { ok: true, value: record[key] };
++  } catch {
++    return { ok: false };
++  }
++}
++
++function valueOf(record: UnknownRecord | undefined, key: string): unknown {
++  const result = read(record, key);
++  return result.ok ? result.value : undefined;
++}
++
++function finiteNumber(value: unknown): number | undefined {
++  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
++}
++
++function safeInteger(value: number): boolean {
++  return Number.isSafeInteger(value) && value >= 0;
++}
++
++function validAxis(axis: CategoryAxis): boolean {
++  return axis === 'x' || axis === 'y';
++}
++
++function coordinatePair(value: unknown): readonly [number, number] | undefined {
++  const record = asRecord(value);
++  const x = finiteNumber(valueOf(record, '0'));
++  const y = finiteNumber(valueOf(record, '1'));
++  return x === undefined || y === undefined ? undefined : [x, y];
++}
++
++function call(record: UnknownRecord | undefined, key: string, args: readonly unknown[]): unknown {
++  const method = read(record, key);
++  if (!method.ok || typeof method.value !== 'function') {
++    return undefined;
++  }
++  try {
++    return Reflect.apply(method.value, record, args);
++  } catch {
++    return undefined;
++  }
++}
++
++function sceneRectangle(
++  value: unknown,
++  nodeId: ViewNodeId,
++  seriesId: SeriesId,
++  elementKey: string,
++): ComparisonSceneElementReceipt | undefined {
++  const bounds = asRecord(value);
++  const min = coordinatePair(valueOf(bounds, 'min'));
++  const max = coordinatePair(valueOf(bounds, 'max'));
++  if (min !== undefined && max !== undefined) {
++    return min[0] <= max[0] && min[1] <= max[1]
++      ? {
++          nodeId,
++          seriesId,
++          elementKey,
++          minX: min[0],
++          minY: min[1],
++          maxX: max[0],
++          maxY: max[1],
++        }
++      : undefined;
++  }
++
++  const center = coordinatePair(valueOf(bounds, 'center'));
++  const halfExtents = coordinatePair(valueOf(bounds, 'halfExtents'));
++  if (
++    center === undefined ||
++    halfExtents === undefined ||
++    halfExtents[0] < 0 ||
++    halfExtents[1] < 0
++  ) {
++    return undefined;
++  }
++  return {
++    nodeId,
++    seriesId,
++    elementKey,
++    minX: center[0] - halfExtents[0],
++    minY: center[1] - halfExtents[1],
++    maxX: center[0] + halfExtents[0],
++    maxY: center[1] + halfExtents[1],
++  };
++}
++
++function expectedElementKey(nodeId: ViewNodeId, seriesId: SeriesId): string {
++  return JSON.stringify(['comparison-element', nodeId, seriesId]);
++}
++
++function pairKey(nodeId: ViewNodeId, seriesId: SeriesId): string {
++  return JSON.stringify([nodeId, seriesId]);
++}
++
++function readElements(context: unknown): readonly unknown[] | undefined {
++  const contextRecord = asRecord(context);
++  const canvas = asRecord(valueOf(contextRecord, 'canvas'));
++  const document = asRecord(valueOf(canvas, 'document'));
++  const collectionValue = call(document, 'getElementsByClassName', ['element']);
++  const collection = asRecord(collectionValue);
++  const length = finiteNumber(valueOf(collection, 'length'));
++  if (
++    collection === undefined ||
++    length === undefined ||
++    !Number.isSafeInteger(length) ||
++    length < 0
++  ) {
++    return undefined;
++  }
++  const elements: unknown[] = [];
++  for (let index = 0; index < length; index += 1) {
++    const item = read(collection, String(index));
++    if (!item.ok || item.value === undefined) {
++      return undefined;
++    }
++    elements.push(item.value);
++  }
++  return elements;
++}
++
++function readMainElement(
++  value: unknown,
++  expectedPairs: ReadonlySet<string>,
++): { readonly claimed: boolean; readonly receipt?: ComparisonSceneElementReceipt } {
++  const element = asRecord(value);
++  if (element === undefined) {
++    return { claimed: false };
++  }
++  const sceneDataRead = read(element, '__data__');
++  const sceneData = asRecord(sceneDataRead.value);
++  if (!sceneDataRead.ok) {
++    return { claimed: true };
++  }
++  if (sceneData === undefined) {
++    return { claimed: false };
++  }
++  const markKeyRead = read(sceneData, 'markKey');
++  if (!markKeyRead.ok) {
++    return { claimed: true };
++  }
++  if (markKeyRead.value !== COMPARISON_INTERVAL_MARK_KEY) {
++    return { claimed: false };
++  }
++
++  const viewKey = read(sceneData, 'viewKey');
++  const markType = read(element, 'markType');
++  const sceneKey = read(sceneData, 'key');
++  const datumRead = read(sceneData, 'data');
++  const datum = asRecord(datumRead.value);
++  if (
++    !viewKey.ok ||
++    viewKey.value !== COMPARISON_VIEW_KEY ||
++    !markType.ok ||
++    markType.value !== 'interval' ||
++    !sceneKey.ok ||
++    typeof sceneKey.value !== 'string' ||
++    !datumRead.ok ||
++    datum === undefined
++  ) {
++    return { claimed: true };
++  }
++
++  const nodeIdRead = read(datum, 'nodeId');
++  const seriesIdRead = read(datum, 'seriesId');
++  const elementKeyRead = read(datum, 'elementKey');
++  if (
++    !nodeIdRead.ok ||
++    typeof nodeIdRead.value !== 'string' ||
++    nodeIdRead.value.length === 0 ||
++    !seriesIdRead.ok ||
++    typeof seriesIdRead.value !== 'string' ||
++    seriesIdRead.value.length === 0 ||
++    !elementKeyRead.ok ||
++    typeof elementKeyRead.value !== 'string'
++  ) {
++    return { claimed: true };
++  }
++  const nodeId = nodeIdRead.value;
++  const seriesId = seriesIdRead.value;
++  const elementKey = elementKeyRead.value;
++  if (
++    !expectedPairs.has(pairKey(nodeId, seriesId)) ||
++    elementKey !== expectedElementKey(nodeId, seriesId) ||
++    sceneKey.value !== elementKey
++  ) {
++    return { claimed: true };
++  }
++
++  const bounds = call(element, 'getBounds', []);
++  const receipt = sceneRectangle(bounds, nodeId, seriesId, elementKey);
++  return receipt === undefined ? { claimed: true } : { claimed: true, receipt };
++}
++
++function unionRectangles(
++  nodeId: ViewNodeId,
++  rectangles: readonly ComparisonSceneElementReceipt[],
++): ChartSceneRectangle | undefined {
++  if (rectangles.length === 0) {
++    return undefined;
++  }
++  return {
++    nodeId,
++    minX: Math.min(...rectangles.map(bounds => bounds.minX)),
++    minY: Math.min(...rectangles.map(bounds => bounds.minY)),
++    maxX: Math.max(...rectangles.map(bounds => bounds.maxX)),
++    maxY: Math.max(...rectangles.map(bounds => bounds.maxY)),
++  };
++}
++
++function toAxisBounds(
++  nodeId: ViewNodeId,
++  bounds: ChartSceneRectangle,
++  axis: CategoryAxis,
++): ChartCategoryBounds {
++  const min = axis === 'x' ? bounds.minX : bounds.minY;
++  const max = axis === 'x' ? bounds.maxX : bounds.maxY;
++  return { nodeId, min, center: (min + max) / 2, max };
++}
++
++function arrayFromCollection(value: unknown): readonly unknown[] | undefined {
++  const collection = asRecord(value);
++  const length = finiteNumber(valueOf(collection, 'length'));
++  if (
++    collection === undefined ||
++    length === undefined ||
++    !Number.isSafeInteger(length) ||
++    length < 0
++  ) {
++    return undefined;
++  }
++  const result: unknown[] = [];
++  for (let index = 0; index < length; index += 1) {
++    const item = read(collection, String(index));
++    if (!item.ok || item.value === undefined) {
++      return undefined;
++    }
++    result.push(item.value);
++  }
++  return result;
++}
++
++function finiteLayout(view: UnknownRecord): boolean {
++  const layout = asRecord(valueOf(view, 'layout'));
++  return [
++    'x',
++    'y',
++    'width',
++    'height',
++    'innerWidth',
++    'innerHeight',
++    'marginLeft',
++    'marginTop',
++    'paddingLeft',
++    'paddingTop',
++  ].every(key => {
++    const value = finiteNumber(valueOf(layout, key));
++    return value !== undefined && (key === 'width' || key === 'height' ? value > 0 : true);
++  });
++}
++
++function mapCoordinate(
++  coordinate: UnknownRecord,
++  point: readonly [number, number],
++  offset: readonly [number, number],
++): readonly [number, number] | undefined {
++  const mapped = coordinatePair(call(coordinate, 'map', [point]));
++  return mapped === undefined ? undefined : [mapped[0] + offset[0], mapped[1] + offset[1]];
++}
++
++function readNumericRange(scale: UnknownRecord): readonly [number, number] | undefined {
++  const direct = call(scale, 'getRange', []);
++  const options = asRecord(call(scale, 'getOptions', []));
++  const range = arrayFromCollection(direct ?? valueOf(options, 'range'));
++  if (range === undefined || range.length !== 2) {
++    return undefined;
++  }
++  const first = finiteNumber(range[0]);
++  const second = finiteNumber(range[1]);
++  return first === undefined || second === undefined || first === second
++    ? undefined
++    : [first, second];
++}
++
++function exactAllZeroBounds(
++  context: unknown,
++  nodeId: ViewNodeId,
++  projectionOrder: readonly ViewNodeId[],
++  axis: CategoryAxis,
++): { readonly axisBounds: ChartCategoryBounds; readonly pointerBounds: ChartSceneRectangle } | undefined {
++  const contextRecord = asRecord(context);
++  const views = arrayFromCollection(valueOf(contextRecord, 'views'));
++  if (views === undefined) {
++    return undefined;
++  }
++  const candidates = views.filter(value => valueOf(asRecord(value), 'key') === COMPARISON_VIEW_KEY);
++  if (candidates.length !== 1) {
++    return undefined;
++  }
++  const view = asRecord(candidates[0]);
++  if (view === undefined || !finiteLayout(view)) {
++    return undefined;
++  }
++  const scale = asRecord(valueOf(view, 'scale'));
++  const layout = asRecord(valueOf(view, 'layout'));
++  const xScale = asRecord(valueOf(scale, 'x'));
++  const yScale = asRecord(valueOf(scale, 'y'));
++  const coordinate = asRecord(valueOf(view, 'coordinate'));
++  const coordinateOptions = asRecord(call(coordinate, 'getOptions', []));
++  const innerWidth = finiteNumber(valueOf(coordinateOptions, 'innerWidth'));
++  const innerHeight = finiteNumber(valueOf(coordinateOptions, 'innerHeight'));
++  if (
++    layout === undefined ||
++    xScale === undefined ||
++    yScale === undefined ||
++    coordinate === undefined ||
++    innerWidth === undefined ||
++    innerWidth <= 0 ||
++    innerHeight === undefined ||
++    innerHeight <= 0
++  ) {
++    return undefined;
++  }
++  const layoutX = finiteNumber(valueOf(layout, 'x'));
++  const layoutY = finiteNumber(valueOf(layout, 'y'));
++  const marginLeft = finiteNumber(valueOf(layout, 'marginLeft'));
++  const marginTop = finiteNumber(valueOf(layout, 'marginTop'));
++  const paddingLeft = finiteNumber(valueOf(layout, 'paddingLeft'));
++  const paddingTop = finiteNumber(valueOf(layout, 'paddingTop'));
++  if (
++    layoutX === undefined ||
++    layoutY === undefined ||
++    marginLeft === undefined ||
++    marginTop === undefined ||
++    paddingLeft === undefined ||
++    paddingTop === undefined
++  ) {
++    return undefined;
++  }
++  const offset = [layoutX + marginLeft + paddingLeft, layoutY + marginTop + paddingTop] as const;
++
++  const domain = arrayFromCollection(call(xScale, 'getDomain', []));
++  if (
++    domain === undefined ||
++    domain.length !== projectionOrder.length ||
++    domain.some((value, index) => value !== projectionOrder[index])
++  ) {
++    return undefined;
++  }
++  const categoryStart = finiteNumber(call(xScale, 'map', [nodeId]));
++  const categoryWidth = finiteNumber(call(xScale, 'getBandWidth', [nodeId]));
++  const zero = finiteNumber(call(yScale, 'map', [0]));
++  const valueRange = readNumericRange(yScale);
++  if (
++    categoryStart === undefined ||
++    categoryWidth === undefined ||
++    categoryWidth <= 0 ||
++    zero === undefined ||
++    valueRange === undefined
++  ) {
++    return undefined;
++  }
++  const categoryCenter = categoryStart + categoryWidth / 2;
++  const bandStartPoint = mapCoordinate(coordinate, [categoryStart, zero], offset);
++  const bandEndPoint = mapCoordinate(
++    coordinate,
++    [categoryStart + categoryWidth, zero],
++    offset,
++  );
++  const baselinePoint = mapCoordinate(coordinate, [categoryCenter, zero], offset);
++  const negativePoint = mapCoordinate(
++    coordinate,
++    [categoryCenter, Math.min(...valueRange)],
++    offset,
++  );
++  const positivePoint = mapCoordinate(
++    coordinate,
++    [categoryCenter, Math.max(...valueRange)],
++    offset,
++  );
++  if (
++    bandStartPoint === undefined ||
++    bandEndPoint === undefined ||
++    baselinePoint === undefined ||
++    negativePoint === undefined ||
++    positivePoint === undefined
++  ) {
++    return undefined;
++  }
++
++  const categoryStartPixel = axis === 'x' ? bandStartPoint[0] : bandStartPoint[1];
++  const categoryEndPixel = axis === 'x' ? bandEndPoint[0] : bandEndPoint[1];
++  const baseline = axis === 'x' ? baselinePoint[1] : baselinePoint[0];
++  const negativeEnd = axis === 'x' ? negativePoint[1] : negativePoint[0];
++  const positiveEnd = axis === 'x' ? positivePoint[1] : positivePoint[0];
++  const categoryMin = Math.min(categoryStartPixel, categoryEndPixel);
++  const categoryMax = Math.max(categoryStartPixel, categoryEndPixel);
++  const plotMin = Math.min(negativeEnd, positiveEnd);
++  const plotMax = Math.max(negativeEnd, positiveEnd);
++  if (
++    categoryMin === categoryMax ||
++    plotMin === plotMax ||
++    baseline < plotMin ||
++    baseline > plotMax
++  ) {
++    return undefined;
++  }
++
++  const targetSize = Math.min(ALL_ZERO_TARGET_SIZE, plotMax - plotMin);
++  const positiveCapacity = Math.abs(positiveEnd - baseline);
++  const negativeCapacity = Math.abs(negativeEnd - baseline);
++  const positiveSize = Math.min(targetSize, positiveCapacity);
++  const negativeSize = targetSize - positiveSize;
++  if (negativeSize > negativeCapacity) {
++    return undefined;
++  }
++  const positiveEdge = baseline + Math.sign(positiveEnd - baseline) * positiveSize;
++  const negativeEdge = baseline + Math.sign(negativeEnd - baseline) * negativeSize;
++  const valueMin = Math.min(baseline, positiveEdge, negativeEdge);
++  const valueMax = Math.max(baseline, positiveEdge, negativeEdge);
++  const pointerBounds =
++    axis === 'x'
++      ? { nodeId, minX: categoryMin, minY: valueMin, maxX: categoryMax, maxY: valueMax }
++      : { nodeId, minX: valueMin, minY: categoryMin, maxX: valueMax, maxY: categoryMax };
++  return {
++    axisBounds: {
++      nodeId,
++      min: categoryMin,
++      center: (categoryMin + categoryMax) / 2,
++      max: categoryMax,
++    },
++    pointerBounds,
++  };
++}
++
++/** Builds an atomic current-render receipt from the locked G2 5.4.8 scene shape. */
++export function createComparisonSceneReceipt(
++  input: ComparisonSceneReceiptInput,
++): ComparisonSceneReceipt | undefined {
++  if (
++    !validAxis(input.axis) ||
++    input.renderSignature !== input.currentRenderSignature ||
++    input.renderRevision !== input.currentRenderRevision ||
++    input.generation !== input.currentGeneration ||
++    !safeInteger(input.renderRevision) ||
++    !safeInteger(input.generation)
++  ) {
++    return undefined;
++  }
++
++  const seriesIds = input.series.map(entry => entry.id);
++  if (new Set(seriesIds).size !== seriesIds.length) {
++    return undefined;
++  }
++  const expected: { readonly nodeId: ViewNodeId; readonly seriesId: SeriesId }[] = [];
++  const expectedPairs = new Set<string>();
++  for (const datum of input.projection) {
++    if (
++      datum.values.length !== seriesIds.length ||
++      datum.values.some((value, index) => value.seriesId !== seriesIds[index])
++    ) {
++      return undefined;
++    }
++    for (const value of datum.values) {
++      const key = pairKey(datum.nodeId, value.seriesId);
++      if (expectedPairs.has(key)) {
++        return undefined;
++      }
++      expectedPairs.add(key);
++      expected.push({ nodeId: datum.nodeId, seriesId: value.seriesId });
++    }
++  }
++
++  const sceneElements = readElements(input.context);
++  if (sceneElements === undefined) {
++    return undefined;
++  }
++  const byPair = new Map<string, ComparisonSceneElementReceipt>();
++  for (const sceneElement of sceneElements) {
++    const result = readMainElement(sceneElement, expectedPairs);
++    if (!result.claimed) {
++      continue;
++    }
++    if (result.receipt === undefined) {
++      return undefined;
++    }
++    const key = pairKey(result.receipt.nodeId, result.receipt.seriesId);
++    if (byPair.has(key)) {
++      return undefined;
++    }
++    byPair.set(key, result.receipt);
++  }
++  if (byPair.size !== expected.length) {
++    return undefined;
++  }
++  const elements = expected.map(value => byPair.get(pairKey(value.nodeId, value.seriesId)));
++  if (elements.some(value => value === undefined)) {
++    return undefined;
++  }
++  const orderedElements = elements.filter(
++    (value): value is ComparisonSceneElementReceipt => value !== undefined,
++  );
++  const projectionOrder = input.projection.map(datum => datum.nodeId);
++  const categories: ComparisonCategorySceneReceipt[] = [];
++  for (const datum of input.projection) {
++    const rectangles = orderedElements.filter(element => element.nodeId === datum.nodeId);
++    const ghostBounds = unionRectangles(datum.nodeId, rectangles);
++    if (ghostBounds === undefined) {
++      return undefined;
++    }
++    const allZero = datum.values.every(value => value.amount === 0);
++    const allZeroBounds = allZero
++      ? exactAllZeroBounds(input.context, datum.nodeId, projectionOrder, input.axis)
++      : undefined;
++    if (allZero && allZeroBounds === undefined) {
++      return undefined;
++    }
++    categories.push({
++      nodeId: datum.nodeId,
++      rectangles,
++      axisBounds:
++        allZeroBounds?.axisBounds ?? toAxisBounds(datum.nodeId, ghostBounds, input.axis),
++      ghostBounds,
++      pointerBounds: allZeroBounds?.pointerBounds,
++      allZero,
++    });
++  }
++
++  return {
++    renderSignature: input.renderSignature,
++    renderRevision: input.renderRevision,
++    generation: input.generation,
++    axis: input.axis,
++    elements: orderedElements,
++    categories,
++  };
++}
++
++function contains(bounds: ChartSceneRectangle, point: ChartAxisPoint): boolean {
++  return (
++    point.x >= bounds.minX &&
++    point.x <= bounds.maxX &&
++    point.y >= bounds.minY &&
++    point.y <= bounds.maxY
++  );
++}
++
++/** Exact hit uses actual rectangles except for the renderer-band all-zero target. */
++export function hitComparisonSceneReceipt(
++  receipt: ComparisonSceneReceipt,
++  point: ChartAxisPoint,
++): ComparisonCategorySceneReceipt | undefined {
++  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
++    return undefined;
++  }
++  for (const category of receipt.categories) {
++    if (category.allZero) {
++      if (category.pointerBounds !== undefined && contains(category.pointerBounds, point)) {
++        return category;
++      }
++      continue;
++    }
++    if (category.rectangles.some(bounds => contains(bounds, point))) {
++      return category;
++    }
++  }
++  return undefined;
++}
++
++function intersects(a: ComparisonMarqueeRectangle, b: ChartSceneRectangle): boolean {
++  return a.maxX >= b.minX && a.minX <= b.maxX && a.maxY >= b.minY && a.minY <= b.maxY;
++}
++
++/** Marquee remains per-interval and returns node IDs in projection order. */
++export function marqueeComparisonSceneReceipt(
++  receipt: ComparisonSceneReceipt,
++  rectangle: ComparisonMarqueeRectangle,
++): readonly ViewNodeId[] {
++  if (
++    ![rectangle.minX, rectangle.minY, rectangle.maxX, rectangle.maxY].every(Number.isFinite) ||
++    rectangle.minX > rectangle.maxX ||
++    rectangle.minY > rectangle.maxY
++  ) {
++    return [];
++  }
++  return receipt.categories
++    .filter(category => category.rectangles.some(bounds => intersects(rectangle, bounds)))
++    .map(category => category.nodeId);
++}
+diff --git a/packages/editor/tests/rendering/g2/chart-pointer.test.ts b/packages/editor/tests/rendering/g2/chart-pointer.test.ts
+index f23470c..58e5330 100644
+--- a/packages/editor/tests/rendering/g2/chart-pointer.test.ts
++++ b/packages/editor/tests/rendering/g2/chart-pointer.test.ts
+@@ -1,11 +1,51 @@
+ import { describe, expect, it } from 'vitest';
+ 
+ import {
++  readComparisonChartCategoryElementPointer,
+   readChartCategoryElementPointer,
+   readChartElementBounds,
+ } from '../../../src/rendering/g2/chartPointer';
++import type { ComparisonSceneReceipt } from '../../../src/rendering/g2/comparisonSceneReceipt';
+ 
+ describe('internal G2 chart pointer adapter', () => {
++  const comparisonReceipt: ComparisonSceneReceipt = {
++    renderSignature: 'render',
++    renderRevision: 2,
++    generation: 1,
++    axis: 'x',
++    elements: [
++      {
++        nodeId: 'node',
++        seriesId: 'actual',
++        elementKey: '["comparison-element","node","actual"]',
++        minX: 10,
++        minY: 20,
++        maxX: 30,
++        maxY: 80,
++      },
++    ],
++    categories: [
++      {
++        nodeId: 'node',
++        rectangles: [
++          {
++            nodeId: 'node',
++            seriesId: 'actual',
++            elementKey: '["comparison-element","node","actual"]',
++            minX: 10,
++            minY: 20,
++            maxX: 30,
++            maxY: 80,
++          },
++        ],
++        axisBounds: { nodeId: 'node', min: 10, center: 20, max: 30 },
++        ghostBounds: { nodeId: 'node', minX: 10, minY: 20, maxX: 30, maxY: 80 },
++        pointerBounds: undefined,
++        allZero: false,
++      },
++    ],
++  };
++
+   const event = {
+     pointerId: 9,
+     canvas: { x: 110, y: 150 },
+@@ -96,6 +136,51 @@ describe('internal G2 chart pointer adapter', () => {
+     });
+   });
+ 
++  it('maps only a registered comparison series element through the authoritative receipt', () => {
++    const comparisonEvent = {
++      pointerId: 4,
++      canvas: { x: 15, y: 40 },
++      data: {
++        data: {
++          nodeId: 'node',
++          seriesId: 'actual',
++          elementKey: '["comparison-element","node","actual"]',
++        },
++      },
++    };
++    expect(
++      readComparisonChartCategoryElementPointer(comparisonEvent, comparisonReceipt),
++    ).toEqual({
++      ok: true,
++      value: {
++        pointerId: 4,
++        x: 15,
++        y: 40,
++        axis: 'x',
++        nodeId: 'node',
++        edge: 'before',
++        min: 10,
++        max: 30,
++        target: 10,
++      },
++    });
++    expect(
++      readComparisonChartCategoryElementPointer(
++        {
++          ...comparisonEvent,
++          data: { data: { nodeId: 'node', seriesId: 'budget', elementKey: 'wrong' } },
++        },
++        comparisonReceipt,
++      ),
++    ).toEqual({ ok: false, reason: 'SOURCE_NOT_FOUND' });
++    expect(
++      readComparisonChartCategoryElementPointer(
++        { ...comparisonEvent, canvas: { x: 40, y: 40 } },
++        comparisonReceipt,
++      ),
++    ).toEqual({ ok: false, reason: 'INVALID_BOUNDS' });
++  });
++
+   it('reads valid scene bounds and skips invalid elements', () => {
+     const elements = [
+       {
+diff --git a/packages/editor/tests/rendering/g2/chart-runtime.test.ts b/packages/editor/tests/rendering/g2/chart-runtime.test.ts
+index f7b8a11..1ce18fe 100644
+--- a/packages/editor/tests/rendering/g2/chart-runtime.test.ts
++++ b/packages/editor/tests/rendering/g2/chart-runtime.test.ts
+@@ -83,6 +83,13 @@ function deferred(): Deferred {
+   return { promise, resolve, reject };
+ }
+ 
++function resizeEntry(target: Element, width: number, height: number): ResizeObserverEntry {
++  return {
++    target,
++    contentRect: { width, height },
++  } as ResizeObserverEntry;
++}
++
+ beforeEach(() => {
+   g2Mock.Chart.instances = [];
+   g2Mock.Chart.renderQueue = [];
+@@ -95,6 +102,37 @@ beforeEach(() => {
+ });
+ 
+ describe('G2 chart runtime', () => {
++  it('publishes one current structural generation across invalidation and settlement', async () => {
++    const invalidated = vi.fn();
++    const settled = vi.fn();
++    const runtime = createG2ChartRuntime<string>({
++      container: document.body,
++      events: [],
++      onGeometryInvalidated: invalidated,
++      onRenderSettled: settled,
++    });
++
++    runtime.request({
++      value: 'comparison',
++      spec: { type: 'interval' },
++      structuralIdentity: '["actual","budget"]',
++    });
++
++    expect(invalidated).toHaveBeenCalledWith({ generation: 1, reason: 'render' });
++    expect(runtime.getGeneration()).toBe(1);
++    await vi.waitFor(() =>
++      expect(settled).toHaveBeenLastCalledWith({
++        value: 'comparison',
++        status: 'success',
++        latest: true,
++        generation: 1,
++        origin: 'render',
++        geometryAuthoritative: true,
++      }),
++    );
++    runtime.dispose();
++  });
++
+   it('caches the dynamic constructor and skips initialization after immediate disposal', async () => {
+     expect(loadG2ChartConstructor()).toBe(loadG2ChartConstructor());
+ 
+@@ -142,12 +180,18 @@ describe('G2 chart runtime', () => {
+         value: 'latest',
+         status: 'success',
+         latest: true,
++        generation: 0,
++        origin: 'render',
++        geometryAuthoritative: true,
+       }),
+     );
+     expect(settled).toHaveBeenCalledWith({
+       value: 'first',
+       status: 'failure',
+       latest: false,
++      generation: 0,
++      origin: 'render',
++      geometryAuthoritative: false,
+     });
+     expect(runtime.getContext()).toEqual(expect.objectContaining({ marker: 'scene-context' }));
+   });
+@@ -201,6 +245,9 @@ describe('G2 chart runtime', () => {
+           value: 'new',
+           status: 'success',
+           latest: true,
++          generation: 2,
++          origin: 'render',
++          geometryAuthoritative: true,
+         }),
+       );
+       expect(settled).not.toHaveBeenCalledWith(expect.objectContaining({ value: 'old' }));
+@@ -247,6 +294,9 @@ describe('G2 chart runtime', () => {
+           value: 'old',
+           status: 'success',
+           latest: true,
++          generation: 1,
++          origin: 'render',
++          geometryAuthoritative: true,
+         }),
+       );
+       const oldChart = g2Mock.Chart.instances[0];
+@@ -254,7 +304,8 @@ describe('G2 chart runtime', () => {
+         throw new Error('Expected the initial G2 chart');
+       }
+       oldChart.forceFit.mockImplementationOnce(() => pendingFit.promise.then(() => oldChart));
+-      resize?.([], {} as ResizeObserver);
++      resize?.([resizeEntry(document.body, 100, 100)], {} as ResizeObserver);
++      resize?.([resizeEntry(document.body, 120, 100)], {} as ResizeObserver);
+       await vi.waitFor(() => expect(oldChart.forceFit).toHaveBeenCalledOnce());
+ 
+       runtime.request({
+@@ -269,6 +320,9 @@ describe('G2 chart runtime', () => {
+           value: 'new',
+           status: 'success',
+           latest: true,
++          generation: 2,
++          origin: 'render',
++          geometryAuthoritative: true,
+         }),
+       );
+       expect(oldChart.forceFit).toHaveBeenCalledOnce();
+@@ -330,22 +384,39 @@ describe('G2 chart runtime', () => {
+     try {
+       const host = document.createElement('div');
+       document.body.append(host);
++      const invalidated = vi.fn();
++      const settled = vi.fn();
+       const runtime = createG2ChartRuntime<string>({
+         container: host,
+         events: [],
+-        onRenderSettled: vi.fn(),
++        onGeometryInvalidated: invalidated,
++        onRenderSettled: settled,
+       });
+       runtime.request({ value: 'ready', spec: { type: 'interval' } });
+ 
+       await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
+       expect(observe).toHaveBeenCalledWith(host);
+-      resize?.([], {} as ResizeObserver);
++      resize?.([resizeEntry(host, 100, 100)], {} as ResizeObserver);
++      resize?.([resizeEntry(host, 120, 100)], {} as ResizeObserver);
+       expect(g2Mock.Chart.instances[0]?.forceFit).not.toHaveBeenCalled();
+       pendingRender.resolve();
+       await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce());
++      await vi.waitFor(() => expect(settled).toHaveBeenCalledTimes(2));
++      expect(invalidated).toHaveBeenLastCalledWith({ generation: 0, reason: 'resize' });
++      expect(settled).toHaveBeenLastCalledWith({
++        value: 'ready',
++        status: 'success',
++        latest: true,
++        generation: 0,
++        origin: 'resize',
++        geometryAuthoritative: true,
++      });
++      resize?.([resizeEntry(host, 120, 100)], {} as ResizeObserver);
++      await Promise.resolve();
++      expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce();
+ 
+       runtime.dispose();
+-      resize?.([], {} as ResizeObserver);
++      resize?.([resizeEntry(host, 140, 100)], {} as ResizeObserver);
+       await Promise.resolve();
+ 
+       expect(disconnect).toHaveBeenCalledOnce();
+@@ -359,6 +430,258 @@ describe('G2 chart runtime', () => {
+     }
+   });
+ 
++  it('ignores an initial ResizeObserver delivery matching the synchronously captured size', async () => {
++    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
++    let resize: ResizeObserverCallback | undefined;
++    class TestResizeObserver {
++      constructor(callback: ResizeObserverCallback) {
++        resize = callback;
++      }
++      readonly observe = vi.fn();
++      readonly unobserve = vi.fn();
++      readonly disconnect = vi.fn();
++    }
++    Object.defineProperty(window, 'ResizeObserver', {
++      configurable: true,
++      value: TestResizeObserver,
++    });
++
++    try {
++      const host = document.createElement('div');
++      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 80));
++      document.body.append(host);
++      const invalidated = vi.fn();
++      const runtime = createG2ChartRuntime<string>({
++        container: host,
++        events: [],
++        onGeometryInvalidated: invalidated,
++        onRenderSettled: vi.fn(),
++      });
++      runtime.request({ value: 'ready', spec: { type: 'interval' } });
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++
++      resize?.([resizeEntry(host, 100, 80)], {} as ResizeObserver);
++      await Promise.resolve();
++
++      expect(g2Mock.Chart.instances[0]?.forceFit).not.toHaveBeenCalled();
++      expect(invalidated).not.toHaveBeenCalledWith(expect.objectContaining({ reason: 'resize' }));
++      runtime.dispose();
++    } finally {
++      if (descriptor === undefined) {
++        Reflect.deleteProperty(window, 'ResizeObserver');
++      } else {
++        Object.defineProperty(window, 'ResizeObserver', descriptor);
++      }
++    }
++  });
++
++  it('invalidates when size changes before the first ResizeObserver delivery', async () => {
++    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
++    let resize: ResizeObserverCallback | undefined;
++    class TestResizeObserver {
++      constructor(callback: ResizeObserverCallback) {
++        resize = callback;
++      }
++      readonly observe = vi.fn();
++      readonly unobserve = vi.fn();
++      readonly disconnect = vi.fn();
++    }
++    Object.defineProperty(window, 'ResizeObserver', {
++      configurable: true,
++      value: TestResizeObserver,
++    });
++
++    try {
++      const host = document.createElement('div');
++      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 80));
++      document.body.append(host);
++      const invalidated = vi.fn();
++      const settled = vi.fn();
++      const runtime = createG2ChartRuntime<string>({
++        container: host,
++        events: [],
++        onGeometryInvalidated: invalidated,
++        onRenderSettled: settled,
++      });
++      runtime.request({ value: 'ready', spec: { type: 'interval' } });
++      await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
++
++      resize?.([resizeEntry(host, 120, 80)], {} as ResizeObserver);
++
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce());
++      expect(invalidated).toHaveBeenLastCalledWith({ generation: 0, reason: 'resize' });
++      await vi.waitFor(() =>
++        expect(settled).toHaveBeenLastCalledWith({
++          value: 'ready',
++          status: 'success',
++          latest: true,
++          generation: 0,
++          origin: 'resize',
++          geometryAuthoritative: true,
++        }),
++      );
++      runtime.dispose();
++    } finally {
++      if (descriptor === undefined) {
++        Reflect.deleteProperty(window, 'ResizeObserver');
++      } else {
++        Object.defineProperty(window, 'ResizeObserver', descriptor);
++      }
++    }
++  });
++
++  it('keeps render geometry non-authoritative until a resize queued during render settles', async () => {
++    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
++    const pendingRender = deferred();
++    const pendingFit = deferred();
++    g2Mock.Chart.renderQueue.push(() => pendingRender.promise);
++    let resize: ResizeObserverCallback | undefined;
++    class TestResizeObserver {
++      constructor(callback: ResizeObserverCallback) {
++        resize = callback;
++      }
++      readonly observe = vi.fn();
++      readonly unobserve = vi.fn();
++      readonly disconnect = vi.fn();
++    }
++    Object.defineProperty(window, 'ResizeObserver', {
++      configurable: true,
++      value: TestResizeObserver,
++    });
++
++    try {
++      const settled = vi.fn();
++      const runtime = createG2ChartRuntime<string>({
++        container: document.body,
++        events: [],
++        onRenderSettled: settled,
++      });
++      runtime.request({ value: 'comparison', spec: { type: 'interval' } });
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++      const chart = g2Mock.Chart.instances[0];
++      expect(chart).toBeDefined();
++      if (chart === undefined) {
++        return;
++      }
++      chart.forceFit.mockImplementationOnce(() => pendingFit.promise.then(() => chart));
++      resize?.([resizeEntry(document.body, 100, 100)], {} as ResizeObserver);
++      resize?.([resizeEntry(document.body, 120, 100)], {} as ResizeObserver);
++      pendingRender.resolve();
++
++      await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
++      expect(settled).toHaveBeenLastCalledWith({
++        value: 'comparison',
++        status: 'success',
++        latest: true,
++        generation: 0,
++        origin: 'render',
++        geometryAuthoritative: false,
++      });
++      expect(settled).not.toHaveBeenCalledWith(
++        expect.objectContaining({ geometryAuthoritative: true }),
++      );
++      await vi.waitFor(() => expect(chart.forceFit).toHaveBeenCalledOnce());
++
++      pendingFit.resolve();
++      await vi.waitFor(() =>
++        expect(settled).toHaveBeenLastCalledWith({
++          value: 'comparison',
++          status: 'success',
++          latest: true,
++          generation: 0,
++          origin: 'resize',
++          geometryAuthoritative: true,
++        }),
++      );
++      runtime.dispose();
++    } finally {
++      if (descriptor === undefined) {
++        Reflect.deleteProperty(window, 'ResizeObserver');
++      } else {
++        Object.defineProperty(window, 'ResizeObserver', descriptor);
++      }
++    }
++  });
++
++  it('reports a failed forceFit as non-authoritative geometry without a render failure', async () => {
++    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
++    let resize: ResizeObserverCallback | undefined;
++    class TestResizeObserver {
++      constructor(callback: ResizeObserverCallback) {
++        resize = callback;
++      }
++      readonly observe = vi.fn();
++      readonly unobserve = vi.fn();
++      readonly disconnect = vi.fn();
++    }
++    Object.defineProperty(window, 'ResizeObserver', {
++      configurable: true,
++      value: TestResizeObserver,
++    });
++    const containerBounds = vi
++      .spyOn(document.body, 'getBoundingClientRect')
++      .mockReturnValue(new DOMRect(0, 0, 100, 100));
++
++    try {
++      const settled = vi.fn();
++      const runtime = createG2ChartRuntime<string>({
++        container: document.body,
++        events: [],
++        onRenderSettled: settled,
++      });
++      runtime.request({ value: 'ready', spec: { type: 'interval' } });
++      await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
++      const chart = g2Mock.Chart.instances[0];
++      expect(chart).toBeDefined();
++      if (chart === undefined) {
++        return;
++      }
++      chart.forceFit.mockRejectedValueOnce(new Error('private fit failure'));
++      resize?.([resizeEntry(document.body, 100, 100)], {} as ResizeObserver);
++      resize?.([resizeEntry(document.body, 120, 100)], {} as ResizeObserver);
++
++      await vi.waitFor(() => expect(settled).toHaveBeenCalledTimes(2));
++      expect(settled).toHaveBeenLastCalledWith({
++        value: 'ready',
++        status: 'success',
++        latest: true,
++        generation: 0,
++        origin: 'resize',
++        geometryAuthoritative: false,
++      });
++      runtime.dispose();
++    } finally {
++      containerBounds.mockRestore();
++      if (descriptor === undefined) {
++        Reflect.deleteProperty(window, 'ResizeObserver');
++      } else {
++        Object.defineProperty(window, 'ResizeObserver', descriptor);
++      }
++    }
++  });
++
++  it('hides current private G2 Tooltip DOM and permits a later renderer show', async () => {
++    const host = document.createElement('div');
++    const tooltip = document.createElement('div');
++    tooltip.className = 'g2-tooltip';
++    tooltip.style.visibility = 'visible';
++    host.append(tooltip);
++    document.body.append(host);
++    const runtime = createG2ChartRuntime<string>({
++      container: host,
++      events: [],
++      onRenderSettled: vi.fn(),
++    });
++
++    runtime.dismissTooltip();
++    expect(tooltip.style.visibility).toBe('hidden');
++    tooltip.style.visibility = 'visible';
++    expect(tooltip.style.visibility).toBe('visible');
++
++    runtime.dispose();
++    expect(tooltip.style.visibility).toBe('hidden');
++  });
++
+   it('isolates a throwing settlement callback and still processes the next request', async () => {
+     const host = document.createElement('div');
+     document.body.append(host);
+@@ -394,6 +717,9 @@ describe('G2 chart runtime', () => {
+         value: 'initialization',
+         status: 'failure',
+         latest: true,
++        generation: 0,
++        origin: 'render',
++        geometryAuthoritative: false,
+       }),
+     );
+     expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
+@@ -447,6 +773,9 @@ describe('G2 chart runtime', () => {
+         value: 'failed',
+         status: 'failure',
+         latest: true,
++        generation: 0,
++        origin: 'render',
++        geometryAuthoritative: false,
+       }),
+     );
+ 
+@@ -458,6 +787,9 @@ describe('G2 chart runtime', () => {
+         value: 'retry',
+         status: 'success',
+         latest: true,
++        generation: 0,
++        origin: 'render',
++        geometryAuthoritative: true,
+       }),
+     );
+     expect(g2Mock.Chart.instances).toHaveLength(2);
+@@ -485,6 +817,9 @@ describe('G2 chart runtime', () => {
+         value: 'retry',
+         status: 'success',
+         latest: true,
++        generation: 0,
++        origin: 'render',
++        geometryAuthoritative: true,
+       }),
+     );
+     expect(g2Mock.Chart.instances).toHaveLength(2);
+@@ -553,6 +888,9 @@ describe('G2 chart runtime', () => {
+       value: 'second',
+       status: 'success',
+       latest: true,
++      generation: 0,
++      origin: 'render',
++      geometryAuthoritative: true,
+     });
+   });
+ 
+@@ -622,6 +960,9 @@ describe('G2 chart runtime', () => {
+         value: 'latest',
+         status: 'success',
+         latest: true,
++        generation: 0,
++        origin: 'render',
++        geometryAuthoritative: true,
+       });
+ 
+       runtime.request({ value: 'disposed', spec: { type: 'interval', data: [4] } });
+diff --git a/packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts b/packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts
+new file mode 100644
+index 0000000..5592d49
+--- /dev/null
++++ b/packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts
+@@ -0,0 +1,448 @@
++import { describe, expect, it } from 'vitest';
++
++import type {
++  CategoricalComparisonProjection,
++  CategoricalComparisonSeries,
++} from '@tellplot/core';
++import {
++  createComparisonSceneReceipt,
++  hitComparisonSceneReceipt,
++  marqueeComparisonSceneReceipt,
++} from '../../../src/rendering/g2/comparisonSceneReceipt';
++
++const series = [
++  { id: 'actual', label: 'Actual' },
++  { id: 'budget', label: 'Budget' },
++] as const satisfies readonly CategoricalComparisonSeries[];
++
++const projection = [
++  {
++    nodeId: 'alpha',
++    label: 'Alpha',
++    values: [
++      { seriesId: 'actual', label: 'Actual', amount: 10 },
++      { seriesId: 'budget', label: 'Budget', amount: -8 },
++    ],
++    kind: 'category',
++    sourceIds: ['alpha'],
++    locked: false,
++    order: 0,
++  },
++  {
++    nodeId: 'beta',
++    label: 'Beta',
++    values: [
++      { seriesId: 'actual', label: 'Actual', amount: 0 },
++      { seriesId: 'budget', label: 'Budget', amount: 0 },
++    ],
++    kind: 'category',
++    sourceIds: ['beta'],
++    locked: false,
++    order: 1,
++  },
++] as const satisfies CategoricalComparisonProjection;
++
++function element(
++  nodeId: 'alpha' | 'beta',
++  seriesId: 'actual' | 'budget',
++  bounds: { min: readonly [number, number]; max: readonly [number, number] },
++): Record<string, unknown> {
++  const elementKey = JSON.stringify(['comparison-element', nodeId, seriesId]);
++  return {
++    markType: 'interval',
++    __data__: {
++      viewKey: 'categorical-comparison-view',
++      markKey: 'categorical-comparison-interval',
++      key: elementKey,
++      data: { nodeId, seriesId, elementKey },
++    },
++    getBounds: () => bounds,
++  };
++}
++
++function context(
++  elements: readonly unknown[],
++  allNegative = false,
++  transposed = false,
++): unknown {
++  const xPositions = new Map([
++    ['alpha', 0.1],
++    ['beta', 0.5],
++  ]);
++  const y = allNegative
++    ? (amount: number) => (amount + 20) / 20
++    : (amount: number) => amount / 40 + 0.5;
++  return {
++    canvas: {
++      document: { getElementsByClassName: () => elements },
++    },
++    views: [
++      {
++        key: 'categorical-comparison-view',
++        layout: {
++          x: 0,
++          y: 0,
++          width: 200,
++          height: 100,
++          innerWidth: 200,
++          innerHeight: 100,
++          marginLeft: 0,
++          marginTop: 0,
++          paddingLeft: 0,
++          paddingTop: 0,
++        },
++        scale: {
++          x: {
++            getDomain: () => ['alpha', 'beta'],
++            map: (nodeId: string) => xPositions.get(nodeId),
++            getBandWidth: () => 0.35,
++          },
++          y: { map: y, getOptions: () => ({ range: [0, 1] }) },
++        },
++        coordinate: {
++          getOptions: () => ({ innerWidth: 200, innerHeight: 100 }),
++          map: ([x, mappedY]: readonly [number, number]) =>
++            transposed ? [mappedY * 200, x * 100] : [x * 200, (1 - mappedY) * 100],
++        },
++      },
++    ],
++  };
++}
++
++function build(
++  elements: readonly unknown[],
++  options: {
++    readonly axis?: 'x' | 'y';
++    readonly currentSignature?: string;
++    readonly currentRevision?: number;
++    readonly currentGeneration?: number;
++    readonly allNegative?: boolean;
++  } = {},
++) {
++  return createComparisonSceneReceipt({
++    context: context(elements, options.allNegative, options.axis === 'y'),
++    projection,
++    series,
++    axis: options.axis ?? 'x',
++    renderSignature: 'current-render',
++    currentRenderSignature: options.currentSignature ?? 'current-render',
++    renderRevision: 4,
++    currentRenderRevision: options.currentRevision ?? 4,
++    generation: 7,
++    currentGeneration: options.currentGeneration ?? 7,
++  });
++}
++
++const alphaActual = element('alpha', 'actual', { min: [24, 20], max: [42, 50] });
++const alphaBudget = element('alpha', 'budget', { min: [46, 50], max: [64, 76] });
++const betaActual = element('beta', 'actual', { min: [118, 50], max: [136, 50] });
++const betaBudget = element('beta', 'budget', { min: [140, 50], max: [158, 50] });
++
++describe('comparison authoritative scene receipt', () => {
++  it('rebuilds N x S data in projection and source order while ignoring helper marks', () => {
++    const helper = {
++      markType: 'point',
++      __data__: {
++        viewKey: 'categorical-comparison-view',
++        markKey: 'categorical-comparison-value-label-anchor',
++        data: { nodeId: 'alpha', seriesId: 'actual' },
++      },
++      getBounds: () => ({ min: [0, 0], max: [0, 0] }),
++    };
++    const decorationWithoutDatum = { markType: 'path' };
++    const receipt = build([
++      betaBudget,
++      helper,
++      decorationWithoutDatum,
++      alphaBudget,
++      betaActual,
++      alphaActual,
++    ]);
++
++    expect(receipt?.elements.map(value => [value.nodeId, value.seriesId])).toEqual([
++      ['alpha', 'actual'],
++      ['alpha', 'budget'],
++      ['beta', 'actual'],
++      ['beta', 'budget'],
++    ]);
++    expect(receipt?.categories.map(value => value.nodeId)).toEqual(['alpha', 'beta']);
++    expect(receipt?.categories[0]).toMatchObject({
++      axisBounds: { nodeId: 'alpha', min: 24, center: 44, max: 64 },
++      ghostBounds: { nodeId: 'alpha', minX: 24, minY: 20, maxX: 64, maxY: 76 },
++      allZero: false,
++    });
++    expect(receipt?.categories[1]).toMatchObject({
++      axisBounds: { nodeId: 'beta', min: 100, center: 135, max: 170 },
++      ghostBounds: { nodeId: 'beta', minX: 118, minY: 50, maxX: 158, maxY: 50 },
++      allZero: true,
++      pointerBounds: { nodeId: 'beta', minX: 100, minY: 18, maxX: 170, maxY: 50 },
++    });
++  });
++
++  it.each([
++    ['missing', [alphaActual, alphaBudget, betaActual]],
++    ['duplicate', [alphaActual, alphaActual, alphaBudget, betaActual, betaBudget]],
++    [
++      'unregistered',
++      [
++        alphaActual,
++        alphaBudget,
++        betaActual,
++        element('beta', 'budget', { min: [140, 50], max: [158, 50] }),
++        {
++          ...element('alpha', 'actual', { min: [1, 1], max: [2, 2] }),
++          __data__: {
++            viewKey: 'categorical-comparison-view',
++            markKey: 'categorical-comparison-interval',
++            key: '["comparison-element","unknown","actual"]',
++            data: {
++              nodeId: 'unknown',
++              seriesId: 'actual',
++              elementKey: '["comparison-element","unknown","actual"]',
++            },
++          },
++        },
++      ],
++    ],
++  ])('rejects a whole %s receipt', (_case, elements) => {
++    expect(build(elements)).toBeUndefined();
++  });
++
++  it('rejects wrong main identity, mark type, key, stale lifecycle and invalid bounds atomically', () => {
++    const valid = [alphaActual, alphaBudget, betaActual, betaBudget];
++    const replace = (index: number, value: unknown) =>
++      valid.map((entry, entryIndex) => (entryIndex === index ? value : entry));
++    expect(
++      build(
++        replace(0, {
++          ...alphaActual,
++          __data__: { ...(alphaActual['__data__'] as object), viewKey: 'other-view' },
++        }),
++      ),
++    ).toBeUndefined();
++    expect(build(replace(0, { ...alphaActual, markType: 'point' }))).toBeUndefined();
++    expect(
++      build(
++        replace(0, {
++          ...alphaActual,
++          __data__: { ...(alphaActual['__data__'] as object), key: 'wrong' },
++        }),
++      ),
++    ).toBeUndefined();
++    expect(
++      build(
++        replace(0, {
++          ...alphaActual,
++          getBounds: () => ({ min: [Number.NaN, 20], max: [42, 50] }),
++        }),
++      ),
++    ).toBeUndefined();
++    expect(build(valid, { currentSignature: 'stale' })).toBeUndefined();
++    expect(build(valid, { currentRevision: 5 })).toBeUndefined();
++    expect(build(valid, { currentGeneration: 8 })).toBeUndefined();
++  });
++
++  it('fails closed for throwing getters, proxies, sparse collections and unreadable all-zero scales', () => {
++    const valid = [alphaActual, alphaBudget, betaActual, betaBudget];
++    expect(
++      build(
++        valid.map((entry, index) =>
++          index === 0
++            ? new Proxy(entry, {
++                get() {
++                  throw new Error('private scene failure');
++                },
++              })
++            : entry,
++        ),
++      ),
++    ).toBeUndefined();
++
++    const sparse = Array.from({ length: 5 }, (_, index) => (index === 1 ? undefined : valid[index]));
++    expect(build(sparse)).toBeUndefined();
++
++    const hostileContext = context(valid) as {
++      views: { scale: { x: { getBandWidth: () => number } } }[];
++    };
++    const hostileView = hostileContext.views[0];
++    expect(hostileView).toBeDefined();
++    if (hostileView === undefined) {
++      return;
++    }
++    hostileView.scale.x.getBandWidth = () => Number.NaN;
++    expect(
++      createComparisonSceneReceipt({
++        context: hostileContext,
++        projection,
++        series,
++        axis: 'x',
++        renderSignature: 'same',
++        currentRenderSignature: 'same',
++        renderRevision: 0,
++        currentRenderRevision: 0,
++        generation: 0,
++        currentGeneration: 0,
++      }),
++    ).toBeUndefined();
++  });
++
++  it('uses actual rectangles for exact hit and marquee but the category union for drop', () => {
++    const receipt = build([alphaActual, alphaBudget, betaActual, betaBudget]);
++    expect(receipt).toBeDefined();
++    if (receipt === undefined) {
++      return;
++    }
++    expect(hitComparisonSceneReceipt(receipt, { x: 30, y: 30 })?.nodeId).toBe('alpha');
++    expect(hitComparisonSceneReceipt(receipt, { x: 44, y: 40 })).toBeUndefined();
++    expect(hitComparisonSceneReceipt(receipt, { x: 145, y: 40 })?.nodeId).toBe('beta');
++    expect(hitComparisonSceneReceipt(receipt, { x: 95, y: 50 })).toBeUndefined();
++    expect(receipt.categories.map(category => category.axisBounds)).toEqual([
++      { nodeId: 'alpha', min: 24, center: 44, max: 64 },
++      { nodeId: 'beta', min: 100, center: 135, max: 170 },
++    ]);
++
++    expect(
++      marqueeComparisonSceneReceipt(receipt, { minX: 40, minY: 18, maxX: 120, maxY: 48 }),
++    ).toEqual(['alpha']);
++    expect(
++      marqueeComparisonSceneReceipt(receipt, { minX: 115, minY: 49, maxX: 125, maxY: 50 }),
++    ).toEqual(['beta']);
++    expect(
++      marqueeComparisonSceneReceipt(receipt, { minX: 115, minY: 45, maxX: 125, maxY: 49 }),
++    ).toEqual([]);
++  });
++
++  it('contains the exact 32px all-zero target in positive and all-negative plot interiors', () => {
++    const positive = build([alphaActual, alphaBudget, betaActual, betaBudget]);
++    const negative = build([alphaActual, alphaBudget, betaActual, betaBudget], {
++      allNegative: true,
++    });
++    expect(positive?.categories[1]?.pointerBounds).toEqual({
++      nodeId: 'beta',
++      minX: 100,
++      minY: 18,
++      maxX: 170,
++      maxY: 50,
++    });
++    expect(negative?.categories[1]?.pointerBounds).toEqual({
++      nodeId: 'beta',
++      minX: 100,
++      minY: 0,
++      maxX: 170,
++      maxY: 32,
++    });
++
++    const positiveBar = build([alphaActual, alphaBudget, betaActual, betaBudget], { axis: 'y' });
++    const negativeBar = build([alphaActual, alphaBudget, betaActual, betaBudget], {
++      axis: 'y',
++      allNegative: true,
++    });
++    expect(positiveBar?.categories[1]?.pointerBounds).toEqual({
++      nodeId: 'beta',
++      minX: 100,
++      minY: 50,
++      maxX: 132,
++      maxY: 85,
++    });
++    expect(negativeBar?.categories[1]?.pointerBounds).toEqual({
++      nodeId: 'beta',
++      minX: 168,
++      minY: 50,
++      maxX: 200,
++      maxY: 85,
++    });
++  });
++
++  it('maps a reversed category scale through the transposed coordinate before adding layout offsets', () => {
++    const transposedContext = context(
++      [alphaActual, alphaBudget, betaActual, betaBudget],
++      false,
++      true,
++    ) as {
++      views: {
++        layout: Record<string, number>;
++        scale: { x: { map: (nodeId: string) => number | undefined } };
++      }[];
++    };
++    const view = transposedContext.views[0];
++    expect(view).toBeDefined();
++    if (view === undefined) {
++      return;
++    }
++    Object.assign(view.layout, {
++      x: 11,
++      y: 13,
++      marginLeft: 5,
++      marginTop: 7,
++      paddingLeft: 2,
++      paddingTop: 3,
++    });
++    const reversedPositions = new Map([
++      ['alpha', 0.55],
++      ['beta', 0.1],
++    ]);
++    view.scale.x.map = (nodeId: string) => reversedPositions.get(nodeId);
++
++    const receipt = createComparisonSceneReceipt({
++      context: transposedContext,
++      projection,
++      series,
++      axis: 'y',
++      renderSignature: 'transposed',
++      currentRenderSignature: 'transposed',
++      renderRevision: 2,
++      currentRenderRevision: 2,
++      generation: 3,
++      currentGeneration: 3,
++    });
++
++    expect(receipt?.categories[1]).toMatchObject({
++      axisBounds: { nodeId: 'beta', min: 33, center: 50.5, max: 68 },
++      pointerBounds: { nodeId: 'beta', minX: 118, minY: 33, maxX: 150, maxY: 68 },
++    });
++    expect(receipt).toBeDefined();
++    if (receipt === undefined) {
++      return;
++    }
++    expect(hitComparisonSceneReceipt(receipt, { x: 149, y: 50 })?.nodeId).toBe('beta');
++    expect(hitComparisonSceneReceipt(receipt, { x: 151, y: 50 })).toBeUndefined();
++  });
++
++  it('adds the authoritative view and plot layout offsets to renderer scale geometry', () => {
++    const offsetContext = context([alphaActual, alphaBudget, betaActual, betaBudget]) as {
++      views: { layout: Record<string, number> }[];
++    };
++    const offsetView = offsetContext.views[0];
++    expect(offsetView).toBeDefined();
++    if (offsetView === undefined) {
++      return;
++    }
++    Object.assign(offsetView.layout, {
++      x: 5,
++      y: 7,
++      marginLeft: 10,
++      marginTop: 11,
++      paddingLeft: 20,
++      paddingTop: 13,
++    });
++    const receipt = createComparisonSceneReceipt({
++      context: offsetContext,
++      projection,
++      series,
++      axis: 'x',
++      renderSignature: 'offset',
++      currentRenderSignature: 'offset',
++      renderRevision: 1,
++      currentRenderRevision: 1,
++      generation: 1,
++      currentGeneration: 1,
++    });
++    expect(receipt?.categories[1]?.pointerBounds).toEqual({
++      nodeId: 'beta',
++      minX: 135,
++      minY: 49,
++      maxX: 205,
++      maxY: 81,
++    });
++  });
++});
+diff --git a/packages/editor/tests/runtime/chart-surface.test.ts b/packages/editor/tests/runtime/chart-surface.test.ts
+index 3efa6cf..51944ff 100644
+--- a/packages/editor/tests/runtime/chart-surface.test.ts
++++ b/packages/editor/tests/runtime/chart-surface.test.ts
+@@ -20,6 +20,13 @@ const runtimeMock = vi.hoisted(() => {
+       readonly value: unknown;
+       readonly status: 'success' | 'failure';
+       readonly latest: boolean;
++      readonly generation?: number;
++      readonly origin?: 'render' | 'resize';
++      readonly geometryAuthoritative?: boolean;
++    }) => void;
++    readonly onGeometryInvalidated?: (invalidation: {
++      readonly generation: number;
++      readonly reason: 'render' | 'resize' | 'dispose';
+     }) => void;
+   }
+ 
+@@ -27,17 +34,52 @@ const runtimeMock = vi.hoisted(() => {
+     readonly options: RuntimeOptions;
+     readonly requests: unknown[];
+     context: unknown;
++    generation: number;
++    structuralIdentity: unknown;
++    readonly dismissTooltip: ReturnType<typeof vi.fn>;
+   }
+ 
+   const records: RuntimeRecord[] = [];
+   const create = vi.fn((options: RuntimeOptions) => {
+-    const record: RuntimeRecord = { options, requests: [], context: undefined };
++    const record: RuntimeRecord = {
++      options,
++      requests: [],
++      context: undefined,
++      generation: 0,
++      structuralIdentity: undefined,
++      dismissTooltip: vi.fn(),
++    };
+     records.push(record);
+     return {
+-      request: vi.fn((request: unknown) => record.requests.push(request)),
++      request: vi.fn((request: unknown) => {
++        const details = request as {
++          readonly structuralIdentity?: unknown;
++          readonly invalidateGeometry?: boolean;
++        };
++        const identity = details.structuralIdentity;
++        if (identity !== record.structuralIdentity) {
++          record.structuralIdentity = identity;
++          record.generation += 1;
++        }
++        if (details.invalidateGeometry !== false) {
++          record.options.onGeometryInvalidated?.({
++            generation: record.generation,
++            reason: 'render',
++          });
++        }
++        record.requests.push(request);
++      }),
+       finishAnimations: vi.fn(),
++      dismissTooltip: record.dismissTooltip,
+       getContext: vi.fn(() => record.context),
+-      dispose: vi.fn(),
++      getGeneration: vi.fn(() => record.generation),
++      dispose: vi.fn(() => {
++        record.generation += 1;
++        record.options.onGeometryInvalidated?.({
++          generation: record.generation,
++          reason: 'dispose',
++        });
++      }),
+     };
+   });
+ 
+@@ -78,6 +120,130 @@ const state: ChartSurfaceState = {
+   messages: editorMessages('en-US'),
+ };
+ 
++const comparisonState: ChartSurfaceState = {
++  config: {
++    type: 'column',
++    data: {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: 'comparison-chart-surface',
++      series: [
++        { id: 'actual', label: 'Actual' },
++        { id: 'budget', label: 'Budget' },
++      ],
++      items: [
++        {
++          id: 'alpha',
++          label: 'Alpha',
++          values: [
++            { seriesId: 'actual', amount: 10 },
++            { seriesId: 'budget', amount: -8 },
++          ],
++        },
++        {
++          id: 'beta',
++          label: 'Beta',
++          values: [
++            { seriesId: 'actual', amount: 20 },
++            { seriesId: 'budget', amount: -12 },
++          ],
++        },
++      ],
++    },
++  },
++  view: {
++    schemaVersion: '3.0.0',
++    chartType: 'column',
++    datasetId: 'comparison-chart-surface',
++    revision: 0,
++    rootOrder: ['alpha', 'beta'],
++    groups: {},
++    collapsedGroupIds: [],
++    pinnedItemIds: [],
++    annotations: {},
++    emphasis: {},
++  },
++  chart: {
++    family: 'categorical',
++    generation: 'comparison',
++    chartType: 'column',
++    projection: [
++      {
++        nodeId: 'alpha',
++        label: 'Alpha',
++        values: [
++          { seriesId: 'actual', label: 'Actual', amount: 10 },
++          { seriesId: 'budget', label: 'Budget', amount: -8 },
++        ],
++        kind: 'category',
++        sourceIds: ['alpha'],
++        locked: false,
++        order: 0,
++      },
++      {
++        nodeId: 'beta',
++        label: 'Beta',
++        values: [
++          { seriesId: 'actual', label: 'Actual', amount: 20 },
++          { seriesId: 'budget', label: 'Budget', amount: -12 },
++        ],
++        kind: 'category',
++        sourceIds: ['beta'],
++        locked: false,
++        order: 1,
++      },
++    ],
++  },
++  messages: editorMessages('en-US'),
++};
++
++function comparisonElement(
++  nodeId: 'alpha' | 'beta',
++  seriesId: 'actual' | 'budget',
++  min: readonly [number, number],
++  max: readonly [number, number],
++): Record<string, unknown> {
++  const elementKey = JSON.stringify(['comparison-element', nodeId, seriesId]);
++  return {
++    markType: 'interval',
++    __data__: {
++      viewKey: 'categorical-comparison-view',
++      markKey: 'categorical-comparison-interval',
++      key: elementKey,
++      data: { nodeId, seriesId, elementKey },
++    },
++    getBounds: () => ({ min, max }),
++  };
++}
++
++function comparisonContext(includeBudget = true): unknown {
++  return {
++    canvas: {
++      document: {
++        getElementsByClassName: () => [
++          comparisonElement('beta', 'actual', [50, 10], [60, 70]),
++          comparisonElement('alpha', 'actual', [10, 20], [20, 70]),
++          ...(includeBudget
++            ? [
++                comparisonElement('beta', 'budget', [62, 40], [72, 80]),
++                comparisonElement('alpha', 'budget', [22, 50], [32, 90]),
++              ]
++            : []),
++          {
++            markType: 'point',
++            __data__: {
++              viewKey: 'categorical-comparison-view',
++              markKey: 'categorical-comparison-value-label-anchor',
++              data: { nodeId: 'alpha', seriesId: 'actual' },
++            },
++            getBounds: () => ({ min: [15, 20], max: [15, 20] }),
++          },
++        ],
++      },
++    },
++  };
++}
++
+ function createCallbacks() {
+   return {
+     onMove: vi.fn<ChartSurfaceCallbacks['onMove']>(),
+@@ -604,6 +770,12 @@ describe('chart surface render recovery', () => {
+     surface.update(state);
+     const runtime = latestRuntime();
+     const pointerDown = runtime.options.events.find(event => event.name === 'plot:pointerdown');
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++    });
+     pointerDown?.listener({ pointerId: 7, canvas: { x: 20, y: 30 } });
+ 
+     expect(surface.element.dataset['interactionState']).toBe('selecting');
+@@ -682,4 +854,371 @@ describe('chart surface render recovery', () => {
+     });
+     surface.destroy();
+   });
++
++  it('uses every registered comparison series as one category drag with a 2D union ghost', () => {
++    const callbacks = createCallbacks();
++    const surface = createChartSurface(document, callbacks);
++    surface.update(comparisonState);
++    const runtime = latestRuntime();
++    runtime.context = comparisonContext();
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++    });
++    const elementDown = runtime.options.events.find(event => event.name === 'element:pointerdown');
++    const move = runtime.options.events.find(event => event.name === 'plot:pointermove');
++    const up = runtime.options.events.find(event => event.name === 'plot:pointerup');
++
++    elementDown?.listener({
++      pointerId: 21,
++      canvas: { x: 25, y: 60 },
++      data: {
++        data: {
++          nodeId: 'alpha',
++          seriesId: 'budget',
++          elementKey: '["comparison-element","alpha","budget"]',
++        },
++      },
++    });
++    move?.listener({ pointerId: 21, canvas: { x: 65, y: 60 } });
++
++    const overlay = surface.element.querySelector<HTMLElement>(
++      '[data-testid="chart-drag-overlay"]',
++    );
++    expect(overlay?.style.width).toBe('22px');
++    expect(overlay?.style.height).toBe('70px');
++    expect(overlay?.style.transform).toBe('translate3d(50px, 20px, 0)');
++    expect(surface.element.dataset['interactionState']).toBe('dragging');
++
++    runtime.context = comparisonContext(false);
++    elementDown?.listener({ pointerId: 99, canvas: { x: 0, y: 0 } });
++    expect(surface.element.dataset['interactionState']).toBe('dragging');
++
++    up?.listener({ pointerId: 21, canvas: { x: 65, y: 60 } });
++
++    expect(callbacks.onMove).toHaveBeenCalledOnce();
++    expect(callbacks.onMove).toHaveBeenCalledWith('alpha', { containerId: 'root', index: 1 });
++    expect(callbacks.onSelect).not.toHaveBeenCalled();
++    surface.destroy();
++  });
++
++  it('fails comparison chart interaction closed for a partial receipt', () => {
++    const callbacks = createCallbacks();
++    const surface = createChartSurface(document, callbacks);
++    surface.update(comparisonState);
++    const runtime = latestRuntime();
++    runtime.context = comparisonContext(false);
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++    });
++    runtime.options.events
++      .find(event => event.name === 'element:pointerdown')
++      ?.listener({
++        pointerId: 22,
++        canvas: { x: 15, y: 40 },
++        data: {
++          data: {
++            nodeId: 'alpha',
++            seriesId: 'actual',
++            elementKey: '["comparison-element","alpha","actual"]',
++          },
++        },
++      });
++
++    expect(surface.element.dataset['interactionState']).toBe('idle');
++    expect(callbacks.onSelect).not.toHaveBeenCalled();
++    expect(callbacks.onMove).not.toHaveBeenCalled();
++    surface.destroy();
++  });
++
++  it('treats an inactive comparison cluster gap as marquee and cancels on geometry invalidation', () => {
++    const callbacks = createCallbacks();
++    const surface = createChartSurface(document, callbacks);
++    surface.update(comparisonState);
++    const runtime = latestRuntime();
++    runtime.context = comparisonContext();
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++    });
++    const plotDown = runtime.options.events.find(event => event.name === 'plot:pointerdown');
++    plotDown?.listener({ pointerId: 23, canvas: { x: 21, y: 30 } });
++
++    expect(surface.element.dataset['interactionState']).toBe('selecting');
++    runtime.options.onGeometryInvalidated?.({ generation: runtime.generation, reason: 'resize' });
++
++    expect(surface.element.dataset['interactionState']).toBe('idle');
++    expect(callbacks.onInteractionChange).toHaveBeenLastCalledWith({ state: 'idle' });
++    expect(callbacks.onInteractionAbort).not.toHaveBeenCalled();
++    expect(callbacks.onRenderError).not.toHaveBeenCalled();
++    expect(runtime.dismissTooltip).toHaveBeenCalled();
++    expect(callbacks.onMove).not.toHaveBeenCalled();
++    expect(callbacks.onMarqueeSelection).not.toHaveBeenCalled();
++    surface.destroy();
++  });
++
++  it('keeps comparison blocked for non-authoritative resize geometry without a render error', () => {
++    const callbacks = createCallbacks();
++    const surface = createChartSurface(document, callbacks);
++    surface.update(comparisonState);
++    const runtime = latestRuntime();
++    runtime.context = comparisonContext();
++    const value = latestRequestValue(runtime);
++
++    runtime.options.onRenderSettled({
++      value,
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++      origin: 'resize',
++      geometryAuthoritative: false,
++    });
++    runtime.options.events
++      .find(event => event.name === 'element:pointerdown')
++      ?.listener({
++        pointerId: 24,
++        canvas: { x: 15, y: 40 },
++        data: {
++          data: {
++            nodeId: 'alpha',
++            seriesId: 'actual',
++            elementKey: '["comparison-element","alpha","actual"]',
++          },
++        },
++      });
++
++    expect(surface.element.dataset['interactionState']).toBe('idle');
++    expect(surface.element.dataset['renderState']).toBe('rendering');
++    expect(callbacks.onRenderError).not.toHaveBeenCalled();
++    expect(callbacks.onMove).not.toHaveBeenCalled();
++    expect(callbacks.onSelect).not.toHaveBeenCalled();
++
++    runtime.options.onRenderSettled({
++      value,
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++      origin: 'resize',
++      geometryAuthoritative: true,
++    });
++    expect(surface.element.dataset['renderState']).toBe('ready');
++    surface.destroy();
++  });
++
++  it('preserves scalar ready state for non-authoritative resize geometry', () => {
++    const callbacks = createCallbacks();
++    const surface = createChartSurface(document, callbacks);
++    surface.update(state);
++    const runtime = latestRuntime();
++
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++      origin: 'resize',
++      geometryAuthoritative: false,
++    });
++
++    expect(surface.element.dataset['renderState']).toBe('ready');
++    expect(callbacks.onRenderError).not.toHaveBeenCalled();
++    surface.destroy();
++  });
++
++  it('blocks comparison interaction until an authoritative null-preview restore settles', () => {
++    const callbacks = createCallbacks();
++    const surface = createChartSurface(document, callbacks);
++    surface.update(comparisonState);
++    const runtime = latestRuntime();
++    runtime.context = comparisonContext();
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++      geometryAuthoritative: true,
++    });
++
++    surface.preview(comparisonState);
++    const previewRequest = runtime.requests.at(-1) as {
++      readonly value?: { readonly authoritative?: unknown };
++      readonly invalidateGeometry?: unknown;
++    };
++    expect(previewRequest.value?.authoritative).toBe(false);
++    expect(previewRequest.invalidateGeometry).toBe(false);
++
++    surface.preview(null);
++    const restoreRequest = runtime.requests.at(-1) as {
++      readonly value?: { readonly authoritative?: unknown };
++      readonly invalidateGeometry?: unknown;
++    };
++    expect(restoreRequest.value?.authoritative).toBe(true);
++    expect(restoreRequest.invalidateGeometry).toBe(true);
++    expect(surface.element.dataset['renderState']).toBe('rendering');
++
++    const elementDown = runtime.options.events.find(event => event.name === 'element:pointerdown');
++    const move = runtime.options.events.find(event => event.name === 'plot:pointermove');
++    const event = {
++      pointerId: 26,
++      canvas: { x: 15, y: 40 },
++      data: {
++        data: {
++          nodeId: 'alpha',
++          seriesId: 'actual',
++          elementKey: '["comparison-element","alpha","actual"]',
++        },
++      },
++    };
++    elementDown?.listener(event);
++    move?.listener({ pointerId: 26, canvas: { x: 65, y: 60 } });
++    expect(surface.element.dataset['interactionState']).toBe('idle');
++
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++      geometryAuthoritative: true,
++    });
++    expect(surface.element.dataset['renderState']).toBe('ready');
++    elementDown?.listener(event);
++    move?.listener({ pointerId: 26, canvas: { x: 65, y: 60 } });
++    expect(surface.element.dataset['interactionState']).toBe('dragging');
++    surface.destroy();
++  });
++
++  it('owns comparison preview restores without rendering a bare null preview', () => {
++    const surface = createChartSurface(document, createCallbacks());
++    surface.update(comparisonState);
++    const runtime = latestRuntime();
++    const initialRequestCount = runtime.requests.length;
++
++    surface.preview(null);
++    expect(runtime.requests).toHaveLength(initialRequestCount);
++
++    surface.preview(comparisonState);
++    expect(runtime.requests).toHaveLength(initialRequestCount + 1);
++    surface.preview(null);
++    expect(runtime.requests).toHaveLength(initialRequestCount + 2);
++    expect(
++      (
++        runtime.requests.at(-1) as {
++          readonly value?: { readonly authoritative?: unknown };
++        }
++      ).value?.authoritative,
++    ).toBe(true);
++
++    surface.update(comparisonState);
++    const updatedRequestCount = runtime.requests.length;
++    surface.preview(null);
++    expect(runtime.requests).toHaveLength(updatedRequestCount);
++
++    surface.preview(comparisonState);
++    surface.destroy();
++    const destroyedRequestCount = runtime.requests.length;
++    surface.preview(null);
++    expect(runtime.requests).toHaveLength(destroyedRequestCount);
++  });
++
++  it('keeps an active comparison drag across a null preview until idle restore', () => {
++    const callbacks = createCallbacks();
++    const surface = createChartSurface(document, callbacks);
++    surface.update(comparisonState);
++    const runtime = latestRuntime();
++    runtime.context = comparisonContext();
++    runtime.options.onRenderSettled({
++      value: latestRequestValue(runtime),
++      status: 'success',
++      latest: true,
++      generation: runtime.generation,
++      geometryAuthoritative: true,
++    });
++    const elementDown = runtime.options.events.find(event => event.name === 'element:pointerdown');
++    const move = runtime.options.events.find(event => event.name === 'plot:pointermove');
++    const up = runtime.options.events.find(event => event.name === 'plot:pointerup');
++    const event = {
++      pointerId: 27,
++      canvas: { x: 15, y: 40 },
++      data: {
++        data: {
++          nodeId: 'alpha',
++          seriesId: 'actual',
++          elementKey: '["comparison-element","alpha","actual"]',
++        },
++      },
++    };
++
++    elementDown?.listener(event);
++    move?.listener({ pointerId: 27, canvas: { x: 65, y: 60 } });
++    expect(surface.element.dataset['interactionState']).toBe('dragging');
++    expect(callbacks.onInteractionChange).toHaveBeenLastCalledWith({
++      state: 'dragging',
++      itemId: 'alpha',
++      target: expect.objectContaining({ nodeId: 'beta' }),
++    });
++    surface.preview(comparisonState);
++
++    move?.listener({ pointerId: 27, canvas: { x: 25, y: 60 } });
++    expect(callbacks.onInteractionChange).toHaveBeenLastCalledWith({
++      state: 'dragging',
++      itemId: 'alpha',
++      target: null,
++    });
++    surface.preview(null);
++    const invalidTargetRestore = runtime.requests.at(-1) as {
++      readonly value?: { readonly authoritative?: unknown };
++      readonly invalidateGeometry?: unknown;
++    };
++    expect(invalidTargetRestore.value?.authoritative).toBe(false);
++    expect(invalidTargetRestore.invalidateGeometry).toBe(false);
++    expect(surface.element.dataset['interactionState']).toBe('dragging');
++
++    move?.listener({ pointerId: 27, canvas: { x: 65, y: 60 } });
++    surface.preview(comparisonState);
++    up?.listener({ pointerId: 27, canvas: { x: 65, y: 60 } });
++    expect(callbacks.onMove).toHaveBeenCalledOnce();
++    expect(surface.element.dataset['interactionState']).toBe('idle');
++
++    surface.preview(null);
++    const idleRestore = runtime.requests.at(-1) as {
++      readonly value?: { readonly authoritative?: unknown };
++      readonly invalidateGeometry?: unknown;
++    };
++    expect(idleRestore.value?.authoritative).toBe(true);
++    expect(idleRestore.invalidateGeometry).toBe(true);
++    const restoredRequestCount = runtime.requests.length;
++    surface.preview(null);
++    expect(runtime.requests).toHaveLength(restoredRequestCount);
++    surface.destroy();
++  });
++
++  it('preserves scalar bare null preview rendering', () => {
++    const surface = createChartSurface(document, createCallbacks());
++    surface.update(state);
++    const runtime = latestRuntime();
++    const initialRequestCount = runtime.requests.length;
++
++    surface.preview(null);
++
++    expect(runtime.requests).toHaveLength(initialRequestCount + 1);
++    expect(
++      (
++        runtime.requests.at(-1) as {
++          readonly value?: { readonly authoritative?: unknown };
++          readonly invalidateGeometry?: unknown;
++        }
++      ).value?.authoritative,
++    ).toBe(true);
++    expect(
++      (runtime.requests.at(-1) as { readonly invalidateGeometry?: unknown }).invalidateGeometry,
++    ).toBe(true);
++    surface.destroy();
++  });
+ });

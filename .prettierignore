@@ -10,3 +10,5 @@ node_modules/
 playwright-report/
 pnpm-lock.yaml
 test-results/
+apps/video/out/
+apps/video/public/captures/

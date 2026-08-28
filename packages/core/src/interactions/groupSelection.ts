@@ -131,7 +131,7 @@ export function evaluateGroupSelection(
   const sourceItems = new Map(sourceData.items.map(item => [item.id, item]));
   const leafIds = orderedIds.flatMap(nodeId => collectLeafSourceIds(viewSpec, nodeId));
   const categoricalSource =
-    sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical';
+    sourceData.schemaVersion !== '1.0.0' && sourceData.dataKind === 'categorical';
   if (
     leafIds.some(itemId => {
       const item = sourceItems.get(itemId);

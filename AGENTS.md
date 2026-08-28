@@ -7,6 +7,21 @@
 - G008 / T132-T134 已完成并处于 `Needs_Review`；官网由 Vercel 从 clean Git source 部署到
   `https://tellplot.com`，Cloudflare 保持权威 DNS，Preview/Production、HTTPS、静态可发现性与部署 evidence
   均已验收；该目标不包含 npm publish、tag 或公共包变更。
+- G003 多序列分类比较的产品范围、本地 `tellplot@2.0.0` / schema `3.0.0` 方向与精确 breaking public
+  API/schema contracts、TDR-025、technical plan 与 T135-T141 work graph 已确认，planning analysis 无阻断 finding。
+  G003 与 T135-T141 已由用户于 2026-08-28 完成目标级验收并处于 `Accepted`；完整质量矩阵与三层终审均为
+  Critical 0 / High 0 / Medium 0。T135 唯一 editor package version assertion 失败仍是其执行前即存在的 baseline exception。T140
+  的真实 G2/export review 形成的 TDR-025-A01 / T140 amendment 已由用户于 2026-08-27 明确批准；T140 A008/A009
+  定向恢复与 fresh evidence 已通过三层终审。T141-A003 format hygiene 与 candidate rehearsal amendment 已获批准；
+  200x2 performance、50x4 responsive、current/previous browser、package/framework/security、可复现 candidate 和
+  目标级 evidence 均已收口。dependency、远程 Git、
+  stage/commit/push/PR、publish、tag、release 与 production promotion 仍需独立明确批准。
+- G003-R1 TellPlot 2.0 发布准备范围已由用户于 2026-08-28 确认；feature
+  `.ai-platform/specs/016-tellplot-v2-release-readiness/` 的 requirements checklist 已完成，TDR-026、Technical
+  Plan、T142-T145 Work Graph、packets 与 planning analysis 已于同日获用户明确批准。G003/T135-T141
+  已完成验收；T142 已通过 focused gates 与三层终审并处于 `Needs_Review`，T143 为
+  `Running`，T144-T145 按串行前置推进。本目标只建设本地 current-release contract、
+  integrated-source artifact、fresh rehearsal 与授权材料，不执行远程 Git、tag、stage、publish 或 release。
 - 当前仓库以 `tellplot` 作为唯一公共包；内部 `@tellplot/core`、`@tellplot/editor`、`@tellplot/react`、
   `@tellplot/vue` 均为 private workspace layers。playground、单元/组件/E2E/兼容性测试和单包发布 evidence
   共同验证公共入口；npm Registry 不保留 scoped 可安装版本，发布使用 stage-only Trusted Publisher、人类

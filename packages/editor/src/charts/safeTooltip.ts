@@ -25,6 +25,15 @@ interface SafeTooltipInteraction {
   };
 }
 
+export interface SafeComparisonTooltipInteraction {
+  readonly legendFilter: false;
+  readonly legendHighlight: false;
+  readonly tooltip?: SafeTooltipInteraction['tooltip'] & {
+    readonly shared: true;
+    readonly sort: (item: { readonly name?: string }) => number;
+  };
+}
+
 const HTML_ENTITIES: Readonly<Record<string, string>> = Object.freeze({
   '&': '&amp;',
   '<': '&lt;',
@@ -97,6 +106,28 @@ export function createSafeTooltipInteraction(): SafeTooltipInteraction {
           'margin-left': '16px',
         },
       },
+    },
+  };
+}
+
+/** Keeps a comparison Tooltip shared and deterministically source-ordinal. */
+export function createSafeComparisonTooltipInteraction(
+  seriesLabels: readonly string[],
+  enabled: boolean,
+): SafeComparisonTooltipInteraction {
+  if (!enabled) {
+    return { legendFilter: false, legendHighlight: false };
+  }
+  const ordinalByName = new Map(
+    seriesLabels.map((label, ordinal) => [encodeTooltipHtml(label), ordinal]),
+  );
+  return {
+    legendFilter: false,
+    legendHighlight: false,
+    tooltip: {
+      ...createSafeTooltipInteraction().tooltip,
+      shared: true,
+      sort: item => ordinalByName.get(item.name ?? '') ?? seriesLabels.length,
     },
   };
 }

@@ -130,28 +130,66 @@ function parseSessionOptions(options: unknown): ValidationResult<ParsedSessionOp
 
 function sourceFingerprint(sourceData: SourceData): string {
   const waterfall = sourceDataKind(sourceData) === 'waterfall';
-  const canonicalSource = {
-    schemaVersion: sourceData.schemaVersion,
-    ...(sourceData.schemaVersion === '2.0.0' ? { dataKind: sourceData.dataKind } : {}),
-    datasetId: sourceData.datasetId,
-    ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
-    items: sourceData.items.map(item => ({
-      id: item.id,
-      label: item.label,
-      amount: item.amount,
-      ...(waterfall && 'kind' in item ? { kind: item.kind } : {}),
-      ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
-      ...(item.metadata === undefined
-        ? {}
-        : {
-            metadata: Object.fromEntries(
-              Object.entries(item.metadata).sort(([first], [second]) =>
-                first < second ? -1 : first > second ? 1 : 0,
-              ),
-            ),
-          }),
-    })),
-  };
+  const sortedMetadata = (
+    metadata: Readonly<Record<string, string | number | boolean | null>>,
+    canonicalizeZero: boolean,
+  ): Record<string, string | number | boolean | null> =>
+    Object.fromEntries(
+      Object.entries(metadata)
+        .sort(([first], [second]) => (first < second ? -1 : first > second ? 1 : 0))
+        .map(([key, value]) => [
+          key,
+          canonicalizeZero && typeof value === 'number' && value === 0 ? 0 : value,
+        ]),
+    );
+
+  const canonicalSource =
+    sourceData.schemaVersion === '3.0.0'
+      ? {
+          schemaVersion: sourceData.schemaVersion,
+          dataKind: sourceData.dataKind,
+          datasetId: sourceData.datasetId,
+          ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
+          series: sourceData.series.map(series => ({
+            id: series.id,
+            label: series.label,
+            ...(series.metadata === undefined
+              ? {}
+              : { metadata: sortedMetadata(series.metadata, true) }),
+          })),
+          items: sourceData.items.map(item => ({
+            id: item.id,
+            label: item.label,
+            ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
+            ...(item.metadata === undefined
+              ? {}
+              : { metadata: sortedMetadata(item.metadata, true) }),
+            values: item.values.map(value => ({
+              seriesId: value.seriesId,
+              amount: value.amount === 0 ? 0 : value.amount,
+              ...(value.sourceRef === undefined ? {} : { sourceRef: value.sourceRef }),
+              ...(value.metadata === undefined
+                ? {}
+                : { metadata: sortedMetadata(value.metadata, true) }),
+            })),
+          })),
+        }
+      : {
+          schemaVersion: sourceData.schemaVersion,
+          ...(sourceData.schemaVersion === '2.0.0' ? { dataKind: sourceData.dataKind } : {}),
+          datasetId: sourceData.datasetId,
+          ...(sourceData.currency === undefined ? {} : { currency: sourceData.currency }),
+          items: sourceData.items.map(item => ({
+            id: item.id,
+            label: item.label,
+            amount: item.amount,
+            ...(waterfall && 'kind' in item ? { kind: item.kind } : {}),
+            ...(item.sourceRef === undefined ? {} : { sourceRef: item.sourceRef }),
+            ...(item.metadata === undefined
+              ? {}
+              : { metadata: sortedMetadata(item.metadata, false) }),
+          })),
+        };
   let hash = FNV1A_64_OFFSET;
   for (const character of JSON.stringify(canonicalSource)) {
     const codePoint = character.codePointAt(0) as number;

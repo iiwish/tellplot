@@ -3,10 +3,11 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { OFFICIAL_NPM_REGISTRY } from './audit-production.mjs';
+import { currentRelease } from './current-release.mjs';
 import { fail, repositoryRoot } from './release-utils.mjs';
 
-const PACKAGE_DIRECTORIES = ['tellplot'];
-const EXPECTED_PACKAGE_NAMES = ['tellplot'];
+const PACKAGE_DIRECTORIES = [currentRelease.packageName];
+const EXPECTED_PACKAGE_NAMES = [currentRelease.packageName];
 
 export function packageRootUrl(name) {
   return new URL(encodeURIComponent(name), OFFICIAL_NPM_REGISTRY).toString();
@@ -40,16 +41,15 @@ function validatePackages(packages) {
   ) {
     findings.push('trust readiness requires the single tellplot public package');
   }
-  if (releaseVersion(packages) === undefined) {
-    findings.push('trust readiness requires one stable tellplot version');
+  if (releaseVersion(packages) !== currentRelease.version) {
+    findings.push(`trust readiness requires tellplot@${currentRelease.version}`);
   }
   return findings;
 }
 
 export function validateTrustReadiness(packages, results, confirmation) {
   const findings = validatePackages(packages);
-  const version = releaseVersion(packages);
-  const expectedConfirmation = `stage ${version} stage-only-trusted-publishers-verified`;
+  const expectedConfirmation = `stage ${currentRelease.version} stage-only-trusted-publishers-verified`;
   if (confirmation !== expectedConfirmation) {
     findings.push(
       `stage-only trusted publishers must be verified manually; confirmation must equal "${expectedConfirmation}"`,
@@ -67,7 +67,7 @@ export function validateTrustReadiness(packages, results, confirmation) {
     }
     if (result.rootStatus === 'bootstrap-required') {
       findings.push(
-        `${result.name} package root is absent; bootstrap required: complete a separately authorized non-1.0.0 bootstrap publish, then configure publish-npm.yml with npm-production as a stage-only Trusted Publisher (allow-stage-publish enabled, allow-publish disabled) before rerunning`,
+        `${result.name} package root is absent; bootstrap required: complete a separately authorized bootstrap before configuring publish-npm.yml with npm-production as a stage-only Trusted Publisher (allow-stage-publish enabled, allow-publish disabled)`,
       );
     } else if (result.rootStatus !== 'exists') {
       findings.push(`${result.name} package root query failed on the official npm registry`);

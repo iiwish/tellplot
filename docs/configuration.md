@@ -5,7 +5,20 @@
 `ChartConfig` 是 TellPlot 的声明式公共配置。它保持可序列化、可校验，并且不会开放可能破坏图表投影、
 拖拽命中、导出一致性或可访问性的 G2 内部字段。
 
-```ts
+```ts id=waterfall-config mode=standalone
+import type { ChartConfig, WaterfallSourceData } from 'tellplot';
+
+const sourceData = {
+  schemaVersion: '2.0.0',
+  dataKind: 'waterfall',
+  datasetId: 'operating-bridge',
+  items: [
+    { id: 'start', label: '期初', amount: 100, kind: 'start' },
+    { id: 'growth', label: '增长', amount: 20, kind: 'contribution' },
+    { id: 'end', label: '期末', amount: 120, kind: 'end' },
+  ],
+} as const satisfies WaterfallSourceData;
+
 const config = {
   type: 'waterfall',
   data: sourceData,
@@ -88,6 +101,10 @@ const config = {
 | `backgroundColor`   | 是       | 是       | 十六进制颜色                                        |
 | `backgroundOpacity` | 是       | 是       | `0` 至 `1`                                          |
 
+comparison 的 `colors.series` 是 `{ seriesId, color }[]`，override 按 ID 应用；未覆盖项按 source ordinal
+使用稳定默认 palette。`legend` 默认为 `true`，只读且严格保持 source order；关闭时 screen 与 export 都不
+输出 legend。comparison 不接受 positive/negative 语义色槽。
+
 `auto` 位置保留每类图表经过验证的默认放置；`inside` 与 `outside` 按数值方向自动翻转对齐，不要求宿主
 区分 bar 的转置坐标。背景默认关闭，开启时使用紧凑内边距和圆角，不改变柱形命中。
 
@@ -128,7 +145,11 @@ TellPlot 的 `auto` 策略管理；碰撞选项暂不开放，避免提供一个
 
 TypeScript 推荐使用 `satisfies ChartConfig`。JavaScript、不可信 JSON 或跨边界数据使用：
 
-```ts
+```ts id=validate-config mode=standalone
+import { validateChartConfig } from 'tellplot';
+
+declare const input: unknown;
+
 const result = validateChartConfig(input);
 if (!result.ok) {
   console.error(result.errors[0]?.code, result.errors[0]?.path);

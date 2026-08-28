@@ -1,0 +1,138 @@
+schema_version: 1
+packet_id: EP-016-T145
+task_id: T145
+feature_id: 016-tellplot-v2-release-readiness
+packet_status: draft_pending_plan_approval
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  feature_spec: .ai-platform/specs/016-tellplot-v2-release-readiness/spec.md
+  requirements_checklist: .ai-platform/specs/016-tellplot-v2-release-readiness/checklists/requirements.md
+  technical_decision: .ai-platform/docs/technology-decision-record.md#tdr-026-tellplot-20-current-release-lineage
+  feature_plan: .ai-platform/specs/016-tellplot-v2-release-readiness/plan.md
+  work_graph: .ai-platform/specs/016-tellplot-v2-release-readiness/tasks.md
+  analysis: .ai-platform/specs/016-tellplot-v2-release-readiness/analysis.md
+  predecessor_packets:
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/packets/T142.yaml
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/packets/T143.yaml
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/packets/T144.yaml
+  predecessor_evidence:
+    - .ai-platform/evidence/T142
+    - .ai-platform/evidence/T143
+    - .ai-platform/evidence/T144
+  approval_gates:
+    git_handoff: Must remain separately pending
+    public_release: Must remain separately pending
+
+work_unit:
+  title: 形成目标级 Review 与 Release Authorization Dossier
+  goal: >-
+    Independently review all G003-R1 source, release tooling, artifact and validation evidence; produce a self-contained
+    authorization dossier for later Git handoff and public release decisions; move only G003-R1 to Needs_Review and do
+    not execute or imply any remote or public action.
+  requirements:
+    - REL2-FR-001
+    - REL2-FR-005
+    - REL2-FR-006
+    - REL2-FR-007
+    - REL2-NFR-003
+    - REL2-NFR-004
+    - REL2-NFR-006
+  depends_on:
+    - T144 Needs_Review with all local gates and three-lens review passed
+  blocks:
+    - G003-R1 goal-level Needs_Review
+    - future Git handoff approval
+    - future public release approval
+  parallel: false
+  conflicts_with:
+    - T142 through T144
+    - canonical goal status and release claims
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/**
+    - .ai-platform/evidence/T142/**
+    - .ai-platform/evidence/T143/**
+    - .ai-platform/evidence/T144/**
+    - .ai-platform/docs/tasks.md
+    - .ai-platform/docs/technology-decision-record.md
+    - .ai-platform/docs/release-report.md
+    - docs/roadmap.md
+    - AGENTS.md
+  dossier_contract:
+    - State exact source base/tracking ref and explicitly deny live remote freshness unless separately verified.
+    - State exact artifact filename, size, SHA-256, descriptor and workflow receipt.
+    - List every local gate with fresh result and every external check as Not_Run_Not_Authorized.
+    - Separate future Git handoff approval from future tag/npm/GitHub release approval.
+    - Include stop/rollback conditions for remote drift, occupied version, trust mismatch, tag mismatch and staged rejection.
+  forbidden_changes:
+    - Marking G003 or G003-R1 Accepted without explicit user acceptance.
+    - Rewriting the 1.0 release report as a 2.0 released report.
+    - Executing any command listed in the future authorization dossier.
+
+execution_constraints:
+  allowed_files:
+    - .ai-platform/specs/016-tellplot-v2-release-readiness/**
+    - .ai-platform/docs/tasks.md
+    - .ai-platform/docs/technology-decision-record.md
+    - docs/roadmap.md
+    - AGENTS.md
+    - .ai-platform/evidence/T145/**
+  shared_worktree: true
+  evidence_only: true
+  no_subdelegation: true
+  retry_budget: 1
+
+tdd_plan:
+  red:
+    - Not applicable to runtime behavior; first run status/evidence integrity checks and record any missing or inconsistent receipt.
+  green:
+    - Resolve only evidence/status/document inconsistencies within the allowed files; return source/tool defects to the owning task.
+  refactor:
+    - Keep canonical documents present-tense and avoid change-narrative or release claims.
+
+validation_loop:
+  commands:
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 016-tellplot-v2-release-readiness
+    - git diff --check
+  expected_signals:
+    - All required artifacts and evidence paths exist and agree on status, source and hash.
+    - Three review lenses report Critical 0, High 0, Medium 0 unresolved.
+    - G003-R1 is Needs_Review and every remote/public action remains not run and not authorized.
+  failure_handling:
+    - Return any implementation or artifact defect to T142, T143 or T144 and invalidate downstream receipts.
+    - Do not paper over missing external verification with a prose assertion.
+
+evidence_contract:
+  root: .ai-platform/evidence/T145
+  required_files:
+    - summary.md
+    - test-results.md
+    - diff.patch
+    - review.md
+    - release-authorization.md
+  privacy:
+    - No credentials, personal paths, business data or unredacted live account metadata.
+
+review_contract:
+  lenses:
+    - spec_compliance
+    - bug_and_code_quality
+    - qa_acceptance
+  pass_condition: Critical 0, High 0, Medium 0 unresolved
+
+handoff:
+  success_status: Needs_Review
+  next_task: User acceptance of G003-R1, then separately authorized Git handoff/public release
+  user_acceptance_required: true
+  remote_actions_authorized: false
+
+stop_conditions:
+  - Any predecessor task lacks complete passing evidence or has a blocking review finding.
+  - Artifact, descriptor, workflow or source receipts disagree.
+  - Completion would require an Accepted or Released claim not explicitly authorized by the user.

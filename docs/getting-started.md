@@ -1,12 +1,14 @@
 # TellPlot 入门与集成
 
 TellPlot 的领域层和包 import 支持 SSR；实际编辑器只在浏览器中调用 `createEditor` 时访问 DOM 和 G2。
-以下命令用于已经创建好的宿主项目；React 与 Vue 示例默认项目本身已安装对应 framework。`tellplot`
-内部使用经过兼容与安全复核的精确 G2 `5.4.8`。
+以下命令用于已经创建好的宿主项目，并安装本地 `tellplot@2.0.0` candidate artifact；React 与 Vue 示例默认
+项目本身已安装对应 framework。`tellplot` 内部使用经过兼容与安全复核的精确 G2 `5.4.8`。
 
 ```bash
-pnpm add tellplot
+pnpm add ./tellplot-2.0.0.tgz
 ```
+
+`2.0.0` 正式发布到 registry 后，宿主可以改用 `pnpm add tellplot@^2.0.0`。当前说明不表示 2.0 已发布。
 
 ## 公共配置
 

@@ -74,7 +74,7 @@ function showcaseConfig(
   }
   if (
     type === 'waterfall' &&
-    !(sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical')
+    (sourceData.schemaVersion === '1.0.0' || sourceData.dataKind === 'waterfall')
   ) {
     return {
       ...common,

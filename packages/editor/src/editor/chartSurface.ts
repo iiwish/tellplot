@@ -23,19 +23,35 @@ import {
   createCategoricalChartSpec,
   shouldShowCategoricalValueLabels,
 } from '../charts/categorical/spec';
-import { projectExpandedGroupRegions } from '../charts/groupRegions';
+import {
+  comparisonStructuralIdentity,
+  createComparisonChartSpec,
+  shouldShowComparisonValueLabels,
+} from '../charts/categorical/comparisonSpec';
+import {
+  projectComparisonExpandedGroupRegions,
+  projectExpandedGroupRegions,
+} from '../charts/groupRegions';
 import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
 import { createG2ChartRuntime, type G2ChartRuntime } from '../rendering/g2/chartRuntime';
 import {
+  readComparisonChartCategoryElementPointer,
   readChartCategoryElementPointer,
   readChartElementBounds,
   type ChartSceneElementBounds,
   type ChartPointerPoint,
 } from '../rendering/g2/chartPointer';
+import {
+  createComparisonSceneReceipt,
+  hitComparisonSceneReceipt,
+  marqueeComparisonSceneReceipt,
+  type ComparisonSceneReceipt,
+} from '../rendering/g2/comparisonSceneReceipt';
 import { button, element, setOptionalAttribute } from './dom';
-import type { EditorLocale } from './formatAmount';
+import { formatAmount, type EditorLocale } from './formatAmount';
 import type { EditorLayoutMode } from './layout';
 import type { EditorMessages } from './messages';
+import { outlineEntries } from './outline';
 import { chartTitle, type EditorChartProjection } from './projection';
 import type { ChartRenderIssue } from './types';
 
@@ -108,6 +124,7 @@ interface ChartRenderRequestValue {
   readonly chart: EditorChartProjection;
   readonly authoritative: boolean;
   readonly interactionSignature: string;
+  readonly renderRevision: number;
 }
 
 const CHART_RENDER_ISSUE = Object.freeze<ChartRenderIssue>({
@@ -171,8 +188,13 @@ function axisFor(chart: EditorChartProjection): CategoryAxis {
   return chart.chartType === 'bar' ? 'y' : 'x';
 }
 
-function interactionSignature(chart: EditorChartProjection): string {
-  return JSON.stringify(chart);
+function interactionSignature(state: ChartSurfaceState, layoutMode: EditorLayoutMode): string {
+  return JSON.stringify({
+    chart: state.chart,
+    config: state.config,
+    view: state.view,
+    layoutMode,
+  });
 }
 
 function isDraggable(chart: EditorChartProjection, nodeId: ViewNodeId): boolean {
@@ -344,13 +366,23 @@ export function createChartSurface(
   let currentInteractionSignature: string | undefined;
   let interactiveSceneSignature: string | undefined;
   let interactionBlockedUntilCompatibleSettlement = false;
+  let comparisonReceipt: ComparisonSceneReceipt | undefined;
+  let comparisonPreviewActive = false;
+
+  const isComparison = (state: ChartSurfaceState | undefined = current): boolean =>
+    state?.chart.family === 'categorical' && state.chart.generation === 'comparison';
 
   const renderAllowsInteraction = (): boolean =>
     current !== undefined &&
     !renderErrorActive &&
     stage.dataset['renderState'] !== 'error' &&
     !interactionBlockedUntilCompatibleSettlement &&
-    interactiveSceneSignature === currentInteractionSignature;
+    interactiveSceneSignature === currentInteractionSignature &&
+    (!isComparison() ||
+      (comparisonReceipt !== undefined &&
+        comparisonReceipt.renderSignature === currentInteractionSignature &&
+        comparisonReceipt.renderRevision === current.view.revision &&
+        comparisonReceipt.generation === runtime.getGeneration()));
 
   const hideActions = (): void => {
     actions.hidden = true;
@@ -369,6 +401,7 @@ export function createChartSurface(
   };
 
   const clearInteraction = (notify = true): void => {
+    runtime.dismissTooltip();
     drag = null;
     marqueeSession = null;
     stage.dataset['interactionState'] = 'idle';
@@ -421,7 +454,12 @@ export function createChartSurface(
         toFinancialChartAppearance(active.config),
         '',
       ).palette;
-      dragOverlay.style.setProperty('--tp-chart-drag-fill', palette[datum.kind]);
+      dragOverlay.style.setProperty(
+        '--tp-chart-drag-fill',
+        active.chart.family === 'categorical' && active.chart.generation === 'comparison'
+          ? '#5F6B65'
+          : palette[datum.kind as keyof typeof palette],
+      );
       shell.insertBefore(dragOverlay, actions);
     }
     const markBounds = session.markBounds;
@@ -454,9 +492,10 @@ export function createChartSurface(
       return;
     }
     const groupActions = actionGroups(current.chart, current.view, nodeId);
-    const bounds = readChartElementBounds(runtime.getContext()).find(
-      value => value.nodeId === nodeId,
-    );
+    const comparisonBounds = comparisonReceipt?.categories.find(value => value.nodeId === nodeId);
+    const bounds = isComparison()
+      ? (comparisonBounds?.pointerBounds ?? comparisonBounds?.ghostBounds)
+      : readChartElementBounds(runtime.getContext()).find(value => value.nodeId === nodeId);
     if (groupActions === null || bounds === undefined) {
       hideActions();
       return;
@@ -649,22 +688,61 @@ export function createChartSurface(
           .filter(datum => isDraggable(activeState.chart, datum.nodeId))
           .map(datum => datum.nodeId) ?? [],
       );
-      const ids = readChartElementBounds(runtime.getContext())
-        .filter(
-          bounds =>
-            bounds.maxX >= left &&
-            bounds.minX <= right &&
-            bounds.maxY >= top &&
-            bounds.minY <= bottom,
-        )
-        .map(bounds => bounds.nodeId)
-        .filter(
-          (nodeId, index, values) => selectable.has(nodeId) && values.indexOf(nodeId) === index,
-        );
+      const ids = isComparison()
+        ? (comparisonReceipt === undefined
+            ? []
+            : marqueeComparisonSceneReceipt(comparisonReceipt, {
+                minX: left,
+                minY: top,
+                maxX: right,
+                maxY: bottom,
+              })
+          ).filter(nodeId => selectable.has(nodeId))
+        : readChartElementBounds(runtime.getContext())
+            .filter(
+              bounds =>
+                bounds.maxX >= left &&
+                bounds.minX <= right &&
+                bounds.maxY >= top &&
+                bounds.minY <= bottom,
+            )
+            .map(bounds => bounds.nodeId)
+            .filter(
+              (nodeId, index, values) => selectable.has(nodeId) && values.indexOf(nodeId) === index,
+            );
       if (ids.length > 0) {
         callbacks.onMarqueeSelection(ids);
       }
     }
+  };
+
+  const refreshComparisonReceipt = (): ComparisonSceneReceipt | undefined => {
+    const active = current;
+    const settled = comparisonReceipt;
+    if (
+      active === undefined ||
+      settled === undefined ||
+      active.chart.family !== 'categorical' ||
+      active.chart.generation !== 'comparison' ||
+      active.config.data.schemaVersion !== '3.0.0' ||
+      currentInteractionSignature === undefined
+    ) {
+      comparisonReceipt = undefined;
+      return undefined;
+    }
+    comparisonReceipt = createComparisonSceneReceipt({
+      context: runtime.getContext(),
+      projection: active.chart.projection,
+      series: active.config.data.series,
+      axis: axisFor(active.chart),
+      renderSignature: settled.renderSignature,
+      currentRenderSignature: currentInteractionSignature,
+      renderRevision: settled.renderRevision,
+      currentRenderRevision: active.view.revision,
+      generation: settled.generation,
+      currentGeneration: runtime.getGeneration(),
+    });
+    return comparisonReceipt;
   };
 
   const beginElementInteraction = (nodeId: ViewNodeId, point: ChartPointerPoint): void => {
@@ -677,6 +755,7 @@ export function createChartSurface(
     ) {
       return;
     }
+    runtime.dismissTooltip();
     const axis = axisFor(current.chart);
     hideActions();
     actions.classList.remove('tp-chart-group-actions');
@@ -692,7 +771,8 @@ export function createChartSurface(
       callbacks.onCancel('item-locked');
       return;
     }
-    const sceneBounds = readChartElementBounds(runtime.getContext());
+    const activeReceipt = isComparison() ? comparisonReceipt : undefined;
+    const sceneBounds = isComparison() ? [] : readChartElementBounds(runtime.getContext());
     const boundsByNode = new Map(
       sceneBounds
         .map(bounds => {
@@ -703,10 +783,21 @@ export function createChartSurface(
           (value): value is readonly [ViewNodeId, ChartCategoryBounds] => value !== undefined,
         ),
     );
-    const orderedBounds = current.chart.projection.flatMap(datum => {
-      const bounds = boundsByNode.get(datum.nodeId);
-      return bounds === undefined ? [] : [bounds];
-    });
+    const orderedBounds = isComparison()
+      ? (activeReceipt?.categories.map(category => category.axisBounds) ?? [])
+      : current.chart.projection.flatMap(datum => {
+          const bounds = boundsByNode.get(datum.nodeId);
+          return bounds === undefined ? [] : [bounds];
+        });
+    const markBounds = isComparison()
+      ? activeReceipt?.categories.find(category => category.nodeId === nodeId)?.ghostBounds
+      : sceneBounds.find(bounds => bounds.nodeId === nodeId);
+    if (
+      (isComparison() && orderedBounds.length !== current.chart.projection.length) ||
+      markBounds === undefined
+    ) {
+      return;
+    }
     drag = {
       pointerId: point.pointerId,
       itemId: nodeId,
@@ -715,7 +806,7 @@ export function createChartSurface(
       current: point,
       orderedBounds,
       sourceGroupBounds: projectChartCategorySourceGroupBounds(current.view, nodeId, orderedBounds),
-      markBounds: sceneBounds.find(bounds => bounds.nodeId === nodeId),
+      markBounds,
       revision: current.view.revision,
       moved: false,
       target: null,
@@ -732,8 +823,14 @@ export function createChartSurface(
       return;
     }
     runtime.finishAnimations();
-    const pointer = readChartCategoryElementPointer(event, axisFor(current.chart));
-    if (pointer.ok) {
+    const activeReceipt = isComparison() ? refreshComparisonReceipt() : undefined;
+    const pointer =
+      isComparison() && activeReceipt !== undefined
+        ? readComparisonChartCategoryElementPointer(event, activeReceipt)
+        : isComparison()
+          ? undefined
+          : readChartCategoryElementPointer(event, axisFor(current.chart));
+    if (pointer?.ok === true) {
       beginElementInteraction(pointer.value.nodeId, pointer.value);
     }
   };
@@ -763,18 +860,29 @@ export function createChartSurface(
     if (point === undefined) {
       return;
     }
-    const elementBounds = readChartElementBounds(runtime.getContext());
-    if (current.chart.projection.length > 0 && elementBounds.length === 0) {
+    const activeReceipt = isComparison() ? refreshComparisonReceipt() : undefined;
+    const elementBounds = isComparison() ? [] : readChartElementBounds(runtime.getContext());
+    if (
+      current.chart.projection.length > 0 &&
+      (isComparison() ? activeReceipt === undefined : elementBounds.length === 0)
+    ) {
       return;
     }
-    const hitsMark = elementBounds.some(
-      bounds =>
-        point.x >= bounds.minX &&
-        point.x <= bounds.maxX &&
-        point.y >= bounds.minY &&
-        point.y <= bounds.maxY,
-    );
-    if (!hitsMark) {
+    const comparisonHit =
+      activeReceipt === undefined ? undefined : hitComparisonSceneReceipt(activeReceipt, point);
+    const hitsMark = isComparison()
+      ? comparisonHit !== undefined
+      : elementBounds.some(
+          bounds =>
+            point.x >= bounds.minX &&
+            point.x <= bounds.maxX &&
+            point.y >= bounds.minY &&
+            point.y <= bounds.maxY,
+        );
+    if (comparisonHit !== undefined) {
+      beginElementInteraction(comparisonHit.nodeId, point);
+    } else if (!hitsMark) {
+      runtime.dismissTooltip();
       marqueeSession = { pointerId: point.pointerId, start: point, current: point };
       stage.dataset['interactionState'] = 'selecting';
       callbacks.onInteractionChange({ state: 'selecting' });
@@ -791,8 +899,15 @@ export function createChartSurface(
           if (current === undefined || drag !== null || !renderAllowsInteraction()) {
             return;
           }
-          const pointer = readChartCategoryElementPointer(event, axisFor(current.chart));
-          if (pointer.ok) {
+          const pointer = isComparison()
+            ? comparisonReceipt === undefined
+              ? undefined
+              : readComparisonChartCategoryElementPointer(event, comparisonReceipt)
+            : readChartCategoryElementPointer(event, axisFor(current.chart));
+          if (pointer?.ok === true) {
+            if (isComparison()) {
+              runtime.dismissTooltip();
+            }
             renderActions(pointer.value.nodeId);
           }
         },
@@ -875,16 +990,62 @@ export function createChartSurface(
         },
       },
     ],
+    onGeometryInvalidated: () => {
+      if (!isComparison()) {
+        return;
+      }
+      runtime.dismissTooltip();
+      comparisonReceipt = undefined;
+      interactiveSceneSignature = undefined;
+      interactionBlockedUntilCompatibleSettlement = true;
+      const hadActiveInteraction = drag !== null || marqueeSession !== null;
+      clearInteraction(hadActiveInteraction);
+    },
     onRenderSettled: settlement => {
       if (!settlement.latest || destroyed) {
         return;
       }
+      const geometryAuthoritative = settlement.geometryAuthoritative !== false;
       if (settlement.status === 'success') {
-        interactiveSceneSignature = settlement.value.interactionSignature;
+        if (!settlement.value.authoritative) {
+          return;
+        }
+        const comparisonGeometryBlocked = isComparison() && !geometryAuthoritative;
+        interactiveSceneSignature = comparisonGeometryBlocked
+          ? undefined
+          : settlement.value.interactionSignature;
         interactionBlockedUntilCompatibleSettlement =
+          comparisonGeometryBlocked ||
           current === undefined ||
           settlement.value.interactionSignature !== currentInteractionSignature;
+        if (comparisonGeometryBlocked) {
+          comparisonReceipt = undefined;
+        }
+        if (
+          geometryAuthoritative &&
+          settlement.value.authoritative &&
+          current !== undefined &&
+          current.chart.family === 'categorical' &&
+          current.chart.generation === 'comparison' &&
+          current.config.data.schemaVersion === '3.0.0' &&
+          currentInteractionSignature !== undefined
+        ) {
+          comparisonReceipt = createComparisonSceneReceipt({
+            context: runtime.getContext(),
+            projection: current.chart.projection,
+            series: current.config.data.series,
+            axis: axisFor(current.chart),
+            renderSignature: settlement.value.interactionSignature,
+            currentRenderSignature: currentInteractionSignature,
+            renderRevision: settlement.value.renderRevision,
+            currentRenderRevision: current.view.revision,
+            generation: settlement.generation,
+            currentGeneration: runtime.getGeneration(),
+          });
+          interactionBlockedUntilCompatibleSettlement ||= comparisonReceipt === undefined;
+        }
       } else {
+        comparisonReceipt = undefined;
         interactionBlockedUntilCompatibleSettlement = true;
       }
       if (settlement.status === 'failure') {
@@ -903,7 +1064,7 @@ export function createChartSurface(
         if (!settlement.value.authoritative) {
           requestRender(current);
         }
-      } else if (settlement.value.authoritative) {
+      } else if (settlement.value.authoritative && (!isComparison() || geometryAuthoritative)) {
         stage.dataset['renderState'] = 'ready';
         renderError.hidden = true;
         if (renderErrorActive) {
@@ -930,26 +1091,37 @@ export function createChartSurface(
     }
     runtime.finishAnimations();
     const point = pointFromPointerEvent(event, canvas);
-    const elementBounds = readChartElementBounds(runtime.getContext());
-    if (current.chart.projection.length > 0 && elementBounds.length === 0) {
+    const activeReceipt = isComparison() ? refreshComparisonReceipt() : undefined;
+    const elementBounds = isComparison() ? [] : readChartElementBounds(runtime.getContext());
+    if (
+      current.chart.projection.length > 0 &&
+      (isComparison() ? activeReceipt === undefined : elementBounds.length === 0)
+    ) {
       return;
     }
-    const exactHit = elementBounds.find(
-      bounds =>
-        point.x >= bounds.minX &&
-        point.x <= bounds.maxX &&
-        point.y >= bounds.minY &&
-        point.y <= bounds.maxY,
-    );
+    const comparisonHit =
+      activeReceipt === undefined ? undefined : hitComparisonSceneReceipt(activeReceipt, point);
+    const exactHit = isComparison()
+      ? undefined
+      : elementBounds.find(
+          bounds =>
+            point.x >= bounds.minX &&
+            point.x <= bounds.maxX &&
+            point.y >= bounds.minY &&
+            point.y <= bounds.maxY,
+        );
     const minimumHit =
-      exactHit === undefined && layoutMode === 'narrow'
+      !isComparison() && exactHit === undefined && layoutMode === 'narrow'
         ? resolveChartCategoryMinimumTargetHit(point, elementBounds, 32, axisFor(current.chart))
         : undefined;
     const nodeId =
-      exactHit?.nodeId ?? (minimumHit?.ok === true ? minimumHit.hit.nodeId : undefined);
+      comparisonHit?.nodeId ??
+      exactHit?.nodeId ??
+      (minimumHit?.ok === true ? minimumHit.hit.nodeId : undefined);
     if (nodeId !== undefined) {
       beginElementInteraction(nodeId, point);
     } else if (current.config.editor?.readOnly !== true) {
+      runtime.dismissTooltip();
       marqueeSession = { pointerId: point.pointerId, start: point, current: point };
       stage.dataset['interactionState'] = 'selecting';
       callbacks.onInteractionChange({ state: 'selecting' });
@@ -1002,14 +1174,21 @@ export function createChartSurface(
       eventTargetsPlot(event)
     ) {
       const point = pointFromPointerEvent(event, canvas);
-      const hit = readChartElementBounds(runtime.getContext()).find(
-        bounds =>
-          point.x >= bounds.minX &&
-          point.x <= bounds.maxX &&
-          point.y >= bounds.minY &&
-          point.y <= bounds.maxY,
-      );
+      const hit = isComparison()
+        ? comparisonReceipt === undefined
+          ? undefined
+          : hitComparisonSceneReceipt(comparisonReceipt, point)
+        : readChartElementBounds(runtime.getContext()).find(
+            bounds =>
+              point.x >= bounds.minX &&
+              point.x <= bounds.maxX &&
+              point.y >= bounds.minY &&
+              point.y <= bounds.maxY,
+          );
       if (hit !== undefined) {
+        if (isComparison()) {
+          runtime.dismissTooltip();
+        }
         renderActions(hit.nodeId);
       }
     }
@@ -1051,13 +1230,18 @@ export function createChartSurface(
   document.addEventListener('keydown', handleKeyDown);
   ownerWindow?.addEventListener('blur', handleWindowBlur);
 
-  const requestRender = (renderState: ChartSurfaceState | undefined = current): void => {
+  const requestRender = (
+    renderState: ChartSurfaceState | undefined = current,
+    authoritative = renderState === current,
+  ): void => {
     if (renderState === undefined || destroyed) {
       return;
     }
+    if (authoritative) {
+      comparisonPreviewActive = false;
+    }
     const { chart, config, view } = renderState;
-    const authoritative = renderState === current;
-    const nextInteractionSignature = interactionSignature(chart);
+    const nextInteractionSignature = interactionSignature(renderState, layoutMode);
     if (!hasRenderRequest) {
       hasRenderRequest = true;
       interactiveSceneSignature = nextInteractionSignature;
@@ -1068,36 +1252,68 @@ export function createChartSurface(
       stage.dataset['renderState'] = 'rendering';
     }
     const locale = config.locale ?? 'zh-CN';
-    const regions = projectExpandedGroupRegions(view, chart.projection);
+    const regions =
+      chart.family === 'categorical' && chart.generation === 'comparison'
+        ? projectComparisonExpandedGroupRegions(view, chart.projection)
+        : projectExpandedGroupRegions(view, chart.projection);
     const reduce = reducedMotion?.matches ?? false;
     const compactViewport = layoutMode === 'narrow';
+    let spec;
+    let structuralIdentity: string | undefined;
+    if (chart.family === 'categorical' && chart.generation === 'comparison') {
+      if (config.data.schemaVersion !== '3.0.0') {
+        return;
+      }
+      structuralIdentity = comparisonStructuralIdentity(config.data.series);
+      spec = createComparisonChartSpec({
+        projection: chart.projection,
+        series: config.data.series,
+        chartType: chart.chartType,
+        locale,
+        currency: config.data.currency,
+        reducedMotion: reduce,
+        showValueLabels: shouldShowComparisonValueLabels(chart.projection, compactViewport),
+        annotations: view.annotations,
+        emphasis: view.emphasis,
+        appearance: config.appearance,
+        groupRegions: regions,
+      });
+    } else if (chart.family === 'categorical') {
+      spec = createCategoricalChartSpec({
+        projection: chart.projection,
+        chartType: chart.chartType,
+        locale,
+        currency: config.data.currency,
+        reducedMotion: reduce,
+        showValueLabels: shouldShowCategoricalValueLabels(chart.projection, compactViewport),
+        annotations: view.annotations,
+        emphasis: view.emphasis,
+        appearance: toFinancialChartAppearance(config),
+        groupRegions: regions,
+      });
+    } else {
+      spec = createWaterfallChartSpec({
+        projection: chart.projection,
+        locale,
+        currency: config.data.currency,
+        reducedMotion: reduce,
+        showValueLabels: shouldShowWaterfallValueLabels(chart.projection, compactViewport),
+        annotations: view.annotations,
+        emphasis: view.emphasis,
+        appearance: toFinancialChartAppearance(config),
+        groupRegions: regions,
+      });
+    }
     runtime.request({
-      value: { chart, authoritative, interactionSignature: nextInteractionSignature },
-      spec:
-        chart.family === 'categorical'
-          ? createCategoricalChartSpec({
-              projection: chart.projection,
-              chartType: chart.chartType,
-              locale,
-              currency: config.data.currency,
-              reducedMotion: reduce,
-              showValueLabels: shouldShowCategoricalValueLabels(chart.projection, compactViewport),
-              annotations: view.annotations,
-              emphasis: view.emphasis,
-              appearance: toFinancialChartAppearance(config),
-              groupRegions: regions,
-            })
-          : createWaterfallChartSpec({
-              projection: chart.projection,
-              locale,
-              currency: config.data.currency,
-              reducedMotion: reduce,
-              showValueLabels: shouldShowWaterfallValueLabels(chart.projection, compactViewport),
-              annotations: view.annotations,
-              emphasis: view.emphasis,
-              appearance: toFinancialChartAppearance(config),
-              groupRegions: regions,
-            }),
+      value: {
+        chart,
+        authoritative,
+        interactionSignature: nextInteractionSignature,
+        renderRevision: view.revision,
+      },
+      spec,
+      structuralIdentity,
+      invalidateGeometry: authoritative,
     });
   };
   retryRender.addEventListener('click', () => requestRender());
@@ -1111,8 +1327,15 @@ export function createChartSurface(
         return;
       }
       current = state;
-      currentInteractionSignature = interactionSignature(state.chart);
+      currentInteractionSignature = interactionSignature(state, layoutMode);
       clearInteraction();
+      if (state.chart.family === 'categorical' && state.chart.generation === 'comparison') {
+        title.tabIndex = -1;
+        title.dataset['focusKey'] = 'chart-heading';
+      } else {
+        title.removeAttribute('tabindex');
+        delete title.dataset['focusKey'];
+      }
       const locale = state.config.locale ?? 'zh-CN';
       const copy = chartCopy(locale, state.chart.family);
       renderErrorMessage.textContent = state.messages.chartRenderFailed;
@@ -1136,26 +1359,138 @@ export function createChartSurface(
         empty.hidden = !isEmpty;
       }
       summary.setAttribute('aria-label', locale === 'en-US' ? 'Chart summary' : '图表摘要');
-      const intro = element(document, 'p', {
-        text:
-          locale === 'en-US'
-            ? `${title.textContent ?? ''}, ${state.chart.projection.length} visible nodes.`
-            : `${title.textContent ?? ''}，共 ${state.chart.projection.length} 个可见节点。`,
-      });
-      const list = element(document, 'ol');
-      for (const datum of state.chart.projection) {
-        list.append(element(document, 'li', { text: `${datum.label}, ${datum.amount}` }));
+      if (state.chart.family === 'categorical' && state.chart.generation === 'comparison') {
+        const series = state.config.data.schemaVersion === '3.0.0' ? state.config.data.series : [];
+        const intro = element(document, 'p', {
+          text: `${title.textContent ?? ''}, ${state.messages.comparisonSummary(
+            state.chart.projection.length,
+            series.length,
+          )}`,
+          attributes: { 'data-summary-kind': 'intro' },
+        });
+        const registry = element(document, 'p', {
+          text: state.messages.seriesRegistry(series.map(entry => entry.label)),
+          attributes: { 'data-summary-kind': 'series-registry' },
+        });
+        const list = element(document, 'ol');
+        const entries = outlineEntries(
+          state.view,
+          state.chart.projection,
+          'categorical',
+          'comparison',
+        );
+        const resolved = resolveFinancialChartAppearance(
+          toFinancialChartAppearance(state.config),
+          '',
+        );
+        for (const entry of entries) {
+          const datum = state.chart.projection.find(value => value.nodeId === entry.nodeId);
+          const group = ownGroup(state.view, entry.nodeId);
+          const kind =
+            group === undefined
+              ? 'category'
+              : entry.expanded === true
+                ? 'expanded-group'
+                : 'collapsed-group';
+          const fragments = [entry.label];
+          if (group !== undefined) {
+            fragments.push(
+              entry.expanded === true ? state.messages.expanded : state.messages.collapsed,
+            );
+          }
+          if (datum !== undefined && 'values' in datum) {
+            fragments.push(
+              datum.values
+                .map(
+                  value =>
+                    `${value.label}, ${formatAmount(
+                      value.amount,
+                      locale,
+                      state.config.data.currency,
+                      resolved.numberFormat,
+                    )}`,
+                )
+                .join('; '),
+            );
+          }
+          fragments.push(state.messages.sourceCategories(new Set(entry.sourceIds).size));
+          const annotation = state.view.annotations[entry.nodeId];
+          if (annotation !== undefined) {
+            fragments.push(`${state.messages.annotation}: ${annotation}`);
+          }
+          const emphasis = state.view.emphasis[entry.nodeId];
+          if (emphasis !== undefined) {
+            fragments.push(
+              (emphasis === 'highlight'
+                ? state.messages.highlighted
+                : state.messages.muted
+              ).toLocaleLowerCase(locale),
+            );
+          }
+          if (
+            entry.kind === 'contribution' &&
+            entry.sourceIds[0] !== undefined &&
+            state.view.pinnedItemIds.includes(entry.sourceIds[0])
+          ) {
+            fragments.push(state.messages.pinned.toLocaleLowerCase(locale));
+          }
+          if (entry.locked) {
+            fragments.push(state.messages.locked.toLocaleLowerCase(locale));
+          }
+          list.append(
+            element(document, 'li', {
+              text: `${fragments.join('. ')}.`,
+              attributes: {
+                'data-summary-node-id': entry.nodeId,
+                'data-summary-node-kind': kind,
+              },
+            }),
+          );
+        }
+        summary.replaceChildren(intro, registry, list);
+      } else {
+        const intro = element(document, 'p', {
+          text:
+            locale === 'en-US'
+              ? `${title.textContent ?? ''}, ${state.chart.projection.length} visible nodes.`
+              : `${title.textContent ?? ''}，共 ${state.chart.projection.length} 个可见节点。`,
+        });
+        const list = element(document, 'ol');
+        for (const datum of state.chart.projection) {
+          list.append(
+            element(document, 'li', {
+              text: `${datum.label}, ${datum.amount}`,
+            }),
+          );
+        }
+        summary.replaceChildren(intro, list);
       }
-      summary.replaceChildren(intro, list);
       setOptionalAttribute(stage, 'data-chart-type', state.chart.chartType);
       requestRender();
     },
     preview(state): void {
-      requestRender(state ?? current);
+      if (state === null && isComparison()) {
+        if (!comparisonPreviewActive) {
+          return;
+        }
+        if (drag !== null) {
+          requestRender(current, false);
+          return;
+        }
+        requestRender(current, true);
+        return;
+      }
+      if (state !== null && isComparison(state)) {
+        comparisonPreviewActive = true;
+      }
+      requestRender(state ?? current, state === null);
     },
     setLayoutMode(mode): void {
       if (!destroyed && mode !== layoutMode) {
         layoutMode = mode;
+        if (current !== undefined) {
+          currentInteractionSignature = interactionSignature(current, layoutMode);
+        }
         requestRender();
       }
     },
@@ -1169,6 +1504,7 @@ export function createChartSurface(
         return;
       }
       destroyed = true;
+      comparisonPreviewActive = false;
       current = undefined;
       currentInteractionSignature = undefined;
       clearInteraction();

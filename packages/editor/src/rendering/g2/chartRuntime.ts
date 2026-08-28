@@ -29,26 +29,40 @@ export interface G2ChartEventRegistration {
 export interface G2ChartRenderRequest<Value> {
   readonly value: Value;
   readonly spec: G2Spec;
+  readonly structuralIdentity?: string | undefined;
+  readonly invalidateGeometry?: boolean | undefined;
 }
 
 export interface G2ChartRenderSettlement<Value> {
   readonly value: Value;
   readonly status: 'success' | 'failure';
   readonly latest: boolean;
+  readonly generation: number;
+  readonly origin: 'render' | 'resize';
+  readonly geometryAuthoritative: boolean;
+}
+
+export interface G2ChartGeometryInvalidation {
+  readonly generation: number;
+  readonly reason: 'render' | 'resize' | 'dispose';
 }
 
 export interface G2ChartRuntimeOptions<Value> {
   readonly container: HTMLElement;
   readonly events: readonly G2ChartEventRegistration[];
   readonly onRenderSettled: (settlement: G2ChartRenderSettlement<Value>) => void;
+  readonly onGeometryInvalidated?:
+    ((invalidation: G2ChartGeometryInvalidation) => void) | undefined;
   readonly onCallbackError?: (() => void) | undefined;
   readonly onCleanupError?: (() => void) | undefined;
 }
 
 export interface G2ChartRuntime<Value> {
   request(request: G2ChartRenderRequest<Value>): void;
+  dismissTooltip(): void;
   finishAnimations(): void;
   getContext(): unknown;
+  getGeneration(): number;
   dispose(): void;
 }
 
@@ -66,16 +80,30 @@ function finishAnimations(chart: G2Chart): void {
   }
 }
 
+function dismissTooltip(container: HTMLElement): void {
+  try {
+    for (const tooltip of container.querySelectorAll<HTMLElement>('.g2-tooltip')) {
+      tooltip.style.visibility = 'hidden';
+    }
+  } catch {
+    // Tooltip cleanup is best effort and must not interrupt renderer progress.
+  }
+}
+
 /** Owns the shared G2 constructor, render queue, event and teardown lifecycle. */
 export function createG2ChartRuntime<Value>(
   options: G2ChartRuntimeOptions<Value>,
 ): G2ChartRuntime<Value> {
   let chart: G2Chart | undefined;
   let disposed = false;
-  let initializing = false;
-  let rendering = false;
+  let generation = 0;
+  let structuralIdentity: string | undefined;
+  let initializingGeneration: number | undefined;
+  let renderingGeneration: number | undefined;
+  let resizingGeneration: number | undefined;
   let requestId = 0;
   let attemptedRequestId = 0;
+  let successfullyRenderedRequestId = 0;
   let latestRequest:
     | (G2ChartRenderRequest<Value> & {
         readonly id: number;
@@ -86,7 +114,7 @@ export function createG2ChartRuntime<Value>(
   let scheduleToken = 0;
   let resizeObserver: ResizeObserver | undefined;
   let resizePending = false;
-  let resizing = false;
+  let observedSize: { readonly width: number; readonly height: number } | undefined;
 
   const notifyCallbackError = (): void => {
     try {
@@ -104,6 +132,15 @@ export function createG2ChartRuntime<Value>(
     }
   };
 
+  const notifyGeometryInvalidated = (reason: G2ChartGeometryInvalidation['reason']): void => {
+    dismissTooltip(options.container);
+    try {
+      options.onGeometryInvalidated?.({ generation, reason });
+    } catch {
+      notifyCallbackError();
+    }
+  };
+
   const cancelScheduledFlush = (): void => {
     scheduleToken += 1;
     if (scheduledFrame !== undefined) {
@@ -114,6 +151,7 @@ export function createG2ChartRuntime<Value>(
 
   const disconnectResizeObserver = (): void => {
     resizePending = false;
+    observedSize = undefined;
     resizeObserver?.disconnect();
     resizeObserver = undefined;
   };
@@ -150,21 +188,58 @@ export function createG2ChartRuntime<Value>(
 
   const flushResize = async (): Promise<void> => {
     const activeChart = chart;
-    if (activeChart === undefined || disposed || rendering || resizing || !resizePending) {
+    const activeGeneration = generation;
+    if (
+      activeChart === undefined ||
+      disposed ||
+      renderingGeneration === activeGeneration ||
+      resizingGeneration === activeGeneration ||
+      !resizePending
+    ) {
       return;
     }
     resizePending = false;
-    resizing = true;
+    resizingGeneration = activeGeneration;
+    let geometryAuthoritative = false;
     try {
       await activeChart.forceFit();
+      geometryAuthoritative = true;
     } catch {
-      // A later render request or resize can recover from a transient fit failure.
+      geometryAuthoritative = false;
     } finally {
-      resizing = false;
-      if (!disposed && resizePending) {
+      if (resizingGeneration === activeGeneration) {
+        resizingGeneration = undefined;
+      }
+      const settledRequest =
+        latestRequest?.id === attemptedRequestId &&
+        successfullyRenderedRequestId === attemptedRequestId
+          ? latestRequest
+          : undefined;
+      if (
+        !disposed &&
+        generation === activeGeneration &&
+        chart === activeChart &&
+        settledRequest !== undefined
+      ) {
+        notifySettlement({
+          value: settledRequest.value,
+          status: 'success',
+          latest: true,
+          generation: activeGeneration,
+          origin: 'resize',
+          geometryAuthoritative: geometryAuthoritative && !resizePending,
+        });
+      }
+      if (!disposed && generation === activeGeneration && chart === activeChart && resizePending) {
         void flushResize();
       }
-      if (!disposed && latestRequest !== undefined && latestRequest.id !== attemptedRequestId) {
+      if (
+        !disposed &&
+        generation === activeGeneration &&
+        chart === activeChart &&
+        latestRequest !== undefined &&
+        latestRequest.id !== attemptedRequestId
+      ) {
         void flush();
       }
     }
@@ -172,13 +247,19 @@ export function createG2ChartRuntime<Value>(
 
   const flush = async (): Promise<void> => {
     const activeChart = chart;
-    if (activeChart === undefined || disposed || rendering || resizing) {
+    const activeGeneration = generation;
+    if (
+      activeChart === undefined ||
+      disposed ||
+      renderingGeneration === activeGeneration ||
+      resizingGeneration === activeGeneration
+    ) {
       return;
     }
 
-    rendering = true;
+    renderingGeneration = activeGeneration;
     try {
-      while (!disposed) {
+      while (!disposed && generation === activeGeneration && chart === activeChart) {
         const request = latestRequest;
         if (request === undefined || request.id === attemptedRequestId) {
           break;
@@ -189,29 +270,40 @@ export function createG2ChartRuntime<Value>(
           activeChart.options(request.spec);
           await activeChart.render();
           status = 'success';
+          successfullyRenderedRequestId = request.id;
         } catch {
           status = 'failure';
         }
-        if (disposed) {
+        if (disposed || generation !== activeGeneration || chart !== activeChart) {
           return;
         }
 
         attemptedRequestId = request.id;
         const latest = latestRequest?.id === request.id;
-        notifySettlement({ value: request.value, status, latest });
+        notifySettlement({
+          value: request.value,
+          status,
+          latest,
+          generation: activeGeneration,
+          origin: 'render',
+          geometryAuthoritative: status === 'success' && !resizePending,
+        });
         if (!latest) {
           continue;
         }
         break;
       }
     } finally {
-      rendering = false;
-      if (!disposed && resizePending) {
+      if (renderingGeneration === activeGeneration) {
+        renderingGeneration = undefined;
+      }
+      if (!disposed && generation === activeGeneration && chart === activeChart && resizePending) {
         void flushResize();
       }
       if (
         !disposed &&
-        chart !== undefined &&
+        generation === activeGeneration &&
+        chart === activeChart &&
         latestRequest !== undefined &&
         latestRequest.id !== attemptedRequestId
       ) {
@@ -222,13 +314,19 @@ export function createG2ChartRuntime<Value>(
 
   const scheduleFlush = (): void => {
     const activeChart = chart;
+    const activeGeneration = generation;
     if (disposed || activeChart === undefined) {
       return;
     }
     cancelScheduledFlush();
     const token = scheduleToken;
     const run = (): void => {
-      if (disposed || token !== scheduleToken) {
+      if (
+        disposed ||
+        token !== scheduleToken ||
+        generation !== activeGeneration ||
+        chart !== activeChart
+      ) {
         return;
       }
       scheduledFrame = undefined;
@@ -245,13 +343,14 @@ export function createG2ChartRuntime<Value>(
   };
 
   const initialize = async (): Promise<void> => {
-    if (disposed || initializing || chart !== undefined) {
+    const activeGeneration = generation;
+    if (disposed || initializingGeneration === activeGeneration || chart !== undefined) {
       return;
     }
-    initializing = true;
+    initializingGeneration = activeGeneration;
     try {
       const Chart = await loadG2ChartConstructor();
-      if (disposed) {
+      if (disposed || generation !== activeGeneration || chart !== undefined) {
         return;
       }
       const created = new Chart({ container: options.container, autoFit: true });
@@ -264,8 +363,31 @@ export function createG2ChartRuntime<Value>(
       }
       const ResizeObserver = options.container.ownerDocument.defaultView?.ResizeObserver;
       if (ResizeObserver !== undefined) {
-        resizeObserver = new ResizeObserver(() => {
-          if (!disposed) {
+        try {
+          const bounds = options.container.getBoundingClientRect();
+          if (Number.isFinite(bounds.width) && Number.isFinite(bounds.height)) {
+            observedSize = { width: bounds.width, height: bounds.height };
+          }
+        } catch {
+          observedSize = undefined;
+        }
+        resizeObserver = new ResizeObserver(entries => {
+          if (!disposed && generation === activeGeneration && chart === created) {
+            const entry = entries.find(candidate => candidate.target === options.container);
+            const bounds = entry?.contentRect ?? options.container.getBoundingClientRect();
+            const nextSize = { width: bounds.width, height: bounds.height };
+            if (!Number.isFinite(nextSize.width) || !Number.isFinite(nextSize.height)) {
+              return;
+            }
+            if (observedSize === undefined) {
+              observedSize = nextSize;
+              return;
+            }
+            if (observedSize.width === nextSize.width && observedSize.height === nextSize.height) {
+              return;
+            }
+            observedSize = nextSize;
+            notifyGeometryInvalidated('resize');
             resizePending = true;
             void flushResize();
           }
@@ -274,19 +396,29 @@ export function createG2ChartRuntime<Value>(
       }
       await flush();
     } catch {
-      if (disposed) {
+      if (disposed || generation !== activeGeneration) {
         return;
       }
       releaseChart();
       const request = latestRequest;
       if (request !== undefined) {
         attemptedRequestId = request.id;
-        notifySettlement({ value: request.value, status: 'failure', latest: true });
+        notifySettlement({
+          value: request.value,
+          status: 'failure',
+          latest: true,
+          generation: activeGeneration,
+          origin: 'render',
+          geometryAuthoritative: false,
+        });
       }
     } finally {
-      initializing = false;
+      if (initializingGeneration === activeGeneration) {
+        initializingGeneration = undefined;
+      }
       if (
         !disposed &&
+        generation === activeGeneration &&
         chart === undefined &&
         latestRequest !== undefined &&
         latestRequest.id !== attemptedRequestId
@@ -303,6 +435,15 @@ export function createG2ChartRuntime<Value>(
       if (disposed) {
         return;
       }
+      if (request.structuralIdentity !== structuralIdentity) {
+        structuralIdentity = request.structuralIdentity;
+        generation += 1;
+        cancelScheduledFlush();
+        releaseChart();
+      }
+      if (request.invalidateGeometry !== false) {
+        notifyGeometryInvalidated('render');
+      }
       requestId += 1;
       latestRequest = { ...request, id: requestId };
       if (chart === undefined) {
@@ -310,6 +451,9 @@ export function createG2ChartRuntime<Value>(
       } else {
         scheduleFlush();
       }
+    },
+    dismissTooltip(): void {
+      dismissTooltip(options.container);
     },
     finishAnimations(): void {
       if (chart !== undefined && !disposed) {
@@ -326,11 +470,17 @@ export function createG2ChartRuntime<Value>(
         return undefined;
       }
     },
+    getGeneration(): number {
+      return generation;
+    },
     dispose(): void {
       if (disposed) {
         return;
       }
       disposed = true;
+      generation += 1;
+      dismissTooltip(options.container);
+      notifyGeometryInvalidated('dispose');
       latestRequest = undefined;
       cancelScheduledFlush();
       releaseChart();

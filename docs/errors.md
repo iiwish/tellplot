@@ -104,6 +104,7 @@ try {
 - 图表无样式：确认应用入口导入所用包的 `styles.css` subpath。
 - 图表配置无效：先调用 `validateChartConfig`，按 issue 的 `code` 与 `path` 修正公开配置。
 - 图表显示 data/view 冲突：重新用当前 data 调用 `createInitialViewSpec`，或校验恢复的 view。
-- 条形图初始化失败：只有 current categorical source 可以使用 `bar` 或 `column`。
+- 条形图初始化失败：scalar v2 或 comparison v3 categorical source 才能使用 `bar` 或 `column`，source/view
+  schema 必须一致。
 - SSR 阶段缺少 DOM：在客户端挂载编辑器；服务端只处理纯验证与持久化函数。
 - 导出不可用：确认调用发生在已挂载、支持 Canvas/SVG 的浏览器环境。

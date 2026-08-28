@@ -9,6 +9,7 @@ import {
   resolveKeyboardMoveTarget,
   resolvePointerDropPlacement,
   resolvePointerMoveTarget,
+  resolveFinancialChartAppearance,
   serializeViewSpec,
   toFinancialChartAppearance,
   viewSpecsEqual,
@@ -25,7 +26,10 @@ import {
   type ViewNodeId,
   type ViewSpec,
 } from '@tellplot/core';
-import { projectExpandedGroupRegions } from '../charts/groupRegions';
+import {
+  projectComparisonExpandedGroupRegions,
+  projectExpandedGroupRegions,
+} from '../charts/groupRegions';
 import { normalizeExportOptions } from '../export/exportOptions';
 import { exportPngChart } from '../export/pngExport';
 import { exportSvgChart } from '../export/svgExport';
@@ -458,8 +462,10 @@ export function createEditor(
   let transientScrollTop = 0;
   let workbenchScrollTop = 0;
   let focusRestoreVersion = 0;
+  let pendingComparisonFocusRestoreVersion: number | null = null;
   let suppressStoreRender = false;
   let layoutMode: EditorLayoutMode = 'narrow';
+  let comparisonFocusLifecycle = store.getSnapshot().config?.data.schemaVersion === '3.0.0';
   let layoutObserver: EditorLayoutObserver | undefined;
   let onRenderError = initialOptionsSnapshot.onRenderError;
   const activeExportControllers = new Set<AbortController>();
@@ -548,14 +554,111 @@ export function createEditor(
     return captureFocusState(control, 'root');
   };
 
-  const restoreWorkbenchState = (state: FocusState | null): void => {
+  const comparisonFocusable = (candidate: HTMLElement | undefined): candidate is HTMLElement => {
+    if (
+      candidate === undefined ||
+      !candidate.isConnected ||
+      candidate.hasAttribute('disabled') ||
+      candidate.hidden ||
+      candidate.closest('[hidden], [inert], [aria-hidden="true"]') !== null
+    ) {
+      return false;
+    }
+    if (candidate.closest('.tp-outline-trigger') !== null && layoutMode !== 'narrow') {
+      return false;
+    }
+    if (
+      root.dataset['editorState'] === 'invalid' &&
+      candidate.closest('.tp-outline-trigger, .tp-inspector-trigger') !== null
+    ) {
+      return false;
+    }
+    if (candidate.closest('.tp-inspector-trigger') !== null) {
+      const inspectorMode = root.dataset['inspectorMode'] ?? 'static';
+      if (layoutMode === 'wide' || (layoutMode === 'compact' && inspectorMode === 'tabs')) {
+        return false;
+      }
+    }
+    if (
+      candidate.closest('.tp-inspector-static') !== null &&
+      (layoutMode === 'compact' || layoutMode === 'narrow')
+    ) {
+      return false;
+    }
+    if (
+      layoutMode === 'narrow' &&
+      candidate.closest('.tp-outline-static, .tp-panel-rail-static') !== null
+    ) {
+      return false;
+    }
+    let current: HTMLElement | null = candidate;
+    while (current !== null && root.contains(current)) {
+      const style = ownerWindow?.getComputedStyle(current);
+      if (
+        style?.display === 'none' ||
+        style?.visibility === 'hidden' ||
+        style?.visibility === 'collapse'
+      ) {
+        return false;
+      }
+      current = current.parentElement;
+    }
+    return true;
+  };
+
+  const comparisonFallback = (): HTMLElement => {
+    const outline = Array.from(workbench.querySelectorAll<HTMLElement>('[role="treeitem"]')).find(
+      comparisonFocusable,
+    );
+    if (outline !== undefined) {
+      return outline;
+    }
+    const toolbarControl = Array.from(
+      toolbar.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]'),
+    ).find(comparisonFocusable);
+    if (toolbarControl !== undefined) {
+      return toolbarControl;
+    }
+    const heading = workbench.querySelector<HTMLElement>('[data-focus-key="chart-heading"]');
+    return heading !== null && comparisonFocusable(heading) ? heading : root;
+  };
+
+  const restoreWorkbenchState = (
+    state: FocusState | null,
+    useComparisonFocus = comparisonFocusLifecycle,
+  ): void => {
+    const hasActiveExternalFocusTarget = (): boolean => {
+      const active = document.activeElement;
+      return (
+        active !== null &&
+        active !== document.body &&
+        active !== document.documentElement &&
+        active.isConnected &&
+        !root.contains(active)
+      );
+    };
+    if (
+      state === null &&
+      pendingComparisonFocusRestoreVersion !== null &&
+      !hasActiveExternalFocusTarget()
+    ) {
+      return;
+    }
     focusRestoreVersion += 1;
     const version = focusRestoreVersion;
+    pendingComparisonFocusRestoreVersion = useComparisonFocus && state !== null ? version : null;
     if (state === null) {
       return;
     }
     queueMicrotask(() => {
+      const isPendingComparisonRestore = pendingComparisonFocusRestoreVersion === version;
+      if (isPendingComparisonRestore) {
+        pendingComparisonFocusRestoreVersion = null;
+      }
       if (destroyed || version !== focusRestoreVersion || modalFocusTrap?.isTop() === true) {
+        return;
+      }
+      if (isPendingComparisonRestore && hasActiveExternalFocusTarget()) {
         return;
       }
       const target =
@@ -565,12 +668,15 @@ export function createEditor(
               ...toolbar.querySelectorAll<HTMLElement>('[data-focus-key]'),
               ...workbench.querySelectorAll<HTMLElement>('[data-focus-key]'),
             ].find(candidate => candidate.dataset['focusKey'] === state.key);
-      const hiddenStaticPanel =
+      const hiddenLegacyStaticPanel =
         layoutMode === 'narrow' &&
         target !== undefined &&
         target.closest('.tp-outline-static, .tp-inspector-static, .tp-panel-rail-static') !== null;
-      const focusTarget =
-        target === undefined || target.hasAttribute('disabled') || hiddenStaticPanel
+      const focusTarget = useComparisonFocus
+        ? comparisonFocusable(target)
+          ? target
+          : comparisonFallback()
+        : target === undefined || target.hasAttribute('disabled') || hiddenLegacyStaticPanel
           ? root
           : target;
       focusTarget.focus();
@@ -1139,7 +1245,12 @@ export function createEditor(
       className: 'tp-outline-tree',
       attributes: { role: 'tree', 'aria-label': messages.outline, 'aria-multiselectable': 'true' },
     });
-    const entries = outlineEntries(snapshot.view as ViewSpec, chart.projection, chart.family);
+    const entries = outlineEntries(
+      snapshot.view as ViewSpec,
+      chart.projection,
+      chart.family,
+      chart.family === 'categorical' ? chart.generation : 'scalar',
+    );
     if (rovingNodeId === null || !entries.some(entry => entry.nodeId === rovingNodeId)) {
       rovingNodeId = snapshot.selection?.nodeId ?? entries[0]?.nodeId ?? null;
     }
@@ -1221,13 +1332,15 @@ export function createEditor(
       const value = element(document, 'span', {
         className: 'tp-row-value',
         text:
-          entry.amount === null
-            ? `${entry.sourceIds.length} ${messages.sourceItems}`
-            : formatAmount(
-                entry.amount,
-                snapshot.config?.locale ?? 'zh-CN',
-                snapshot.config?.data.currency,
-              ),
+          entry.seriesCount !== undefined
+            ? messages.seriesCount(entry.seriesCount)
+            : entry.amount === null
+              ? `${entry.sourceIds.length} ${messages.sourceItems}`
+              : formatAmount(
+                  entry.amount,
+                  snapshot.config?.locale ?? 'zh-CN',
+                  snapshot.config?.data.currency,
+                ),
       });
       const lock = element(document, 'span', {
         className: entry.locked ? 'tp-row-lock' : 'tp-row-lock-placeholder',
@@ -1313,12 +1426,33 @@ export function createEditor(
       scroll.scrollTop = workbenchScrollTop;
     }
     const selection = snapshot.selection;
-    const selected = selection === null ? undefined : projectionDatum(chart, selection.nodeId);
+    const comparison = chart.family === 'categorical' && chart.generation === 'comparison';
+    const singleSelection = selection !== null && (!comparison || selection.nodeIds.length === 1);
+    const selected = !singleSelection ? undefined : projectionDatum(chart, selection.nodeId);
     const selectedGroup =
-      selection === null || snapshot.view === null
+      !singleSelection || snapshot.view === null
         ? undefined
         : ownGroup(snapshot.view, selection.nodeId);
     const details = element(document, 'section', { className: 'tp-inspector-section' });
+    const collapsedGroup =
+      selectedGroup !== undefined && snapshot.view?.collapsedGroupIds.includes(selectedGroup.id);
+    const inspectorKind =
+      selection === null
+        ? 'validation'
+        : !singleSelection
+          ? 'multi-selection'
+          : comparison && selectedGroup !== undefined
+            ? collapsedGroup
+              ? 'collapsed-group'
+              : 'expanded-group'
+            : comparison
+              ? 'category'
+              : selectedGroup === undefined
+                ? 'item'
+                : collapsedGroup
+                  ? 'collapsed-group'
+                  : 'expanded-group';
+    details.dataset['inspectorKind'] = inspectorKind;
     details.append(
       element(document, 'div', {
         className: 'tp-section-kicker',
@@ -1328,10 +1462,12 @@ export function createEditor(
         text:
           selection === null
             ? messages.valid
-            : (selected?.label ?? selectedGroup?.label ?? selection.nodeId),
+            : !singleSelection
+              ? messages.selectedNodes(selection.nodeIds.length)
+              : (selected?.label ?? selectedGroup?.label ?? selection.nodeId),
       }),
     );
-    if (selected !== undefined) {
+    if (selected !== undefined && 'amount' in selected) {
       details.append(
         element(document, 'span', {
           className: 'tp-inspector-amount',
@@ -1356,102 +1492,165 @@ export function createEditor(
       appendMetric(messages.dataset, snapshot.config?.data.datasetId ?? '');
       appendMetric(messages.sourceCount, String(snapshot.config?.data.items.length ?? 0));
       appendMetric(messages.revision, String(snapshot.view?.revision ?? 0));
-    } else {
-      appendMetric(messages.sourceCount, String(selection.sourceIds.length));
+    } else if (!singleSelection) {
+      appendMetric(messages.selectedItem, messages.selectedNodes(selection.nodeIds.length));
       appendMetric(
-        selected?.locked === true ? messages.locked : messages.editable,
-        selected?.locked === true ? messages.locked : messages.editable,
+        messages.sourceCount,
+        messages.sourceCategories(new Set(selection.sourceIds).size),
+      );
+    } else {
+      appendMetric(
+        messages.sourceCount,
+        comparison
+          ? messages.sourceCategories(new Set(selection.sourceIds).size)
+          : String(selection.sourceIds.length),
+      );
+      if (selectedGroup !== undefined) {
+        appendMetric(selectedGroup.label, collapsedGroup ? messages.collapsed : messages.expanded);
+      }
+      if (
+        selected !== undefined &&
+        selectedGroup === undefined &&
+        selected.sourceIds[0] !== undefined &&
+        snapshot.view?.pinnedItemIds.includes(selected.sourceIds[0]) === true
+      ) {
+        appendMetric(messages.pinned, messages.pinned);
+      }
+      const emphasis = snapshot.view?.emphasis[selection.nodeId];
+      if (emphasis !== undefined) {
+        const emphasisMessage = emphasis === 'highlight' ? messages.highlighted : messages.muted;
+        appendMetric(emphasisMessage, emphasisMessage);
+      }
+      const locked =
+        selected?.locked === true ||
+        selection.sourceIds.some(sourceId => snapshot.view?.pinnedItemIds.includes(sourceId)) ||
+        snapshot.readOnly;
+      appendMetric(
+        locked ? messages.locked : messages.editable,
+        locked ? messages.locked : messages.editable,
       );
     }
     details.append(metrics);
+    if (comparison && singleSelection && selected !== undefined && 'values' in selected) {
+      const resolved = resolveFinancialChartAppearance(
+        toFinancialChartAppearance(snapshot.config as NonNullable<typeof snapshot.config>),
+        '',
+      );
+      const values = element(document, 'dl', {
+        className: 'tp-comparison-series-values',
+        attributes: { 'data-inspector-values': '' },
+      });
+      for (const value of selected.values) {
+        const row = element(document, 'div', {
+          attributes: { 'data-series-id': value.seriesId },
+        });
+        row.append(
+          element(document, 'dt', { text: value.label }),
+          element(document, 'dd', {
+            text: formatAmount(
+              value.amount,
+              snapshot.config?.locale ?? 'zh-CN',
+              snapshot.config?.data.currency,
+              resolved.numberFormat,
+            ),
+          }),
+        );
+        values.append(row);
+      }
+      details.append(values);
+    }
     scroll.append(details);
 
     if (selection !== null && snapshot.view !== null) {
-      const persistedAnnotation = annotationValue(snapshot.view, selection.nodeId);
-      const draftAnnotation =
-        annotationDraft?.nodeId === selection.nodeId ? annotationDraft.value : persistedAnnotation;
-      const field = element(document, 'section', {
-        className: 'tp-inspector-section tp-annotation-field',
-      });
-      const fieldId = `${instanceId}-${context}-annotation-${selection.nodeId.replace(/[^A-Za-z0-9_-]/gu, '-')}`;
-      const label = element(document, 'label', {
-        className: 'tp-field-label',
-        text: messages.annotation,
-        attributes: { for: fieldId },
-      });
-      const textarea = element(document, 'textarea', {
-        className: 'tp-text-input tp-text-area',
-        attributes: {
-          id: fieldId,
-          placeholder: messages.annotationPlaceholder,
-          'data-focus-key': `annotation:${selection.nodeId}`,
-        },
-      });
-      textarea.value = draftAnnotation;
-      textarea.readOnly = snapshot.readOnly;
-      const footer = element(document, 'div', { className: 'tp-annotation-footer' });
-      const count = element(document, 'span', { className: 'tp-annotation-count' });
-      const save = button(document, messages.saveAnnotation, { className: 'tp-command-button' });
-      const updateAnnotationState = (): void => {
-        const length = Array.from(textarea.value).length;
-        count.textContent = `${length} / 500`;
-        count.dataset['invalid'] = length > 500 ? 'true' : 'false';
-        save.disabled =
-          snapshot.readOnly ||
-          length > 500 ||
-          textarea.value === persistedAnnotation ||
-          (annotationDraft?.nodeId === selection.nodeId &&
-            annotationDraft.submittedValue === textarea.value);
-      };
-      textarea.addEventListener('input', () => {
-        annotationDraft = {
-          nodeId: selection.nodeId,
-          value: textarea.value,
-          baseline: persistedAnnotation,
-        };
-        updateAnnotationState();
-      });
-      save.addEventListener('click', () => {
-        const view = store.getSnapshot().view;
-        if (view === null || Array.from(textarea.value).length > 500) {
-          return;
-        }
-        const text = textarea.value.trim() === '' ? null : textarea.value;
-        const submittedValue = text ?? '';
-        annotationDraft = {
-          nodeId: selection.nodeId,
-          value: textarea.value,
-          baseline: persistedAnnotation,
-          submittedValue,
-        };
-        const result = dispatchInteraction(
-          {
-            schemaVersion: '1.0.0',
-            id: nextActionId('direct'),
-            type: 'setAnnotation',
-            source: 'direct',
-            baseRevision: view.revision,
-            payload: { nodeId: selection.nodeId, text },
+      if (singleSelection) {
+        const persistedAnnotation = annotationValue(snapshot.view, selection.nodeId);
+        const draftAnnotation =
+          annotationDraft?.nodeId === selection.nodeId
+            ? annotationDraft.value
+            : persistedAnnotation;
+        const field = element(document, 'section', {
+          className: 'tp-inspector-section tp-annotation-field',
+        });
+        const fieldId = `${instanceId}-${context}-annotation-${selection.nodeId.replace(/[^A-Za-z0-9_-]/gu, '-')}`;
+        const label = element(document, 'label', {
+          className: 'tp-field-label',
+          text: messages.annotation,
+          attributes: { for: fieldId },
+        });
+        const textarea = element(document, 'textarea', {
+          className: 'tp-text-input tp-text-area',
+          attributes: {
+            id: fieldId,
+            placeholder: messages.annotationPlaceholder,
+            'data-focus-key': `annotation:${selection.nodeId}`,
           },
-          text === null ? messages.annotationRemoved : messages.annotationSaved,
-        );
-        if (
-          result?.ok !== true &&
-          annotationDraft?.nodeId === selection.nodeId &&
-          annotationDraft.submittedValue === submittedValue
-        ) {
+        });
+        textarea.value = draftAnnotation;
+        textarea.readOnly = snapshot.readOnly;
+        const footer = element(document, 'div', { className: 'tp-annotation-footer' });
+        const count = element(document, 'span', { className: 'tp-annotation-count' });
+        const save = button(document, messages.saveAnnotation, { className: 'tp-command-button' });
+        const updateAnnotationState = (): void => {
+          const length = Array.from(textarea.value).length;
+          count.textContent = `${length} / 500`;
+          count.dataset['invalid'] = length > 500 ? 'true' : 'false';
+          save.disabled =
+            snapshot.readOnly ||
+            length > 500 ||
+            textarea.value === persistedAnnotation ||
+            (annotationDraft?.nodeId === selection.nodeId &&
+              annotationDraft.submittedValue === textarea.value);
+        };
+        textarea.addEventListener('input', () => {
           annotationDraft = {
             nodeId: selection.nodeId,
             value: textarea.value,
             baseline: persistedAnnotation,
           };
-        }
-      });
-      save.dataset['focusKey'] = `annotation-save:${selection.nodeId}`;
-      updateAnnotationState();
-      footer.append(count, save);
-      field.append(label, textarea, footer);
-      scroll.append(field);
+          updateAnnotationState();
+        });
+        save.addEventListener('click', () => {
+          const view = store.getSnapshot().view;
+          if (view === null || Array.from(textarea.value).length > 500) {
+            return;
+          }
+          const text = textarea.value.trim() === '' ? null : textarea.value;
+          const submittedValue = text ?? '';
+          annotationDraft = {
+            nodeId: selection.nodeId,
+            value: textarea.value,
+            baseline: persistedAnnotation,
+            submittedValue,
+          };
+          const result = dispatchInteraction(
+            {
+              schemaVersion: '1.0.0',
+              id: nextActionId('direct'),
+              type: 'setAnnotation',
+              source: 'direct',
+              baseRevision: view.revision,
+              payload: { nodeId: selection.nodeId, text },
+            },
+            text === null ? messages.annotationRemoved : messages.annotationSaved,
+          );
+          if (
+            result?.ok !== true &&
+            annotationDraft?.nodeId === selection.nodeId &&
+            annotationDraft.submittedValue === submittedValue
+          ) {
+            annotationDraft = {
+              nodeId: selection.nodeId,
+              value: textarea.value,
+              baseline: persistedAnnotation,
+            };
+          }
+        });
+        save.dataset['focusKey'] = `annotation-save:${selection.nodeId}`;
+        updateAnnotationState();
+        footer.append(count, save);
+        field.append(label, textarea, footer);
+        scroll.append(field);
+      }
 
       const groupSelection =
         snapshot.config === null
@@ -1688,7 +1887,11 @@ export function createEditor(
         groupLabelDraft = null;
       }
       if (reusableWasTop) {
-        queueMicrotask(() => root.focus());
+        if (comparisonFocusLifecycle) {
+          restoreWorkbenchState({ key: 'disabled-panel-return' });
+        } else {
+          queueMicrotask(() => root.focus());
+        }
       }
       return;
     }
@@ -1716,18 +1919,27 @@ export function createEditor(
         }
         renderTransient();
         overlayReturnFocus = null;
-        queueMicrotask(() => {
-          const currentTrigger = root.querySelector<HTMLElement>(
-            closingOverlay === 'outline' ? '.tp-outline-trigger' : '.tp-inspector-trigger',
-          );
-          if (currentTrigger !== null) {
-            currentTrigger.focus();
-          } else if (returnFocus?.isConnected === true) {
-            returnFocus.focus();
-          } else {
-            root.focus();
-          }
-        });
+        const currentTrigger = root.querySelector<HTMLElement>(
+          closingOverlay === 'outline' ? '.tp-outline-trigger' : '.tp-inspector-trigger',
+        );
+        if (comparisonFocusLifecycle) {
+          restoreWorkbenchState({
+            key:
+              currentTrigger?.dataset['focusKey'] ??
+              returnFocus?.dataset['focusKey'] ??
+              'overlay-return',
+          });
+        } else {
+          queueMicrotask(() => {
+            if (currentTrigger !== null) {
+              currentTrigger.focus();
+            } else if (returnFocus?.isConnected === true) {
+              returnFocus.focus();
+            } else {
+              root.focus();
+            }
+          });
+        }
       };
       const overlayLabel = desiredKind === 'outline' ? messages.outline : messages.inspector;
       const scrim = button(document, messages.backdrop(overlayLabel), {
@@ -2074,7 +2286,7 @@ export function createEditor(
     );
   };
 
-  function render(): void {
+  function render(useComparisonFocus = comparisonFocusLifecycle): void {
     if (destroyed || rendering) {
       return;
     }
@@ -2088,12 +2300,14 @@ export function createEditor(
       const empty =
         snapshot.status === 'ready' &&
         snapshot.config !== null &&
-        (snapshot.config.data.schemaVersion === '2.0.0' &&
-        snapshot.config.data.dataKind === 'categorical'
+        (snapshot.config.data.schemaVersion === '3.0.0'
           ? snapshot.config.data.items.length === 0
-          : !snapshot.config.data.items.some(
-              item => 'kind' in item && item.kind === 'contribution',
-            ));
+          : snapshot.config.data.schemaVersion === '2.0.0' &&
+              snapshot.config.data.dataKind === 'categorical'
+            ? snapshot.config.data.items.length === 0
+            : !snapshot.config.data.items.some(
+                item => 'kind' in item && item.kind === 'contribution',
+              ));
       root.dataset['editorState'] =
         snapshot.status !== 'ready' ? 'invalid' : empty ? 'empty' : 'ready';
       if (outlineDrag === null) {
@@ -2132,7 +2346,10 @@ export function createEditor(
       }
       renderTransient();
       editorRenderFailed = false;
-      restoreWorkbenchState(preservedFocus);
+      restoreWorkbenchState(preservedFocus, useComparisonFocus);
+      if (snapshot.config !== null) {
+        comparisonFocusLifecycle = snapshot.config.data.schemaVersion === '3.0.0';
+      }
     } finally {
       rendering = false;
     }
@@ -2503,7 +2720,13 @@ export function createEditor(
       throw exportError('EXPORT_UNAVAILABLE', '/export');
     }
     const projected = projectEditorChart(snapshot.config, snapshot.view);
-    if (!projected.ok || projected.value.projection.length === 0) {
+    if (!projected.ok) {
+      throw exportError('EXPORT_UNAVAILABLE', '/export');
+    }
+    if (
+      projected.value.projection.length === 0 &&
+      !(projected.value.family === 'categorical' && projected.value.generation === 'comparison')
+    ) {
       throw exportError('EXPORT_UNAVAILABLE', '/export');
     }
     const plot = chartSurface.element.querySelector<HTMLElement>('[data-testid="tellplot-chart"]');
@@ -2530,34 +2753,90 @@ export function createEditor(
       height,
       annotations: snapshot.view.annotations,
       emphasis: snapshot.view.emphasis,
-      appearance: toFinancialChartAppearance(snapshot.config),
-      groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
     };
     try {
       if (normalized.format === 'png') {
-        return await (projected.value.family === 'categorical'
-          ? exportPngChart(
+        if (projected.value.family === 'categorical') {
+          if (projected.value.generation === 'comparison') {
+            if (snapshot.config.data.schemaVersion !== '3.0.0') {
+              throw exportError('EXPORT_UNAVAILABLE', '/export');
+            }
+            return await exportPngChart(
               {
                 ...common,
+                generation: 'comparison',
                 chartType: projected.value.chartType,
                 projection: projected.value.projection,
+                series: snapshot.config.data.series,
+                appearance: snapshot.config.appearance,
+                groupRegions: projectComparisonExpandedGroupRegions(
+                  snapshot.view,
+                  projected.value.projection,
+                ),
               },
               normalized,
-            )
-          : exportPngChart({ ...common, projection: projected.value.projection }, normalized));
+            );
+          }
+          return await exportPngChart(
+            {
+              ...common,
+              generation: 'scalar',
+              chartType: projected.value.chartType,
+              projection: projected.value.projection,
+              appearance: toFinancialChartAppearance(snapshot.config),
+              groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
+            },
+            normalized,
+          );
+        }
+        return await exportPngChart(
+          {
+            ...common,
+            projection: projected.value.projection,
+            appearance: toFinancialChartAppearance(snapshot.config),
+            groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
+          },
+          normalized,
+        );
       }
       const svgOptions = {
         ...common,
         background: normalized.background,
         suggestedFilename: normalized.suggestedFilename,
       };
-      return await (projected.value.family === 'categorical'
-        ? exportSvgChart({
+      if (projected.value.family === 'categorical') {
+        if (projected.value.generation === 'comparison') {
+          if (snapshot.config.data.schemaVersion !== '3.0.0') {
+            throw exportError('EXPORT_UNAVAILABLE', '/export');
+          }
+          return await exportSvgChart({
             ...svgOptions,
+            generation: 'comparison',
             chartType: projected.value.chartType,
             projection: projected.value.projection,
-          })
-        : exportSvgChart({ ...svgOptions, projection: projected.value.projection }));
+            series: snapshot.config.data.series,
+            appearance: snapshot.config.appearance,
+            groupRegions: projectComparisonExpandedGroupRegions(
+              snapshot.view,
+              projected.value.projection,
+            ),
+          });
+        }
+        return await exportSvgChart({
+          ...svgOptions,
+          generation: 'scalar',
+          chartType: projected.value.chartType,
+          projection: projected.value.projection,
+          appearance: toFinancialChartAppearance(snapshot.config),
+          groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
+        });
+      }
+      return await exportSvgChart({
+        ...svgOptions,
+        projection: projected.value.projection,
+        appearance: toFinancialChartAppearance(snapshot.config),
+        groupRegions: projectExpandedGroupRegions(snapshot.view, projected.value.projection),
+      });
     } finally {
       activeExportControllers.delete(controller);
     }
@@ -2586,6 +2865,11 @@ export function createEditor(
       const localeChanged =
         (before.config?.locale ?? 'zh-CN') !== (after.config?.locale ?? 'zh-CN');
       const preserveRenderErrorFeedback = feedback.code === 'CHART_RENDER_ERROR';
+      const useComparisonFocus =
+        comparisonFocusLifecycle ||
+        before.config?.data.schemaVersion === '3.0.0' ||
+        after.config?.data.schemaVersion === '3.0.0';
+      let restoreComparisonContextFocus = false;
 
       if (!editorRenderFailed && sameRenderState(before, after)) {
         return;
@@ -2619,7 +2903,9 @@ export function createEditor(
         transientScrollTop = 0;
         transientLayer.replaceChildren();
         root.removeAttribute('data-overlay-open');
-        if (restoreTransientFocus) {
+        if (restoreTransientFocus && useComparisonFocus) {
+          restoreComparisonContextFocus = true;
+        } else if (restoreTransientFocus) {
           queueMicrotask(() => root.focus());
         }
       } else if (pendingGroup !== null && !sameView(before.view, after.view)) {
@@ -2632,10 +2918,17 @@ export function createEditor(
         modalKind = null;
         transientFocus = null;
         transientScrollTop = 0;
-        queueMicrotask(() => root.focus());
+        if (useComparisonFocus) {
+          restoreComparisonContextFocus = true;
+        } else {
+          queueMicrotask(() => root.focus());
+        }
       }
       try {
-        render();
+        render(useComparisonFocus);
+        if (restoreComparisonContextFocus) {
+          restoreWorkbenchState({ key: 'context-fallback' }, useComparisonFocus);
+        }
       } catch {
         renderEditorFailure();
         throw editorError('EDITOR_RENDER_FAILED', 'TellPlot editor could not render its state.');
@@ -2684,6 +2977,8 @@ export function createEditor(
         return;
       }
       destroyed = true;
+      focusRestoreVersion += 1;
+      pendingComparisonFocusRestoreVersion = null;
       for (const controller of activeExportControllers) {
         controller.abort(exportError('EXPORT_UNAVAILABLE', '/export'));
       }
@@ -2713,6 +3008,8 @@ export function createEditor(
       if (destroyed || nextMode === layoutMode) {
         return;
       }
+      const preservedFocus = comparisonFocusLifecycle ? captureWorkbenchState() : null;
+      const closedOverlay = comparisonFocusLifecycle && overlay !== null;
       layoutMode = nextMode;
       root.dataset['layout'] = nextMode;
       cancelOutlineDrag();
@@ -2722,7 +3019,14 @@ export function createEditor(
         overlay = null;
         overlayReturnFocus = null;
         renderTransient();
-        queueMicrotask(() => root.focus());
+        if (!comparisonFocusLifecycle) {
+          queueMicrotask(() => root.focus());
+        }
+      }
+      if (closedOverlay) {
+        restoreWorkbenchState({ key: 'responsive-overlay-fallback' });
+      } else if (preservedFocus !== null) {
+        restoreWorkbenchState(preservedFocus);
       }
     });
     render();

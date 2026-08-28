@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { canonicalizeNpmTarball } from './canonical-gzip.mjs';
+import { currentRelease } from './current-release.mjs';
 import { fail, repositoryRoot, run } from './release-utils.mjs';
 
 const write = process.argv.slice(2).includes('--write');
@@ -29,11 +30,13 @@ if (process.versions.node !== releaseNodeVersion) {
     `Release artifact requires Node ${releaseNodeVersion}; current runtime is ${process.versions.node}`,
   );
 }
+if (releaseNodeVersion !== currentRelease.nodeVersion) {
+  throw new Error('Release artifact Node version does not match the current release descriptor');
+}
 
-const packageDirectories = ['tellplot'];
-const evidenceRoot = resolve(repositoryRoot, '.ai-platform/evidence/T131');
-const artifactsRoot = resolve(evidenceRoot, 'artifacts');
-const manifestPath = resolve(evidenceRoot, 'tarball-manifest.json');
+const packageDirectories = [currentRelease.packageName];
+const artifactsRoot = resolve(repositoryRoot, currentRelease.artifactRoot);
+const manifestPath = resolve(repositoryRoot, currentRelease.manifestPath);
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'tellplot-release-artifacts-'));
 
 function sha256(path) {
@@ -73,8 +76,25 @@ try {
     });
   }
 
-  const current = { version: '1.0.0', packages: currentPackages };
-  if (write) {
+  const current = {
+    version: currentRelease.version,
+    evidenceTask: currentRelease.evidenceTask,
+    nodeVersion: process.versions.node,
+    packages: currentPackages,
+  };
+  const findings = [];
+  const generatedArtifact = currentPackages[0];
+  if (
+    currentPackages.length !== 1 ||
+    generatedArtifact?.name !== currentRelease.packageName ||
+    generatedArtifact?.version !== currentRelease.version ||
+    generatedArtifact?.filename !== currentRelease.artifact.filename ||
+    generatedArtifact?.sizeBytes !== currentRelease.artifact.sizeBytes ||
+    generatedArtifact?.sha256 !== currentRelease.artifact.sha256
+  ) {
+    findings.push('generated artifact does not match the current release descriptor');
+  }
+  if (write && findings.length === 0) {
     mkdirSync(artifactsRoot, { recursive: true });
     for (const packageArtifact of currentPackages) {
       copyFileSync(
@@ -84,8 +104,6 @@ try {
     }
     writeFileSync(manifestPath, `${JSON.stringify(current, null, 2)}\n`);
   }
-
-  const findings = [];
   if (!existsSync(manifestPath)) {
     findings.push('missing release artifact manifest');
   }
@@ -97,6 +115,13 @@ try {
 
   if (findings.length === 0) {
     const stored = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    if (
+      stored.version !== currentRelease.version ||
+      stored.evidenceTask !== currentRelease.evidenceTask ||
+      stored.nodeVersion !== currentRelease.nodeVersion
+    ) {
+      findings.push('release artifact manifest does not match the current release descriptor');
+    }
     for (const packageArtifact of currentPackages) {
       const storedPackage = stored.packages?.find(item => item.name === packageArtifact.name);
       if (storedPackage === undefined) {

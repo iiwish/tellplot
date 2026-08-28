@@ -1,0 +1,150 @@
+diff --git a/.ai-platform/evidence/T144/quality-matrix.json b/.ai-platform/evidence/T144/quality-matrix.json
+new file mode 100644
+index 0000000..ed044ae
+--- /dev/null
++++ b/.ai-platform/evidence/T144/quality-matrix.json
+@@ -0,0 +1,144 @@
++{
++  "schemaVersion": 1,
++  "taskId": "T144",
++  "generatedOn": "2026-08-28",
++  "result": "passed",
++  "toolchain": {
++    "node": "22.20.0",
++    "pnpm": "11.1.3",
++    "npm": "11.18.0"
++  },
++  "artifact": {
++    "path": ".ai-platform/evidence/T143/artifacts/tellplot-2.0.0.tgz",
++    "sizeBytes": 597508,
++    "fileCount": 41,
++    "sha256": "44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca",
++    "matchesDescriptor": true,
++    "matchesManifest": true,
++    "matchesWorkflow": true
++  },
++  "gates": [
++    { "command": "pnpm format:check", "result": "passed" },
++    { "command": "pnpm lint", "result": "passed" },
++    { "command": "pnpm typecheck", "result": "passed" },
++    {
++      "command": "pnpm test:coverage",
++      "result": "passed",
++      "testFiles": 72,
++      "tests": 613,
++      "coverage": {
++        "statements": 90.29,
++        "branches": 84.38,
++        "functions": 91.13,
++        "lines": 90.4
++      }
++    },
++    { "command": "pnpm build", "result": "passed" },
++    { "command": "pnpm test:package", "result": "passed" },
++    {
++      "command": "pnpm test:framework-matrix",
++      "result": "passed",
++      "consumers": ["imperative-dom", "react-18", "react-19", "vue-3"]
++    },
++    {
++      "command": "pnpm test:e2e",
++      "result": "passed",
++      "tests": 321,
++      "projects": ["chromium", "firefox", "webkit"]
++    },
++    {
++      "command": "pnpm test:a11y",
++      "result": "passed",
++      "tests": 48,
++      "projects": ["chromium", "firefox", "webkit"]
++    },
++    {
++      "command": "pnpm test:performance",
++      "result": "passed",
++      "tests": 4,
++      "budgetMs": 150,
++      "orchestratedP95Ms": {
++        "visibleCanvas": 48.1,
++        "categoricalCanvas": 77.4,
++        "comparisonKeyboard": 79.1,
++        "comparisonDirect": 52.7
++      },
++      "sampleCounts": {
++        "visibleCanvas": 30,
++        "categoricalCanvas": 30,
++        "comparisonKeyboard": 30,
++        "comparisonDirect": 30
++      },
++      "rootCommitDelta": 0
++    },
++    {
++      "command": "pnpm test:browser-previous",
++      "result": "passed",
++      "previousReleaseTests": 321,
++      "previousMajorWebkitTests": 107,
++      "previousPlaywright": "1.60.0",
++      "previousMajorWebkit": "18.4"
++    },
++    { "command": "pnpm security:lock", "result": "passed", "packages": 14, "artifacts": 17 },
++    {
++      "command": "pnpm security:dependencies",
++      "result": "passed",
++      "installedManifests": 48
++    },
++    { "command": "pnpm audit:prod", "result": "passed", "knownVulnerabilities": 0 },
++    {
++      "command": "pnpm release:architecture",
++      "result": "passed",
++      "sourceFiles": 62,
++      "importEdges": 237,
++      "runtimeCycles": 0
++    },
++    {
++      "command": "pnpm release:audit",
++      "result": "passed",
++      "version": "2.0.0",
++      "publicFiles": 27,
++      "markdownFiles": 21
++    },
++    { "command": "pnpm release:artifact", "result": "passed" },
++    {
++      "command": "pnpm release:check",
++      "result": "passed",
++      "portOverride": 4175,
++      "includesFreshRehearsal": true
++    },
++    {
++      "command": "pnpm release:rehearse",
++      "result": "passed",
++      "execution": "fresh nested exact gate in release:check",
++      "sourceFiles": 464,
++      "gates": 12,
++      "isolatedUnitTests": 613
++    },
++    { "command": "git diff --check", "result": "passed" }
++  ],
++  "environmentalRetries": [
++    {
++      "gate": "pnpm test:e2e",
++      "firstResult": "failed_before_tests",
++      "reason": "Port 4174 was occupied by an unrelated local process.",
++      "replay": "TELLPLOT_E2E_PORT=4175",
++      "replayResult": "passed_321_of_321"
++    },
++    {
++      "gate": "pnpm test:browser-previous",
++      "firstResult": "failed_319_of_321",
++      "reason": "Two Firefox accessibility interactions timed out after sustained browser load.",
++      "replay": "Exact command after a 60-second host cooldown; no assertion, timeout, worker or threshold change.",
++      "replayResult": "passed_321_of_321_and_107_of_107"
++    },
++    {
++      "gate": "focused release contract suite",
++      "firstResult": "one_15_second_timeout",
++      "reason": "Architecture fixture exceeded its test timeout immediately after the browser matrix.",
++      "replay": "Exact 3-file suite after a 60-second host cooldown; no source change.",
++      "replayResult": "passed_31_of_31"
++    }
++  ],
++  "downgrades": []
++}

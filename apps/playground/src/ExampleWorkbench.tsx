@@ -43,6 +43,33 @@ function initialConfig(sourceData: SourceData, requestedChartType: 'bar' | undef
       height: '100%',
     };
   }
+  if (sourceData.schemaVersion === '3.0.0') {
+    const type = requestedChartType ?? 'column';
+    return {
+      type,
+      appearance: {
+        title: sourceData.series.length === 2 ? '实际与预算' : '业务线情景比较',
+        colors: {
+          series: sourceData.series.map((series, index) => ({
+            seriesId: series.id,
+            color: ['#0072B2', '#D55E00', '#009E73', '#CC79A7'][index] ?? '#0072B2',
+          })),
+          group: '#7C5CFC',
+        },
+        legend: true,
+        labels: {
+          value: { display: 'auto', placement: 'outside', offset: 6 },
+          group: 'auto',
+        },
+        tooltip: true,
+        animation: { enabled: true, duration: 180 },
+      },
+      data: sourceData,
+      editor: DEFAULT_EDITOR,
+      locale: 'zh-CN',
+      height: '100%',
+    };
+  }
   return {
     type: 'waterfall',
     appearance: {
@@ -195,6 +222,7 @@ export function ExampleWorkbench(): React.JSX.Element {
       const result = await editorRef.current?.exportImage({
         format,
         filename: config.data.datasetId,
+        background: '#ffffff',
         ...(format === 'png' ? { pixelRatio: 2 } : {}),
       });
       if (result === undefined) {

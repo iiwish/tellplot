@@ -49,7 +49,16 @@ export type ValidationIssueReason =
   | 'INVALID_ANNOTATION'
   | 'ANNOTATION_TOO_LONG'
   | 'UNKNOWN_NODE_REFERENCE'
-  | 'INVALID_EMPHASIS';
+  | 'INVALID_EMPHASIS'
+  | 'INVALID_SERIES_COUNT'
+  | 'DUPLICATE_SERIES_ID'
+  | 'DUPLICATE_SERIES_LABEL'
+  | 'UNKNOWN_SERIES_REFERENCE'
+  | 'DUPLICATE_SERIES_VALUE'
+  | 'MISSING_SERIES_VALUE'
+  | 'SERIES_VALUE_ORDER_MISMATCH'
+  | 'DUPLICATE_SERIES_COLOR'
+  | 'INCOMPATIBLE_PROJECTOR_GENERATION';
 
 export interface ValidationIssue {
   readonly code: ValidationErrorCode;
@@ -114,6 +123,15 @@ const ISSUE_MESSAGES: Readonly<Record<ValidationIssueReason, string>> = {
   ANNOTATION_TOO_LONG: 'Annotation exceeds the supported length.',
   UNKNOWN_NODE_REFERENCE: 'View references an unknown node.',
   INVALID_EMPHASIS: 'Emphasis value is not supported.',
+  INVALID_SERIES_COUNT: 'Series count must be between two and four.',
+  DUPLICATE_SERIES_ID: 'Series identifiers must be unique.',
+  DUPLICATE_SERIES_LABEL: 'Series labels must be unique after normalization.',
+  UNKNOWN_SERIES_REFERENCE: 'Reference does not match a declared series.',
+  DUPLICATE_SERIES_VALUE: 'Category values must contain each series exactly once.',
+  MISSING_SERIES_VALUE: 'Category values must cover every declared series.',
+  SERIES_VALUE_ORDER_MISMATCH: 'Category values must follow declared series order.',
+  DUPLICATE_SERIES_COLOR: 'Series color may be configured only once.',
+  INCOMPATIBLE_PROJECTOR_GENERATION: 'Projector does not support this schema generation.',
 };
 
 export function validationIssue(

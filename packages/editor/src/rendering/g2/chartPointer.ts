@@ -6,6 +6,7 @@ import {
   type MoveTargetEdge,
   type ViewNodeId,
 } from '@tellplot/core';
+import type { ComparisonSceneReceipt } from './comparisonSceneReceipt';
 
 export interface ChartPointerPoint {
   readonly pointerId: number;
@@ -144,6 +145,67 @@ export function readChartCategoryElementPointer(
       min: bounds.min,
       max: bounds.max,
       target: edge === 'before' ? bounds.min : bounds.max,
+    },
+  };
+}
+
+/** Maps a comparison interval event only through an already-authoritative receipt. */
+export function readComparisonChartCategoryElementPointer(
+  event: unknown,
+  receipt: ComparisonSceneReceipt,
+): ChartCategoryPointerResult {
+  const point = readChartPointerPoint(event);
+  if (point === undefined || categoryCoordinate(point, receipt.axis) === undefined) {
+    return { ok: false, reason: 'INVALID_INPUT' };
+  }
+  const record = asRecord(event);
+  const data = asRecord(read(record, 'data'));
+  const datum = asRecord(read(data, 'data'));
+  const nodeId = read(datum, 'nodeId');
+  const seriesId = read(datum, 'seriesId');
+  const elementKey = read(datum, 'elementKey');
+  if (
+    typeof nodeId !== 'string' ||
+    typeof seriesId !== 'string' ||
+    typeof elementKey !== 'string'
+  ) {
+    return { ok: false, reason: 'SOURCE_NOT_FOUND' };
+  }
+  const element = receipt.elements.find(
+    candidate =>
+      candidate.nodeId === nodeId &&
+      candidate.seriesId === seriesId &&
+      candidate.elementKey === elementKey,
+  );
+  const category = receipt.categories.find(candidate => candidate.nodeId === nodeId);
+  if (element === undefined || category === undefined) {
+    return { ok: false, reason: 'SOURCE_NOT_FOUND' };
+  }
+  const bounds = category.allZero ? category.pointerBounds : element;
+  if (
+    bounds === undefined ||
+    point.x < bounds.minX ||
+    point.x > bounds.maxX ||
+    point.y < bounds.minY ||
+    point.y > bounds.maxY
+  ) {
+    return { ok: false, reason: 'INVALID_BOUNDS' };
+  }
+  const coordinate = categoryCoordinate(point, receipt.axis);
+  if (coordinate === undefined) {
+    return { ok: false, reason: 'INVALID_BOUNDS' };
+  }
+  const edge: MoveTargetEdge = coordinate < category.axisBounds.center ? 'before' : 'after';
+  return {
+    ok: true,
+    value: {
+      ...point,
+      axis: receipt.axis,
+      nodeId,
+      edge,
+      min: category.axisBounds.min,
+      max: category.axisBounds.max,
+      target: edge === 'before' ? category.axisBounds.min : category.axisBounds.max,
     },
   };
 }

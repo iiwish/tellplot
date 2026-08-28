@@ -308,7 +308,7 @@ export function projectWaterfall(
   if (!validation.ok) {
     return validation;
   }
-  if (sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical') {
+  if (sourceData.schemaVersion !== '1.0.0' && sourceData.dataKind === 'categorical') {
     return validationFailure([
       validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType'),
     ]);

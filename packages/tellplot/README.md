@@ -1,10 +1,18 @@
 # tellplot
 
 TellPlot 是基于 AntV G2 的框架无关可编辑图表库。一个包提供 imperative DOM、React、Vue 和无 DOM
-数据/命令能力，完整编辑器只实现一次。
+数据/命令能力，支持 waterfall、scalar categorical 与 2 至 4 序列 comparison categorical，完整编辑器只实现一次。
+
+当前仓库中的 `tellplot@2.0.0` 是本地 candidate。候选验证使用生成的 tarball：
 
 ```bash
-pnpm add tellplot
+pnpm add ./tellplot-2.0.0.tgz
+```
+
+`2.0.0` 正式发布到 registry 后，可以安装明确的 2.x 版本：
+
+```bash
+pnpm add tellplot@^2.0.0
 ```
 
 ```ts
@@ -18,10 +26,21 @@ const editor = createEditor(host, {
   config: {
     type: 'column',
     data: {
-      schemaVersion: '2.0.0',
+      schemaVersion: '3.0.0',
       dataKind: 'categorical',
-      datasetId: 'revenue',
-      items: [{ id: 'north', label: 'North', amount: 128 }],
+      datasetId: 'actual-versus-budget',
+      series: [
+        { id: 'actual', label: 'Actual' },
+        { id: 'budget', label: 'Budget' },
+      ],
+      items: [{
+        id: 'north',
+        label: 'North',
+        values: [
+          { seriesId: 'actual', amount: 128 },
+          { seriesId: 'budget', amount: 135 },
+        ],
+      }],
     },
   },
 });

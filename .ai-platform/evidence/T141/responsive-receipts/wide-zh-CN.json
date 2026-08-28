@@ -1,0 +1,243 @@
+[
+  {
+    "id": "wide-zh-CN-idle",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "locale": "zh-CN",
+    "state": "idle",
+    "canvas": {
+      "width": 912,
+      "height": 416,
+      "paintedPixels": 133856,
+      "expectedVisibleMarks": 200,
+      "rasterDistinctColoredComponents": 204
+    },
+    "screen": {
+      "pageHorizontalOverflow": 0,
+      "plotRect": {
+        "x": 92,
+        "y": 335,
+        "width": 834,
+        "height": 317
+      },
+      "legendRect": {
+        "x": 50,
+        "y": 298,
+        "width": 203,
+        "height": 8
+      },
+      "toolbarRect": {
+        "x": 10,
+        "y": 120,
+        "width": 1260,
+        "height": 52
+      },
+      "layoutIntersections": 0,
+      "requiredTextIntersections": 0,
+      "transientKind": "none",
+      "transientRect": null,
+      "transientOcclusions": 0,
+      "transientTargetIntersection": false,
+      "dropIndicator": false
+    },
+    "svg": {
+      "localBBox": {
+        "x": 0,
+        "y": 0,
+        "width": 950.9113159179688,
+        "height": 416
+      },
+      "clientRect": {
+        "x": 0,
+        "y": 0,
+        "width": 912,
+        "height": 416
+      },
+      "visibleTextCount": 18,
+      "textIntersections": 0,
+      "textIntersectionKinds": [],
+      "intervalCount": 200,
+      "automaticValueLabelCount": 0,
+      "annotationLabelCount": 1,
+      "unsafeElementCount": 0,
+      "externalReferenceCount": 0,
+      "transientElementCount": 0
+    },
+    "accessible": {
+      "outlineCategoryCount": 50,
+      "outlineSourceOrderMatched": true,
+      "tooltipSeriesCount": 4,
+      "tooltipSourceOrderMatched": true,
+      "inspectorSeriesCount": 4,
+      "inspectorSourceOrderMatched": true,
+      "categoryEditCommitted": true
+    },
+    "screenshot": "responsive-screenshots/wide-zh-CN-idle.png"
+  },
+  {
+    "id": "wide-zh-CN-hover",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "locale": "zh-CN",
+    "state": "hover",
+    "canvas": {
+      "width": 912,
+      "height": 416,
+      "paintedPixels": 133856,
+      "expectedVisibleMarks": 200,
+      "rasterDistinctColoredComponents": 204
+    },
+    "screen": {
+      "pageHorizontalOverflow": 0,
+      "plotRect": {
+        "x": 92,
+        "y": 335,
+        "width": 834,
+        "height": 317
+      },
+      "legendRect": {
+        "x": 50,
+        "y": 298,
+        "width": 203,
+        "height": 8
+      },
+      "toolbarRect": {
+        "x": 10,
+        "y": 120,
+        "width": 1260,
+        "height": 52
+      },
+      "layoutIntersections": 0,
+      "requiredTextIntersections": 0,
+      "transientKind": "tooltip",
+      "transientRect": {
+        "x": 207.5,
+        "y": 447.5,
+        "width": 136.625,
+        "height": 112
+      },
+      "transientOcclusions": 0,
+      "transientTargetIntersection": false,
+      "dropIndicator": false
+    },
+    "svg": {
+      "localBBox": {
+        "x": 0,
+        "y": 0,
+        "width": 950.9113159179688,
+        "height": 416
+      },
+      "clientRect": {
+        "x": 0,
+        "y": 0,
+        "width": 912,
+        "height": 416
+      },
+      "visibleTextCount": 18,
+      "textIntersections": 0,
+      "textIntersectionKinds": [],
+      "intervalCount": 200,
+      "automaticValueLabelCount": 0,
+      "annotationLabelCount": 1,
+      "unsafeElementCount": 0,
+      "externalReferenceCount": 0,
+      "transientElementCount": 0
+    },
+    "accessible": {
+      "outlineCategoryCount": 50,
+      "outlineSourceOrderMatched": true,
+      "tooltipSeriesCount": 4,
+      "tooltipSourceOrderMatched": true,
+      "inspectorSeriesCount": 4,
+      "inspectorSourceOrderMatched": true,
+      "categoryEditCommitted": true
+    },
+    "screenshot": "responsive-screenshots/wide-zh-CN-hover.png"
+  },
+  {
+    "id": "wide-zh-CN-active-drag",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "locale": "zh-CN",
+    "state": "active-drag",
+    "canvas": {
+      "width": 912,
+      "height": 416,
+      "paintedPixels": 133856,
+      "expectedVisibleMarks": 200,
+      "rasterDistinctColoredComponents": 204
+    },
+    "screen": {
+      "pageHorizontalOverflow": 0,
+      "plotRect": {
+        "x": 92,
+        "y": 335,
+        "width": 834,
+        "height": 317
+      },
+      "legendRect": {
+        "x": 50,
+        "y": 298,
+        "width": 203,
+        "height": 8
+      },
+      "toolbarRect": {
+        "x": 10,
+        "y": 120,
+        "width": 1260,
+        "height": 52
+      },
+      "layoutIntersections": 0,
+      "requiredTextIntersections": 0,
+      "transientKind": "drag-overlay",
+      "transientRect": {
+        "x": 913.7762451171875,
+        "y": 365.4125061035156,
+        "width": 11.734375,
+        "height": 296.5780944824219
+      },
+      "transientOcclusions": 0,
+      "transientTargetIntersection": false,
+      "dropIndicator": true
+    },
+    "svg": {
+      "localBBox": {
+        "x": 0,
+        "y": 0,
+        "width": 950.9113159179688,
+        "height": 416
+      },
+      "clientRect": {
+        "x": 0,
+        "y": 0,
+        "width": 912,
+        "height": 416
+      },
+      "visibleTextCount": 18,
+      "textIntersections": 0,
+      "textIntersectionKinds": [],
+      "intervalCount": 200,
+      "automaticValueLabelCount": 0,
+      "annotationLabelCount": 1,
+      "unsafeElementCount": 0,
+      "externalReferenceCount": 0,
+      "transientElementCount": 0
+    },
+    "accessible": {
+      "outlineCategoryCount": 50,
+      "outlineSourceOrderMatched": true,
+      "tooltipSeriesCount": 4,
+      "tooltipSourceOrderMatched": true,
+      "inspectorSeriesCount": 4,
+      "inspectorSourceOrderMatched": true,
+      "categoryEditCommitted": true
+    },
+    "screenshot": "responsive-screenshots/wide-zh-CN-active-drag.png"
+  }
+]

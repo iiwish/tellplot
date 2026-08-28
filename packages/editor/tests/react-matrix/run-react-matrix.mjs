@@ -216,6 +216,63 @@ async function canvasPixelSignature(canvas) {
   });
 }
 
+async function canvasPaletteReceipt(canvas, colors) {
+  return canvas.evaluate((element, expected) => {
+    if (!(element instanceof HTMLCanvasElement)) {
+      return [];
+    }
+    const context = element.getContext('2d');
+    if (context === null || element.width === 0 || element.height === 0) {
+      return [];
+    }
+    const pixels = context.getImageData(0, 0, element.width, element.height).data;
+    return expected.map(color => {
+      let count = 0;
+      let minX = element.width;
+      let minY = element.height;
+      for (let offset = 0; offset < pixels.length; offset += 4) {
+        const red = pixels[offset] ?? 0;
+        const green = pixels[offset + 1] ?? 0;
+        const blue = pixels[offset + 2] ?? 0;
+        const alpha = pixels[offset + 3] ?? 0;
+        if (
+          alpha > 160 &&
+          Math.abs(red - color[0]) <= 5 &&
+          Math.abs(green - color[1]) <= 5 &&
+          Math.abs(blue - color[2]) <= 5
+        ) {
+          count += 1;
+          const pixel = offset / 4;
+          minX = Math.min(minX, pixel % element.width);
+          minY = Math.min(minY, Math.floor(pixel / element.width));
+        }
+      }
+      return { count, minX, minY };
+    });
+  }, colors);
+}
+
+async function settledCanvasReceipt(canvas, previousSignature) {
+  const deadline = Date.now() + 30_000;
+  let previousSample = -1;
+  let stableSamples = 0;
+  let painted = 0;
+  let signature = 0;
+  while (stableSamples < 2 && Date.now() < deadline) {
+    lifecycle.throwIfTerminationRequested();
+    painted = await paintedPixelCount(canvas);
+    signature = await canvasPixelSignature(canvas);
+    const eligible =
+      painted > 500 && (previousSignature === undefined || signature !== previousSignature);
+    stableSamples = eligible && signature === previousSample ? stableSamples + 1 : 0;
+    previousSample = signature;
+    await canvas.page().waitForTimeout(16);
+  }
+  assert.ok(painted > 500, 'comparison canvas must remain nonblank');
+  assert.equal(stableSamples, 2, 'comparison canvas must settle on a fresh signature');
+  return { painted, signature };
+}
+
 async function svgSemantics(page, exported) {
   return page.evaluate(value => {
     const parsed = new DOMParser().parseFromString(value.svg, 'image/svg+xml');
@@ -248,6 +305,75 @@ async function svgSemantics(page, exported) {
       ).length,
     };
   }, exported);
+}
+
+async function visibleSvgReceipt(page, exported, labels, colors) {
+  return page.evaluate(
+    value => {
+      const host = document.createElement('div');
+      host.style.position = 'fixed';
+      host.style.left = '0';
+      host.style.top = '0';
+      host.style.width = `${value.exported.width}px`;
+      host.style.height = `${value.exported.height}px`;
+      host.style.background = '#ffffff';
+      host.innerHTML = value.exported.svg;
+      document.body.append(host);
+      try {
+        const svg = host.querySelector('svg');
+        if (!(svg instanceof SVGSVGElement)) return null;
+        const texts = Array.from(svg.querySelectorAll('text'));
+        const legend = value.labels.map(label => {
+          const element = texts.find(text => text.textContent?.trim() === label);
+          if (!(element instanceof SVGGraphicsElement)) return null;
+          const box = element.getBBox();
+          return { label, x: box.x, y: box.y, width: box.width, height: box.height };
+        });
+        const elements = Array.from(svg.querySelectorAll('*'));
+        const paintCounts = value.colors.map(
+          color =>
+            elements.filter(element => {
+              const style = getComputedStyle(element);
+              return style.fill === color || style.stroke === color;
+            }).length,
+        );
+        return { legend, paintCounts };
+      } finally {
+        host.remove();
+      }
+    },
+    { exported, labels, colors },
+  );
+}
+
+async function assertComparisonSvg(page, consumerId, labels, colors) {
+  const exported = await page.evaluate(() =>
+    globalThis.__tellplotFrameworkMatrix?.exportComparisonSvg(),
+  );
+  assert.notEqual(exported, null, `${consumerId} comparison SVG must return a result`);
+  assert.notEqual(exported, undefined, `${consumerId} comparison SVG must return a result`);
+  const semantics = await svgSemantics(page, exported);
+  assert.equal(semantics.mimeType, 'image/svg+xml');
+  assert.equal(semantics.rootName, 'svg');
+  assert.equal(semantics.unsafeElements, 0);
+  assert.equal(semantics.externalReferences, 0);
+  const visible = await visibleSvgReceipt(page, exported, labels, colors);
+  assert.notEqual(visible, null, `${consumerId} comparison SVG must mount visibly`);
+  assert.ok(
+    visible.legend.every(receipt => receipt !== null && receipt.width > 0 && receipt.height > 0),
+    `${consumerId} comparison legend labels must have visible SVG bboxes`,
+  );
+  const ordered = visible.legend.map(receipt => [receipt.y, receipt.x]);
+  assert.deepEqual(
+    [...ordered].sort((left, right) => left[0] - right[0] || left[1] - right[1]),
+    ordered,
+    `${consumerId} comparison legend must retain source order`,
+  );
+  assert.ok(
+    visible.paintCounts.every(count => count > 0),
+    `${consumerId} comparison SVG palette must be visible`,
+  );
+  return { semantics, visible };
 }
 
 async function verifyConsumer(browser, consumer, directory) {
@@ -401,15 +527,133 @@ async function verifyConsumer(browser, consumer, directory) {
       assert.equal(semantics.externalReferences, 0);
       assert.ok(semantics.elements.path + semantics.elements.rect > 0);
 
+      const comparison = await page.evaluate(() =>
+        globalThis.__tellplotFrameworkMatrix?.beginComparisonScenario(),
+      );
+      assert.notEqual(comparison, null, `${consumer.id} comparison scenario must return a result`);
+      assert.notEqual(
+        comparison,
+        undefined,
+        `${consumer.id} comparison scenario must return a result`,
+      );
+      assert.deepEqual(comparison.movedOrder, ['beta', 'alpha']);
+      assert.deepEqual(comparison.undoOrder, ['alpha', 'beta']);
+      assert.deepEqual(comparison.beforeDefaultUpdate, comparison.afterDefaultUpdate);
+      assert.deepEqual(comparison.controlledView, comparison.afterDefaultUpdate);
+      assert.equal(comparison.standaloneView.annotations.alpha, 'Host controlled note');
+      assert.deepEqual(comparison.uncontrolledView, comparison.standaloneView);
+      assert.equal(comparison.callbackView.revision, 2);
+      assert.equal(comparison.callbackCommand.type, 'undo');
+      assert.match(comparison.registry, /Current(?:,|、)\s*Plan/u);
+      await page.waitForFunction(
+        () =>
+          document.querySelector('[data-chart-type="column"] canvas') instanceof HTMLCanvasElement,
+      );
+      const comparisonCanvas = page.locator('[data-chart-type="column"] canvas').first();
+      const initialComparison = await settledCanvasReceipt(comparisonCanvas, configuredSignature);
+      const twoSeriesPalette = await canvasPaletteReceipt(comparisonCanvas, [
+        [0, 114, 178],
+        [213, 94, 0],
+      ]);
+      assert.ok(
+        twoSeriesPalette.every(receipt => receipt.count > 0),
+        `${consumer.id} initial comparison palette must be visible on Canvas`,
+      );
+      const initialSvg = await assertComparisonSvg(
+        page,
+        consumer.id,
+        ['Current', 'Plan'],
+        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)'],
+      );
+
+      const reordered = await page.evaluate(() =>
+        globalThis.__tellplotFrameworkMatrix?.reorderComparisonRegistry(),
+      );
+      assert.match(reordered.registry, /Plan(?:,|、)\s*Current/u);
+      assert.deepEqual(reordered.inspectorOrder, ['plan', 'current']);
+      assert.deepEqual(reordered.view, comparison.uncontrolledView);
+      const reorderedComparison = await settledCanvasReceipt(
+        comparisonCanvas,
+        initialComparison.signature,
+      );
+      const reorderedPalette = await canvasPaletteReceipt(comparisonCanvas, [
+        [0, 114, 178],
+        [213, 94, 0],
+      ]);
+      assert.ok(
+        reorderedPalette.every(receipt => receipt.count > 0),
+        `${consumer.id} reordered comparison palette and legend must remain visible`,
+      );
+      const reorderedSvg = await assertComparisonSvg(
+        page,
+        consumer.id,
+        ['Plan', 'Current'],
+        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)'],
+      );
+
+      const fourSeries = await page.evaluate(() =>
+        globalThis.__tellplotFrameworkMatrix?.expandComparisonRegistry(),
+      );
+      assert.match(
+        fourSeries.registry,
+        /Plan(?:,|、)\s*Current(?:,|、)\s*Forecast(?:,|、)\s*Stretch/u,
+      );
+      assert.deepEqual(fourSeries.inspectorOrder, ['plan', 'current', 'forecast', 'stretch']);
+      assert.equal(fourSeries.seriesCount, 4);
+      assert.deepEqual(fourSeries.view, reordered.view);
+      const fourSeriesComparison = await settledCanvasReceipt(
+        comparisonCanvas,
+        reorderedComparison.signature,
+      );
+      const fourSeriesPalette = await canvasPaletteReceipt(comparisonCanvas, [
+        [0, 114, 178],
+        [213, 94, 0],
+        [0, 158, 115],
+        [204, 121, 167],
+      ]);
+      assert.ok(
+        fourSeriesPalette.every(receipt => receipt.count > 0),
+        `${consumer.id} four-series palette and legend must be visible on Canvas`,
+      );
+      const fourSeriesSvg = await assertComparisonSvg(
+        page,
+        consumer.id,
+        ['Plan', 'Current', 'Forecast', 'Stretch'],
+        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)', 'rgb(0, 158, 115)', 'rgb(204, 121, 167)'],
+      );
+
+      const empty = await page.evaluate(() =>
+        globalThis.__tellplotFrameworkMatrix?.emptyComparison(),
+      );
+      assert.deepEqual(empty.view.rootOrder, []);
+      const emptySvg = await assertComparisonSvg(
+        page,
+        consumer.id,
+        ['Plan', 'Current', 'Forecast', 'Stretch'],
+        ['rgb(0, 114, 178)', 'rgb(213, 94, 0)', 'rgb(0, 158, 115)', 'rgb(204, 121, 167)'],
+      );
+
       await page.evaluate(() => globalThis.__tellplotFrameworkMatrix?.unmount());
       await page.locator('#root[data-unmounted="true"]').waitFor({ state: 'attached' });
       assert.equal(await page.locator('[data-tellplot="editor"]').count(), 0);
-      await page.waitForTimeout(50);
+      await page.waitForFunction(() => document.querySelector('[data-tellplot="editor"]') === null);
       assert.deepEqual(runtimeErrors, []);
       console.log(
-        `[framework-matrix:${consumer.id}] ${consumer.framework} ${runtime.frameworkVersion}, controlled move ${scenario.view.revision}, undo ${scenario.undoView.revision}, SVG ${semantics.width}x${semantics.height}, clean unmount`,
+        `[framework-matrix:${consumer.id}] ${consumer.framework} ${runtime.frameworkVersion}, legacy move/undo and SVG ${semantics.width}x${semantics.height}, v3 2/reordered/4-series/empty SVG parity on real G2, clean unmount`,
       );
-      return { scenario, semantics };
+      return {
+        scenario,
+        semantics,
+        comparison,
+        reordered,
+        fourSeries,
+        comparisonSvg: { initialSvg, reorderedSvg, fourSeriesSvg, emptySvg },
+        signatures: {
+          initial: initialComparison.signature,
+          reordered: reorderedComparison.signature,
+          fourSeries: fourSeriesComparison.signature,
+        },
+      };
     } finally {
       await page.close();
     }

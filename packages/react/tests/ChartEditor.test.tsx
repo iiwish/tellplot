@@ -48,6 +48,47 @@ const config: ChartConfig = {
   },
 };
 
+const comparisonConfig: ChartConfig = {
+  type: 'column',
+  data: {
+    schemaVersion: '3.0.0',
+    dataKind: 'categorical',
+    datasetId: 'react-comparison',
+    series: [
+      { id: 'current', label: 'Current' },
+      { id: 'plan', label: 'Plan' },
+    ],
+    items: [
+      {
+        id: 'a',
+        label: 'Alpha',
+        values: [
+          { seriesId: 'current', amount: 1 },
+          { seriesId: 'plan', amount: 2 },
+        ],
+      },
+    ],
+  },
+  editor: {
+    readOnly: true,
+    panels: { outline: false, inspector: true, toolbar: true },
+    inspector: { mode: 'tabs' },
+  },
+};
+
+const comparisonView: ViewSpec = {
+  schemaVersion: '3.0.0',
+  datasetId: 'react-comparison',
+  chartType: 'column',
+  revision: 1,
+  rootOrder: ['a'],
+  groups: {},
+  collapsedGroupIds: [],
+  pinnedItemIds: [],
+  annotations: {},
+  emphasis: {},
+};
+
 describe('React ChartEditor adapter', () => {
   it('updates one imperative instance only for runtime inputs and keeps callbacks current', () => {
     const handle = createRef<ChartEditorHandle>();
@@ -98,6 +139,44 @@ describe('React ChartEditor adapter', () => {
 
     rendered.unmount();
     expect(instance?.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('submits a compatible comparison config and controlled view in one render', () => {
+    const rendered = render(<ChartEditor config={config} />);
+    const instance = runtime.instances.at(-1);
+
+    rendered.rerender(<ChartEditor config={comparisonConfig} view={comparisonView} />);
+
+    expect(instance?.update).toHaveBeenCalledOnce();
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ config: comparisonConfig, view: comparisonView }),
+    );
+    rendered.unmount();
+  });
+
+  it('forwards standalone defaultView and both controlled-mode transitions', () => {
+    const rendered = render(<ChartEditor config={comparisonConfig} defaultView={comparisonView} />);
+    const instance = runtime.instances.at(-1);
+    expect(runtime.createEditor.mock.calls.at(-1)?.[1]).toEqual(
+      expect.objectContaining({ defaultView: comparisonView }),
+    );
+
+    rendered.rerender(<ChartEditor config={comparisonConfig} view={comparisonView} />);
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ defaultView: expect.anything() }),
+    );
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ view: comparisonView }),
+    );
+
+    rendered.rerender(<ChartEditor config={comparisonConfig} defaultView={comparisonView} />);
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ view: expect.anything() }),
+    );
+    expect(instance?.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ defaultView: comparisonView }),
+    );
+    rendered.unmount();
   });
 
   it('cleans every Strict Mode mount', () => {
