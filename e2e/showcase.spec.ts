@@ -12,14 +12,14 @@ test.describe('TellPlot 开源官网', () => {
       '#quick-start',
     );
     await expect(page.getByRole('group', { name: '选择图表家族' }).getByRole('button')).toHaveCount(
-      3,
+      5,
     );
     const showcase = page.getByTestId('showcase-chart');
     const editor = showcase.locator('[data-tellplot="editor"]');
     await expect(showcase).toHaveAttribute('data-interactive', 'true');
-    await expect(showcase).toHaveAttribute('data-default-group', '增长驱动');
+    await expect(showcase).toHaveAttribute('data-example-id', 'comparison-column');
     await expect(showcase).not.toHaveAttribute('inert', '');
-    await expect(editor).toHaveAttribute('data-chart-type', 'waterfall');
+    await expect(editor).toHaveAttribute('data-chart-type', 'column');
     await expect(editor).toHaveAttribute('data-read-only', 'false');
     await expect(editor).toHaveAttribute('data-view-revision', '0');
     await expect(showcase.locator('.tp-toolbar')).toBeHidden();
@@ -51,7 +51,7 @@ test.describe('TellPlot 开源官网', () => {
     await page.goto('/examples');
 
     await expect(page.getByRole('heading', { level: 1, name: '图表示例' })).toBeVisible();
-    await expect(page.getByRole('article')).toHaveCount(3);
+    await expect(page.getByRole('article')).toHaveCount(5);
 
     await page.getByRole('link', { name: '打开分类柱状图工作台' }).click();
     await expect(page).toHaveURL(/\/playground\?fixture=categorical-column$/);
@@ -69,16 +69,17 @@ test.describe('TellPlot 开源官网', () => {
   test('示例中心可以按分类与关键词筛选真实图表', async ({ page }) => {
     await page.goto('/examples');
 
-    await page.getByRole('button', { name: '分类比较 2' }).click();
-    await expect(page.getByRole('article')).toHaveCount(2);
+    await page.getByRole('button', { name: '分类比较 4' }).click();
+    await expect(page.getByRole('article')).toHaveCount(4);
     await expect(page.getByRole('heading', { name: '经营变动瀑布图' })).toBeHidden();
 
     await page.getByRole('searchbox', { name: '搜索图表示例' }).fill('条形');
-    await expect(page.getByRole('article')).toHaveCount(1);
+    await expect(page.getByRole('article')).toHaveCount(2);
     await expect(page.getByRole('heading', { name: '分类条形图' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '实际与预算条形图' })).toBeVisible();
 
     await page.getByRole('button', { name: '清空搜索' }).click();
-    await expect(page.getByRole('article')).toHaveCount(2);
+    await expect(page.getByRole('article')).toHaveCount(4);
   });
 
   test('文档页提供安装、模型与配置入口', async ({ page }) => {

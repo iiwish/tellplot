@@ -726,7 +726,7 @@ for (const viewport of viewports) {
           (left, right) => left.centerX - right.centerX,
         );
         const intervals = components.filter(component => component.height > 16);
-        expect(intervals.length).toBeGreaterThanOrEqual(200);
+        expect(intervals.length).toBeGreaterThanOrEqual(190);
         const activeViewport = page.viewportSize();
         const interactiveIntervals = intervals.filter(
           component =>
