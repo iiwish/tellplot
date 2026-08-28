@@ -17,13 +17,13 @@ export const SITE_METADATA = {
   examples: {
     path: '/examples',
     title: '图表示例 | TellPlot',
-    description: '浏览 TellPlot 已验证的瀑布图、分类柱状图和分类条形图示例。',
+    description: '浏览 TellPlot 已验证的瀑布图、分类图和 2 至 4 序列业务比较示例。',
     canonicalUrl: `${SITE_ORIGIN}/examples`,
   },
   docs: {
     path: '/docs',
     title: '开发者文档 | TellPlot',
-    description: '了解 tellplot 的安装、数据合同、安全配置和导出能力。',
+    description: '了解 tellplot 2.0 的安装、schema 3.0 多序列数据合同、安全配置和导出能力。',
     canonicalUrl: `${SITE_ORIGIN}/docs`,
   },
   playground: {

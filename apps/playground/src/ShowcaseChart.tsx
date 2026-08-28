@@ -1,8 +1,12 @@
 import type { ChartConfig, SourceData } from 'tellplot';
 import { ChartEditor } from 'tellplot/react';
 
-import { EXAMPLE_CATALOG, type ShowcaseExampleId } from './exampleCatalog';
-import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from './demoPresentation';
+import { EXAMPLE_CATALOG, type ShowcaseChartType, type ShowcaseExampleId } from './exampleCatalog';
+import {
+  DEMO_CATEGORICAL_COLORS,
+  DEMO_COMPARISON_PALETTE,
+  DEMO_WATERFALL_COLORS,
+} from './demoPresentation';
 import { getPlaygroundFixture } from './fixtures';
 import { createShowcaseDefaultView } from './showcaseView';
 
@@ -13,9 +17,9 @@ export interface ShowcaseChartProps {
   readonly testId?: string;
 }
 
-function showcaseConfig(
+export function createShowcaseConfig(
   sourceData: SourceData,
-  type: ShowcaseExampleId,
+  type: ShowcaseChartType,
   title: string,
   compact: boolean,
   interactive: boolean,
@@ -72,6 +76,27 @@ function showcaseConfig(
       },
     };
   }
+  if (sourceData.schemaVersion === '3.0.0' && (type === 'bar' || type === 'column')) {
+    return {
+      ...common,
+      type,
+      data: sourceData,
+      appearance: {
+        ...common.appearance,
+        labels: compact
+          ? { value: 'never' as const, group: 'never' as const }
+          : common.appearance.labels,
+        colors: {
+          series: sourceData.series.map((series, index) => ({
+            seriesId: series.id,
+            color: DEMO_COMPARISON_PALETTE[index] ?? DEMO_COMPARISON_PALETTE[0],
+          })),
+          group: DEMO_WATERFALL_COLORS.group,
+        },
+        legend: true,
+      },
+    };
+  }
   if (
     type === 'waterfall' &&
     (sourceData.schemaVersion === '1.0.0' || sourceData.dataKind === 'waterfall')
@@ -101,7 +126,13 @@ export function ShowcaseChart({
   }
 
   const sourceData = getPlaygroundFixture(example.fixtureSearch);
-  const config = showcaseConfig(sourceData, example.chartType, example.title, compact, interactive);
+  const config = createShowcaseConfig(
+    sourceData,
+    example.chartType,
+    example.title,
+    compact,
+    interactive,
+  );
   if (config === null) {
     return <p role="alert">示例数据无法渲染</p>;
   }

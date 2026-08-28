@@ -1,10 +1,12 @@
-export type ShowcaseExampleId = 'waterfall' | 'column' | 'bar';
+export type ShowcaseExampleId =
+  'waterfall' | 'column' | 'bar' | 'comparison-column' | 'comparison-bar';
+export type ShowcaseChartType = 'waterfall' | 'column' | 'bar';
 export type ShowcaseExampleCategory = 'financial' | 'categorical';
 
 export interface ShowcaseExample {
   readonly id: ShowcaseExampleId;
   readonly ordinal: string;
-  readonly chartType: ShowcaseExampleId;
+  readonly chartType: ShowcaseChartType;
   readonly category: ShowcaseExampleCategory;
   readonly title: string;
   readonly shortTitle: string;
@@ -62,6 +64,36 @@ export const EXAMPLE_CATALOG: readonly ShowcaseExample[] = [
     tags: ['分类比较', '横向', '长标签'],
     fixtureSearch: '?fixture=categorical-bar',
     workbenchHref: '/playground?fixture=categorical-bar',
+    accent: 'coral',
+  },
+  {
+    id: 'comparison-column',
+    ordinal: '04',
+    chartType: 'column',
+    category: 'categorical',
+    title: '实际与预算柱状图',
+    shortTitle: '多序列柱状图',
+    eyebrow: 'Comparison column',
+    description: '在同一分类下并排比较实际与预算，差异、正负值和序列顺序一眼可见。',
+    detail: '2 至 4 个只读序列共享 category 排序、分组、折叠、Tooltip、导出和无障碍语义。',
+    tags: ['实际与预算', '2–4 序列', '分组柱状图'],
+    fixtureSearch: '?fixture=comparison-actual-budget',
+    workbenchHref: '/playground?fixture=comparison-actual-budget',
+    accent: 'blue',
+  },
+  {
+    id: 'comparison-bar',
+    ordinal: '05',
+    chartType: 'bar',
+    category: 'categorical',
+    title: '实际与预算条形图',
+    shortTitle: '多序列条形图',
+    eyebrow: 'Comparison bar',
+    description: '用横向分组条形扫描多序列业务差异，长分类名称也保持完整可读。',
+    detail: 'series 保持 source 顺序且不可单独编辑，完整 category 始终是唯一叙事原子。',
+    tags: ['业务比较', '共享 Tooltip', '横向长标签'],
+    fixtureSearch: '?fixture=comparison-actual-budget-bar',
+    workbenchHref: '/playground?fixture=comparison-actual-budget-bar',
     accent: 'coral',
   },
 ] as const;

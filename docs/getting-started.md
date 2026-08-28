@@ -33,7 +33,57 @@ export const config = {
 } as const satisfies ChartConfig;
 ```
 
-`bar` 使用同一 categorical data，只需把 `type` 改为 `bar`。waterfall 使用带明确锚点语义的 current schema：
+`bar` 使用同一 categorical data，只需把 `type` 改为 `bar`。
+
+## 多序列业务比较
+
+schema `3.0.0` 使用 2 至 4 个有序 series。每个 category 必须按 series 顺序完整提供 dense values；缺失值
+不会被解释为零。
+
+```ts
+export const comparisonConfig = {
+  type: 'column',
+  data: {
+    schemaVersion: '3.0.0',
+    dataKind: 'categorical',
+    datasetId: 'actual-vs-budget',
+    currency: 'CNY',
+    series: [
+      { id: 'actual', label: '实际' },
+      { id: 'budget', label: '预算' },
+    ],
+    items: [
+      {
+        id: 'enterprise',
+        label: '企业业务',
+        values: [
+          { seriesId: 'actual', amount: 1680 },
+          { seriesId: 'budget', amount: 1540 },
+        ],
+      },
+      {
+        id: 'consumer',
+        label: '消费者业务',
+        values: [
+          { seriesId: 'actual', amount: 1120 },
+          { seriesId: 'budget', amount: 1260 },
+        ],
+      },
+    ],
+  },
+  appearance: {
+    legend: true,
+    tooltip: true,
+  },
+} as const satisfies ChartConfig;
+```
+
+series 是只读比较维度；完整 category 仍是排序、分组、折叠、固定、注释和历史操作的唯一编辑原子。
+`bar` 使用同一 source，只需把 `type` 改为 `bar`。完整 wire、不变量和错误合同见[数据合同](data-contract.md)。
+
+## 瀑布图
+
+waterfall 使用带明确锚点语义的 current schema：
 
 ```ts
 export const waterfallConfig = {

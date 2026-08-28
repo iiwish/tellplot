@@ -19,7 +19,11 @@ const EXAMPLE_FILTERS: readonly {
 }[] = [
   { id: 'all', label: '全部图表', description: '当前已验证的全部图表' },
   { id: 'financial', label: '财务图表', description: '起点、贡献、小计与终点' },
-  { id: 'categorical', label: '分类比较', description: '纵向或横向比较分类值' },
+  {
+    id: 'categorical',
+    label: '分类比较',
+    description: '单序列与 2 至 4 序列的纵向或横向比较',
+  },
 ] as const;
 
 function matchesSearch(example: ShowcaseExample, query: string): boolean {
@@ -149,7 +153,7 @@ export function ExamplesPage({
               <div className="site-example-empty" role="status">
                 <Search size={24} aria-hidden="true" />
                 <h3>没有匹配的图表</h3>
-                <p>尝试搜索“瀑布图”“柱状图”或清空当前筛选。</p>
+                <p>尝试搜索“瀑布图”“实际与预算”或清空当前筛选。</p>
                 <button
                   type="button"
                   onClick={() => {

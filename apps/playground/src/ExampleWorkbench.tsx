@@ -12,7 +12,11 @@ import { ChartEditor, type ChartEditorHandle, type ExportError } from 'tellplot/
 import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from './demoPresentation';
+import {
+  DEMO_CATEGORICAL_COLORS,
+  DEMO_COMPARISON_PALETTE,
+  DEMO_WATERFALL_COLORS,
+} from './demoPresentation';
 import { getPlaygroundChartType, getPlaygroundFixture } from './fixtures';
 import { UsageGuide } from './UsageGuide';
 
@@ -52,7 +56,7 @@ function initialConfig(sourceData: SourceData, requestedChartType: 'bar' | undef
         colors: {
           series: sourceData.series.map((series, index) => ({
             seriesId: series.id,
-            color: ['#0072B2', '#D55E00', '#009E73', '#CC79A7'][index] ?? '#0072B2',
+            color: DEMO_COMPARISON_PALETTE[index] ?? DEMO_COMPARISON_PALETTE[0],
           })),
           group: '#7C5CFC',
         },
