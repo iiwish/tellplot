@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { DocsPage } from '../src/DocsPage';
 import { EXAMPLE_CATALOG, exampleById } from '../src/exampleCatalog';
 import { getPlaygroundFixture } from '../src/fixtures';
-import { createShowcaseConfig } from '../src/ShowcaseChart';
+import { createShowcaseConfig } from '../src/showcaseConfig';
 import { SiteHeader } from '../src/SiteHeader';
 import { SITE_METADATA, SITE_ORIGIN, siteMetadataForPage } from '../src/siteMetadata';
 import { resolveSiteRoute, siteTitleForRoute } from '../src/siteRouting';
