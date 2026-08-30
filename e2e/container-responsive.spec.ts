@@ -27,21 +27,26 @@ async function applyConfigWithoutMovingFocus(
       if (update.hideFocusedHeading) {
         const focusedHeading = element.ownerDocument.activeElement;
         const editor = focusedHeading?.closest<HTMLElement>('[data-tellplot="editor"]');
+        const ownerWindow = element.ownerDocument.defaultView;
         if (
           !(focusedHeading instanceof HTMLElement) ||
           focusedHeading.dataset['focusKey'] !== 'chart-heading' ||
           editor === null ||
-          editor === undefined
+          editor === undefined ||
+          ownerWindow === null
         ) {
           throw new Error('Focused comparison heading is unavailable.');
         }
-        const observer = new MutationObserver(() => {
-          if (editor.style.height === '721px') {
-            observer.disconnect();
-            focusedHeading.hidden = true;
-          }
-        });
-        observer.observe(editor, { attributes: true, attributeFilter: ['style'] });
+        const originalQueueMicrotask = ownerWindow.queueMicrotask;
+        ownerWindow.queueMicrotask = callback => {
+          originalQueueMicrotask.call(ownerWindow, () => {
+            if (editor.style.height === '721px') {
+              ownerWindow.queueMicrotask = originalQueueMicrotask;
+              focusedHeading.hidden = true;
+            }
+            callback();
+          });
+        };
       }
       apply.click();
     },
