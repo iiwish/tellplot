@@ -14,16 +14,6 @@ async function applyConfigWithoutMovingFocus(
       if (!(element instanceof HTMLTextAreaElement)) {
         throw new Error('Playground config input is unavailable.');
       }
-      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-      setter?.call(element, update.serialized);
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-      const apply = element.ownerDocument.querySelector<HTMLButtonElement>(
-        'button[aria-label="立即应用图表配置"]',
-      );
-      if (apply === null) {
-        throw new Error('Playground config apply control is unavailable.');
-      }
       if (update.hideFocusedHeading) {
         const focusedHeading = element.ownerDocument.activeElement;
         const editor = focusedHeading?.closest<HTMLElement>('[data-tellplot="editor"]');
@@ -45,6 +35,16 @@ async function applyConfigWithoutMovingFocus(
             focusedHeading.hidden = true;
           },
         });
+      }
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+      setter?.call(element, update.serialized);
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      const apply = element.ownerDocument.querySelector<HTMLButtonElement>(
+        'button[aria-label="立即应用图表配置"]',
+      );
+      if (apply === null) {
+        throw new Error('Playground config apply control is unavailable.');
       }
       apply.click();
     },
