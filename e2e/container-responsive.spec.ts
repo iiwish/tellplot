@@ -28,7 +28,7 @@ async function applyConfigWithoutMovingFocus(
         const style = element.ownerDocument.createElement('style');
         style.dataset['comparisonHiddenHeading'] = 'true';
         style.textContent =
-          '[data-tellplot="editor"] [data-focus-key="chart-heading"] { display: none !important; }';
+          '[data-tellplot="editor"][style*="height: 721px"] [data-focus-key="chart-heading"] { display: none !important; }';
         element.ownerDocument.head.append(style);
       }
       apply.click();
