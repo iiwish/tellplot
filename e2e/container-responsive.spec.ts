@@ -41,8 +41,8 @@ async function applyConfigWithoutMovingFocus(
           set: value => {
             Reflect.deleteProperty(editor.style, 'height');
             editor.style.setProperty('height', value);
-            focusedHeading.setAttribute('aria-hidden', 'true');
             focusedHeading.blur();
+            focusedHeading.hidden = true;
           },
         });
       }
