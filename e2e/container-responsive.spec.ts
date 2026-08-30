@@ -35,20 +35,12 @@ async function applyConfigWithoutMovingFocus(
         ) {
           throw new Error('Focused comparison heading is unavailable.');
         }
-        const height = Object.getOwnPropertyDescriptor(
-          Object.getPrototypeOf(editor.style),
-          'height',
-        );
-        const setHeight = height?.set;
-        if (setHeight === undefined) {
-          throw new Error('Focused comparison heading is unavailable.');
-        }
         Object.defineProperty(editor.style, 'height', {
           configurable: true,
-          get: () => height.get?.call(editor.style) ?? '',
+          get: () => editor.style.getPropertyValue('height'),
           set: value => {
             Reflect.deleteProperty(editor.style, 'height');
-            setHeight.call(editor.style, value);
+            editor.style.setProperty('height', value);
             focusedHeading.hidden = true;
           },
         });
