@@ -25,11 +25,25 @@ async function applyConfigWithoutMovingFocus(
         throw new Error('Playground config apply control is unavailable.');
       }
       if (update.hideFocusedHeading) {
-        const style = element.ownerDocument.createElement('style');
-        style.dataset['comparisonHiddenHeading'] = 'true';
-        style.textContent =
-          '[data-tellplot="editor"][style*="height: 721px"] [data-focus-key="chart-heading"] { display: none !important; }';
-        element.ownerDocument.head.append(style);
+        const focusedHeading = element.ownerDocument.activeElement;
+        const textContent = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+        const setTextContent = textContent?.set;
+        if (
+          !(focusedHeading instanceof HTMLElement) ||
+          focusedHeading.dataset['focusKey'] !== 'chart-heading' ||
+          setTextContent === undefined
+        ) {
+          throw new Error('Focused comparison heading is unavailable.');
+        }
+        Object.defineProperty(focusedHeading, 'textContent', {
+          configurable: true,
+          get: () => textContent.get?.call(focusedHeading) ?? null,
+          set: value => {
+            Reflect.deleteProperty(focusedHeading, 'textContent');
+            setTextContent.call(focusedHeading, value);
+            focusedHeading.hidden = true;
+          },
+        });
       }
       apply.click();
     },
