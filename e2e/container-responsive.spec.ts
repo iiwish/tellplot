@@ -27,28 +27,31 @@ async function applyConfigWithoutMovingFocus(
       if (update.hideFocusedHeading) {
         const focusedHeading = element.ownerDocument.activeElement;
         const editor = focusedHeading?.closest<HTMLElement>('[data-tellplot="editor"]');
-        const ownerWindow = element.ownerDocument.defaultView;
         if (
           !(focusedHeading instanceof HTMLElement) ||
           focusedHeading.dataset['focusKey'] !== 'chart-heading' ||
           editor === null ||
-          editor === undefined ||
-          ownerWindow === null
+          editor === undefined
         ) {
           throw new Error('Focused comparison heading is unavailable.');
         }
-        const originalQueueMicrotask = ownerWindow.queueMicrotask;
-        ownerWindow.queueMicrotask = callback => {
-          originalQueueMicrotask.call(ownerWindow, () => {
-            if (editor.style.height === '721px') {
-              focusedHeading.hidden = true;
-            }
-            callback();
-            if (element.ownerDocument.activeElement === editor) {
-              ownerWindow.queueMicrotask = originalQueueMicrotask;
-            }
-          });
-        };
+        const height = Object.getOwnPropertyDescriptor(
+          Object.getPrototypeOf(editor.style),
+          'height',
+        );
+        const setHeight = height?.set;
+        if (setHeight === undefined) {
+          throw new Error('Focused comparison heading is unavailable.');
+        }
+        Object.defineProperty(editor.style, 'height', {
+          configurable: true,
+          get: () => height.get?.call(editor.style) ?? '',
+          set: value => {
+            Reflect.deleteProperty(editor.style, 'height');
+            setHeight.call(editor.style, value);
+            focusedHeading.hidden = true;
+          },
+        });
       }
       apply.click();
     },
