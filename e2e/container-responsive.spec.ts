@@ -25,11 +25,28 @@ async function applyConfigWithoutMovingFocus(
         throw new Error('Playground config apply control is unavailable.');
       }
       if (update.hideFocusedHeading) {
-        const style = element.ownerDocument.createElement('style');
-        style.dataset['comparisonHiddenHeading'] = 'true';
-        style.textContent =
-          '[data-tellplot="editor"] [data-focus-key="chart-heading"] { display: none !important; }';
-        element.ownerDocument.head.append(style);
+        const focusedHeading = element.ownerDocument.activeElement;
+        const editor = focusedHeading?.closest<HTMLElement>('[data-tellplot="editor"]');
+        const ownerWindow = element.ownerDocument.defaultView;
+        if (
+          !(focusedHeading instanceof HTMLElement) ||
+          focusedHeading.dataset['focusKey'] !== 'chart-heading' ||
+          editor === null ||
+          editor === undefined ||
+          ownerWindow === null
+        ) {
+          throw new Error('Focused comparison heading is unavailable.');
+        }
+        const originalQueueMicrotask = ownerWindow.queueMicrotask;
+        ownerWindow.queueMicrotask = callback => {
+          originalQueueMicrotask.call(ownerWindow, () => {
+            if (editor.style.height === '721px') {
+              ownerWindow.queueMicrotask = originalQueueMicrotask;
+              focusedHeading.hidden = true;
+            }
+            callback();
+          });
+        };
       }
       apply.click();
     },
