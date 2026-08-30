@@ -26,24 +26,22 @@ async function applyConfigWithoutMovingFocus(
       }
       if (update.hideFocusedHeading) {
         const focusedHeading = element.ownerDocument.activeElement;
-        const textContent = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
-        const setTextContent = textContent?.set;
+        const editor = focusedHeading?.closest<HTMLElement>('[data-tellplot="editor"]');
         if (
           !(focusedHeading instanceof HTMLElement) ||
           focusedHeading.dataset['focusKey'] !== 'chart-heading' ||
-          setTextContent === undefined
+          editor === null ||
+          editor === undefined
         ) {
           throw new Error('Focused comparison heading is unavailable.');
         }
-        Object.defineProperty(focusedHeading, 'textContent', {
-          configurable: true,
-          get: () => textContent.get?.call(focusedHeading) ?? null,
-          set: value => {
-            Reflect.deleteProperty(focusedHeading, 'textContent');
-            setTextContent.call(focusedHeading, value);
+        const observer = new MutationObserver(() => {
+          if (editor.style.height === '721px') {
+            observer.disconnect();
             focusedHeading.hidden = true;
-          },
+          }
         });
+        observer.observe(editor, { attributes: true, attributeFilter: ['style'] });
       }
       apply.click();
     },
