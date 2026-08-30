@@ -41,10 +41,12 @@ async function applyConfigWithoutMovingFocus(
         ownerWindow.queueMicrotask = callback => {
           originalQueueMicrotask.call(ownerWindow, () => {
             if (editor.style.height === '721px') {
-              ownerWindow.queueMicrotask = originalQueueMicrotask;
               focusedHeading.hidden = true;
             }
             callback();
+            if (element.ownerDocument.activeElement === editor) {
+              ownerWindow.queueMicrotask = originalQueueMicrotask;
+            }
           });
         };
       }
