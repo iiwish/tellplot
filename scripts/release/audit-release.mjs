@@ -9,6 +9,7 @@ import {
   validatePackageSurface,
   workspacePackageEntries,
 } from './package-contracts.mjs';
+import { currentRelease } from './current-release.mjs';
 import { fail, repositoryPath, repositoryRoot, toPosix, walkFiles } from './release-utils.mjs';
 
 const findings = [];
@@ -48,8 +49,11 @@ for (const contract of packageContracts) {
     findings.push(`${contract.directory} package name must be ${contract.name}`);
   }
   if (contract.public === true) {
-    if (manifest.version !== '1.0.0' || !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))) {
-      findings.push(`${contract.name} version must be stable 1.0.0`);
+    if (
+      manifest.version !== currentRelease.version ||
+      !/^\d+\.\d+\.\d+$/u.test(String(manifest.version))
+    ) {
+      findings.push(`${contract.name} version must be stable ${currentRelease.version}`);
     }
     if (manifest.private === true) {
       findings.push(`${contract.name} public package must not be private`);
@@ -168,7 +172,7 @@ if (findings.length > 0) {
     `${JSON.stringify(
       {
         status: 'passed',
-        version: '1.0.0',
+        version: currentRelease.version,
         packages: publicPackageContracts.map(({ name }) => name),
         publicSurface: publicSurfaceCounts,
         publicFiles: requiredFiles.length,

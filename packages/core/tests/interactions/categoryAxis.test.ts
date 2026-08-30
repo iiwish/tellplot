@@ -336,4 +336,19 @@ describe('category-axis minimum pointer target', () => {
       reason: 'INVALID_INPUT',
     });
   });
+
+  it('partitions overlapping minimum targets at the axis midpoint with earlier-order ties', () => {
+    const bounds = [
+      { nodeId: 'earlier', minX: 100, minY: 100, maxX: 108, maxY: 110 },
+      { nodeId: 'later', minX: 120, minY: 100, maxX: 128, maxY: 110 },
+    ];
+    expect(resolveChartCategoryMinimumTargetHit({ x: 114, y: 105 }, bounds, 32, 'x')).toEqual({
+      ok: true,
+      hit: { nodeId: 'earlier', edge: 'after', min: 100, max: 108, target: 108 },
+    });
+    expect(resolveChartCategoryMinimumTargetHit({ x: 114.01, y: 105 }, bounds, 32, 'x')).toEqual({
+      ok: true,
+      hit: { nodeId: 'later', edge: 'before', min: 120, max: 128, target: 120 },
+    });
+  });
 });

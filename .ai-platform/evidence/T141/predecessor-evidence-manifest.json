@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T141",
+  "attempt": "T141-A002",
+  "mutationAllowed": false,
+  "count": 22,
+  "files": [
+    {
+      "path": ".ai-platform/evidence/T135/diff.patch",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 55096,
+      "sha256": "ad8c31b3e0da1c14ac5e3d28e8ac9143fa9d4d4d1b71a34edec94795179a0c6c"
+    },
+    {
+      "path": ".ai-platform/evidence/T135/summary.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6759,
+      "sha256": "202a68886ca37822f08ec5274c3d63320b42391e9e9d3b0d2f1280613dc0f457"
+    },
+    {
+      "path": ".ai-platform/evidence/T135/test-results.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6597,
+      "sha256": "f6b90314575eff0e388fb8da3f0bcf0dc3e547038118a50cdbf508f3fa19ef08"
+    },
+    {
+      "path": ".ai-platform/evidence/T136/diff.patch",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 78909,
+      "sha256": "eca6d36109e28c60851bb53706ef901085fb14a9cca45f5687fe29390c939e87"
+    },
+    {
+      "path": ".ai-platform/evidence/T136/summary.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4467,
+      "sha256": "84f6d84d816d1714bc461d192a4a4174d20557df971cab356ed6ebbcb798ad31"
+    },
+    {
+      "path": ".ai-platform/evidence/T136/test-results.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 3061,
+      "sha256": "7b55e2a2246234d197aac5a26b7738949f1ea92b7b612dbbc766ad5adef3ba6e"
+    },
+    {
+      "path": ".ai-platform/evidence/T137/diff.patch",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 108426,
+      "sha256": "fedcbb6ea9bf1e084ed06e7ec4c8c8a3f0ce6dda1479a9e0ab2c88276d3aadfa"
+    },
+    {
+      "path": ".ai-platform/evidence/T137/summary.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7092,
+      "sha256": "253e68ac0e9ea928c4b88f0111942d7ccd6b9bb6f1985f3aa6dfd450588266bc"
+    },
+    {
+      "path": ".ai-platform/evidence/T137/test-results.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4959,
+      "sha256": "1d26da8e32e04306d0310314be89c7eee58280e6837c55f5403159ec06aaef41"
+    },
+    {
+      "path": ".ai-platform/evidence/T138/diff.patch",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 138193,
+      "sha256": "bbaa8ee29c022d2d394a60ecfb2632898a92258f10decc86ced1920446296f3a"
+    },
+    {
+      "path": ".ai-platform/evidence/T138/summary.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 11400,
+      "sha256": "f073a139bc77af218c760155fa30940dcdabc056a2ca09b5326d55cbf5ae08d2"
+    },
+    {
+      "path": ".ai-platform/evidence/T138/test-results.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 10745,
+      "sha256": "6e2ff4f7954ada818dbd3da87e3a59b369b4e48bf1a92786ec03d4216f15fe4a"
+    },
+    {
+      "path": ".ai-platform/evidence/T139/diff.patch",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 126009,
+      "sha256": "48d46efd95a473d40b480dc28da3daa5b3ac5fdf37efbd4525671f09f273d707"
+    },
+    {
+      "path": ".ai-platform/evidence/T139/summary.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 19032,
+      "sha256": "3b43a380e245ec01b46ecd1a1f9ebce227a05cf50e1276e2a04e693eab8f0bb1"
+    },
+    {
+      "path": ".ai-platform/evidence/T139/test-results.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 28023,
+      "sha256": "f577d15dad643d684923f1012eae48e7ad6db49f7b828a0b8879a08dd7dc75a8"
+    },
+    {
+      "path": ".ai-platform/evidence/T140/artifacts/tellplot-2.0.0.tgz",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 597340,
+      "sha256": "8b572af88be4dc9a3c2f970afee4ea4e5d297af8307baf6b4f38de3861fb2143"
+    },
+    {
+      "path": ".ai-platform/evidence/T140/diff.patch",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 164506,
+      "sha256": "e9c60445a9c8089d355dbd055868cc29d5ca0abd4c3c2604843c9370045629bd"
+    },
+    {
+      "path": ".ai-platform/evidence/T140/isolated-source-receipt.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 265,
+      "sha256": "c761d223dda7dd120d9d3bc3a660831ba44e458ec42a63c7fa35d139389d116c"
+    },
+    {
+      "path": ".ai-platform/evidence/T140/review.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2476,
+      "sha256": "fc478dea9b8c0b750f7e7c61c63d9dc220bea94a9e48402118a39078ddedeb79"
+    },
+    {
+      "path": ".ai-platform/evidence/T140/summary.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7110,
+      "sha256": "fe725a70f46c243dbc1ff8ea906f6584fba23ebf53cdc7821cc3bf057c8d884a"
+    },
+    {
+      "path": ".ai-platform/evidence/T140/tarball-manifest.json",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 2783,
+      "sha256": "fdb0997d973abbc9a3972b0033a17cd115a49e068f0ebceaae5d34a80711fbf6"
+    },
+    {
+      "path": ".ai-platform/evidence/T140/test-results.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 6568,
+      "sha256": "5c976000e928e400cf2fb1a272d86109f83f5a2a6c1a358a847616d24f2a3a53"
+    }
+  ]
+}

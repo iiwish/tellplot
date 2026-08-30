@@ -83,6 +83,13 @@ function deferred(): Deferred {
   return { promise, resolve, reject };
 }
 
+function resizeEntry(target: Element, width: number, height: number): ResizeObserverEntry {
+  return {
+    target,
+    contentRect: { width, height },
+  } as ResizeObserverEntry;
+}
+
 beforeEach(() => {
   g2Mock.Chart.instances = [];
   g2Mock.Chart.renderQueue = [];
@@ -95,6 +102,37 @@ beforeEach(() => {
 });
 
 describe('G2 chart runtime', () => {
+  it('publishes one current structural generation across invalidation and settlement', async () => {
+    const invalidated = vi.fn();
+    const settled = vi.fn();
+    const runtime = createG2ChartRuntime<string>({
+      container: document.body,
+      events: [],
+      onGeometryInvalidated: invalidated,
+      onRenderSettled: settled,
+    });
+
+    runtime.request({
+      value: 'comparison',
+      spec: { type: 'interval' },
+      structuralIdentity: '["actual","budget"]',
+    });
+
+    expect(invalidated).toHaveBeenCalledWith({ generation: 1, reason: 'render' });
+    expect(runtime.getGeneration()).toBe(1);
+    await vi.waitFor(() =>
+      expect(settled).toHaveBeenLastCalledWith({
+        value: 'comparison',
+        status: 'success',
+        latest: true,
+        generation: 1,
+        origin: 'render',
+        geometryAuthoritative: true,
+      }),
+    );
+    runtime.dispose();
+  });
+
   it('caches the dynamic constructor and skips initialization after immediate disposal', async () => {
     expect(loadG2ChartConstructor()).toBe(loadG2ChartConstructor());
 
@@ -142,14 +180,161 @@ describe('G2 chart runtime', () => {
         value: 'latest',
         status: 'success',
         latest: true,
+        generation: 0,
+        origin: 'render',
+        geometryAuthoritative: true,
       }),
     );
     expect(settled).toHaveBeenCalledWith({
       value: 'first',
       status: 'failure',
       latest: false,
+      generation: 0,
+      origin: 'render',
+      geometryAuthoritative: false,
     });
     expect(runtime.getContext()).toEqual(expect.objectContaining({ marker: 'scene-context' }));
+  });
+
+  it('recreates structural identities and rejects stale render and resize continuations', async () => {
+    const firstRender = deferred();
+    g2Mock.Chart.renderQueue.push(
+      () => firstRender.promise,
+      () => Promise.resolve(),
+    );
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    class TestResizeObserver {
+      readonly observe = vi.fn();
+      readonly unobserve = vi.fn();
+      readonly disconnect = vi.fn();
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+
+    try {
+      const settled = vi.fn();
+      const runtime = createG2ChartRuntime<string>({
+        container: document.body,
+        events: [],
+        onRenderSettled: settled,
+      });
+      runtime.request({
+        value: 'old',
+        spec: { type: 'interval' },
+        structuralIdentity: '["actual","budget"]',
+      });
+      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
+      const oldChart = g2Mock.Chart.instances[0];
+      if (oldChart === undefined) {
+        throw new Error('Expected the old G2 chart');
+      }
+      runtime.request({
+        value: 'new',
+        spec: { type: 'interval' },
+        structuralIdentity: '["budget","actual"]',
+      });
+      await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
+      expect(oldChart.destroy).toHaveBeenCalledOnce();
+      firstRender.resolve();
+
+      await vi.waitFor(() => expect(g2Mock.Chart.instances[1]?.render).toHaveBeenCalledOnce());
+      await vi.waitFor(() =>
+        expect(settled).toHaveBeenLastCalledWith({
+          value: 'new',
+          status: 'success',
+          latest: true,
+          generation: 2,
+          origin: 'render',
+          geometryAuthoritative: true,
+        }),
+      );
+      expect(settled).not.toHaveBeenCalledWith(expect.objectContaining({ value: 'old' }));
+      runtime.dispose();
+    } finally {
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(window, 'ResizeObserver');
+      } else {
+        Object.defineProperty(window, 'ResizeObserver', descriptor);
+      }
+    }
+  });
+
+  it('does not let a stale forceFit continuation schedule work on a replacement chart', async () => {
+    const pendingFit = deferred();
+    let resize: ResizeObserverCallback | undefined;
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      readonly observe = vi.fn();
+      readonly unobserve = vi.fn();
+      readonly disconnect = vi.fn();
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+    try {
+      const settled = vi.fn();
+      const runtime = createG2ChartRuntime<string>({
+        container: document.body,
+        events: [],
+        onRenderSettled: settled,
+      });
+      runtime.request({
+        value: 'old',
+        spec: { type: 'interval' },
+        structuralIdentity: '["actual","budget"]',
+      });
+      await vi.waitFor(() =>
+        expect(settled).toHaveBeenLastCalledWith({
+          value: 'old',
+          status: 'success',
+          latest: true,
+          generation: 1,
+          origin: 'render',
+          geometryAuthoritative: true,
+        }),
+      );
+      const oldChart = g2Mock.Chart.instances[0];
+      if (oldChart === undefined) {
+        throw new Error('Expected the initial G2 chart');
+      }
+      oldChart.forceFit.mockImplementationOnce(() => pendingFit.promise.then(() => oldChart));
+      resize?.([resizeEntry(document.body, 100, 100)], {} as ResizeObserver);
+      resize?.([resizeEntry(document.body, 120, 100)], {} as ResizeObserver);
+      await vi.waitFor(() => expect(oldChart.forceFit).toHaveBeenCalledOnce());
+
+      runtime.request({
+        value: 'new',
+        spec: { type: 'interval' },
+        structuralIdentity: '["budget","actual"]',
+      });
+      await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
+      pendingFit.resolve();
+      await vi.waitFor(() =>
+        expect(settled).toHaveBeenLastCalledWith({
+          value: 'new',
+          status: 'success',
+          latest: true,
+          generation: 2,
+          origin: 'render',
+          geometryAuthoritative: true,
+        }),
+      );
+      expect(oldChart.forceFit).toHaveBeenCalledOnce();
+      expect(g2Mock.Chart.instances[1]?.forceFit).not.toHaveBeenCalled();
+      runtime.dispose();
+    } finally {
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(window, 'ResizeObserver');
+      } else {
+        Object.defineProperty(window, 'ResizeObserver', descriptor);
+      }
+    }
   });
 
   it('removes the exact event callbacks and destroys exactly once', async () => {
@@ -199,22 +384,39 @@ describe('G2 chart runtime', () => {
     try {
       const host = document.createElement('div');
       document.body.append(host);
+      const invalidated = vi.fn();
+      const settled = vi.fn();
       const runtime = createG2ChartRuntime<string>({
         container: host,
         events: [],
-        onRenderSettled: vi.fn(),
+        onGeometryInvalidated: invalidated,
+        onRenderSettled: settled,
       });
       runtime.request({ value: 'ready', spec: { type: 'interval' } });
 
       await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
       expect(observe).toHaveBeenCalledWith(host);
-      resize?.([], {} as ResizeObserver);
+      resize?.([resizeEntry(host, 100, 100)], {} as ResizeObserver);
+      resize?.([resizeEntry(host, 120, 100)], {} as ResizeObserver);
       expect(g2Mock.Chart.instances[0]?.forceFit).not.toHaveBeenCalled();
       pendingRender.resolve();
       await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce());
+      await vi.waitFor(() => expect(settled).toHaveBeenCalledTimes(2));
+      expect(invalidated).toHaveBeenLastCalledWith({ generation: 0, reason: 'resize' });
+      expect(settled).toHaveBeenLastCalledWith({
+        value: 'ready',
+        status: 'success',
+        latest: true,
+        generation: 0,
+        origin: 'resize',
+        geometryAuthoritative: true,
+      });
+      resize?.([resizeEntry(host, 120, 100)], {} as ResizeObserver);
+      await Promise.resolve();
+      expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce();
 
       runtime.dispose();
-      resize?.([], {} as ResizeObserver);
+      resize?.([resizeEntry(host, 140, 100)], {} as ResizeObserver);
       await Promise.resolve();
 
       expect(disconnect).toHaveBeenCalledOnce();
@@ -226,6 +428,258 @@ describe('G2 chart runtime', () => {
         Object.defineProperty(window, 'ResizeObserver', descriptor);
       }
     }
+  });
+
+  it('ignores an initial ResizeObserver delivery matching the synchronously captured size', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    let resize: ResizeObserverCallback | undefined;
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      readonly observe = vi.fn();
+      readonly unobserve = vi.fn();
+      readonly disconnect = vi.fn();
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+
+    try {
+      const host = document.createElement('div');
+      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 80));
+      document.body.append(host);
+      const invalidated = vi.fn();
+      const runtime = createG2ChartRuntime<string>({
+        container: host,
+        events: [],
+        onGeometryInvalidated: invalidated,
+        onRenderSettled: vi.fn(),
+      });
+      runtime.request({ value: 'ready', spec: { type: 'interval' } });
+      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
+
+      resize?.([resizeEntry(host, 100, 80)], {} as ResizeObserver);
+      await Promise.resolve();
+
+      expect(g2Mock.Chart.instances[0]?.forceFit).not.toHaveBeenCalled();
+      expect(invalidated).not.toHaveBeenCalledWith(expect.objectContaining({ reason: 'resize' }));
+      runtime.dispose();
+    } finally {
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(window, 'ResizeObserver');
+      } else {
+        Object.defineProperty(window, 'ResizeObserver', descriptor);
+      }
+    }
+  });
+
+  it('invalidates when size changes before the first ResizeObserver delivery', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    let resize: ResizeObserverCallback | undefined;
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      readonly observe = vi.fn();
+      readonly unobserve = vi.fn();
+      readonly disconnect = vi.fn();
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+
+    try {
+      const host = document.createElement('div');
+      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 80));
+      document.body.append(host);
+      const invalidated = vi.fn();
+      const settled = vi.fn();
+      const runtime = createG2ChartRuntime<string>({
+        container: host,
+        events: [],
+        onGeometryInvalidated: invalidated,
+        onRenderSettled: settled,
+      });
+      runtime.request({ value: 'ready', spec: { type: 'interval' } });
+      await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
+
+      resize?.([resizeEntry(host, 120, 80)], {} as ResizeObserver);
+
+      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.forceFit).toHaveBeenCalledOnce());
+      expect(invalidated).toHaveBeenLastCalledWith({ generation: 0, reason: 'resize' });
+      await vi.waitFor(() =>
+        expect(settled).toHaveBeenLastCalledWith({
+          value: 'ready',
+          status: 'success',
+          latest: true,
+          generation: 0,
+          origin: 'resize',
+          geometryAuthoritative: true,
+        }),
+      );
+      runtime.dispose();
+    } finally {
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(window, 'ResizeObserver');
+      } else {
+        Object.defineProperty(window, 'ResizeObserver', descriptor);
+      }
+    }
+  });
+
+  it('keeps render geometry non-authoritative until a resize queued during render settles', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    const pendingRender = deferred();
+    const pendingFit = deferred();
+    g2Mock.Chart.renderQueue.push(() => pendingRender.promise);
+    let resize: ResizeObserverCallback | undefined;
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      readonly observe = vi.fn();
+      readonly unobserve = vi.fn();
+      readonly disconnect = vi.fn();
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+
+    try {
+      const settled = vi.fn();
+      const runtime = createG2ChartRuntime<string>({
+        container: document.body,
+        events: [],
+        onRenderSettled: settled,
+      });
+      runtime.request({ value: 'comparison', spec: { type: 'interval' } });
+      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
+      const chart = g2Mock.Chart.instances[0];
+      expect(chart).toBeDefined();
+      if (chart === undefined) {
+        return;
+      }
+      chart.forceFit.mockImplementationOnce(() => pendingFit.promise.then(() => chart));
+      resize?.([resizeEntry(document.body, 100, 100)], {} as ResizeObserver);
+      resize?.([resizeEntry(document.body, 120, 100)], {} as ResizeObserver);
+      pendingRender.resolve();
+
+      await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
+      expect(settled).toHaveBeenLastCalledWith({
+        value: 'comparison',
+        status: 'success',
+        latest: true,
+        generation: 0,
+        origin: 'render',
+        geometryAuthoritative: false,
+      });
+      expect(settled).not.toHaveBeenCalledWith(
+        expect.objectContaining({ geometryAuthoritative: true }),
+      );
+      await vi.waitFor(() => expect(chart.forceFit).toHaveBeenCalledOnce());
+
+      pendingFit.resolve();
+      await vi.waitFor(() =>
+        expect(settled).toHaveBeenLastCalledWith({
+          value: 'comparison',
+          status: 'success',
+          latest: true,
+          generation: 0,
+          origin: 'resize',
+          geometryAuthoritative: true,
+        }),
+      );
+      runtime.dispose();
+    } finally {
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(window, 'ResizeObserver');
+      } else {
+        Object.defineProperty(window, 'ResizeObserver', descriptor);
+      }
+    }
+  });
+
+  it('reports a failed forceFit as non-authoritative geometry without a render failure', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    let resize: ResizeObserverCallback | undefined;
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      readonly observe = vi.fn();
+      readonly unobserve = vi.fn();
+      readonly disconnect = vi.fn();
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+    const containerBounds = vi
+      .spyOn(document.body, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 100, 100));
+
+    try {
+      const settled = vi.fn();
+      const runtime = createG2ChartRuntime<string>({
+        container: document.body,
+        events: [],
+        onRenderSettled: settled,
+      });
+      runtime.request({ value: 'ready', spec: { type: 'interval' } });
+      await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
+      const chart = g2Mock.Chart.instances[0];
+      expect(chart).toBeDefined();
+      if (chart === undefined) {
+        return;
+      }
+      chart.forceFit.mockRejectedValueOnce(new Error('private fit failure'));
+      resize?.([resizeEntry(document.body, 100, 100)], {} as ResizeObserver);
+      resize?.([resizeEntry(document.body, 120, 100)], {} as ResizeObserver);
+
+      await vi.waitFor(() => expect(settled).toHaveBeenCalledTimes(2));
+      expect(settled).toHaveBeenLastCalledWith({
+        value: 'ready',
+        status: 'success',
+        latest: true,
+        generation: 0,
+        origin: 'resize',
+        geometryAuthoritative: false,
+      });
+      runtime.dispose();
+    } finally {
+      containerBounds.mockRestore();
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(window, 'ResizeObserver');
+      } else {
+        Object.defineProperty(window, 'ResizeObserver', descriptor);
+      }
+    }
+  });
+
+  it('hides current private G2 Tooltip DOM and permits a later renderer show', async () => {
+    const host = document.createElement('div');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'g2-tooltip';
+    tooltip.style.visibility = 'visible';
+    host.append(tooltip);
+    document.body.append(host);
+    const runtime = createG2ChartRuntime<string>({
+      container: host,
+      events: [],
+      onRenderSettled: vi.fn(),
+    });
+
+    runtime.dismissTooltip();
+    expect(tooltip.style.visibility).toBe('hidden');
+    tooltip.style.visibility = 'visible';
+    expect(tooltip.style.visibility).toBe('visible');
+
+    runtime.dispose();
+    expect(tooltip.style.visibility).toBe('hidden');
   });
 
   it('isolates a throwing settlement callback and still processes the next request', async () => {
@@ -263,6 +717,9 @@ describe('G2 chart runtime', () => {
         value: 'initialization',
         status: 'failure',
         latest: true,
+        generation: 0,
+        origin: 'render',
+        geometryAuthoritative: false,
       }),
     );
     expect(g2Mock.Chart.instances[0]?.destroy).toHaveBeenCalledOnce();
@@ -316,6 +773,9 @@ describe('G2 chart runtime', () => {
         value: 'failed',
         status: 'failure',
         latest: true,
+        generation: 0,
+        origin: 'render',
+        geometryAuthoritative: false,
       }),
     );
 
@@ -327,6 +787,9 @@ describe('G2 chart runtime', () => {
         value: 'retry',
         status: 'success',
         latest: true,
+        generation: 0,
+        origin: 'render',
+        geometryAuthoritative: true,
       }),
     );
     expect(g2Mock.Chart.instances).toHaveLength(2);
@@ -354,6 +817,9 @@ describe('G2 chart runtime', () => {
         value: 'retry',
         status: 'success',
         latest: true,
+        generation: 0,
+        origin: 'render',
+        geometryAuthoritative: true,
       }),
     );
     expect(g2Mock.Chart.instances).toHaveLength(2);
@@ -422,6 +888,9 @@ describe('G2 chart runtime', () => {
       value: 'second',
       status: 'success',
       latest: true,
+      generation: 0,
+      origin: 'render',
+      geometryAuthoritative: true,
     });
   });
 
@@ -491,6 +960,9 @@ describe('G2 chart runtime', () => {
         value: 'latest',
         status: 'success',
         latest: true,
+        generation: 0,
+        origin: 'render',
+        geometryAuthoritative: true,
       });
 
       runtime.request({ value: 'disposed', spec: { type: 'interval', data: [4] } });

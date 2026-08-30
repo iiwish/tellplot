@@ -16,6 +16,7 @@
 - [架构概览](architecture.md)
 - [入门与集成](getting-started.md)
 - [公共 API](api.md)
+- [数据合同](data-contract.md)
 - [错误处理](errors.md)
 - [图表配置边界](configuration.md)
 - [迁移与兼容](migration.md)
@@ -25,7 +26,7 @@
 ## 本地网站
 
 - `/`：产品首页与真实图表家族切换。
-- `/examples`：当前三个已验证图表的示例中心。
+- `/examples`：当前五个已验证示例，覆盖瀑布图、单序列分类图与多序列业务比较。
 - `/docs`：面向接入方的可扫描文档入口。
 - `/playground`：公共 `ChartConfig`、独立 `ViewSpec`、结构大纲、检查器与导入导出工作台。
 

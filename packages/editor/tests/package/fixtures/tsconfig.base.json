@@ -1,0 +1,14 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "baseUrl": "../../../../tellplot",
+    "paths": {
+      "tellplot": ["src/core.ts"],
+      "@tellplot/core": ["../core/src/index.ts"],
+      "@tellplot/editor": ["../editor/src/index.ts"]
+    }
+  }
+}

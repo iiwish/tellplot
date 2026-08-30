@@ -82,6 +82,7 @@ beforeEach(() => {
 describe('categorical SVG export', () => {
   it('uses the canonical categorical spec and preserves top-to-bottom bar order', async () => {
     const result = await exportSvgChart({
+      generation: 'scalar',
       chartType: 'bar',
       ownerDocument: document,
       projection,
@@ -113,6 +114,7 @@ describe('categorical SVG export', () => {
 
   it('passes expanded group regions into the transposed SVG spec', async () => {
     await exportSvgChart({
+      generation: 'scalar',
       chartType: 'bar',
       ownerDocument: document,
       projection,

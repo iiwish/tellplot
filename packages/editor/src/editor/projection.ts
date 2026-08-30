@@ -1,6 +1,8 @@
 import {
   projectCategorical,
+  projectCategoricalComparison,
   projectWaterfall,
+  type CategoricalComparisonProjection,
   validationIssue,
   type CategoricalProjection,
   type ChartConfig,
@@ -18,8 +20,15 @@ export type EditorChartProjection =
     }
   | {
       readonly family: 'categorical';
+      readonly generation: 'scalar';
       readonly chartType: 'bar' | 'column';
       readonly projection: CategoricalProjection;
+    }
+  | {
+      readonly family: 'categorical';
+      readonly generation: 'comparison';
+      readonly chartType: 'bar' | 'column';
+      readonly projection: CategoricalComparisonProjection;
     };
 
 export type EditorProjectionResult =
@@ -28,6 +37,27 @@ export type EditorProjectionResult =
 
 export function projectEditorChart(config: ChartConfig, view: ViewSpec): EditorProjectionResult {
   const sourceData = config.data;
+  if (sourceData.schemaVersion === '3.0.0') {
+    const result = projectCategoricalComparison(sourceData, view);
+    if (!result.ok) {
+      return result;
+    }
+    if (view.chartType !== 'bar' && view.chartType !== 'column') {
+      return {
+        ok: false,
+        errors: [validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType')],
+      };
+    }
+    return {
+      ok: true,
+      value: {
+        family: 'categorical',
+        generation: 'comparison',
+        chartType: view.chartType,
+        projection: result.value,
+      },
+    };
+  }
   if (sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical') {
     const result = projectCategorical(sourceData, view);
     if (!result.ok) {
@@ -41,7 +71,12 @@ export function projectEditorChart(config: ChartConfig, view: ViewSpec): EditorP
     }
     return {
       ok: true,
-      value: { family: 'categorical', chartType: view.chartType, projection: result.value },
+      value: {
+        family: 'categorical',
+        generation: 'scalar',
+        chartType: view.chartType,
+        projection: result.value,
+      },
     };
   }
 

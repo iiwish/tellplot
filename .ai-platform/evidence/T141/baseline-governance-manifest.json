@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T141",
+  "attempt": "T141-A002",
+  "baseCommit": "cd90ddf3d27bb323c994b5ba01735a4972c46f48",
+  "mutationPolicy": "Only packet-authorized status/evidence references may change after freeze.",
+  "statusOnlyPaths": [
+    ".ai-platform/specs/015-multi-series-categorical-comparison/tasks.md",
+    ".ai-platform/specs/015-multi-series-categorical-comparison/analysis.md",
+    ".ai-platform/docs/tasks.md",
+    "AGENTS.md",
+    "docs/roadmap.md"
+  ],
+  "count": 24,
+  "files": [
+    {
+      "path": ".ai-platform/docs/product-design.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 18432,
+      "sha256": "948557a856e72d563cd3c0658527ed67df1a8b03285b8a5b5cbd2e71865171a6"
+    },
+    {
+      "path": ".ai-platform/docs/tasks.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 20141,
+      "sha256": "a394274d9d1d572df6bcb406ec624810d84e2a0e0a0673d7b3490910f1f21690"
+    },
+    {
+      "path": ".ai-platform/docs/technology-decision-record.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 40978,
+      "sha256": "cec86aa5e3e821fbe750e1fe46643a3755e5eae82571c440a35df75e0c3d46c0"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/analysis.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 22137,
+      "sha256": "c4e8f9314ef3a4b23f4587e4c2f6d65b98220b175e0696c61d1c870b486a0a61"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/checklists/public-contract.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4023,
+      "sha256": "695f97c36632151c97b35cd1b33170630c13afc225f6d4c9a0a3812895be83fa"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/checklists/requirements.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 9717,
+      "sha256": "7d7c0ec40c4ea537b62005154e99b8433991254ba481d737a6cafdedd64ff0d7"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 25840,
+      "sha256": "b69cf532513655c3ebc409ac04c1e959d656c5d72907184fac51372ecb4e8af2"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/contracts/migration.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 10333,
+      "sha256": "a81ff2ccc9afa1590c76da5a313cd2547c9113becbd36df8fe6fbccb83784e41"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/contracts/public-api.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 12397,
+      "sha256": "127c28f36291752b2ab87a7c7cff2e49e6d9b3faaeb412842a99e0befcd46ed7"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/contracts/validation.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 14124,
+      "sha256": "975b5a1ea5dbab0ece6e43339aecae853520584867f025e6532cd8fce26a5127"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/data-model.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 14671,
+      "sha256": "16e9ad3bc032210ffe372b16b51dff69ec38ba0ae9c97d8772d1bf9ab7c767f9"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/packets/T135.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 13955,
+      "sha256": "73803fd2927d05f0df364664084a5f148cb6c60bce94ec0032de4245a0536840"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/packets/T136.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 21499,
+      "sha256": "7d8ad1fe5649df5e148bb26fb844cbc47ae93ff6781875f1c336232ffa8d02d8"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/packets/T137.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 27204,
+      "sha256": "9eed6ddd02925348fc63fffdcbd632dbe5e15e009ae38f944cd39fd0f6e4e3e2"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/packets/T138.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 31623,
+      "sha256": "5e78dbd523d9ea621e56a67696bfe111d9ee8ce2d681f934ff7b752670535ba3"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/packets/T139.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 31928,
+      "sha256": "aec00e4fca29d4a74b858841845aafa2fa36777f8aef83dc36c789b33aa76561"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/packets/T140.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 40823,
+      "sha256": "f6a4f941454484d189d604df258da56b2233771536333c60c8ea03f0f8b29627"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/packets/T141.yaml",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 41868,
+      "sha256": "0b5cd0573682a8237d981a6e7fbe23cc51ee9d8e7f404b45ec1df01759843a83"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/plan.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 24628,
+      "sha256": "f530b31f5767932d6f27a2b868462184adb50146ebce92ba003d2a5fae69766d"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/research.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 10174,
+      "sha256": "c51b1f810728a07ec26cab93937282664eecc05f0a321af84ac0d048758559c3"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/spec.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 38522,
+      "sha256": "90a6b3ab4963b6c8ed0bf1581513b38596a22cf8b1597676fe9d192bc6c822ed"
+    },
+    {
+      "path": ".ai-platform/specs/015-multi-series-categorical-comparison/tasks.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 43680,
+      "sha256": "0fb3aee743dda42ed7ed620879b1a5e62a4faae411162a83f72ea07738313508"
+    },
+    {
+      "path": "AGENTS.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 4273,
+      "sha256": "7858903ceb65fc1fce067ef5749fab1cf83a99fd81a2b96b62853d86cfa8486b"
+    },
+    {
+      "path": "docs/roadmap.md",
+      "type": "file",
+      "mode": "100644",
+      "sizeBytes": 7770,
+      "sha256": "c8446281a484cc7fdcdf0db792e13f899bb1942ca0dbc9bfb7e4e8a2b751dcd8"
+    }
+  ]
+}

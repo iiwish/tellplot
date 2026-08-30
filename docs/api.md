@@ -1,10 +1,12 @@
 # TellPlot 公共 API
 
 ```bash
-pnpm add tellplot
+pnpm add ./tellplot-2.0.0.tgz
 ```
 
-根入口、core、React 和 Vue 使用同一个版本与 tarball；只允许从下列声明的 subpath 导入。
+本文对应本地 `tellplot@2.0.0` candidate。根入口、core、React 和 Vue 使用同一个 candidate tarball；只允许
+从下列声明的 subpath 导入。`2.0.0` 正式发布到 registry 后才能改用
+`pnpm add tellplot@^2.0.0`；当前说明不表示 2.0 已发布。
 
 ## `tellplot/core`
 
@@ -28,7 +30,7 @@ core 入口不访问 DOM、G2 或 UI framework，导出：
 | Store          | `createEditorStore`                                                                                                                                                                                                                                    | controlled/uncontrolled session、selection、callbacks 和订阅 |
 | View tree      | `locateViewNode`、`containerChildren`、`ownGroup`、`groupContainsGroup`、`groupDepth`、`collectLeafSourceIds`                                                                                                                                          | 只读遍历递归分组树                                           |
 | 不变量         | `validateEditorInvariants`                                                                                                                                                                                                                             | 校验 source/view 顺序、锚点、分组和引用完整性                |
-| Projection     | `projectWaterfall`、`projectCategorical`                                                                                                                                                                                                               | 生成 renderer-neutral、确定性的可见 datum 序列               |
+| Projection     | `projectWaterfall`、`projectCategorical`、`projectCategoricalComparison`                                                                                                                                                                               | 生成 renderer-neutral、确定性的可见 datum 序列               |
 | 配置解析       | `sourceDataKind`、`createNarrativeChartPolicy`、`resolveFinancialChartAppearance`、`toFinancialChartAppearance`                                                                                                                                        | 选择图表策略并解析安全显示语义                               |
 | 配置常量       | `DEFAULT_FINANCIAL_CHART_PALETTE`、`DEFAULT_FINANCIAL_CHART_NUMBER_FORMAT`                                                                                                                                                                             | 只读默认 palette 与 number format                            |
 | 移动策略       | `buildMoveItemCommand`、`buildMoveNodeCommand`、`resolvePointerDropPlacement`、`resolvePointerMoveTarget`、`resolveKeyboardMoveTarget`                                                                                                                 | 将 DOM/framework 输入归一为确定性命令目标                    |
@@ -43,14 +45,34 @@ core 入口不访问 DOM、G2 或 UI framework，导出：
 - 配置：`ChartConfig` discriminated union、appearance/editor options 及 resolved financial appearance。
 - 投影/交互：waterfall/categorical datum/projection、category bounds/hit/drop、selection、pointer/keyboard move types。
 
-以上 named exports 都属于 1.x 公共表面；各字段的精确 readonly、union 和泛型签名以包内 `.d.ts` 为准。
+schema `3.0.0` 增加 16 个 named types：`ComparisonSchemaVersion`、`SeriesId`、
+`CategoricalComparisonSeries`、`CategoricalComparisonValue`、`CategoricalComparisonSourceItem`、
+`CategoricalComparisonSourceData`、`CategoricalComparisonViewSpec`、`CategoricalComparisonDatumKind`、
+`CategoricalComparisonSeriesValue`、`CategoricalComparisonDatum`、`CategoricalComparisonProjection`、
+`CategoricalComparisonProjectionResult`、`CategoricalComparisonSeriesColor`、
+`CategoricalComparisonChartColors`、`CategoricalComparisonChartAppearance` 和
+`CategoricalComparisonChartConfig`。唯一新增 runtime export 是 `projectCategoricalComparison`。
 
 ## `tellplot`
 
 根入口包含 `tellplot/core` 的全部公共能力，并额外提供 framework-neutral imperative editor：
 
-```ts
-const editor = createEditor(container, options);
+```ts id=imperative-api mode=standalone
+import { createEditor, type ChartConfig } from 'tellplot';
+
+declare const container: HTMLElement;
+
+const config = {
+  type: 'column',
+  data: {
+    schemaVersion: '2.0.0',
+    dataKind: 'categorical',
+    datasetId: 'api-example',
+    items: [{ id: 'revenue', label: 'Revenue', amount: 12 }],
+  },
+} as const satisfies ChartConfig;
+
+export const editor = createEditor(container, { config });
 ```
 
 `EditorOptions`：
@@ -113,9 +135,9 @@ Vue 的 `update:view` 驱动 `v-model:view`，`view-change` 同时提供候选 v
 `ChartConfig` 以 `type` 区分 `waterfall | bar | column`。`ViewSpec` 只保存可编辑叙事状态。所有编辑入口
 产生封闭 `EditorCommand`，`CommandSource` 为 `direct | outline | keyboard | host`。
 
-推荐 source 使用 `schemaVersion: '2.0.0'`：waterfall 还包含 `dataKind: 'waterfall'` 与
-`start | contribution | subtotal | end` item kind；bar/column 共用 `dataKind: 'categorical'` 和无 kind item。
-legacy waterfall `1.0.0` 只用于兼容现有持久化内容。
+waterfall 与 scalar categorical 使用 `schemaVersion: '2.0.0'`。comparison categorical 使用
+`schemaVersion: '3.0.0'`、2 至 4 个 source-ordered series，以及每个 category 的 dense values matrix。
+legacy waterfall `1.0.0` 继续用于读取现有持久化内容。完整 wire 见[数据合同](data-contract.md)。
 
 `ViewSpec` 的持久化字段包括 `schemaVersion`、`datasetId`、`chartType`、`revision`、`rootOrder`、`groups`、
 `collapsedGroupIds`、`pinnedItemIds`、`annotations` 和 `emphasis`。它必须与 source 的 dataset/schema/family

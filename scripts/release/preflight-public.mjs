@@ -5,19 +5,15 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { currentRelease, validateCurrentRelease } from './current-release.mjs';
 import { fail, repositoryRoot } from './release-utils.mjs';
 
-const PACKAGE_DIRECTORIES = ['tellplot'];
-const EXPECTED_PACKAGE_NAMES = ['tellplot'];
+const PACKAGE_DIRECTORIES = [currentRelease.packageName];
+const EXPECTED_PACKAGE_NAMES = [currentRelease.packageName];
 const EXPECTED_REMOTE =
   /^(?:git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)iiwish\/tellplot(?:\.git)?$/u;
 const CANONICAL_REMOTE_QUERY_URL = 'https://github.com/iiwish/tellplot.git';
-const OFFICIAL_NPM_REGISTRY = 'https://registry.npmjs.org/';
-const MINIMUM_NODE_VERSION = '22.14.0';
-const MINIMUM_NPM_VERSION = '11.15.0';
-const PUBLISH_WORKFLOW = 'iiwish/tellplot/.github/workflows/publish-npm.yml';
-const ARTIFACT_ROOT = '.ai-platform/evidence/T131/artifacts';
-const ARTIFACT_MANIFEST = '.ai-platform/evidence/T131/tarball-manifest.json';
+const OFFICIAL_NPM_REGISTRY = currentRelease.registry;
 const REMOTE_QUERY_ENVIRONMENT_KEYS = [
   'PATH',
   'PATHEXT',
@@ -38,26 +34,6 @@ const NULL_DEVICE = process.platform === 'win32' ? 'NUL' : '/dev/null';
 
 function clean(value) {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function versionParts(value) {
-  const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(clean(value));
-  return match === null ? undefined : match.slice(1).map(part => Number.parseInt(part, 10));
-}
-
-function isVersionAtLeast(value, minimum) {
-  const parts = versionParts(value);
-  const minimumParts = versionParts(minimum);
-  if (parts === undefined || minimumParts === undefined) {
-    return false;
-  }
-  for (let index = 0; index < minimumParts.length; index += 1) {
-    const difference = (parts[index] ?? 0) - (minimumParts[index] ?? 0);
-    if (difference !== 0) {
-      return difference > 0;
-    }
-  }
-  return true;
 }
 
 function isCommit(value) {
@@ -87,7 +63,7 @@ function releaseVersion(packageManifests) {
   const versions = packageManifests.map(manifest => clean(manifest?.version));
   return versions.length === EXPECTED_PACKAGE_NAMES.length &&
     versions.every(version => version === versions[0]) &&
-    /^\d+\.\d+\.\d+$/u.test(versions[0] ?? '')
+    versions[0] === currentRelease.version
     ? versions[0]
     : undefined;
 }
@@ -102,8 +78,8 @@ function validatePackages(packageManifests, findings) {
     findings.push('release packages must contain only tellplot');
   }
   const version = releaseVersion(packageManifests);
-  if (version === undefined || !/^\d+\.\d+\.\d+$/u.test(version)) {
-    findings.push('the public tellplot package must use a stable semantic version');
+  if (version !== currentRelease.version) {
+    findings.push(`the public tellplot package must use ${currentRelease.version}`);
   }
   for (const manifest of packageManifests) {
     if (
@@ -118,7 +94,7 @@ function validatePackages(packageManifests, findings) {
   return version;
 }
 
-function validateArtifacts(state, packageManifests, version, findings) {
+function validateArtifacts(state, packageManifests, version, release, findings) {
   const manifest = state.artifactManifest;
   if (
     manifest === null ||
@@ -126,14 +102,22 @@ function validateArtifacts(state, packageManifests, version, findings) {
     manifest.version !== version ||
     !Array.isArray(manifest.packages)
   ) {
-    findings.push('T131 release artifact manifest is missing, invalid, or version-mismatched');
+    findings.push(
+      `${release.evidenceTask} release artifact manifest is missing, invalid, or version-mismatched`,
+    );
     return;
+  }
+  if (
+    manifest.evidenceTask !== release.evidenceTask ||
+    manifest.nodeVersion !== release.nodeVersion
+  ) {
+    findings.push('release artifact manifest evidence task does not match the descriptor');
   }
   if (
     JSON.stringify(manifest.packages.map(entry => entry?.name)) !==
     JSON.stringify(EXPECTED_PACKAGE_NAMES)
   ) {
-    findings.push('T131 release artifact manifest must contain exactly the tellplot package');
+    findings.push('release artifact manifest must contain exactly the tellplot package');
   }
 
   const artifactFiles = Array.isArray(state.artifactFiles) ? state.artifactFiles : [];
@@ -151,31 +135,40 @@ function validateArtifacts(state, packageManifests, version, findings) {
       manifestEntry.sizeBytes <= 0 ||
       !/^[0-9a-f]{64}$/u.test(clean(manifestEntry?.sha256))
     ) {
-      findings.push(`T131 release artifact manifest entry is invalid for ${name || filename}`);
+      findings.push(`release artifact manifest entry is invalid for ${name || filename}`);
       continue;
+    }
+    if (
+      manifestEntry.filename !== release.artifact.filename ||
+      manifestEntry.sizeBytes !== release.artifact.sizeBytes ||
+      manifestEntry.sha256 !== release.artifact.sha256
+    ) {
+      findings.push(`release artifact descriptor does not match for ${name}`);
     }
 
     const artifact = artifactFiles.find(candidate => candidate?.filename === filename);
     if (artifact === undefined) {
-      findings.push(`T131 release artifact is missing for ${name}`);
+      findings.push(`release artifact is missing for ${name}`);
       continue;
     }
     if (
       artifact.sizeBytes !== manifestEntry.sizeBytes ||
       artifact.sha256 !== manifestEntry.sha256
     ) {
-      findings.push(`T131 release artifact integrity does not match for ${name}`);
+      findings.push(`release artifact integrity does not match for ${name}`);
     }
   }
 }
 
 export function validatePublicReleaseState(state) {
   const findings = [];
+  const release = state.releaseDescriptor ?? currentRelease;
+  findings.push(...validateCurrentRelease(release));
   const packageManifests = Array.isArray(state.packageManifests) ? state.packageManifests : [];
   const version = validatePackages(packageManifests, findings);
-  validateArtifacts(state, packageManifests, version, findings);
+  validateArtifacts(state, packageManifests, version, release, findings);
 
-  const expectedTag = version === undefined ? undefined : `v${version}`;
+  const expectedTag = version === undefined ? undefined : release.tag;
   if (clean(state.status) !== '') {
     findings.push('public release worktree and index must be clean, including untracked files');
   }
@@ -210,11 +203,11 @@ export function validatePublicReleaseState(state) {
   if (!EXPECTED_REMOTE.test(clean(state.remoteUrl))) {
     findings.push('origin must be the canonical iiwish/tellplot GitHub repository');
   }
-  if (!isVersionAtLeast(state.nodeVersion, MINIMUM_NODE_VERSION)) {
-    findings.push(`public release requires Node ${MINIMUM_NODE_VERSION} or newer`);
+  if (clean(state.nodeVersion) !== release.nodeVersion) {
+    findings.push(`public release requires exact Node ${release.nodeVersion}`);
   }
-  if (!isVersionAtLeast(state.npmVersion, MINIMUM_NPM_VERSION)) {
-    findings.push(`public release requires npm ${MINIMUM_NPM_VERSION} or newer`);
+  if (clean(state.npmVersion) !== release.npmVersion) {
+    findings.push(`public release requires exact npm ${release.npmVersion}`);
   }
   if (normalizeNpmRegistry(state.npmRegistry) !== OFFICIAL_NPM_REGISTRY) {
     findings.push(`npm config registry must resolve to ${OFFICIAL_NPM_REGISTRY}`);
@@ -264,10 +257,10 @@ export function validatePublicReleaseState(state) {
     if (state.visibility !== 'public') {
       findings.push('npm provenance requires a public repository');
     }
-    if (state.workflowRef !== `${PUBLISH_WORKFLOW}@refs/tags/${expectedTag}`) {
+    if (state.workflowRef !== `${release.workflow}@refs/tags/${expectedTag}`) {
       findings.push('public publishing must run the trusted publish-npm.yml workflow from the tag');
     }
-    const confirmation = `stage ${version} stage-only-trusted-publishers-verified`;
+    const confirmation = `stage ${release.version} stage-only-trusted-publishers-verified`;
     if (state.confirmation !== confirmation) {
       findings.push(`release confirmation must exactly equal "${confirmation}"`);
     }
@@ -324,12 +317,12 @@ function sha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
-function artifactState(root, manifests, version) {
+function artifactState(root, manifests, version, release) {
   const artifactFiles = [];
   if (version !== undefined) {
     for (const manifest of manifests) {
       const filename = artifactFilename(clean(manifest?.name), version);
-      const path = resolve(root, ARTIFACT_ROOT, filename);
+      const path = resolve(root, release.artifactRoot, filename);
       try {
         if (!existsSync(path)) {
           continue;
@@ -345,7 +338,7 @@ function artifactState(root, manifests, version) {
     }
   }
   return {
-    artifactManifest: readJson(resolve(root, ARTIFACT_MANIFEST)),
+    artifactManifest: readJson(resolve(root, release.manifestPath)),
     artifactFiles,
   };
 }
@@ -392,6 +385,13 @@ export function collectPublicReleaseState(mode, options = {}) {
       : (options.remoteQueryUrl ?? CANONICAL_REMOTE_QUERY_URL);
   const remoteGitCommand = args =>
     command('git', args, tmpdir(), createRemoteQueryEnvironment(environment));
+  const releaseDescriptor = options.releaseDescriptor ?? currentRelease;
+  const descriptorFindings = validateCurrentRelease(releaseDescriptor);
+  if (descriptorFindings.length > 0) {
+    throw new Error(
+      `Invalid release descriptor for public preflight: ${descriptorFindings.join('; ')}`,
+    );
+  }
   const manifests = packageManifests(root);
   const version = releaseVersion(manifests);
   const tag = version === undefined ? '' : `v${version}`;
@@ -403,8 +403,9 @@ export function collectPublicReleaseState(mode, options = {}) {
     : { object: undefined, commit: undefined };
   const common = {
     mode,
+    releaseDescriptor,
     packageManifests: manifests,
-    ...artifactState(root, manifests, version),
+    ...artifactState(root, manifests, version, releaseDescriptor),
     status:
       gitCommand(['status', '--porcelain=v1', '--untracked-files=all']) ?? 'git status unavailable',
     head,

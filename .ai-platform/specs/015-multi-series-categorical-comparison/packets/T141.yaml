@@ -1,0 +1,684 @@
+schema_version: 1
+packet_id: EP-015-T141
+task_id: T141
+feature_id: 015-multi-series-categorical-comparison
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-multi-series-categorical-comparison/spec.md
+  requirements_checklists:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/checklists/requirements.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/checklists/public-contract.md
+  research: .ai-platform/specs/015-multi-series-categorical-comparison/research.md
+  data_model: .ai-platform/specs/015-multi-series-categorical-comparison/data-model.md
+  public_contracts:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/public-api.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/validation.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/migration.md
+  technical_decisions:
+    - .ai-platform/docs/technology-decision-record.md#tdr-025-多序列分类比较与-g2-几何合同
+    - .ai-platform/docs/technology-decision-record.md#tdr-025-a01-g2-guide-scale-isolation
+  feature_plan: .ai-platform/specs/015-multi-series-categorical-comparison/plan.md
+  work_graph: .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+  analysis: .ai-platform/specs/015-multi-series-categorical-comparison/analysis.md
+  predecessor_packets:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/packets/T135.yaml
+    - .ai-platform/specs/015-multi-series-categorical-comparison/packets/T136.yaml
+    - .ai-platform/specs/015-multi-series-categorical-comparison/packets/T137.yaml
+    - .ai-platform/specs/015-multi-series-categorical-comparison/packets/T138.yaml
+    - .ai-platform/specs/015-multi-series-categorical-comparison/packets/T139.yaml
+    - .ai-platform/specs/015-multi-series-categorical-comparison/packets/T140.yaml
+  predecessor_evidence:
+    T135:
+      summary: .ai-platform/evidence/T135/summary.md
+      tests: .ai-platform/evidence/T135/test-results.md
+      diff: .ai-platform/evidence/T135/diff.patch
+    T136:
+      summary: .ai-platform/evidence/T136/summary.md
+      tests: .ai-platform/evidence/T136/test-results.md
+      diff: .ai-platform/evidence/T136/diff.patch
+    T137:
+      summary: .ai-platform/evidence/T137/summary.md
+      tests: .ai-platform/evidence/T137/test-results.md
+      diff: .ai-platform/evidence/T137/diff.patch
+    T138:
+      summary: .ai-platform/evidence/T138/summary.md
+      tests: .ai-platform/evidence/T138/test-results.md
+      diff: .ai-platform/evidence/T138/diff.patch
+    T139:
+      summary: .ai-platform/evidence/T139/summary.md
+      tests: .ai-platform/evidence/T139/test-results.md
+      diff: .ai-platform/evidence/T139/diff.patch
+    T140:
+      summary: .ai-platform/evidence/T140/summary.md
+      tests: .ai-platform/evidence/T140/test-results.md
+      review: .ai-platform/evidence/T140/review.md
+      diff: .ai-platform/evidence/T140/diff.patch
+      artifact_manifest: .ai-platform/evidence/T140/tarball-manifest.json
+      isolated_source: .ai-platform/evidence/T140/isolated-source-receipt.md
+  immutable_published_lineage:
+    task: T131
+    evidence: .ai-platform/evidence/T131
+    workflows: .github/workflows
+    lockfile: pnpm-lock.yaml
+    legacy_release_scripts:
+      - scripts/release/audit-release.mjs
+      - scripts/release/package-artifact.mjs
+      - scripts/release/rehearse-source.mjs
+      - scripts/release/check-stable.mjs
+      - scripts/release/preflight-public.mjs
+      - scripts/release/check-package-availability.mjs
+  approval_gates:
+    product_scope_and_version_direction: Confirmed by user on 2026-08-12
+    exact_breaking_public_contract: Confirmed by user on 2026-08-12
+    technical_plan_tdr_and_work_graph: Confirmed by user on 2026-08-12
+    tdr_025_a01_and_t140_amendment: Confirmed by user on 2026-08-27
+    requirements_checklists: Completed with no unresolved Critical/High/Medium finding
+    analysis: Completed / Clear_For_T141
+    predecessors: >-
+      T135 through T140 are Needs_Review, not Accepted. Each completed its required validation and independent spec-compliance,
+      bug/code-quality and QA-acceptance reviews with Critical 0 / High 0 / Medium 0. T140 final review is recorded in
+      .ai-platform/evidence/T140/review.md and closes the serial dependency for T141.
+    predecessor_baseline_exception: >-
+      The private @tellplot/editor@0.0.0 manifest and its stale internal 1.0.0 assertion are the unchanged pre-T135 baseline
+      exception. T141 must not change either value, weaken the assertion, add a dependency or reinterpret the exception as a
+      passing package-version assertion.
+    release_boundary: >-
+      The approved outcome is a local tellplot@2.0.0 candidate and G003 goal evidence. No public preflight, registry
+      availability, stage, commit, push, pull request, tag, publish, GitHub Release or production promotion is authorized.
+
+work_unit:
+  title: 完成性能、完整矩阵与目标级 Evidence
+  goal: >-
+    在真实 G2 Canvas/SVG、current/previous browser、完整 package/framework/a11y/security/architecture 与 isolated
+    source 环境中复演本地 tellplot@2.0.0 candidate，形成可独立审查的 G003 目标级 evidence；只修复 full gate
+    实际暴露的 blocking defect，不扩大已批准产品、公共合同、依赖或发布范围。
+  epic: E015
+  stories:
+    - US-MSC-001
+    - US-MSC-002
+    - US-MSC-003
+    - US-MSC-004
+    - US-MSC-005
+  requirements:
+    - MSC-FR-001
+    - MSC-FR-002
+    - MSC-FR-003
+    - MSC-FR-004
+    - MSC-FR-005
+    - MSC-FR-006
+    - MSC-FR-007
+    - MSC-FR-008
+    - MSC-FR-009
+    - MSC-FR-010
+    - MSC-FR-011
+    - MSC-NFR-001
+    - MSC-NFR-002
+    - MSC-NFR-003
+    - MSC-NFR-004
+    - MSC-NFR-005
+    - MSC-NFR-006
+    - MSC-NFR-007
+  success_criteria:
+    - MSC-SC-001
+    - MSC-SC-002
+    - MSC-SC-003
+    - MSC-SC-004
+    - MSC-SC-005
+    - MSC-SC-006
+    - MSC-SC-007
+  acceptance_criteria:
+    - MSC-AC-001
+    - MSC-AC-002
+    - MSC-AC-003
+    - MSC-AC-004
+    - MSC-AC-005
+    - MSC-AC-006
+    - MSC-AC-007
+    - MSC-AC-008
+    - MSC-AC-009
+    - MSC-AC-010
+    - MSC-AC-011
+    - MSC-AC-012
+  priority: P0
+  depends_on:
+    - T140 Needs_Review
+    - T135-T140 have no unresolved Critical/High/Medium finding
+    - T140 spec-compliance, bug/code-quality and QA-acceptance reviews passed
+  blocks:
+    - G003 goal-level Needs_Review
+  parallel: false
+  conflicts_with:
+    - T135
+    - T136
+    - T137
+    - T138
+    - T139
+    - T140
+    - all G003 source, tests and documentation
+    - published release lineage and remote state
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - e2e/performance.spec.ts
+    - e2e/performanceBudget.ts
+    - e2e/comparison-responsive.spec.ts
+    - e2e/comparison-rendering.spec.ts
+    - e2e/comparison-interaction.spec.ts
+    - e2e/comparison-export.spec.ts
+    - e2e/accessibility.spec.ts
+    - e2e/container-responsive.spec.ts
+    - e2e/editorPanels.ts
+    - apps/playground/src/fixtures.ts
+    - playwright.config.ts
+    - packages/editor/tests/browser-matrix/run-previous-browsers.mjs
+    - packages/editor/tests/react-matrix/run-react-matrix.mjs
+    - scripts/release/audit-candidate.mjs
+    - scripts/release/package-candidate-artifact.mjs
+    - scripts/release/rehearse-candidate-source.mjs
+    - scripts/release/package-contracts.json
+    - package.json
+    - .nvmrc
+  existing_patterns:
+    - >-
+      e2e/performance.spec.ts already owns a real React root commit probe, painted Canvas signature receipt, exact
+      sorted[ceil(.95*n)-1] p95 calculation and 30-sample loops for existing chart generations. Extend those mechanisms for
+      schema-3 comparison rather than adding wall-clock sleeps, mocked paint, a second performance threshold or framework-private
+      instrumentation.
+    - >-
+      T137-T140 establish one canonical G2 comparison spec shared by screen and fresh offscreen SVG/PNG. Responsive evidence must
+      use the real screen Canvas and the public SVG export mounted into the browser DOM; component-data assertions or a mocked
+      renderer are not substitutes for visible geometry.
+    - >-
+      The repository current-browser gate is pnpm test:e2e for Chromium, Firefox and WebKit. The previous-browser runner copies
+      every root E2E spec except files ending performance.spec.ts, so comparison responsive/rendering acceptance must remain in a
+      non-performance filename and must not be excluded or renamed out of the previous matrix.
+    - >-
+      T139 owns the complete imperative DOM, React 18, React 19 and Vue 3 host matrix and accessibility semantics. T140 owns exact
+      tellplot@2.0.0 public surface, export/docs/migration and candidate-only path/runtime hardening. T141 consumes and replays
+      those contracts; it does not create a second implementation owner.
+    - >-
+      Candidate artifact and rehearsal already compare the actual process.versions.node with .nvmrc and fail closed for evidence
+      ancestors, roots, nested outputs and output leaves. T141 runs all three candidate commands under actual Node 22.20.0 and
+      writes only .ai-platform/evidence/T141.
+  interfaces_or_contracts:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/spec.md#msc-nfr-002-性能
+    - .ai-platform/specs/015-multi-series-categorical-comparison/spec.md#msc-nfr-004-可访问性
+    - .ai-platform/specs/015-multi-series-categorical-comparison/spec.md#msc-nfr-006-兼容与依赖
+    - .ai-platform/specs/015-multi-series-categorical-comparison/spec.md#msc-nfr-007-发布边界
+    - .ai-platform/specs/015-multi-series-categorical-comparison/plan.md#performance-and-visual-matrix
+    - .ai-platform/specs/015-multi-series-categorical-comparison/plan.md#final-gates
+    - .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md#t141---完成性能完整矩阵与目标级-evidence
+  performance_contract:
+    - >-
+      Use one deterministic 200-category x 2-series comparison fixture at viewport 1440x900. Wait for the initial G2 animation
+      and one warm-up before collecting samples. Do not lower or override the product budget through an environment variable in
+      authoritative evidence.
+    - >-
+      Collect exactly 30 alternating keyboard reorder samples and exactly 30 alternating direct-pointer reorder samples. Each
+      sample begins at accepted command commit and ends at the first painted Canvas frame whose editor revision and authoritative
+      category order both equal the expected values. A DOM-only revision or timer completion is insufficient.
+    - >-
+      For each group sort ascending and compute p95 as sorted[ceil(0.95*n)-1]. Both keyboard and direct-pointer p95 must be at
+      most 150ms. Preserve all 60 raw timing samples, formula, environment, expected/painted revision-order receipts and computed
+      p95 in performance-samples.json without category labels, series labels, amounts, sourceRef or metadata values.
+    - >-
+      During an active direct preview, prove requestAnimationFrame coalescing and a host React root commit delta of exactly zero.
+      A committed command may follow existing controlled-host semantics; the zero-commit assertion applies to the preview path
+      defined by MSC-NFR-002 and cannot be replaced by a pointer-event count alone.
+  responsive_contract:
+    - >-
+      Use one deterministic 50-category x 4-series comparison fixture with maximum 12-character CJK and 24-character Latin
+      labels. Cover 1280x720 and 640x480, zh-CN and en-US, and idle, hover and active-drag states: 12 explicit matrix cells.
+    - >-
+      Every cell must render a nonblank real G2 Canvas and record viewport, locale and interaction state. Assert no unexpected
+      page horizontal overflow; plot, legend and toolbar layout rectangles do not intersect; group action and drag indicator may
+      overlay the plot but do not occlude the current target, legend, toolbar or required text.
+    - >-
+      For the same cell configuration, export through the public SVG path, mount the real SVG in the page and use SVGGraphicsElement
+      getBBox plus visible client rectangles for pairwise visible-text intersection. Transient hover/drag overlays remain screen-only
+      by contract; the matrix must record that separation rather than fabricating transient SVG marks.
+    - >-
+      With 200 visible marks, assert automatic value labels are exactly zero. Nevertheless select categories through Outline,
+      read full source-ordered values through Tooltip and Inspector, and perform a complete category/group edit through the
+      existing category-only surface in every viewport/locale family. Truncated or hidden chart text cannot remove those paths.
+  full_quality_contract:
+    - >-
+      Run fresh format, lint, strict type, coverage, build, core/editor/React/Vue/playground/package, framework, full current
+      browser, previous browser, accessibility, performance, dependency lock, dependency security, production audit and
+      architecture gates. Preserve existing thresholds, projects, retries, timeouts and assertions.
+    - >-
+      Current and previous browser evidence must include the new non-performance comparison responsive/rendering specs. Full
+      compatibility must retain concrete v1 waterfall, v2 waterfall and v2 scalar categorical wire/runtime/persistence/visual/
+      export paths plus v3 strict consumers and migration fixtures.
+    - >-
+      No test may be skipped, narrowed, renamed out of discovery, replaced with a mock or made green by increasing the 150ms
+      product budget. Environment or infrastructure failures must be classified and preserved rather than treated as product pass.
+  candidate_and_release_contract:
+    - >-
+      Execute candidate audit, artifact and rehearsal with actual Node 22.20.0 matching .nvmrc, exact --candidate-version 2.0.0
+      and exact --evidence-task T141. Artifact, manifest, hash and isolated-source receipt may be written only under
+      .ai-platform/evidence/T141; T140 evidence is a read-only predecessor.
+    - >-
+      Candidate artifact must be reproducible across two consecutive canonical builds with identical filename, size, sha256 and
+      file manifest. Rehearsal uses a clean source copy, frozen install, build, package gates and candidate audit without copying
+      existing evidence or exposing temporary absolute paths.
+    - >-
+      T131 evidence, publish workflows, pnpm-lock.yaml and accepted 1.0 release scripts remain byte-for-byte unchanged. Do not run
+      public preflight, availability, trust-readiness, stage, commit, push, pull request, tag, publish, GitHub Release or production
+      promotion commands.
+  forbidden_changes:
+    - Changing the approved public API/schema/migration, package export map, private package versions, publishConfig or dependency graph.
+    - Adding a comparison-only public option, result, error, handle, framework prop/event or G2/spec/receipt/geometry/migration export.
+    - Changing the 150ms budget, sample count, p95 formula, browser projects, coverage thresholds, a11y rules or previous-browser discovery to obtain a pass.
+    - Using mocked G2 output, DOM-only timing, fixed chart geometry or component-data assertions as real Canvas/SVG evidence.
+    - Recording business amounts, category labels, series labels, sourceRef or metadata values in performance, responsive, log or review evidence.
+    - Editing T131 evidence, workflows, pnpm-lock.yaml or accepted legacy release scripts.
+    - Running public preflight, availability, trust-readiness, remote Git, tag, publish, release or production commands.
+    - Editing a predecessor-owned source/test/doc without the owner-variance protocol and exact owner-suite rerun.
+    - Editing a file outside execution_constraints.allowed_files or beyond its qualifier.
+
+execution_constraints:
+  branch_or_worktree: >-
+    Current shared main worktree with approved uncommitted G003 governance and reviewed T135-T140 predecessor changes. The dirty
+    tree is intentional and cannot be reset, restored, stashed, cleaned or replaced. T141 is serial and no implementation agent
+    may run concurrently in this worktree.
+  known_preexisting_worktree_baseline:
+    governance:
+      - .ai-platform/docs/product-design.md
+      - .ai-platform/docs/tasks.md
+      - .ai-platform/docs/technology-decision-record.md
+      - .ai-platform/specs/015-multi-series-categorical-comparison/**
+      - AGENTS.md
+      - docs/roadmap.md
+    predecessor_evidence:
+      - .ai-platform/evidence/T135/**
+      - .ai-platform/evidence/T136/**
+      - .ai-platform/evidence/T137/**
+      - .ai-platform/evidence/T138/**
+      - .ai-platform/evidence/T139/**
+      - .ai-platform/evidence/T140/**
+    predecessor_product_tree: >-
+      T135-T140 diff.patch files remain authoritative task-local evidence, but T141-A001 proved that they are not a lossless
+      cumulative replay chain from HEAD. T141 uses the orchestrator-recorded A002 frozen product manifest and cumulative patch
+      below as its exact task-start predecessor baseline. The six original patches and all predecessor evidence remain immutable.
+    immutable_clean_inputs:
+      - pnpm-lock.yaml
+      - .github/workflows/**
+      - .ai-platform/evidence/T131/**
+      - scripts/release/audit-release.mjs
+      - scripts/release/package-artifact.mjs
+      - scripts/release/rehearse-source.mjs
+      - scripts/release/check-stable.mjs
+      - scripts/release/preflight-public.mjs
+      - scripts/release/check-package-availability.mjs
+  baseline_amendment:
+    attempt: T141-A002
+    status: Orchestrator_Recorded
+    base_commit: cd90ddf3d27bb323c994b5ba01735a4972c46f48
+    reason: >-
+      T141-A001 stopped before RED and without product edits because the six reviewed predecessor patches are task-local deltas,
+      not a complete cumulative replay chain from HEAD. Their product-path union omitted four T135 additions and
+      docs/getting-started.md, while packages/core/src/config/chartConfig.ts did not preserve the final reviewed bytes. This
+      amendment strengthens evidence mechanics only; it does not change product, architecture, public contracts, ownership,
+      dependencies, thresholds, work graph or release boundaries.
+    frozen_product_tree:
+      path_rule: >-
+        Union of non-.ai-platform b-paths in T135-T140 diff.patch, excluding AGENTS.md and docs/roadmap.md, plus
+        docs/getting-started.md, packages/core/src/charts/categorical/comparisonTypes.ts,
+        packages/core/tests/config/comparison-chart-config.test.ts, packages/core/tests/domain/schema-v3.test.ts and
+        scripts/release/validate-package-surface.mjs.
+      expected_paths: 108
+      tracked_modified: 70
+      untracked_added: 38
+      manifest: .ai-platform/evidence/T141/baseline-product-manifest.json
+      cumulative_patch: .ai-platform/evidence/T141/predecessor-product-baseline.patch
+    frozen_governance:
+      manifest: .ai-platform/evidence/T141/baseline-governance-manifest.json
+      mutation_allowed: status-only paths already allowed by this packet
+    predecessor_evidence:
+      expected_files: 22
+      manifest: .ai-platform/evidence/T141/predecessor-evidence-manifest.json
+      mutation_allowed: false
+    immutable_inputs:
+      manifest: .ai-platform/evidence/T141/immutable-lineage-manifest.json
+      mutation_allowed: false
+    replay_rule: >-
+      Generate the cumulative patch from the exact base commit with a temporary index outside the shared worktree, apply it to
+      an isolated archive of that commit and require path type, mode, size and SHA-256 for all 108 product paths to equal the
+      frozen manifest. Reverse application must recover the exact base tree. The patch must exclude governance, predecessor
+      evidence, immutable lineage, T141 output and generated build/test artifacts.
+  proposed_format_and_rehearsal_amendment:
+    attempt: T141-A003
+    status: Confirmed
+    approved_by: user on 2026-08-27
+    reason: >-
+      The mandatory full format gate fails on ten reviewed G003 files spanning T135, T138 and T139, while two local generated
+      video directories excluded only through .git/info/exclude are still scanned by Prettier. Independent QA also found that
+      candidate rehearsal recursively copies those local generated directories into its isolated source. The current packet
+      allows only one semantic predecessor variance and does not allow .prettierignore, so execution remains stopped until the
+      user explicitly approves this exact non-product scope amendment.
+    preserved_semantic_variance:
+      owner: T137
+      paths:
+        - packages/editor/src/charts/categorical/comparisonSpec.ts
+        - packages/editor/tests/export/comparison-chart-spec.test.ts
+      scope: category guide labelSpacing only, with the existing canonical RED/GREEN and T137 owner suite
+    mechanical_format_paths:
+      T135:
+        - packages/core/src/charts/categorical/projection.ts
+        - packages/core/src/domain/model.ts
+        - packages/core/src/domain/validation.ts
+      T138:
+        - e2e/comparison-interaction.spec.ts
+        - packages/editor/src/rendering/g2/chartPointer.ts
+        - packages/editor/src/rendering/g2/comparisonSceneReceipt.ts
+        - packages/editor/tests/rendering/g2/chart-pointer.test.ts
+        - packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts
+      T139:
+        - e2e/container-responsive.spec.ts
+        - packages/editor/tests/runtime/comparison-editor.test.ts
+      execution: pinned Node 22.20.0 and workspace Prettier 3.9.5 against these exact ten paths only; never --write .
+      proof: before/after path, type, mode, size and SHA-256; parser/AST and debug-check equivalence; exact owner suites and full gates
+    prettier_ignore_addition:
+      path: .prettierignore
+      append_only:
+        - apps/video/out/
+        - apps/video/public/captures/
+      boundary: do not edit, delete, move, format or evidence-record the local generated artifacts or .git/info/exclude
+    candidate_rehearsal_variance:
+      owner: T140
+      paths:
+        - scripts/release/rehearse-candidate-source.mjs
+        - packages/editor/tests/package/candidate-tools.test.ts
+      scope: >-
+        Fail closed by excluding exactly apps/video/out and apps/video/public/captures from isolated source copying; retain the
+        existing source inventory, path/symlink/runtime checks, T141-only output and candidate contracts.
+      proof: candidate-tool RED/GREEN, exact T140 owner suite, two identical artifacts and isolated-source rehearsal unaffected by local generated files
+    approval_boundary: >-
+      No product behavior beyond the already recorded T137 label-spacing fix, public contract, architecture, dependency,
+      threshold, browser matrix, release authorization or remote state changes. Preserve A002 artifacts and T131-T140 evidence.
+  allowed_files:
+    - e2e/performance.spec.ts
+    - e2e/performanceBudget.ts
+    - e2e/comparison-responsive.spec.ts
+    - e2e/comparison-rendering.spec.ts
+    - apps/playground/src/fixtures.ts
+    - .ai-platform/evidence/T141/**
+    - .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/analysis.md
+    - .ai-platform/docs/tasks.md
+    - AGENTS.md
+    - docs/roadmap.md
+    - packages/core/src/**
+    - packages/core/tests/**
+    - packages/editor/src/**
+    - packages/editor/tests/**
+    - packages/react/src/**
+    - packages/react/tests/**
+    - packages/vue/src/**
+    - packages/vue/tests/**
+    - packages/tellplot/src/**
+    - packages/tellplot/tests/**
+    - apps/playground/src/**
+    - apps/playground/tests/**
+    - e2e/comparison-*.spec.ts
+    - e2e/accessibility.spec.ts
+    - e2e/container-responsive.spec.ts
+    - e2e/editorPanels.ts
+    - docs/**
+    - README.md
+    - CHANGELOG.md
+    - SUPPORT.md
+    - packages/*/README.md
+    - scripts/release/audit-candidate.mjs
+    - scripts/release/package-candidate-artifact.mjs
+    - scripts/release/rehearse-candidate-source.mjs
+    - scripts/release/canonical-gzip.mjs
+    - scripts/release/package-contracts.mjs
+    - scripts/release/package-contracts.json
+    - scripts/release/release-utils.mjs
+    - .prettierignore
+  allowed_file_qualifiers:
+    e2e/performance.spec.ts: add exact schema-3 200x2 keyboard/direct painted-frame performance and evidence receipts; preserve all v1/v2 tests, 30-sample count and 150ms budget
+    e2e/performanceBudget.ts: read-only unless a RED proves a reusable assertion helper is required; the exported product budget must remain exactly 150 and no override may weaken authoritative evidence
+    e2e/comparison-responsive.spec.ts: new 50x4 two-viewport x two-locale x idle/hover/active-drag real Canvas/SVG getBBox matrix only
+    e2e/comparison-rendering.spec.ts: only non-performance comparison characterization needed for current/previous-browser discovery; do not duplicate the responsive matrix or weaken T137 receipts
+    apps/playground/src/fixtures.ts: add only deterministic 200x2 performance and 50x4 responsive fixtures with synthetic non-sensitive values and exact label-length boundaries
+    .ai-platform/evidence/T141/**: T141-only summary, tests, diff, performance, responsive, review, artifact manifest/tarball, isolated-source and immutable-lineage receipts
+    .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md: T141 status and final evidence references only; do not change approved scope, dependency, requirement or acceptance contracts
+    .ai-platform/specs/015-multi-series-categorical-comparison/analysis.md: final T141 review/result and G003 goal gate only; do not rewrite approved product or technical contracts
+    .ai-platform/docs/tasks.md: G003/T141 status and evidence references only
+    AGENTS.md: current G003/T141 status only
+    docs/roadmap.md: current G003/T141 status only
+    "packages/core/src/**": conditional owner variance only after a reproducible T135/T136-owned blocking defect
+    "packages/core/tests/**": smallest RED/GREEN fixture for the same recorded core owner variance only
+    "packages/editor/src/**": conditional owner variance only after a reproducible T137/T138/T139/T140-owned blocking defect
+    "packages/editor/tests/**": smallest RED/GREEN fixture for the same recorded editor/package owner variance only
+    "packages/react/src/**": conditional T139 host-parity owner variance only
+    "packages/react/tests/**": smallest RED/GREEN fixture for the same recorded React owner variance only
+    "packages/vue/src/**": conditional T139 host-parity owner variance only
+    "packages/vue/tests/**": smallest RED/GREEN fixture for the same recorded Vue owner variance only
+    "packages/tellplot/src/**": conditional T135/T140 public-package owner variance without export-surface change
+    "packages/tellplot/tests/**": smallest RED/GREEN fixture for the same recorded public-package owner variance only
+    "apps/playground/src/**": outside fixtures.ts, conditional T139/T140 workbench or public-journey owner variance only
+    "apps/playground/tests/**": smallest RED/GREEN fixture for the same recorded playground owner variance only
+    "e2e/comparison-*.spec.ts": outside the primary T141 files, conditional owner regression fixture only; preserve current/previous browser discovery
+    e2e/accessibility.spec.ts: conditional T139 accessibility owner variance only
+    e2e/container-responsive.spec.ts: conditional T139 responsive/focus owner variance only
+    e2e/editorPanels.ts: conditional shared test-helper variance only; no product behavior
+    "docs/**": conditional T140 docs/migration owner variance only after a full gate exposes an executable or canonical contract defect
+    README.md: conditional T140 public candidate guidance variance only
+    CHANGELOG.md: conditional T140 local candidate note variance only; no release date or publication claim
+    SUPPORT.md: conditional T140 local candidate support wording variance only; no operational policy expansion
+    "packages/*/README.md": conditional owner handoff wording variance only
+    scripts/release/audit-candidate.mjs: conditional candidate-only T140 owner variance; preserve exact arguments, actual runtime and path fail-closed behavior
+    scripts/release/package-candidate-artifact.mjs: conditional candidate-only T140 owner variance; writes only T141 and never invokes legacy release commands
+    scripts/release/rehearse-candidate-source.mjs: conditional candidate-only T140 owner variance; clean frozen rehearsal and T141-only receipt
+    scripts/release/canonical-gzip.mjs: conditional reproducibility defect only
+    scripts/release/package-contracts.mjs: conditional exact 2.0 candidate surface defect only; no public delta
+    scripts/release/package-contracts.json: conditional exact 2.0 candidate expectation defect only; no dependency/export-map change
+    scripts/release/release-utils.mjs: conditional candidate utility defect only; no legacy release semantic change
+    .prettierignore: T141-A003 Confirmed; append exactly apps/video/out/ and apps/video/public/captures/
+  owner_variance_protocol:
+    required_steps:
+      - Reproduce a blocking full-gate failure on the final T140 baseline and identify the owning predecessor T135-T140.
+      - Record command, failure, path, owner task, expected contract and why a primary T141 test-only fix is insufficient before editing source.
+      - Add or strengthen the smallest owner-local RED, verify the intended failure, then apply the minimum fix inside the conditional path.
+      - Rerun the exact owner suite below plus every T141 gate affected by the change; retain RED/GREEN and any stop/retry history.
+      - Include owner-variance paths separately in T141 diff/evidence and obtain all three independent reviews before goal closure.
+    owner_suite_map:
+      T135: pnpm exec vitest run packages/core/tests/domain/schema-v3.test.ts packages/core/tests/config/comparison-chart-config.test.ts apps/playground/tests
+      T136: pnpm exec vitest run packages/core/tests/categorical packages/core/tests/domain/commands.test.ts packages/core/tests/domain/history.test.ts packages/core/tests/domain/property-sequences.test.ts packages/core/tests/editorStore.test.ts
+      T137: pnpm exec vitest run packages/editor/tests/export/comparison-chart-spec.test.ts packages/editor/tests/rendering/comparison-group-regions.test.ts packages/editor/tests/export/safe-tooltip.test.ts packages/editor/tests/rendering/g2/chart-runtime.test.ts
+      T138: pnpm exec vitest run packages/core/tests/interactions/categoryAxis.test.ts packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts packages/editor/tests/rendering/g2/chart-pointer.test.ts packages/editor/tests/rendering/g2/chart-runtime.test.ts packages/editor/tests/runtime/chart-surface.test.ts
+      T139: pnpm exec vitest run packages/editor/tests/runtime/comparison-editor.test.ts packages/editor/tests/runtime/editor.test.ts packages/react/tests packages/vue/tests
+      T140: pnpm exec vitest run packages/editor/tests/export/comparison-export.test.ts apps/playground/tests packages/tellplot/tests packages/editor/tests/package
+  read_only_lineage_files:
+    - pnpm-lock.yaml
+    - .github/workflows/**
+    - .ai-platform/evidence/T131/**
+    - scripts/release/audit-release.mjs
+    - scripts/release/package-artifact.mjs
+    - scripts/release/rehearse-source.mjs
+    - scripts/release/check-stable.mjs
+    - scripts/release/preflight-public.mjs
+    - scripts/release/check-package-availability.mjs
+  test_targets:
+    - 200x2 real comparison keyboard performance with exactly 30 samples and p95 <= 150ms.
+    - 200x2 real comparison direct-pointer performance with exactly 30 samples and p95 <= 150ms.
+    - Direct preview requestAnimationFrame coalescing with host React root commit delta exactly 0.
+    - 50x4 real Canvas/SVG 12-cell responsive matrix across two viewports, two locales and three interaction states.
+    - SVGGraphicsElement getBBox/client-bbox pairwise visible-text checks, auto value labels exactly 0 above 40 marks and complete Outline/Tooltip/Inspector paths.
+    - Current Chromium/Firefox/WebKit and repository previous-browser matrix including non-performance comparison specs.
+    - Full unit/coverage/build/package/framework/a11y/security/architecture and Node-22.20.0 candidate gates.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    steps: >-
+      Add the comparison 200x2 performance receipts and the new 50x4 responsive matrix before any product change. Run each
+      focused target and retain failures caused by missing comparison fixtures, missing direct painted-frame samples, missing
+      12-cell geometry receipts or a real contract defect. Existing gates that are already green are regression gates, not
+      contrived REDs. If no product change is needed after tests/evidence are complete, record that outcome honestly.
+    commands:
+      - pnpm exec playwright test e2e/performance.spec.ts --project=chromium-performance
+      - pnpm exec playwright test e2e/comparison-responsive.spec.ts --project=chromium
+    expected_failure: >-
+      New assertions fail only for the absent 200x2 comparison keyboard/direct performance receipt, absent 50x4 responsive
+      Canvas/SVG matrix or a reproducible approved-contract defect. Infrastructure, browser-install, stale server, arbitrary
+      timeout or predecessor baseline failures are not valid RED evidence.
+  green:
+    steps: >-
+      Complete only the two deterministic fixtures and T141-owned tests/evidence. If a genuine predecessor defect blocks a gate,
+      follow owner_variance_protocol before the smallest owner-local implementation fix. Never lower thresholds, skip a matrix
+      cell, mock G2 or change browser discovery.
+    commands:
+      - pnpm exec playwright test e2e/performance.spec.ts --project=chromium-performance
+      - pnpm exec playwright test e2e/comparison-responsive.spec.ts --project=chromium
+    expected_signal: >-
+      Exactly 30 keyboard and 30 direct samples satisfy <=150ms with painted revision/order receipts and zero preview root
+      commits; all 12 responsive cells have real Canvas/SVG geometry, label-density and accessible editing receipts.
+  refactor:
+    steps: >-
+      Deduplicate only proven performance/geometry helpers and synthetic fixture generation. Re-run focused targets and any owner
+      suite after cleanup, then freeze source before the full matrix and candidate artifact regeneration.
+    commands:
+      - pnpm exec playwright test e2e/performance.spec.ts --project=chromium-performance
+      - pnpm exec playwright test e2e/comparison-responsive.spec.ts e2e/comparison-rendering.spec.ts --project=chromium
+    expected_signal: focused results and evidence schema remain unchanged after cleanup
+
+validation_loop:
+  runtime: actual Node 22.20.0 matching .nvmrc for every formal command
+  runtime_command_prefix: mise x node@22.20.0 --
+  commands:
+    - pnpm format:check
+    - pnpm lint
+    - pnpm typecheck
+    - pnpm test:coverage
+    - pnpm build
+    - pnpm test:package
+    - pnpm test:framework-matrix
+    - pnpm test:e2e
+    - pnpm test:a11y
+    - pnpm test:performance
+    - pnpm test:browser-previous
+    - pnpm security:lock
+    - pnpm security:dependencies
+    - pnpm audit:prod
+    - pnpm release:architecture
+    - pnpm release:candidate:audit -- --candidate-version 2.0.0 --evidence-task T141
+    - pnpm release:candidate:artifact -- --candidate-version 2.0.0 --evidence-task T141
+    - pnpm release:candidate:artifact -- --candidate-version 2.0.0 --evidence-task T141
+    - pnpm release:candidate:rehearse -- --candidate-version 2.0.0 --evidence-task T141
+    - python3 $HOME/.codex/skills/ai-delivery-governor/scripts/validate_delivery_artifacts.py --root . --feature-id 015-multi-series-categorical-comparison
+    - git diff --check
+  expected_signals:
+    - The actual runtime reports v22.20.0 and exactly matches .nvmrc; no environment override is accepted as runtime evidence.
+    - Performance evidence contains two groups of exactly 30 samples, the approved p95 formula, both p95 values <=150ms and preview host root commit delta 0.
+    - Responsive evidence contains all 12 viewport-locale-state cells with real Canvas, mounted real SVG getBBox and no required overlap/occlusion/overflow.
+    - Above 40 visible marks, automatic value-label count is exactly 0 while Outline, Tooltip and Inspector retain complete source-ordered text and category editing.
+    - Coverage thresholds, current Chromium/Firefox/WebKit, previous Chromium/Firefox/WebKit/WebKit-18.4, a11y and all package/framework gates pass without narrowing.
+    - Dependency lock/security/production audit and architecture gates pass with no dependency, public-surface, network or privacy drift.
+    - Two candidate artifact runs have identical filename, size, SHA-256 and file manifest; isolated frozen-source rehearsal passes and writes only T141.
+    - T131 evidence, workflows, lockfile and legacy release scripts are byte-for-byte unchanged; no remote or release command is run.
+  retry_budget: 2
+  failure_policy:
+    first_failure: >-
+      Preserve output and classify product defect, test/evidence defect, predecessor owner variance, infrastructure or environment.
+      Fix only an in-scope T141 test/evidence defect or follow the owner-variance protocol for a reproducible product blocker.
+    second_failure: >-
+      Re-check approved contracts, worktree baseline, browser/runtime availability, owner task and scope. Do not edit a second
+      owner or broaden allowed paths without stopping for a packet amendment and explicit approval.
+    beyond_budget: >-
+      Stop and record blocked evidence. Do not skip a gate, relax a threshold, increase a timeout, remove a browser/matrix cell,
+      overwrite predecessor evidence or report goal closure.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T141/summary.md
+  test_results: .ai-platform/evidence/T141/test-results.md
+  diff: .ai-platform/evidence/T141/diff.patch
+  performance_samples: .ai-platform/evidence/T141/performance-samples.json
+  responsive_matrix: .ai-platform/evidence/T141/responsive-matrix.md
+  review: .ai-platform/evidence/T141/review.md
+  tarball_manifest: .ai-platform/evidence/T141/tarball-manifest.json
+  candidate_artifact: .ai-platform/evidence/T141/artifacts/tellplot-2.0.0.tgz
+  isolated_source_receipt: .ai-platform/evidence/T141/isolated-source-receipt.md
+  baseline_product_manifest: .ai-platform/evidence/T141/baseline-product-manifest.json
+  predecessor_product_baseline: .ai-platform/evidence/T141/predecessor-product-baseline.patch
+  baseline_governance_manifest: .ai-platform/evidence/T141/baseline-governance-manifest.json
+  predecessor_evidence_manifest: .ai-platform/evidence/T141/predecessor-evidence-manifest.json
+  immutable_lineage_manifest: .ai-platform/evidence/T141/immutable-lineage-manifest.json
+  required:
+    - T141-A001 Stopped_Pre_Edit record, pre-edit git status and the A002 frozen manifests plus isolated forward/reverse replay separating reviewed T135-T140 changes from T141 delta.
+    - RED, GREEN and REFACTOR commands with exit status, expected failure reason, retries, environment and final fresh result.
+    - Two 30-sample performance groups, formula, p95, painted revision/order and preview RAF/root-commit receipts without business values.
+    - Twelve responsive cells with viewport, locale, state, Canvas receipt, mounted SVG getBBox receipt, layout rectangles and screenshot references.
+    - Exact value-label count 0 above 40 marks plus complete Outline, Tooltip and Inspector read/edit receipts.
+    - Full current and previous browser, a11y, coverage, build, package, framework, security, production-audit and architecture command results.
+    - Concrete v1/v2 compatibility and v3 public package/migration consumer results retained from fresh full gates.
+    - Actual Node 22.20.0, exact candidate arguments, two-run reproducible tarball manifest/hash and isolated frozen-source rehearsal.
+    - Byte/hash immutability receipt for T131 evidence, workflows, pnpm-lock.yaml and accepted legacy release scripts.
+    - Owner variance record with owning task, RED/GREEN, changed paths and owner-suite rerun, or an explicit statement that no variance occurred.
+    - Task-local replayable diff containing only T141 delta and matching the final owned tree byte-for-byte.
+    - Explicit confirmation that no dependency, public contract, remote Git, preflight, availability, tag, publish, release or production action changed or ran.
+    - Spec-compliance, bug/code-quality and QA-acceptance reviews with counts and residual Low risks/owners.
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - Exact 200x2 sample count, commit-to-matching-painted-frame boundary, p95 formula/budget and zero React root commits during direct preview.
+    - Complete 50x4 viewport-locale-state matrix with real Canvas/SVG geometry, visible text, density policy and accessible fallback paths.
+    - Current/previous browser discovery, full test/coverage/a11y/package/framework/security/architecture results and absence of skipped or weakened gates.
+    - Any owner variance is tied to a reproducible blocking defect, minimally fixed and covered by the exact predecessor owner suite.
+    - Candidate T141-only writes, actual pinned Node, reproducibility, isolated-source rehearsal and immutable published 1.0 lineage.
+    - No dependency, public API/schema/export, remote, publish, release, production or user-work overwrite.
+  acceptance_rule: >-
+    T141 and G003 may enter Needs_Review only after every required validation passes and all three independent reviews report no
+    unresolved Critical/High/Medium finding. Low findings remain explicit with owner and residual risk. T135-T141 and G003 are
+    not Accepted until the user explicitly accepts the goal-level reviewed result.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - Keep the shared worktree for user goal-level review after T141 and G003 enter Needs_Review.
+    - Prepare a separate Git/release handoff only after explicit user acceptance and separate remote/release authorization.
+  prohibited_handoff:
+    - stage
+    - commit
+    - push
+    - pull request
+    - tag
+    - npm publish
+    - GitHub Release
+    - public preflight or availability
+    - production promotion
+
+stop_conditions:
+  - A confirmed constitution, product/spec, checklist, TDR/plan/work graph, analysis, predecessor packet/evidence/review or this packet is missing or stale.
+  - T140 is not Needs_Review or any T135-T140 review has an unresolved Critical, High or Medium finding.
+  - The current tree differs from the A002 frozen product/governance manifests, the cumulative patch does not replay from the exact base commit, any replayed path hash differs, predecessor evidence hashes change or an unrelated change overlaps T141 ownership.
+  - A RED fails for infrastructure, missing browser/runtime, stale server, arbitrary timeout or a predecessor exception rather than the intended T141 assertion.
+  - Performance requires fewer than 30 samples, a budget above 150ms, a different p95 formula, DOM-only timing, mocked paint or an environment override.
+  - Responsive acceptance requires fewer than 12 cells, mock/single-series/empty output, fixed guessed geometry, hidden overlap or omission of idle/hover/active-drag.
+  - Passing requires skipping, renaming out of discovery, narrowing browsers, increasing timeouts, lowering coverage/a11y/security assertions or ignoring a failed gate.
+  - A source/test/doc change is needed without a reproducible blocking defect, recorded predecessor owner and exact owner-suite rerun.
+  - More than one predecessor ownership boundary must change, or a fix requires a public contract, architecture, dependency or work-graph amendment.
+  - Passing requires editing pnpm-lock.yaml, T131 evidence, a workflow, an accepted legacy release script, package export map, private package version or publishConfig.
+  - Candidate tooling accepts a version other than 2.0.0, a task other than T141, a runtime other than actual Node 22.20.0 or any path/symlink escape.
+  - Candidate output would write outside .ai-platform/evidence/T141 or overwrite T140/predecessor evidence.
+  - Any business amount, category label, series label, sourceRef, metadata value or sensitive absolute path would enter evidence.
+  - T141-A003 exact paths or boundaries must expand beyond the user-confirmed amendment.
+  - Execution requires public preflight, availability, trust-readiness, stage, commit, push, PR, tag, publish, release, remote or production commands.
+  - A validation command is unavailable, retry budget is exhausted or an independent review reports unresolved Critical/High/Medium.

@@ -1,0 +1,139 @@
+{
+  "version": "2.0.0",
+  "evidenceTask": "T141",
+  "nodeVersion": "22.20.0",
+  "packages": [
+    {
+      "name": "tellplot",
+      "version": "2.0.0",
+      "filename": "tellplot-2.0.0.tgz",
+      "sizeBytes": 597508,
+      "sha256": "44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca",
+      "files": [
+        {
+          "path": "LICENSE"
+        },
+        {
+          "path": "README.md"
+        },
+        {
+          "path": "dist/chunk-4IQ5LFZH.js"
+        },
+        {
+          "path": "dist/chunk-4IQ5LFZH.js.map"
+        },
+        {
+          "path": "dist/chunk-FLA6SUZO.cjs"
+        },
+        {
+          "path": "dist/chunk-FLA6SUZO.cjs.map"
+        },
+        {
+          "path": "dist/chunk-QSFM6F7V.js"
+        },
+        {
+          "path": "dist/chunk-QSFM6F7V.js.map"
+        },
+        {
+          "path": "dist/chunk-TYLUAT6R.cjs"
+        },
+        {
+          "path": "dist/chunk-TYLUAT6R.cjs.map"
+        },
+        {
+          "path": "dist/core.cjs"
+        },
+        {
+          "path": "dist/core.cjs.map"
+        },
+        {
+          "path": "dist/core.d.cts"
+        },
+        {
+          "path": "dist/core.d.ts"
+        },
+        {
+          "path": "dist/core.js"
+        },
+        {
+          "path": "dist/core.js.map"
+        },
+        {
+          "path": "dist/editorStore-HAZyP9ck.d.cts"
+        },
+        {
+          "path": "dist/editorStore-HAZyP9ck.d.ts"
+        },
+        {
+          "path": "dist/index.cjs"
+        },
+        {
+          "path": "dist/index.cjs.map"
+        },
+        {
+          "path": "dist/index.d.cts"
+        },
+        {
+          "path": "dist/index.d.ts"
+        },
+        {
+          "path": "dist/index.js"
+        },
+        {
+          "path": "dist/index.js.map"
+        },
+        {
+          "path": "dist/react.cjs"
+        },
+        {
+          "path": "dist/react.cjs.map"
+        },
+        {
+          "path": "dist/react.d.cts"
+        },
+        {
+          "path": "dist/react.d.ts"
+        },
+        {
+          "path": "dist/react.js"
+        },
+        {
+          "path": "dist/react.js.map"
+        },
+        {
+          "path": "dist/styles.css"
+        },
+        {
+          "path": "dist/styles.css.map"
+        },
+        {
+          "path": "dist/types-uyPSjR1N.d.ts"
+        },
+        {
+          "path": "dist/types-zh8YwPZJ.d.cts"
+        },
+        {
+          "path": "dist/vue.cjs"
+        },
+        {
+          "path": "dist/vue.cjs.map"
+        },
+        {
+          "path": "dist/vue.d.cts"
+        },
+        {
+          "path": "dist/vue.d.ts"
+        },
+        {
+          "path": "dist/vue.js"
+        },
+        {
+          "path": "dist/vue.js.map"
+        },
+        {
+          "path": "package.json"
+        }
+      ]
+    }
+  ]
+}

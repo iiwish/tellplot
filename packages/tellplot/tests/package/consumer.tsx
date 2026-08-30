@@ -1,6 +1,9 @@
 import {
   createEditor,
   createInitialViewSpec,
+  type CategoricalComparisonChartConfig,
+  type CategoricalComparisonSourceData,
+  type CategoricalComparisonViewSpec,
   type ChartConfig,
   type EditorInstance,
   type ViewSpec,
@@ -22,6 +25,45 @@ const config = {
 
 const result = validateChartConfig(config);
 const initial = createInitialViewSpec(config.data, { chartType: config.type });
+
+const comparisonData = {
+  schemaVersion: '3.0.0',
+  dataKind: 'categorical',
+  datasetId: 'comparison-package-consumer',
+  series: [
+    { id: 'actual', label: 'Actual' },
+    { id: 'budget', label: 'Budget' },
+  ],
+  items: [
+    {
+      id: 'revenue',
+      label: 'Revenue',
+      values: [
+        { seriesId: 'actual', amount: 128 },
+        { seriesId: 'budget', amount: 135 },
+      ],
+    },
+  ],
+} as const satisfies CategoricalComparisonSourceData;
+
+export const comparisonConfig = {
+  type: 'column',
+  data: comparisonData,
+  appearance: { legend: true, colors: { series: [{ seriesId: 'actual', color: '#0072B2' }] } },
+} as const satisfies CategoricalComparisonChartConfig;
+
+export const comparisonView: CategoricalComparisonViewSpec = {
+  schemaVersion: '3.0.0',
+  datasetId: comparisonData.datasetId,
+  chartType: 'column',
+  revision: 0,
+  rootOrder: ['revenue'],
+  groups: {},
+  collapsedGroupIds: [],
+  pinnedItemIds: [],
+  annotations: {},
+  emphasis: {},
+};
 
 export function mount(container: HTMLElement): EditorInstance {
   return createEditor(container, { config });

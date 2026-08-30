@@ -2,7 +2,10 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import { DocsPage } from '../src/DocsPage';
 import { EXAMPLE_CATALOG, exampleById } from '../src/exampleCatalog';
+import { getPlaygroundFixture } from '../src/fixtures';
+import { createShowcaseConfig } from '../src/showcaseConfig';
 import { SiteHeader } from '../src/SiteHeader';
 import { SITE_METADATA, SITE_ORIGIN, siteMetadataForPage } from '../src/siteMetadata';
 import { resolveSiteRoute, siteTitleForRoute } from '../src/siteRouting';
@@ -25,10 +28,18 @@ describe('playground website header', () => {
 
 describe('playground website content', () => {
   it('keeps the example catalog explicit, unique, and limited to validated chart types', () => {
-    expect(EXAMPLE_CATALOG.map(example => example.id)).toEqual(['waterfall', 'column', 'bar']);
+    expect(EXAMPLE_CATALOG.map(example => example.id)).toEqual([
+      'waterfall',
+      'column',
+      'bar',
+      'comparison-column',
+      'comparison-bar',
+    ]);
     expect(new Set(EXAMPLE_CATALOG.map(example => example.id)).size).toBe(EXAMPLE_CATALOG.length);
     expect(EXAMPLE_CATALOG.map(example => example.chartType)).toEqual([
       'waterfall',
+      'column',
+      'bar',
       'column',
       'bar',
     ]);
@@ -38,6 +49,39 @@ describe('playground website content', () => {
     expect(exampleById('waterfall')?.workbenchHref).toBe('/playground');
     expect(exampleById('column')?.workbenchHref).toBe('/playground?fixture=categorical-column');
     expect(exampleById('bar')?.workbenchHref).toBe('/playground?fixture=categorical-bar');
+    expect(EXAMPLE_CATALOG.find(example => example.id === 'comparison-column')?.workbenchHref).toBe(
+      '/playground?fixture=comparison-actual-budget',
+    );
+    expect(EXAMPLE_CATALOG.find(example => example.id === 'comparison-bar')?.workbenchHref).toBe(
+      '/playground?fixture=comparison-actual-budget-bar',
+    );
+  });
+
+  it('uses schema 3 dense comparison fixtures for both website comparison examples', () => {
+    const comparisons = EXAMPLE_CATALOG.filter(example => example.id.startsWith('comparison-'));
+
+    expect(comparisons).toHaveLength(2);
+    for (const example of comparisons) {
+      const source = getPlaygroundFixture(example.fixtureSearch);
+      expect(source.schemaVersion).toBe('3.0.0');
+      if (source.schemaVersion !== '3.0.0') {
+        throw new Error('Expected schema 3 comparison fixture');
+      }
+      expect(source.series.map(series => series.label)).toEqual(['实际', '预算']);
+      expect(source.items.every(item => item.values.length === source.series.length)).toBe(true);
+    }
+  });
+
+  it('keeps comparison values readable when the interactive showcase becomes compact', () => {
+    const source = getPlaygroundFixture('?fixture=comparison-actual-budget');
+    const compact = createShowcaseConfig(source, 'column', '实际与预算柱状图', true, true);
+    const desktop = createShowcaseConfig(source, 'column', '实际与预算柱状图', false, true);
+
+    expect(compact?.appearance?.labels).toEqual({ value: 'never', group: 'never' });
+    expect(desktop?.appearance?.labels).toMatchObject({
+      value: { display: 'always', placement: 'outside' },
+      group: 'never',
+    });
   });
 
   it('keeps gallery categories explicit without becoming a runtime registry', () => {
@@ -45,7 +89,24 @@ describe('playground website content', () => {
       'financial',
       'categorical',
       'categorical',
+      'categorical',
+      'categorical',
     ]);
+  });
+
+  it('presents the 2.0 and schema 3 comparison contract in the website developer guide', () => {
+    const markup = renderToStaticMarkup(
+      createElement(DocsPage, {
+        onNavigate: () => undefined,
+      }),
+    );
+
+    expect(markup).toContain('DEVELOPER GUIDE · 2.0');
+    expect(markup).toContain('2 至 4 个序列');
+    expect(markup).toContain('实际与预算');
+    expect(markup).toContain('/playground?fixture=comparison-actual-budget');
+    expect(markup).toContain('<strong>2.0.0</strong>');
+    expect(markup).toContain('<dd>1.0 / 2.0 / 3.0</dd>');
   });
 });
 

@@ -13,3 +13,5 @@ export const DEMO_CATEGORICAL_COLORS = {
   negative: DEMO_WATERFALL_COLORS.negative,
   group: DEMO_WATERFALL_COLORS.group,
 } as const;
+
+export const DEMO_COMPARISON_PALETTE = ['#0072B2', '#D55E00', '#009E73', '#CC79A7'] as const;

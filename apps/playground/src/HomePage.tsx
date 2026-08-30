@@ -48,11 +48,11 @@ const DATA_FLOW = [
 const CONFIG_EXAMPLE = `import type { ChartConfig } from 'tellplot';
 import { ChartEditor } from 'tellplot/react';
 import 'tellplot/styles.css';
-import { revenueData } from './revenue.data';
+import { actualBudgetData } from './actual-budget.data';
 
 const config = {
   type: 'column',
-  data: revenueData,
+  data: actualBudgetData,
 } as const satisfies ChartConfig;
 
 export function RevenueChart() {
@@ -61,7 +61,7 @@ export function RevenueChart() {
 const CONFIG_LINES = CONFIG_EXAMPLE.split('\n');
 
 export function HomePage(): React.JSX.Element {
-  const [selectedId, setSelectedId] = useState<ShowcaseExampleId>('waterfall');
+  const [selectedId, setSelectedId] = useState<ShowcaseExampleId>('comparison-column');
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [compactChart, setCompactChart] = useState(
     () =>
@@ -106,7 +106,8 @@ export function HomePage(): React.JSX.Element {
               <div className="site-home-hero__pitch">
                 <p className="site-home-hero__lead">让图表不止被看见，也能被编辑。</p>
                 <p>
-                  框架无关的轻量可编辑图表库。DOM、React 与 Vue 共用一套排序、分组、撤销和导出能力。
+                  框架无关的轻量可编辑图表库。瀑布图、分类图和 2 至 4
+                  序列业务比较共用一套排序、分组、撤销和导出能力。
                 </p>
                 <div className="site-home-hero__actions">
                   <a

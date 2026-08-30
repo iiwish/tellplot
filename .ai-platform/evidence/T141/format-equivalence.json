@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T141",
+  "attempt": "T141-A003",
+  "runtime": "22.20.0",
+  "prettier": "3.9.5",
+  "commandScope": "exact ten-file argv; never --write .",
+  "equivalenceMethod": "TypeScript parse without diagnostics; normalized syntax/token tree ignoring trivia, comments, positions and redundant parenthesis wrappers; normalized transpiled JavaScript syntax/token tree",
+  "counts": {
+    "formattedPaths": 10,
+    "normalizedAstEquivalent": 10,
+    "transpiledAstEquivalent": 10
+  },
+  "records": [
+    {
+      "path": "e2e/comparison-interaction.spec.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 24912,
+        "sha256": "f168e62e771f98ee3ac2c9277d5616c4fde3cee9784f959cdb3b21adce28de58",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 24925,
+        "sha256": "e1e5d67a0f0ef9fb0a9224ccbfad64153194a01dbdec5635e8b6497ca1a22c59",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "e2e/container-responsive.spec.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 10913,
+        "sha256": "90b03c98e2755c44df4aa863a247ed47d96935b2d46fdb4e8d760476fb1b0c43",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 10946,
+        "sha256": "0142ed81f1838f4f34da7dfc68f3b78c31aca9d33853f259903974132ffc8460",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/core/src/charts/categorical/projection.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 5406,
+        "sha256": "4b26c8cd419bb3b2a336115b064feb8894e7b2cd71d332cbcd59726e0cd29ef1",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 5373,
+        "sha256": "852afc1f3e44f9767dc447b3b8b20e4a72597484cca4d467eddb74aab1638c41",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/core/src/domain/model.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 4894,
+        "sha256": "36545c7a67ba46ecaadb0d3484bed1295e2b93054ff4ff8e965b9c54e3898db4",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 4872,
+        "sha256": "7ae6c26cb107155a4689f29daf7bb3cc0acc22f58b624ac53e295be8567c6895",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/core/src/domain/validation.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 40673,
+        "sha256": "59be32bf3c94c97835e07579f5222c166cc19bad88e103147273e441428706cf",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 40508,
+        "sha256": "33633070df748a91b930573371462a4ee25f12a444c2158644a245ee121c38d8",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/editor/src/rendering/g2/chartPointer.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 8384,
+        "sha256": "6e1adb1353f9df38b038f3274b99df3054586ff34a64993f08011c388d2ad38f",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 8380,
+        "sha256": "f5b12283c2bfa8b52b6f4eb78996cf67536b161b539aab474281e72b87e12e46",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/editor/src/rendering/g2/comparisonSceneReceipt.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 21028,
+        "sha256": "1779f68ab84bd0419d9d7a3cb13a1d2f0e6bf021a68a8394c034774401763131",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 21009,
+        "sha256": "6f159d5edf723eb2562b797866b11c0c4c17cc98dfc215d913fab4235d9ecd66",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/editor/tests/rendering/g2/chart-pointer.test.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 6552,
+        "sha256": "0adb0bfa7f4d99d76c10ada8d073b31b11d794767f586b49652af9c9d1ab011c",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 6539,
+        "sha256": "cdb4ea70713d19844fe0c8931a7c6b1e2c86fa7595aeb82dd78b545beef4a649",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 13860,
+        "sha256": "2bc66cf8cc13adaf0909deb9169fe322bc69f89c80f141888cc174c0709ed8ec",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 13856,
+        "sha256": "a09040d2134cfbdf3102ea6d801326557a9b04bb4f3dcc2c5c9db4d4d0f745ad",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    },
+    {
+      "path": "packages/editor/tests/runtime/comparison-editor.test.ts",
+      "before": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 27892,
+        "sha256": "6844f0573927bdd57a9890e954d97895db7075fad2b2345f6957a3d622468eff",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "after": {
+        "type": "file",
+        "mode": "100644",
+        "sizeBytes": 27866,
+        "sha256": "fc5c2f8d52af40572a1a70349f696a449bb025a48c5b76030e19019a0fe46e9e",
+        "normalizedAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c",
+        "transpiledAstSha256": "8f6c2e81fb57d70a91f38e0b0d2cd7dd4a1232047d9ea8e6b8d3ad9e709cfa4c"
+      },
+      "normalizedAstEquivalent": true,
+      "transpiledAstEquivalent": true
+    }
+  ],
+  "prettierIgnore": {
+    "beforeSha256": "1bd291ae4e1dbd0e443a7aa0b8d4855025dc844c2a823aed4dc926099faecd60",
+    "afterSha256": "70f5272e641f424140b760cae4805e481a72a0e7b5f4068937cc67e19f4a4f24",
+    "appendedEntries": [
+      "apps/video/out/",
+      "apps/video/public/captures/"
+    ]
+  }
+}

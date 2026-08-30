@@ -1,4 +1,4 @@
-import { ArrowRight, Braces, Database, Download, Palette } from 'lucide-react';
+import { ArrowRight, Braces, ChartNoAxesCombined, Database, Download, Palette } from 'lucide-react';
 
 import { DEMO_WATERFALL_COLORS } from './demoPresentation';
 import { SiteFooter } from './SiteFooter';
@@ -41,10 +41,40 @@ const APPEARANCE_EXAMPLE = `appearance: {
   },
 }`;
 
+const COMPARISON_EXAMPLE = `import type { ChartConfig, SourceData } from 'tellplot';
+
+const data = {
+  schemaVersion: '3.0.0',
+  dataKind: 'categorical',
+  datasetId: 'actual-vs-budget',
+  currency: 'CNY',
+  series: [
+    { id: 'actual', label: '实际' },
+    { id: 'budget', label: '预算' },
+  ],
+  items: [
+    {
+      id: 'enterprise',
+      label: '企业业务',
+      values: [
+        { seriesId: 'actual', amount: 1680 },
+        { seriesId: 'budget', amount: 1540 },
+      ],
+    },
+  ],
+} as const satisfies SourceData;
+
+export const config = {
+  type: 'column',
+  data,
+  appearance: { legend: true, tooltip: true },
+} as const satisfies ChartConfig;`;
+
 const DOC_SECTIONS = [
   { href: '#installation', label: '安装' },
   { href: '#react', label: 'React 接入' },
   { href: '#model', label: 'SourceData 与 ViewSpec' },
+  { href: '#comparison', label: '多序列比较' },
   { href: '#appearance', label: '安全配置边界' },
   { href: '#export', label: '导出' },
 ] as const;
@@ -58,7 +88,7 @@ export function DocsPage({
     <>
       <main className="site-main site-docs" aria-label="TellPlot 开发者文档">
         <header className="site-page-intro site-page-intro--docs">
-          <p className="site-kicker">DEVELOPER GUIDE · 1.0</p>
+          <p className="site-kicker">DEVELOPER GUIDE · 2.0</p>
           <h1>开发者文档</h1>
           <p>
             用类型化数据和有限语义配置接入真实业务图表。TellPlot 管理编辑状态与 G2
@@ -127,10 +157,40 @@ export function DocsPage({
               </div>
             </section>
 
+            <section id="comparison">
+              <header>
+                <ChartNoAxesCombined size={20} aria-hidden="true" />
+                <span>04</span>
+                <h2>多序列业务比较</h2>
+              </header>
+              <p>
+                schema <code>3.0.0</code> 在每个 category 下支持 2 至 4 个序列，顺序由 source
+                声明。每个 category 必须按 source series 顺序完整提供有限数值；缺失值不会被解释为
+                0。
+              </p>
+              <pre>
+                <code>{COMPARISON_EXAMPLE}</code>
+              </pre>
+              <p>
+                {
+                  'series 是只读比较维度，完整 category 仍是排序、分组、折叠、固定、注释和历史操作的唯一编辑原子。'
+                }
+                Legend、共享 Tooltip、数值标签、无障碍摘要、SVG 与 PNG 使用相同的 series
+                文本、顺序和值。
+              </p>
+              <SiteLink
+                className="site-text-link"
+                href="/playground?fixture=comparison-actual-budget"
+                onNavigate={onNavigate}
+              >
+                打开实际与预算示例 <ArrowRight size={16} aria-hidden="true" />
+              </SiteLink>
+            </section>
+
             <section id="appearance">
               <header>
                 <Palette size={20} aria-hidden="true" />
-                <span>04</span>
+                <span>05</span>
                 <h2>安全配置边界</h2>
               </header>
               <p>
@@ -155,7 +215,7 @@ export function DocsPage({
             <section id="export">
               <header>
                 <Download size={20} aria-hidden="true" />
-                <span>05</span>
+                <span>06</span>
                 <h2>导出</h2>
               </header>
               <p>
@@ -167,7 +227,7 @@ export function DocsPage({
 
           <aside className="site-docs-meta" aria-label="当前版本信息">
             <span>CURRENT CHANNEL</span>
-            <strong>1.0.0</strong>
+            <strong>2.0.0</strong>
             <dl>
               <div>
                 <dt>React</dt>
@@ -175,7 +235,7 @@ export function DocsPage({
               </div>
               <div>
                 <dt>Schema</dt>
-                <dd>1.0 / 2.0</dd>
+                <dd>1.0 / 2.0 / 3.0</dd>
               </div>
               <div>
                 <dt>Renderer</dt>

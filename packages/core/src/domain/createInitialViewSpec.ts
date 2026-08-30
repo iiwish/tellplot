@@ -134,5 +134,12 @@ export function createInitialViewSpec(
       chartType: 'waterfall',
     });
   }
+  if (source.schemaVersion === '3.0.0') {
+    return validationSuccess({
+      ...narrativeFields,
+      schemaVersion: '3.0.0',
+      chartType: chartType as 'bar' | 'column',
+    });
+  }
   return validationSuccess({ ...narrativeFields, schemaVersion: '2.0.0', chartType });
 }

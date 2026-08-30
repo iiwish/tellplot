@@ -1,0 +1,3067 @@
+diff --git a/packages/editor/src/charts/groupRegions.ts b/packages/editor/src/charts/groupRegions.ts
+index 0b20b68..48adeac 100644
+--- a/packages/editor/src/charts/groupRegions.ts
++++ b/packages/editor/src/charts/groupRegions.ts
+@@ -1,6 +1,7 @@
+ import type { Mark } from '@antv/g2';
+ 
+ import type {
++  CategoricalComparisonProjection,
+   GroupId,
+   ResolvedFinancialChartAppearance,
+   SourceItemId,
+@@ -8,6 +9,7 @@ import type {
+   ViewSpec,
+ } from '@tellplot/core';
+ import { collectLeafSourceIds, groupDepth, locateViewNode } from '@tellplot/core';
++import { comparisonFlipToInteriorLabelTransform } from '../rendering/g2/comparisonLabelTransform';
+ import { createForegroundLabelStyle } from './labelStyle';
+ 
+ interface VisibleProjectionDatum {
+@@ -30,6 +32,10 @@ export interface ExpandedGroupRegion {
+   readonly labelValue: number;
+ }
+ 
++interface ComparisonGroupLabelDatum extends ExpandedGroupRegion {
++  readonly helperKey: string;
++}
++
+ interface ExpandedGroupRegionMarkOptions {
+   readonly regions: readonly ExpandedGroupRegion[];
+   readonly categoryDomain: readonly ViewNodeId[];
+@@ -179,6 +185,72 @@ export function createExpandedGroupRegionLabelMark({
+   };
+ }
+ 
++/** Builds the comparison-only category-centered point label above every expanded group region. */
++export function createComparisonExpandedGroupRegionLabelMark({
++  regions,
++  categoryDomain,
++  valueDomain,
++  appearance,
++  denseCanvas,
++  transposed = false,
++}: ExpandedGroupRegionMarkOptions): Mark | undefined {
++  if (
++    !appearance.groupRegion.enabled ||
++    appearance.groupRegion.label !== 'auto' ||
++    denseCanvas ||
++    regions.length === 0
++  ) {
++    return undefined;
++  }
++  const labelStyle = appearance.groupRegion.labelStyle;
++  const inside = labelStyle.placement === 'inside';
++  const data: ComparisonGroupLabelDatum[] = regions.map(region => ({
++    ...region,
++    helperKey: JSON.stringify(['comparison-group-label', region.groupId]),
++  }));
++  const value = {
++    key: 'categorical-comparison-group-labels',
++    type: 'point',
++    data,
++    ...(transposed ? { coordinate: coordinate(true) } : {}),
++    encode: {
++      x: 'startNodeId',
++      y: 'labelValue',
++      key: 'helperKey',
++    },
++    scale: scales(categoryDomain, transposed, valueDomain),
++    axis: false,
++    legend: false,
++    labels: [
++      {
++        text: 'label',
++        position: transposed ? (inside ? 'left' : 'right') : inside ? 'bottom' : 'top',
++        transform: [
++          { type: comparisonFlipToInteriorLabelTransform, transposed },
++          { type: 'exceedAdjust' as const, bounds: 'main' as const },
++        ],
++        style: {
++          ...createForegroundLabelStyle(labelStyle),
++          dx: (region: ComparisonGroupLabelDatum) =>
++            transposed
++              ? (inside ? -1 : 1) *
++                (labelStyle.offset + Math.min(Math.max(region.depth - 1, 0), 2) * 10)
++              : 0,
++          dy: (region: ComparisonGroupLabelDatum) =>
++            transposed
++              ? 0
++              : (inside ? 1 : -1) *
++                (labelStyle.offset + Math.min(Math.max(region.depth - 1, 0), 2) * 12),
++        },
++      },
++    ],
++    style: { opacity: 0, pointerEvents: 'none' as const },
++    tooltip: false,
++    animate: false,
++  };
++  return value as unknown as Mark;
++}
++
+ function visibleValueExtent(
+   projection: readonly VisibleProjectionDatum[],
+ ): readonly [number, number] | undefined {
+@@ -277,3 +349,70 @@ export function projectExpandedGroupRegions(
+       left.groupId.localeCompare(right.groupId),
+   );
+ }
++
++/** Projects comparison regions across all visible category-series values and the zero baseline. */
++export function projectComparisonExpandedGroupRegions(
++  viewSpec: ViewSpec,
++  projection: CategoricalComparisonProjection,
++): readonly ExpandedGroupRegion[] {
++  const collapsed = new Set(viewSpec.collapsedGroupIds);
++  const regions: ExpandedGroupRegion[] = [];
++
++  for (const group of Object.values(viewSpec.groups)) {
++    let ancestorId: ViewNodeId = group.id;
++    let hiddenByCollapsedAncestor = false;
++    const visited = new Set<ViewNodeId>();
++    while (!visited.has(ancestorId)) {
++      visited.add(ancestorId);
++      if (collapsed.has(ancestorId as GroupId)) {
++        hiddenByCollapsedAncestor = true;
++        break;
++      }
++      const location = locateViewNode(viewSpec, ancestorId);
++      if (location === undefined || location.containerId === 'root') {
++        break;
++      }
++      ancestorId = location.containerId;
++    }
++    if (hiddenByCollapsedAncestor) {
++      continue;
++    }
++
++    const leaves = new Set(collectLeafSourceIds(viewSpec, group.id));
++    const visible = projection.filter(datum =>
++      datum.sourceIds.some(sourceId => leaves.has(sourceId)),
++    );
++    const first = visible[0];
++    const last = visible.at(-1);
++    if (first === undefined || last === undefined) {
++      continue;
++    }
++    let minimum = 0;
++    let maximum = 0;
++    for (const datum of visible) {
++      for (const value of datum.values) {
++        minimum = Math.min(minimum, value.amount);
++        maximum = Math.max(maximum, value.amount);
++      }
++    }
++    regions.push({
++      regionId: `group-region:${group.id}`,
++      groupId: group.id,
++      label: group.label,
++      depth: groupDepth(viewSpec, group.id),
++      startNodeId: first.nodeId,
++      endNodeId: last.nodeId,
++      valueStart: minimum,
++      valueEnd: maximum,
++      labelValue: maximum,
++    });
++  }
++
++  return regions.sort(
++    (left, right) =>
++      left.depth - right.depth ||
++      projection.findIndex(datum => datum.nodeId === left.startNodeId) -
++        projection.findIndex(datum => datum.nodeId === right.startNodeId) ||
++      left.groupId.localeCompare(right.groupId),
++  );
++}
+diff --git a/packages/editor/src/charts/safeTooltip.ts b/packages/editor/src/charts/safeTooltip.ts
+index f0c9ab6..2e9bbd5 100644
+--- a/packages/editor/src/charts/safeTooltip.ts
++++ b/packages/editor/src/charts/safeTooltip.ts
+@@ -25,6 +25,15 @@ interface SafeTooltipInteraction {
+   };
+ }
+ 
++export interface SafeComparisonTooltipInteraction {
++  readonly legendFilter: false;
++  readonly legendHighlight: false;
++  readonly tooltip?: SafeTooltipInteraction['tooltip'] & {
++    readonly shared: true;
++    readonly sort: (item: { readonly name?: string }) => number;
++  };
++}
++
+ const HTML_ENTITIES: Readonly<Record<string, string>> = Object.freeze({
+   '&': '&amp;',
+   '<': '&lt;',
+@@ -100,3 +109,25 @@ export function createSafeTooltipInteraction(): SafeTooltipInteraction {
+     },
+   };
+ }
++
++/** Keeps a comparison Tooltip shared and deterministically source-ordinal. */
++export function createSafeComparisonTooltipInteraction(
++  seriesLabels: readonly string[],
++  enabled: boolean,
++): SafeComparisonTooltipInteraction {
++  if (!enabled) {
++    return { legendFilter: false, legendHighlight: false };
++  }
++  const ordinalByName = new Map(
++    seriesLabels.map((label, ordinal) => [encodeTooltipHtml(label), ordinal]),
++  );
++  return {
++    legendFilter: false,
++    legendHighlight: false,
++    tooltip: {
++      ...createSafeTooltipInteraction().tooltip,
++      shared: true,
++      sort: item => ordinalByName.get(item.name ?? '') ?? seriesLabels.length,
++    },
++  };
++}
+diff --git a/packages/editor/src/editor/chartSurface.ts b/packages/editor/src/editor/chartSurface.ts
+index d028a24..4974765 100644
+--- a/packages/editor/src/editor/chartSurface.ts
++++ b/packages/editor/src/editor/chartSurface.ts
+@@ -23,7 +23,15 @@ import {
+   createCategoricalChartSpec,
+   shouldShowCategoricalValueLabels,
+ } from '../charts/categorical/spec';
+-import { projectExpandedGroupRegions } from '../charts/groupRegions';
++import {
++  comparisonStructuralIdentity,
++  createComparisonChartSpec,
++  shouldShowComparisonValueLabels,
++} from '../charts/categorical/comparisonSpec';
++import {
++  projectComparisonExpandedGroupRegions,
++  projectExpandedGroupRegions,
++} from '../charts/groupRegions';
+ import { createWaterfallChartSpec, shouldShowWaterfallValueLabels } from '../charts/waterfall/spec';
+ import { createG2ChartRuntime, type G2ChartRuntime } from '../rendering/g2/chartRuntime';
+ import {
+@@ -347,6 +355,7 @@ export function createChartSurface(
+ 
+   const renderAllowsInteraction = (): boolean =>
+     current !== undefined &&
++    !(current.chart.family === 'categorical' && current.chart.generation === 'comparison') &&
+     !renderErrorActive &&
+     stage.dataset['renderState'] !== 'error' &&
+     !interactionBlockedUntilCompatibleSettlement &&
+@@ -392,6 +401,9 @@ export function createChartSurface(
+     if (session === null || active === undefined) {
+       return;
+     }
++    if (active.chart.family === 'categorical' && active.chart.generation === 'comparison') {
++      return;
++    }
+     const datum = active.chart.projection.find(candidate => candidate.nodeId === nodeId);
+     if (datum === undefined) {
+       return;
+@@ -1068,36 +1080,62 @@ export function createChartSurface(
+       stage.dataset['renderState'] = 'rendering';
+     }
+     const locale = config.locale ?? 'zh-CN';
+-    const regions = projectExpandedGroupRegions(view, chart.projection);
++    const regions =
++      chart.family === 'categorical' && chart.generation === 'comparison'
++        ? projectComparisonExpandedGroupRegions(view, chart.projection)
++        : projectExpandedGroupRegions(view, chart.projection);
+     const reduce = reducedMotion?.matches ?? false;
+     const compactViewport = layoutMode === 'narrow';
++    let spec;
++    let structuralIdentity: string | undefined;
++    if (chart.family === 'categorical' && chart.generation === 'comparison') {
++      if (config.data.schemaVersion !== '3.0.0') {
++        return;
++      }
++      structuralIdentity = comparisonStructuralIdentity(config.data.series);
++      spec = createComparisonChartSpec({
++        projection: chart.projection,
++        series: config.data.series,
++        chartType: chart.chartType,
++        locale,
++        currency: config.data.currency,
++        reducedMotion: reduce,
++        showValueLabels: shouldShowComparisonValueLabels(chart.projection, compactViewport),
++        annotations: view.annotations,
++        emphasis: view.emphasis,
++        appearance: config.appearance,
++        groupRegions: regions,
++      });
++    } else if (chart.family === 'categorical') {
++      spec = createCategoricalChartSpec({
++        projection: chart.projection,
++        chartType: chart.chartType,
++        locale,
++        currency: config.data.currency,
++        reducedMotion: reduce,
++        showValueLabels: shouldShowCategoricalValueLabels(chart.projection, compactViewport),
++        annotations: view.annotations,
++        emphasis: view.emphasis,
++        appearance: toFinancialChartAppearance(config),
++        groupRegions: regions,
++      });
++    } else {
++      spec = createWaterfallChartSpec({
++        projection: chart.projection,
++        locale,
++        currency: config.data.currency,
++        reducedMotion: reduce,
++        showValueLabels: shouldShowWaterfallValueLabels(chart.projection, compactViewport),
++        annotations: view.annotations,
++        emphasis: view.emphasis,
++        appearance: toFinancialChartAppearance(config),
++        groupRegions: regions,
++      });
++    }
+     runtime.request({
+       value: { chart, authoritative, interactionSignature: nextInteractionSignature },
+-      spec:
+-        chart.family === 'categorical'
+-          ? createCategoricalChartSpec({
+-              projection: chart.projection,
+-              chartType: chart.chartType,
+-              locale,
+-              currency: config.data.currency,
+-              reducedMotion: reduce,
+-              showValueLabels: shouldShowCategoricalValueLabels(chart.projection, compactViewport),
+-              annotations: view.annotations,
+-              emphasis: view.emphasis,
+-              appearance: toFinancialChartAppearance(config),
+-              groupRegions: regions,
+-            })
+-          : createWaterfallChartSpec({
+-              projection: chart.projection,
+-              locale,
+-              currency: config.data.currency,
+-              reducedMotion: reduce,
+-              showValueLabels: shouldShowWaterfallValueLabels(chart.projection, compactViewport),
+-              annotations: view.annotations,
+-              emphasis: view.emphasis,
+-              appearance: toFinancialChartAppearance(config),
+-              groupRegions: regions,
+-            }),
++      spec,
++      structuralIdentity,
+     });
+   };
+   retryRender.addEventListener('click', () => requestRender());
+@@ -1144,7 +1182,11 @@ export function createChartSurface(
+       });
+       const list = element(document, 'ol');
+       for (const datum of state.chart.projection) {
+-        list.append(element(document, 'li', { text: `${datum.label}, ${datum.amount}` }));
++        list.append(
++          element(document, 'li', {
++            text: 'amount' in datum ? `${datum.label}, ${datum.amount}` : datum.label,
++          }),
++        );
+       }
+       summary.replaceChildren(intro, list);
+       setOptionalAttribute(stage, 'data-chart-type', state.chart.chartType);
+diff --git a/packages/editor/src/editor/domEditor.ts b/packages/editor/src/editor/domEditor.ts
+index 5deb422..2fd8f5c 100644
+--- a/packages/editor/src/editor/domEditor.ts
++++ b/packages/editor/src/editor/domEditor.ts
+@@ -1139,7 +1139,12 @@ export function createEditor(
+       className: 'tp-outline-tree',
+       attributes: { role: 'tree', 'aria-label': messages.outline, 'aria-multiselectable': 'true' },
+     });
+-    const entries = outlineEntries(snapshot.view as ViewSpec, chart.projection, chart.family);
++    const entries = outlineEntries(
++      snapshot.view as ViewSpec,
++      chart.projection,
++      chart.family,
++      chart.family === 'categorical' ? chart.generation : 'scalar',
++    );
+     if (rovingNodeId === null || !entries.some(entry => entry.nodeId === rovingNodeId)) {
+       rovingNodeId = snapshot.selection?.nodeId ?? entries[0]?.nodeId ?? null;
+     }
+@@ -1331,7 +1336,7 @@ export function createEditor(
+             : (selected?.label ?? selectedGroup?.label ?? selection.nodeId),
+       }),
+     );
+-    if (selected !== undefined) {
++    if (selected !== undefined && 'amount' in selected) {
+       details.append(
+         element(document, 'span', {
+           className: 'tp-inspector-amount',
+@@ -2506,6 +2511,9 @@ export function createEditor(
+     if (!projected.ok || projected.value.projection.length === 0) {
+       throw exportError('EXPORT_UNAVAILABLE', '/export');
+     }
++    if (projected.value.family === 'categorical' && projected.value.generation === 'comparison') {
++      throw exportError('EXPORT_UNAVAILABLE', '/export');
++    }
+     const plot = chartSurface.element.querySelector<HTMLElement>('[data-testid="tellplot-chart"]');
+     const canvas = plot?.querySelector('canvas');
+     if (plot === null || plot === undefined || canvas === null || canvas === undefined) {
+diff --git a/packages/editor/src/editor/outline.ts b/packages/editor/src/editor/outline.ts
+index 44db629..ea766e4 100644
+--- a/packages/editor/src/editor/outline.ts
++++ b/packages/editor/src/editor/outline.ts
+@@ -1,6 +1,8 @@
+ import {
+   collectLeafSourceIds,
+   ownGroup,
++  type CategoricalComparisonDatum,
++  type CategoricalComparisonProjection,
+   type CategoricalDatum,
+   type CategoricalProjection,
+   type SourceItemId,
+@@ -25,7 +27,7 @@ export interface OutlineEntry {
+ 
+ function groupEntry(
+   group: ViewGroup,
+-  datum: WaterfallDatum | CategoricalDatum | undefined,
++  datum: WaterfallDatum | CategoricalDatum | CategoricalComparisonDatum | undefined,
+   expanded: boolean,
+   view: ViewSpec,
+   level: number,
+@@ -34,7 +36,7 @@ function groupEntry(
+   return {
+     nodeId: group.id,
+     label: group.label,
+-    amount: datum?.amount ?? null,
++    amount: datum !== undefined && 'amount' in datum ? datum.amount : null,
+     sourceIds: [...sourceIds],
+     locked: sourceIds.some(itemId => view.pinnedItemIds.includes(itemId)),
+     level,
+@@ -139,12 +141,68 @@ function categoricalEntries(
+   return entries;
+ }
+ 
++function comparisonEntries(
++  view: ViewSpec,
++  projection: CategoricalComparisonProjection,
++): readonly OutlineEntry[] {
++  const entries: OutlineEntry[] = [];
++  const collapsed = new Set(view.collapsedGroupIds);
++  const datumById = new Map(projection.map(datum => [datum.nodeId, datum]));
++  const visited = new Set<ViewNodeId>();
++
++  const visit = (nodeId: ViewNodeId, level: number): void => {
++    if (visited.has(nodeId)) {
++      return;
++    }
++    visited.add(nodeId);
++    const group = ownGroup(view, nodeId);
++    if (group !== undefined) {
++      const isCollapsed = collapsed.has(group.id);
++      entries.push(
++        groupEntry(
++          group,
++          isCollapsed ? datumById.get(group.id) : undefined,
++          !isCollapsed,
++          view,
++          level,
++        ),
++      );
++      if (!isCollapsed) {
++        for (const childId of group.childIds) {
++          visit(childId, level + 1);
++        }
++      }
++      return;
++    }
++    const datum = datumById.get(nodeId);
++    if (datum !== undefined) {
++      entries.push({
++        nodeId: datum.nodeId,
++        label: datum.label,
++        amount: null,
++        sourceIds: [...datum.sourceIds],
++        locked: datum.locked,
++        level,
++        kind: 'contribution',
++      });
++    }
++  };
++
++  for (const nodeId of view.rootOrder) {
++    visit(nodeId, 1);
++  }
++  return entries;
++}
++
+ export function outlineEntries(
+   view: ViewSpec,
+-  projection: WaterfallProjection | CategoricalProjection,
++  projection: WaterfallProjection | CategoricalProjection | CategoricalComparisonProjection,
+   family: 'waterfall' | 'categorical',
++  generation: 'scalar' | 'comparison' = 'scalar',
+ ): readonly OutlineEntry[] {
+   return family === 'waterfall'
+     ? waterfallEntries(view, projection as WaterfallProjection)
+-    : categoricalEntries(view, projection as CategoricalProjection);
++    : generation === 'comparison'
++      ? comparisonEntries(view, projection as CategoricalComparisonProjection)
++      : categoricalEntries(view, projection as CategoricalProjection);
+ }
+diff --git a/packages/editor/src/editor/projection.ts b/packages/editor/src/editor/projection.ts
+index d5cdc6f..26f1119 100644
+--- a/packages/editor/src/editor/projection.ts
++++ b/packages/editor/src/editor/projection.ts
+@@ -1,6 +1,8 @@
+ import {
+   projectCategorical,
++  projectCategoricalComparison,
+   projectWaterfall,
++  type CategoricalComparisonProjection,
+   validationIssue,
+   type CategoricalProjection,
+   type ChartConfig,
+@@ -18,8 +20,15 @@ export type EditorChartProjection =
+     }
+   | {
+       readonly family: 'categorical';
++      readonly generation: 'scalar';
+       readonly chartType: 'bar' | 'column';
+       readonly projection: CategoricalProjection;
++    }
++  | {
++      readonly family: 'categorical';
++      readonly generation: 'comparison';
++      readonly chartType: 'bar' | 'column';
++      readonly projection: CategoricalComparisonProjection;
+     };
+ 
+ export type EditorProjectionResult =
+@@ -28,6 +37,27 @@ export type EditorProjectionResult =
+ 
+ export function projectEditorChart(config: ChartConfig, view: ViewSpec): EditorProjectionResult {
+   const sourceData = config.data;
++  if (sourceData.schemaVersion === '3.0.0') {
++    const result = projectCategoricalComparison(sourceData, view);
++    if (!result.ok) {
++      return result;
++    }
++    if (view.chartType !== 'bar' && view.chartType !== 'column') {
++      return {
++        ok: false,
++        errors: [validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_CHART_TYPE', '/chartType')],
++      };
++    }
++    return {
++      ok: true,
++      value: {
++        family: 'categorical',
++        generation: 'comparison',
++        chartType: view.chartType,
++        projection: result.value,
++      },
++    };
++  }
+   if (sourceData.schemaVersion === '2.0.0' && sourceData.dataKind === 'categorical') {
+     const result = projectCategorical(sourceData, view);
+     if (!result.ok) {
+@@ -41,7 +71,12 @@ export function projectEditorChart(config: ChartConfig, view: ViewSpec): EditorP
+     }
+     return {
+       ok: true,
+-      value: { family: 'categorical', chartType: view.chartType, projection: result.value },
++      value: {
++        family: 'categorical',
++        generation: 'scalar',
++        chartType: view.chartType,
++        projection: result.value,
++      },
+     };
+   }
+ 
+diff --git a/packages/editor/src/rendering/g2/chartRuntime.ts b/packages/editor/src/rendering/g2/chartRuntime.ts
+index b91fe53..432ec09 100644
+--- a/packages/editor/src/rendering/g2/chartRuntime.ts
++++ b/packages/editor/src/rendering/g2/chartRuntime.ts
+@@ -29,6 +29,7 @@ export interface G2ChartEventRegistration {
+ export interface G2ChartRenderRequest<Value> {
+   readonly value: Value;
+   readonly spec: G2Spec;
++  readonly structuralIdentity?: string | undefined;
+ }
+ 
+ export interface G2ChartRenderSettlement<Value> {
+@@ -72,8 +73,11 @@ export function createG2ChartRuntime<Value>(
+ ): G2ChartRuntime<Value> {
+   let chart: G2Chart | undefined;
+   let disposed = false;
+-  let initializing = false;
+-  let rendering = false;
++  let generation = 0;
++  let structuralIdentity: string | undefined;
++  let initializingGeneration: number | undefined;
++  let renderingGeneration: number | undefined;
++  let resizingGeneration: number | undefined;
+   let requestId = 0;
+   let attemptedRequestId = 0;
+   let latestRequest:
+@@ -86,7 +90,6 @@ export function createG2ChartRuntime<Value>(
+   let scheduleToken = 0;
+   let resizeObserver: ResizeObserver | undefined;
+   let resizePending = false;
+-  let resizing = false;
+ 
+   const notifyCallbackError = (): void => {
+     try {
+@@ -150,21 +153,36 @@ export function createG2ChartRuntime<Value>(
+ 
+   const flushResize = async (): Promise<void> => {
+     const activeChart = chart;
+-    if (activeChart === undefined || disposed || rendering || resizing || !resizePending) {
++    const activeGeneration = generation;
++    if (
++      activeChart === undefined ||
++      disposed ||
++      renderingGeneration === activeGeneration ||
++      resizingGeneration === activeGeneration ||
++      !resizePending
++    ) {
+       return;
+     }
+     resizePending = false;
+-    resizing = true;
++    resizingGeneration = activeGeneration;
+     try {
+       await activeChart.forceFit();
+     } catch {
+       // A later render request or resize can recover from a transient fit failure.
+     } finally {
+-      resizing = false;
+-      if (!disposed && resizePending) {
++      if (resizingGeneration === activeGeneration) {
++        resizingGeneration = undefined;
++      }
++      if (!disposed && generation === activeGeneration && chart === activeChart && resizePending) {
+         void flushResize();
+       }
+-      if (!disposed && latestRequest !== undefined && latestRequest.id !== attemptedRequestId) {
++      if (
++        !disposed &&
++        generation === activeGeneration &&
++        chart === activeChart &&
++        latestRequest !== undefined &&
++        latestRequest.id !== attemptedRequestId
++      ) {
+         void flush();
+       }
+     }
+@@ -172,13 +190,19 @@ export function createG2ChartRuntime<Value>(
+ 
+   const flush = async (): Promise<void> => {
+     const activeChart = chart;
+-    if (activeChart === undefined || disposed || rendering || resizing) {
++    const activeGeneration = generation;
++    if (
++      activeChart === undefined ||
++      disposed ||
++      renderingGeneration === activeGeneration ||
++      resizingGeneration === activeGeneration
++    ) {
+       return;
+     }
+ 
+-    rendering = true;
++    renderingGeneration = activeGeneration;
+     try {
+-      while (!disposed) {
++      while (!disposed && generation === activeGeneration && chart === activeChart) {
+         const request = latestRequest;
+         if (request === undefined || request.id === attemptedRequestId) {
+           break;
+@@ -192,7 +216,7 @@ export function createG2ChartRuntime<Value>(
+         } catch {
+           status = 'failure';
+         }
+-        if (disposed) {
++        if (disposed || generation !== activeGeneration || chart !== activeChart) {
+           return;
+         }
+ 
+@@ -205,13 +229,16 @@ export function createG2ChartRuntime<Value>(
+         break;
+       }
+     } finally {
+-      rendering = false;
+-      if (!disposed && resizePending) {
++      if (renderingGeneration === activeGeneration) {
++        renderingGeneration = undefined;
++      }
++      if (!disposed && generation === activeGeneration && chart === activeChart && resizePending) {
+         void flushResize();
+       }
+       if (
+         !disposed &&
+-        chart !== undefined &&
++        generation === activeGeneration &&
++        chart === activeChart &&
+         latestRequest !== undefined &&
+         latestRequest.id !== attemptedRequestId
+       ) {
+@@ -222,13 +249,19 @@ export function createG2ChartRuntime<Value>(
+ 
+   const scheduleFlush = (): void => {
+     const activeChart = chart;
++    const activeGeneration = generation;
+     if (disposed || activeChart === undefined) {
+       return;
+     }
+     cancelScheduledFlush();
+     const token = scheduleToken;
+     const run = (): void => {
+-      if (disposed || token !== scheduleToken) {
++      if (
++        disposed ||
++        token !== scheduleToken ||
++        generation !== activeGeneration ||
++        chart !== activeChart
++      ) {
+         return;
+       }
+       scheduledFrame = undefined;
+@@ -245,13 +278,14 @@ export function createG2ChartRuntime<Value>(
+   };
+ 
+   const initialize = async (): Promise<void> => {
+-    if (disposed || initializing || chart !== undefined) {
++    const activeGeneration = generation;
++    if (disposed || initializingGeneration === activeGeneration || chart !== undefined) {
+       return;
+     }
+-    initializing = true;
++    initializingGeneration = activeGeneration;
+     try {
+       const Chart = await loadG2ChartConstructor();
+-      if (disposed) {
++      if (disposed || generation !== activeGeneration || chart !== undefined) {
+         return;
+       }
+       const created = new Chart({ container: options.container, autoFit: true });
+@@ -265,7 +299,7 @@ export function createG2ChartRuntime<Value>(
+       const ResizeObserver = options.container.ownerDocument.defaultView?.ResizeObserver;
+       if (ResizeObserver !== undefined) {
+         resizeObserver = new ResizeObserver(() => {
+-          if (!disposed) {
++          if (!disposed && generation === activeGeneration && chart === created) {
+             resizePending = true;
+             void flushResize();
+           }
+@@ -274,7 +308,7 @@ export function createG2ChartRuntime<Value>(
+       }
+       await flush();
+     } catch {
+-      if (disposed) {
++      if (disposed || generation !== activeGeneration) {
+         return;
+       }
+       releaseChart();
+@@ -284,9 +318,12 @@ export function createG2ChartRuntime<Value>(
+         notifySettlement({ value: request.value, status: 'failure', latest: true });
+       }
+     } finally {
+-      initializing = false;
++      if (initializingGeneration === activeGeneration) {
++        initializingGeneration = undefined;
++      }
+       if (
+         !disposed &&
++        generation === activeGeneration &&
+         chart === undefined &&
+         latestRequest !== undefined &&
+         latestRequest.id !== attemptedRequestId
+@@ -303,6 +340,12 @@ export function createG2ChartRuntime<Value>(
+       if (disposed) {
+         return;
+       }
++      if (request.structuralIdentity !== structuralIdentity) {
++        structuralIdentity = request.structuralIdentity;
++        generation += 1;
++        cancelScheduledFlush();
++        releaseChart();
++      }
+       requestId += 1;
+       latestRequest = { ...request, id: requestId };
+       if (chart === undefined) {
+@@ -331,6 +374,7 @@ export function createG2ChartRuntime<Value>(
+         return;
+       }
+       disposed = true;
++      generation += 1;
+       latestRequest = undefined;
+       cancelScheduledFlush();
+       releaseChart();
+diff --git a/packages/editor/tests/package/architecture-boundary.test.ts b/packages/editor/tests/package/architecture-boundary.test.ts
+index 768c282..a96cb33 100644
+--- a/packages/editor/tests/package/architecture-boundary.test.ts
++++ b/packages/editor/tests/package/architecture-boundary.test.ts
+@@ -18,7 +18,13 @@ describe('internal chart architecture boundary', () => {
+       'charts/categorical/projection.ts',
+       'charts/categorical/types.ts',
+     ];
+-    const editorRequired = ['charts/waterfall/spec.ts', 'charts/categorical/spec.ts'];
++    const editorRequired = [
++      'charts/waterfall/spec.ts',
++      'charts/categorical/spec.ts',
++      'charts/categorical/comparisonSpec.ts',
++      'charts/categorical/comparisonLabels.ts',
++      'rendering/g2/comparisonLabelTransform.ts',
++    ];
+     const obsolete = [
+       'waterfall/projectWaterfall.ts',
+       'waterfall/waterfallTypes.ts',
+@@ -50,5 +56,9 @@ describe('internal chart architecture boundary', () => {
+     expect(source('index.ts')).not.toContain('rendering/g2');
+     expect(source('index.ts')).not.toContain('G2Spec');
+     expect(source('index.ts')).not.toContain('G2Chart');
++    expect(source('index.ts')).not.toContain('createComparisonChartSpec');
++    expect(source('index.ts')).not.toContain('ComparisonMarkDatum');
++    expect(source('index.ts')).not.toContain('comparisonStructuralIdentity');
++    expect(source('index.ts')).not.toContain('comparisonFlipToInteriorLabelTransform');
+   });
+ });
+diff --git a/packages/editor/tests/rendering/g2/chart-runtime.test.ts b/packages/editor/tests/rendering/g2/chart-runtime.test.ts
+index 5e40a25..f7b8a11 100644
+--- a/packages/editor/tests/rendering/g2/chart-runtime.test.ts
++++ b/packages/editor/tests/rendering/g2/chart-runtime.test.ts
+@@ -152,6 +152,137 @@ describe('G2 chart runtime', () => {
+     expect(runtime.getContext()).toEqual(expect.objectContaining({ marker: 'scene-context' }));
+   });
+ 
++  it('recreates structural identities and rejects stale render and resize continuations', async () => {
++    const firstRender = deferred();
++    g2Mock.Chart.renderQueue.push(
++      () => firstRender.promise,
++      () => Promise.resolve(),
++    );
++    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
++    class TestResizeObserver {
++      readonly observe = vi.fn();
++      readonly unobserve = vi.fn();
++      readonly disconnect = vi.fn();
++    }
++    Object.defineProperty(window, 'ResizeObserver', {
++      configurable: true,
++      value: TestResizeObserver,
++    });
++
++    try {
++      const settled = vi.fn();
++      const runtime = createG2ChartRuntime<string>({
++        container: document.body,
++        events: [],
++        onRenderSettled: settled,
++      });
++      runtime.request({
++        value: 'old',
++        spec: { type: 'interval' },
++        structuralIdentity: '["actual","budget"]',
++      });
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[0]?.render).toHaveBeenCalledOnce());
++      const oldChart = g2Mock.Chart.instances[0];
++      if (oldChart === undefined) {
++        throw new Error('Expected the old G2 chart');
++      }
++      runtime.request({
++        value: 'new',
++        spec: { type: 'interval' },
++        structuralIdentity: '["budget","actual"]',
++      });
++      await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
++      expect(oldChart.destroy).toHaveBeenCalledOnce();
++      firstRender.resolve();
++
++      await vi.waitFor(() => expect(g2Mock.Chart.instances[1]?.render).toHaveBeenCalledOnce());
++      await vi.waitFor(() =>
++        expect(settled).toHaveBeenLastCalledWith({
++          value: 'new',
++          status: 'success',
++          latest: true,
++        }),
++      );
++      expect(settled).not.toHaveBeenCalledWith(expect.objectContaining({ value: 'old' }));
++      runtime.dispose();
++    } finally {
++      if (descriptor === undefined) {
++        Reflect.deleteProperty(window, 'ResizeObserver');
++      } else {
++        Object.defineProperty(window, 'ResizeObserver', descriptor);
++      }
++    }
++  });
++
++  it('does not let a stale forceFit continuation schedule work on a replacement chart', async () => {
++    const pendingFit = deferred();
++    let resize: ResizeObserverCallback | undefined;
++    const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
++    class TestResizeObserver {
++      constructor(callback: ResizeObserverCallback) {
++        resize = callback;
++      }
++      readonly observe = vi.fn();
++      readonly unobserve = vi.fn();
++      readonly disconnect = vi.fn();
++    }
++    Object.defineProperty(window, 'ResizeObserver', {
++      configurable: true,
++      value: TestResizeObserver,
++    });
++    try {
++      const settled = vi.fn();
++      const runtime = createG2ChartRuntime<string>({
++        container: document.body,
++        events: [],
++        onRenderSettled: settled,
++      });
++      runtime.request({
++        value: 'old',
++        spec: { type: 'interval' },
++        structuralIdentity: '["actual","budget"]',
++      });
++      await vi.waitFor(() =>
++        expect(settled).toHaveBeenLastCalledWith({
++          value: 'old',
++          status: 'success',
++          latest: true,
++        }),
++      );
++      const oldChart = g2Mock.Chart.instances[0];
++      if (oldChart === undefined) {
++        throw new Error('Expected the initial G2 chart');
++      }
++      oldChart.forceFit.mockImplementationOnce(() => pendingFit.promise.then(() => oldChart));
++      resize?.([], {} as ResizeObserver);
++      await vi.waitFor(() => expect(oldChart.forceFit).toHaveBeenCalledOnce());
++
++      runtime.request({
++        value: 'new',
++        spec: { type: 'interval' },
++        structuralIdentity: '["budget","actual"]',
++      });
++      await vi.waitFor(() => expect(g2Mock.Chart.instances).toHaveLength(2));
++      pendingFit.resolve();
++      await vi.waitFor(() =>
++        expect(settled).toHaveBeenLastCalledWith({
++          value: 'new',
++          status: 'success',
++          latest: true,
++        }),
++      );
++      expect(oldChart.forceFit).toHaveBeenCalledOnce();
++      expect(g2Mock.Chart.instances[1]?.forceFit).not.toHaveBeenCalled();
++      runtime.dispose();
++    } finally {
++      if (descriptor === undefined) {
++        Reflect.deleteProperty(window, 'ResizeObserver');
++      } else {
++        Object.defineProperty(window, 'ResizeObserver', descriptor);
++      }
++    }
++  });
++
+   it('removes the exact event callbacks and destroys exactly once', async () => {
+     const host = document.createElement('div');
+     document.body.append(host);
+diff --git a/packages/editor/tests/runtime/chart-surface.test.ts b/packages/editor/tests/runtime/chart-surface.test.ts
+index 1a3273c..3efa6cf 100644
+--- a/packages/editor/tests/runtime/chart-surface.test.ts
++++ b/packages/editor/tests/runtime/chart-surface.test.ts
+@@ -74,7 +74,7 @@ const view: ViewSpec = {
+ const state: ChartSurfaceState = {
+   config,
+   view,
+-  chart: { family: 'categorical', chartType: 'bar', projection: [] },
++  chart: { family: 'categorical', generation: 'scalar', chartType: 'bar', projection: [] },
+   messages: editorMessages('en-US'),
+ };
+ 
+@@ -144,6 +144,7 @@ describe('chart surface render recovery', () => {
+       },
+       chart: {
+         family: 'categorical',
++        generation: 'scalar',
+         chartType: 'column',
+         projection: [
+           {
+@@ -293,6 +294,7 @@ describe('chart surface render recovery', () => {
+       },
+       chart: {
+         family: 'categorical',
++        generation: 'scalar',
+         chartType: 'column',
+         projection: [
+           {
+@@ -396,7 +398,12 @@ describe('chart surface render recovery', () => {
+     const columnState: ChartSurfaceState = {
+       config: { ...config, type: 'column' },
+       view: { ...view, chartType: 'column' },
+-      chart: { family: 'categorical', chartType: 'column', projection: [] },
++      chart: {
++        family: 'categorical',
++        generation: 'scalar',
++        chartType: 'column',
++        projection: [],
++      },
+       messages: state.messages,
+     };
+     surface.update(columnState);
+@@ -513,6 +520,7 @@ describe('chart surface render recovery', () => {
+       },
+       chart: {
+         family: 'categorical',
++        generation: 'scalar',
+         chartType: 'column',
+         projection: [
+           {
+@@ -626,7 +634,7 @@ describe('chart surface render recovery', () => {
+     pointerDown?.listener({ pointerId: 7, canvas: { x: 20, y: 30 } });
+     surface.preview({
+       ...state,
+-      chart: { family: 'categorical', chartType: 'bar', projection: [] },
++      chart: { family: 'categorical', generation: 'scalar', chartType: 'bar', projection: [] },
+     });
+     const failedPreview = latestRequestValue(runtime);
+ 
+diff --git a/packages/editor/tests/runtime/editor.test.ts b/packages/editor/tests/runtime/editor.test.ts
+index 00f7c0d..bc92e8f 100644
+--- a/packages/editor/tests/runtime/editor.test.ts
++++ b/packages/editor/tests/runtime/editor.test.ts
+@@ -56,6 +56,38 @@ const replacementConfig: ChartConfig = {
+   },
+ };
+ 
++const comparisonConfig: ChartConfig = {
++  type: 'column',
++  data: {
++    schemaVersion: '3.0.0',
++    dataKind: 'categorical',
++    datasetId: 'comparison-runtime-fixture',
++    series: [
++      { id: 'actual', label: 'Actual' },
++      { id: 'budget', label: 'Budget' },
++    ],
++    items: [
++      {
++        id: 'north',
++        label: 'North',
++        values: [
++          { seriesId: 'actual', amount: 12 },
++          { seriesId: 'budget', amount: 10 },
++        ],
++      },
++      {
++        id: 'south',
++        label: 'South',
++        values: [
++          { seriesId: 'actual', amount: -4 },
++          { seriesId: 'budget', amount: 6 },
++        ],
++      },
++    ],
++  },
++  appearance: { labels: { value: 'never' }, animation: { enabled: false } },
++};
++
+ let host: HTMLDivElement;
+ 
+ beforeEach(() => {
+@@ -71,6 +103,63 @@ afterEach(() => {
+ });
+ 
+ describe('createEditor', () => {
++  it('routes comparison projection to one private interval and recreates only structural registries', async () => {
++    const initialInstanceCount = g2Mock.instances.length;
++    const editor = createEditor(host, { config: comparisonConfig });
++    await waitFor(() => expect(g2Mock.instances.length).toBe(initialInstanceCount + 1));
++    const initialChart = g2Mock.instances.at(-1);
++    await waitFor(() => expect(initialChart?.options).toHaveBeenCalled());
++    const optionCalls = initialChart?.options.mock.calls as unknown as readonly (readonly [
++      unknown,
++    ])[];
++    const spec = optionCalls.at(-1)?.[0] as {
++      readonly children?: readonly { readonly key?: string; readonly type?: string }[];
++    };
++    const intervals = spec.children?.filter(
++      child => child.key === 'categorical-comparison-interval',
++    );
++    expect(intervals).toHaveLength(1);
++    expect(intervals?.[0]).toMatchObject({
++      key: 'categorical-comparison-interval',
++      type: 'interval',
++    });
++    expect(host.querySelector('[data-testid="tellplot-chart-stage"]')?.textContent).not.toContain(
++      '22',
++    );
++
++    editor.update({
++      config: {
++        ...comparisonConfig,
++        data: {
++          ...comparisonConfig.data,
++          series: comparisonConfig.data.series.map(series => ({
++            ...series,
++            label: `${series.label} renamed`,
++          })),
++        },
++      },
++    });
++    await waitFor(() => expect(initialChart?.options.mock.calls.length).toBeGreaterThan(1));
++    expect(g2Mock.instances.length).toBe(initialInstanceCount + 1);
++
++    editor.update({
++      config: {
++        ...comparisonConfig,
++        data: {
++          ...comparisonConfig.data,
++          series: [...comparisonConfig.data.series].reverse(),
++          items: comparisonConfig.data.items.map(item => ({
++            ...item,
++            values: [...item.values].reverse(),
++          })),
++        },
++      },
++    });
++    await waitFor(() => expect(g2Mock.instances.length).toBe(initialInstanceCount + 2));
++    expect(initialChart?.destroy).toHaveBeenCalledOnce();
++    editor.destroy();
++  });
++
+   it('mounts the complete workbench and updates through shared commands', async () => {
+     const views: ViewSpec[] = [];
+     const editor = createEditor(host, { config, onViewChange: view => views.push(view) });
+diff --git a/scripts/release/check-architecture.mjs b/scripts/release/check-architecture.mjs
+index 6b87b53..e888edf 100644
+--- a/scripts/release/check-architecture.mjs
++++ b/scripts/release/check-architecture.mjs
+@@ -142,6 +142,7 @@ function collectImports(sourcePath) {
+     if (matchesAnyPackageSpecifier(specifier, ['@antv/g2', '@antv/g-svg'])) {
+       const allowed =
+         sourceNameValue === 'packages/editor/src/charts/groupRegions.ts' ||
++        sourceNameValue === 'packages/editor/src/charts/categorical/comparisonSpec.ts' ||
+         /^packages\/editor\/src\/charts\/(waterfall|categorical)\/spec\.ts$/u.test(
+           sourceNameValue,
+         ) ||
+
+diff --git a/packages/editor/src/charts/categorical/comparisonAppearance.ts b/packages/editor/src/charts/categorical/comparisonAppearance.ts
+new file mode 100644
+index 0000000..b856e12
+--- /dev/null
++++ b/packages/editor/src/charts/categorical/comparisonAppearance.ts
+@@ -0,0 +1,116 @@
++import {
++  resolveFinancialChartAppearance,
++  type CategoricalComparisonChartAppearance,
++  type CategoricalComparisonSeries,
++  type FinancialChartAppearance,
++  type ResolvedFinancialChartAppearance,
++  type SeriesId,
++} from '@tellplot/core';
++
++const DEFAULT_COMPARISON_COLORS = Object.freeze([
++  '#0072B2',
++  '#D55E00',
++  '#009E73',
++  '#CC79A7',
++] as const);
++
++export interface ResolvedComparisonAppearance {
++  readonly common: ResolvedFinancialChartAppearance;
++  readonly seriesDomain: readonly SeriesId[];
++  readonly seriesRange: readonly string[];
++  readonly legend: boolean;
++}
++
++function present<TValue>(key: string, value: TValue | undefined): Record<string, TValue> {
++  return value === undefined ? {} : { [key]: value };
++}
++
++function toCommonAppearance(
++  appearance: CategoricalComparisonChartAppearance | undefined,
++): FinancialChartAppearance {
++  const valueLabel = appearance?.labels?.value;
++  const groupLabel = appearance?.labels?.group;
++  const valueOptions = typeof valueLabel === 'object' ? valueLabel : undefined;
++  const groupOptions = typeof groupLabel === 'object' ? groupLabel : undefined;
++  return {
++    ...present('title', appearance?.title),
++    ...(appearance?.colors?.group === undefined
++      ? {}
++      : { palette: { group: appearance.colors.group } }),
++    ...(appearance?.axes === undefined
++      ? {}
++      : {
++          axis: {
++            ...present('x', appearance.axes.category),
++            ...present('y', appearance.axes.value),
++          },
++        }),
++    ...present('valueLabels', typeof valueLabel === 'string' ? valueLabel : valueOptions?.display),
++    ...(valueOptions === undefined
++      ? {}
++      : {
++          valueLabelStyle: {
++            ...present('placement', valueOptions.placement),
++            ...present('offset', valueOptions.offset),
++            ...present('color', valueOptions.color),
++            ...present('fontSize', valueOptions.fontSize),
++            ...present('fontWeight', valueOptions.fontWeight),
++            ...present('background', valueOptions.background),
++            ...present('backgroundColor', valueOptions.backgroundColor),
++            ...present('backgroundOpacity', valueOptions.backgroundOpacity),
++          },
++        }),
++    ...present('tooltip', appearance?.tooltip ?? true),
++    ...(appearance?.animation === undefined ? {} : { animation: appearance.animation }),
++    ...(appearance?.groupRegion === undefined && groupLabel === undefined
++      ? {}
++      : {
++          groupRegion: {
++            ...present('enabled', appearance?.groupRegion?.enabled),
++            ...present('fillOpacity', appearance?.groupRegion?.opacity),
++            ...present(
++              'label',
++              typeof groupLabel === 'string' ? groupLabel : groupOptions?.display,
++            ),
++            ...(groupOptions === undefined
++              ? {}
++              : {
++                  labelStyle: {
++                    ...present('placement', groupOptions.placement),
++                    ...present('offset', groupOptions.offset),
++                    ...present('color', groupOptions.color),
++                    ...present('fontSize', groupOptions.fontSize),
++                    ...present('fontWeight', groupOptions.fontWeight),
++                    ...present('background', groupOptions.background),
++                    ...present('backgroundColor', groupOptions.backgroundColor),
++                    ...present('backgroundOpacity', groupOptions.backgroundOpacity),
++                  },
++                }),
++          },
++        }),
++    ...(appearance?.numberFormat === undefined ? {} : { numberFormat: appearance.numberFormat }),
++  };
++}
++
++/** Resolves the private, complete source-ordinal comparison presentation. */
++export function resolveComparisonAppearance(
++  series: readonly CategoricalComparisonSeries[],
++  appearance: CategoricalComparisonChartAppearance | undefined,
++  fallbackTitle: string,
++): ResolvedComparisonAppearance {
++  const overrides = new Map(
++    (appearance?.colors?.series ?? []).map(entry => [entry.seriesId, entry.color]),
++  );
++  return Object.freeze({
++    common: resolveFinancialChartAppearance(toCommonAppearance(appearance), fallbackTitle),
++    seriesDomain: Object.freeze(series.map(entry => entry.id)),
++    seriesRange: Object.freeze(
++      series.map(
++        (entry, index) =>
++          overrides.get(entry.id) ??
++          (DEFAULT_COMPARISON_COLORS[index] as (typeof DEFAULT_COMPARISON_COLORS)[number]),
++      ),
++    ),
++    legend: appearance?.legend ?? true,
++  });
++}
+
+diff --git a/packages/editor/src/charts/categorical/comparisonLabels.ts b/packages/editor/src/charts/categorical/comparisonLabels.ts
+new file mode 100644
+index 0000000..6f5b2cf
+--- /dev/null
++++ b/packages/editor/src/charts/categorical/comparisonLabels.ts
+@@ -0,0 +1,223 @@
++import type {
++  Annotation,
++  CategoricalComparisonProjection,
++  ResolvedFinancialChartNumberFormat,
++  ResolvedFinancialChartValueLabelAppearance,
++  SeriesId,
++  ViewNodeId,
++} from '@tellplot/core';
++import { formatAmount, type EditorLocale } from '../../editor/formatAmount';
++import { comparisonFlipToInteriorLabelTransform } from '../../rendering/g2/comparisonLabelTransform';
++import { createForegroundLabelStyle } from '../labelStyle';
++import { visibleCategoricalAnnotation } from './spec';
++
++export type ComparisonLabelMark = Readonly<Record<string, unknown>>;
++
++export const COMPARISON_VALUE_LABEL_MARK_KEY = 'categorical-comparison-value-labels';
++export const COMPARISON_ANNOTATION_ENDPOINT_MARK_KEY = 'categorical-comparison-annotation-endpoint';
++export const COMPARISON_ANNOTATION_BASELINE_MARK_KEY = 'categorical-comparison-annotation-baseline';
++
++interface ComparisonLabelDatum {
++  readonly helperKey: string;
++  readonly nodeId: ViewNodeId;
++  readonly seriesId: SeriesId;
++  readonly amount: number;
++  readonly text: string;
++}
++
++interface ComparisonAnnotationDatum {
++  readonly helperKey: string;
++  readonly nodeId: ViewNodeId;
++  readonly seriesId?: SeriesId;
++  readonly amount: number;
++  readonly text: string;
++}
++
++export interface ComparisonLabelScaleOptions {
++  readonly x: Readonly<Record<string, unknown>>;
++  readonly y: Readonly<Record<string, unknown>>;
++  readonly series: Readonly<Record<string, unknown>>;
++}
++
++interface ComparisonLabelMarkOptions {
++  readonly projection: CategoricalComparisonProjection;
++  readonly chartType: 'bar' | 'column';
++  readonly locale: EditorLocale;
++  readonly currency: string | undefined;
++  readonly numberFormat: ResolvedFinancialChartNumberFormat;
++  readonly labelStyle: ResolvedFinancialChartValueLabelAppearance;
++  readonly scales: ComparisonLabelScaleOptions;
++}
++
++interface ComparisonAnnotationMarkOptions extends ComparisonLabelMarkOptions {
++  readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
++}
++
++function labelTransform(transposed: boolean) {
++  return [
++    { type: comparisonFlipToInteriorLabelTransform, transposed },
++    { type: 'exceedAdjust' as const, bounds: 'main' as const },
++  ];
++}
++
++function labelPosition(
++  transposed: boolean,
++  amount: number,
++  placement: ResolvedFinancialChartValueLabelAppearance['placement'],
++): 'right' | 'left' | 'top' | 'bottom' {
++  const outside = placement === 'outside';
++  if (transposed) {
++    return amount >= 0 === outside ? 'right' : 'left';
++  }
++  return amount >= 0 === outside ? 'top' : 'bottom';
++}
++
++function attachedLabel(
++  transposed: boolean,
++  labelStyle: ResolvedFinancialChartValueLabelAppearance,
++  placement: ResolvedFinancialChartValueLabelAppearance['placement'],
++) {
++  return {
++    text: 'text',
++    position: (datum: { readonly amount: number }) =>
++      labelPosition(transposed, datum.amount, placement),
++    transform: labelTransform(transposed),
++    style: {
++      ...createForegroundLabelStyle(labelStyle),
++      offset: labelStyle.offset,
++    },
++  };
++}
++
++function pointMark(
++  key: string,
++  data: readonly (ComparisonLabelDatum | ComparisonAnnotationDatum)[],
++  chartType: 'bar' | 'column',
++  scales: ComparisonLabelScaleOptions,
++  labelStyle: ResolvedFinancialChartValueLabelAppearance,
++  seriesPositioned: boolean,
++  placement: ResolvedFinancialChartValueLabelAppearance['placement'],
++): ComparisonLabelMark {
++  const transposed = chartType === 'bar';
++  const value = {
++    key,
++    type: 'point',
++    data: [...data],
++    ...(transposed ? { coordinate: { transform: [{ type: 'transpose' as const }] } } : {}),
++    encode: {
++      x: 'nodeId',
++      y: 'amount',
++      ...(seriesPositioned ? { series: 'seriesId' } : {}),
++      key: 'helperKey',
++    },
++    ...(seriesPositioned
++      ? { transform: [{ type: 'dodgeX' as const, groupBy: 'x' as const, padding: 0.08 }] }
++      : {}),
++    scale: {
++      x: scales.x,
++      y: scales.y,
++      ...(seriesPositioned ? { series: scales.series } : {}),
++    },
++    axis: false,
++    legend: false,
++    labels: [attachedLabel(transposed, labelStyle, placement)],
++    style: { opacity: 0, pointerEvents: 'none' as const },
++    tooltip: false,
++    animate: false,
++  };
++  return value;
++}
++
++export function createComparisonValueLabelMark(
++  options: ComparisonLabelMarkOptions,
++): ComparisonLabelMark | undefined {
++  if (options.projection.length === 0) {
++    return undefined;
++  }
++  const data: ComparisonLabelDatum[] = options.projection.flatMap(datum =>
++    datum.values.map(value => ({
++      helperKey: JSON.stringify(['comparison-value-label', datum.nodeId, value.seriesId]),
++      nodeId: datum.nodeId,
++      seriesId: value.seriesId,
++      amount: value.amount,
++      text: formatAmount(value.amount, options.locale, options.currency, options.numberFormat),
++    })),
++  );
++  return pointMark(
++    COMPARISON_VALUE_LABEL_MARK_KEY,
++    data,
++    options.chartType,
++    options.scales,
++    options.labelStyle,
++    true,
++    options.labelStyle.placement,
++  );
++}
++
++export function createComparisonAnnotationMarks(
++  options: ComparisonAnnotationMarkOptions,
++): readonly ComparisonLabelMark[] {
++  const endpoint: ComparisonAnnotationDatum[] = [];
++  const baseline: ComparisonAnnotationDatum[] = [];
++  for (const datum of options.projection) {
++    const text = visibleCategoricalAnnotation(options.annotations, datum.nodeId);
++    if (text === '') {
++      continue;
++    }
++    const selected = datum.values.reduce<(typeof datum.values)[number] | undefined>(
++      (current, value) =>
++        current === undefined || Math.abs(value.amount) > Math.abs(current.amount)
++          ? value
++          : current,
++      undefined,
++    );
++    if (selected === undefined || datum.values.every(value => value.amount === 0)) {
++      baseline.push({
++        helperKey: JSON.stringify(['comparison-annotation-baseline', datum.nodeId]),
++        nodeId: datum.nodeId,
++        amount: 0,
++        text,
++      });
++    } else {
++      endpoint.push({
++        helperKey: JSON.stringify([
++          'comparison-annotation-endpoint',
++          datum.nodeId,
++          selected.seriesId,
++        ]),
++        nodeId: datum.nodeId,
++        seriesId: selected.seriesId,
++        amount: selected.amount,
++        text,
++      });
++    }
++  }
++  return [
++    ...(endpoint.length === 0
++      ? []
++      : [
++          pointMark(
++            COMPARISON_ANNOTATION_ENDPOINT_MARK_KEY,
++            endpoint,
++            options.chartType,
++            options.scales,
++            options.labelStyle,
++            true,
++            'outside',
++          ),
++        ]),
++    ...(baseline.length === 0
++      ? []
++      : [
++          pointMark(
++            COMPARISON_ANNOTATION_BASELINE_MARK_KEY,
++            baseline,
++            options.chartType,
++            options.scales,
++            options.labelStyle,
++            false,
++            'outside',
++          ),
++        ]),
++  ];
++}
+
+diff --git a/packages/editor/src/charts/categorical/comparisonSpec.ts b/packages/editor/src/charts/categorical/comparisonSpec.ts
+new file mode 100644
+index 0000000..8556a7f
+--- /dev/null
++++ b/packages/editor/src/charts/categorical/comparisonSpec.ts
+@@ -0,0 +1,364 @@
++import type { G2Spec, Mark } from '@antv/g2';
++
++import type {
++  Annotation,
++  CategoricalComparisonChartAppearance,
++  CategoricalComparisonProjection,
++  CategoricalComparisonSeries,
++  Emphasis,
++  GroupId,
++  SeriesId,
++  ViewNodeId,
++} from '@tellplot/core';
++import { formatAmount, type EditorLocale } from '../../editor/formatAmount';
++import {
++  createComparisonExpandedGroupRegionLabelMark,
++  createExpandedGroupRegionMark,
++  type ExpandedGroupRegion,
++} from '../groupRegions';
++import { createSafeComparisonTooltipInteraction, encodeTooltipHtml } from '../safeTooltip';
++import { zeroBasedValueDomain } from '../valueDomain';
++import { resolveComparisonAppearance } from './comparisonAppearance';
++import {
++  createComparisonAnnotationMarks,
++  createComparisonValueLabelMark,
++} from './comparisonLabels';
++
++export const COMPARISON_INTERVAL_MARK_KEY = 'categorical-comparison-interval';
++const DENSE_CANVAS_THRESHOLD = 80;
++const VALUE_LABEL_THRESHOLD = 40;
++
++export interface ComparisonMarkDatum {
++  readonly nodeId: ViewNodeId;
++  readonly categoryLabel: string;
++  readonly seriesId: SeriesId;
++  readonly seriesLabel: string;
++  readonly amount: number;
++  readonly elementKey: string;
++  readonly locked: boolean;
++  readonly nodeKind: 'category' | 'group';
++  readonly categoryOrder: number;
++  readonly seriesOrder: number;
++}
++
++export interface ComparisonChartSpecOptions {
++  readonly projection: CategoricalComparisonProjection;
++  readonly series: readonly CategoricalComparisonSeries[];
++  readonly chartType: 'bar' | 'column';
++  readonly title?: string;
++  readonly locale: EditorLocale;
++  readonly currency: string | undefined;
++  readonly reducedMotion: boolean;
++  readonly showValueLabels: boolean;
++  readonly annotations: Readonly<Record<ViewNodeId, Annotation>>;
++  readonly emphasis: Readonly<Record<ViewNodeId, Emphasis>>;
++  readonly appearance?: CategoricalComparisonChartAppearance | undefined;
++  readonly groupRegions?: readonly ExpandedGroupRegion[] | undefined;
++  readonly activeGroupRegionId?: GroupId | undefined;
++}
++
++/** Keeps G2 component identity tied only to the structural series registry. */
++export function comparisonStructuralIdentity(
++  series: readonly CategoricalComparisonSeries[],
++): string {
++  return JSON.stringify(['categorical-comparison', ...series.map(entry => entry.id)]);
++}
++
++/** Converts renderer-neutral categories into one category-major, series-minor mark sequence. */
++export function flattenComparisonProjection(
++  projection: CategoricalComparisonProjection,
++): readonly ComparisonMarkDatum[] {
++  return projection.flatMap((datum, categoryOrder) =>
++    datum.values.map((value, seriesOrder) => ({
++      nodeId: datum.nodeId,
++      categoryLabel: datum.label,
++      seriesId: value.seriesId,
++      seriesLabel: value.label,
++      amount: value.amount,
++      elementKey: JSON.stringify(['comparison-element', datum.nodeId, value.seriesId]),
++      locked: datum.locked,
++      nodeKind: datum.kind,
++      categoryOrder,
++      seriesOrder,
++    })),
++  );
++}
++
++export function shouldShowComparisonValueLabels(
++  projection: CategoricalComparisonProjection,
++  compactViewport = false,
++): boolean {
++  return (
++    !compactViewport &&
++    projection.reduce((count, datum) => count + datum.values.length, 0) <= VALUE_LABEL_THRESHOLD
++  );
++}
++
++function mainInterval(
++  options: ComparisonChartSpecOptions,
++  data: readonly ComparisonMarkDatum[],
++  scales: {
++    readonly x: Readonly<Record<string, unknown>>;
++    readonly y: Readonly<Record<string, unknown>>;
++    readonly series: Readonly<Record<string, unknown>>;
++    readonly color: Readonly<Record<string, unknown>>;
++  },
++  seriesLabelById: ReadonlyMap<SeriesId, string>,
++  resolved: ReturnType<typeof resolveComparisonAppearance>,
++  denseCanvas: boolean,
++): Mark {
++  const transposed = options.chartType === 'bar';
++  const value = {
++    key: COMPARISON_INTERVAL_MARK_KEY,
++    type: 'interval',
++    data: [...data],
++    ...(transposed ? { coordinate: { transform: [{ type: 'transpose' as const }] } } : {}),
++    encode: {
++      x: 'nodeId',
++      y: 'amount',
++      series: 'seriesId',
++      color: 'seriesId',
++      key: 'elementKey',
++    },
++    transform: [{ type: 'dodgeX' as const, groupBy: 'x' as const, padding: 0.08 }],
++    scale: scales,
++    axis:
++      options.chartType === 'column'
++        ? {
++            x: resolved.common.axis.x
++              ? {
++                  title: false,
++                  labelFill: '#5F6B65',
++                  labelAutoHide: true,
++                  labelAutoRotate: false,
++                  labelFormatter: (nodeId: unknown) =>
++                    options.projection.find(datum => datum.nodeId === String(nodeId))?.label ??
++                    String(nodeId),
++                }
++              : false,
++            y: resolved.common.axis.y
++              ? {
++                  title: false,
++                  labelFill: '#5F6B65',
++                  labelFormatter: (amount: unknown) =>
++                    formatAmount(
++                      Number(amount),
++                      options.locale,
++                      options.currency,
++                      resolved.common.numberFormat,
++                    ),
++                }
++              : false,
++          }
++        : {
++            x: resolved.common.axis.y
++              ? {
++                  title: false,
++                  labelFill: '#5F6B65',
++                  labelAutoHide: true,
++                  labelAutoRotate: false,
++                  labelFormatter: (nodeId: unknown) =>
++                    options.projection.find(datum => datum.nodeId === String(nodeId))?.label ??
++                    String(nodeId),
++                }
++              : false,
++            y: resolved.common.axis.x
++              ? {
++                  title: false,
++                  labelFill: '#5F6B65',
++                  labelFormatter: (amount: unknown) =>
++                    formatAmount(
++                      Number(amount),
++                      options.locale,
++                      options.currency,
++                      resolved.common.numberFormat,
++                    ),
++                }
++              : false,
++          },
++    legend: {
++      color: resolved.legend
++        ? {
++            labelFormatter: (seriesId: unknown) =>
++              seriesLabelById.get(String(seriesId)) ?? String(seriesId),
++          }
++        : false,
++    },
++    labels: [],
++    style: {
++      fillOpacity: (datum: ComparisonMarkDatum) =>
++        options.emphasis[datum.nodeId] === 'muted'
++          ? 0.28
++          : options.emphasis[datum.nodeId] === 'highlight'
++            ? 1
++            : denseCanvas
++              ? 1
++              : 0.96,
++      insetLeft: denseCanvas ? 0.5 : 1,
++      insetRight: denseCanvas ? 0.5 : 1,
++      lineWidth: (datum: ComparisonMarkDatum) =>
++        options.activeGroupRegionId === datum.nodeId ||
++        options.emphasis[datum.nodeId] === 'highlight'
++          ? 3
++          : denseCanvas
++            ? 0
++            : 1,
++      stroke: (datum: ComparisonMarkDatum) =>
++        options.activeGroupRegionId === datum.nodeId
++          ? resolved.common.palette.group
++          : options.emphasis[datum.nodeId] === 'highlight'
++            ? '#18211D'
++            : denseCanvas
++              ? 'transparent'
++              : '#FFFFFF',
++    },
++    tooltip: resolved.common.tooltip
++      ? {
++          title: (datum: ComparisonMarkDatum) => encodeTooltipHtml(datum.categoryLabel),
++          items: [
++            (datum: ComparisonMarkDatum) => ({
++              name: encodeTooltipHtml(datum.seriesLabel),
++              value: encodeTooltipHtml(
++                formatAmount(
++                  datum.amount,
++                  options.locale,
++                  options.currency,
++                  resolved.common.numberFormat,
++                ),
++              ),
++            }),
++          ],
++        }
++      : false,
++    animate:
++      options.reducedMotion || denseCanvas || !resolved.common.animation.enabled
++        ? false
++        : {
++            enter: {
++              type: options.chartType === 'bar' ? 'growInX' : 'growInY',
++              duration: resolved.common.animation.duration,
++              easing: 'cubic-bezier(0.2, 0, 0, 1)',
++            },
++            update: {
++              type: 'morphing',
++              duration: resolved.common.animation.duration,
++              easing: 'cubic-bezier(0.2, 0, 0, 1)',
++            },
++            exit: {
++              type: 'fadeOut',
++              duration: resolved.common.animation.duration,
++              easing: 'cubic-bezier(0.2, 0, 0, 1)',
++            },
++          },
++  };
++  return value as unknown as Mark;
++}
++
++/** Produces the canonical private screen/export comparison spec. */
++export function createComparisonChartSpec(options: ComparisonChartSpecOptions): G2Spec {
++  const resolved = resolveComparisonAppearance(
++    options.series,
++    options.appearance,
++    options.title ?? '',
++  );
++  const data = flattenComparisonProjection(options.projection);
++  const categoryDomain = options.projection.map(datum => datum.nodeId);
++  const valueDomain = zeroBasedValueDomain(data.map(datum => datum.amount));
++  const seriesLabelById = new Map(options.series.map(entry => [entry.id, entry.label]));
++  const transposed = options.chartType === 'bar';
++  const denseCanvas = data.length > DENSE_CANVAS_THRESHOLD;
++  const scales = {
++    x: {
++      type: 'band',
++      domain: categoryDomain,
++      padding: 0.24,
++      reverse: transposed,
++    },
++    y: { type: 'linear', nice: true, zero: true, domain: [...valueDomain] },
++    series: {
++      type: 'band',
++      domain: [...resolved.seriesDomain],
++      paddingInner: 0.08,
++      paddingOuter: 0,
++    },
++    color: {
++      type: 'ordinal',
++      domain: [...resolved.seriesDomain],
++      range: [...resolved.seriesRange],
++    },
++  } as const;
++  const labelScales = { x: scales.x, y: scales.y, series: scales.series };
++  const displayValueLabels =
++    resolved.common.valueLabels === 'always' ||
++    (resolved.common.valueLabels === 'auto' && options.showValueLabels);
++  const valueLabels = displayValueLabels
++    ? createComparisonValueLabelMark({
++        projection: options.projection,
++        chartType: options.chartType,
++        locale: options.locale,
++        currency: options.currency,
++        numberFormat: resolved.common.numberFormat,
++        labelStyle: resolved.common.valueLabelStyle,
++        scales: labelScales,
++      })
++    : undefined;
++  const annotationMarks = createComparisonAnnotationMarks({
++    projection: options.projection,
++    chartType: options.chartType,
++    locale: options.locale,
++    currency: options.currency,
++    numberFormat: resolved.common.numberFormat,
++    labelStyle: resolved.common.valueLabelStyle,
++    scales: labelScales,
++    annotations: options.annotations,
++  });
++  const regions = options.groupRegions ?? [];
++  const groupRegion = createExpandedGroupRegionMark({
++    regions,
++    categoryDomain,
++    valueDomain,
++    appearance: resolved.common,
++    reducedMotion: options.reducedMotion,
++    denseCanvas,
++    transposed,
++    activeGroupId: options.activeGroupRegionId,
++  });
++  const groupLabel = createComparisonExpandedGroupRegionLabelMark({
++    regions,
++    categoryDomain,
++    valueDomain,
++    appearance: resolved.common,
++    reducedMotion: options.reducedMotion,
++    denseCanvas,
++    transposed,
++    activeGroupId: options.activeGroupRegionId,
++  });
++
++  return {
++    key: 'categorical-comparison-view',
++    type: 'view',
++    ...(options.title === undefined
++      ? {}
++      : {
++          title: {
++            title: resolved.common.title,
++            size: 40,
++            align: 'left',
++            titleFill: '#18211D',
++            titleFontSize: 18,
++            titleFontWeight: 650,
++          },
++        }),
++    interaction: createSafeComparisonTooltipInteraction(
++      options.series.map(entry => entry.label),
++      resolved.common.tooltip,
++    ),
++    children: [
++      ...(groupRegion === undefined ? [] : [groupRegion]),
++      mainInterval(options, data, scales, seriesLabelById, resolved, denseCanvas),
++      ...(valueLabels === undefined ? [] : [valueLabels]),
++      ...annotationMarks,
++      ...(groupLabel === undefined ? [] : [groupLabel]),
++    ],
++  } as G2Spec;
++}
+
+diff --git a/packages/editor/src/rendering/g2/comparisonLabelTransform.ts b/packages/editor/src/rendering/g2/comparisonLabelTransform.ts
+new file mode 100644
+index 0000000..4dcfb6d
+--- /dev/null
++++ b/packages/editor/src/rendering/g2/comparisonLabelTransform.ts
+@@ -0,0 +1,110 @@
++import type { G2BaseComponent } from '@antv/g2';
++
++export interface ComparisonLabelFlipOptions {
++  readonly transposed?: boolean;
++}
++
++type UnknownRecord = Record<string, unknown>;
++type ComparisonLabelTransform = (
++  labels: readonly unknown[],
++  context: unknown,
++) => readonly unknown[];
++
++function record(value: unknown): UnknownRecord | undefined {
++  return typeof value === 'object' && value !== null ? (value as UnknownRecord) : undefined;
++}
++
++function finite(value: unknown): number | undefined {
++  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
++}
++
++function pair(value: unknown): readonly [number, number] | undefined {
++  if (!Array.isArray(value) || value.length < 2) {
++    return undefined;
++  }
++  const first = finite(value[0]);
++  const second = finite(value[1]);
++  return first === undefined || second === undefined ? undefined : [first, second];
++}
++
++function hide(style: UnknownRecord | undefined): void {
++  if (style !== undefined) {
++    style['visibility'] = 'hidden';
++  }
++}
++
++function flipLabel(label: unknown, context: unknown, transposed: boolean): void {
++  const target = record(label);
++  const style = record(target?.['style']);
++  const descriptor = record(target?.['__data__']);
++  const points = descriptor?.['points'];
++  const anchor = Array.isArray(points) ? pair(points[0]) : undefined;
++  const layout = record(record(context)?.['layout']);
++  const getRenderBounds = target?.['getRenderBounds'];
++  if (
++    style === undefined ||
++    anchor === undefined ||
++    layout === undefined ||
++    typeof getRenderBounds !== 'function'
++  ) {
++    hide(style);
++    return;
++  }
++
++  try {
++    const bounds = record(Reflect.apply(getRenderBounds, label, []));
++    const minimum = pair(bounds?.['min']);
++    const maximum = pair(bounds?.['max']);
++    const x = finite(layout['x']) ?? 0;
++    const y = finite(layout['y']) ?? 0;
++    const width = finite(layout['width']);
++    const height = finite(layout['height']);
++    if (
++      minimum === undefined ||
++      maximum === undefined ||
++      width === undefined ||
++      height === undefined
++    ) {
++      hide(style);
++      return;
++    }
++    const left = x + (finite(layout['marginLeft']) ?? 0) + (finite(layout['paddingLeft']) ?? 0);
++    const right =
++      x + width - (finite(layout['marginRight']) ?? 0) - (finite(layout['paddingRight']) ?? 0);
++    const top = y + (finite(layout['marginTop']) ?? 0) + (finite(layout['paddingTop']) ?? 0);
++    const bottom =
++      y + height - (finite(layout['marginBottom']) ?? 0) - (finite(layout['paddingBottom']) ?? 0);
++    const overflow = transposed
++      ? minimum[0] < left || maximum[0] > right
++      : minimum[1] < top || maximum[1] > bottom;
++    if (!overflow) {
++      return;
++    }
++    const currentX = finite(style['x']);
++    const currentY = finite(style['y']);
++    if (currentX === undefined || currentY === undefined) {
++      hide(style);
++      return;
++    }
++    if (transposed) {
++      style['x'] = 2 * anchor[0] - currentX;
++    } else {
++      style['y'] = 2 * anchor[1] - currentY;
++    }
++  } catch {
++    hide(style);
++  }
++}
++
++/** Flips endpoint labels before G2's exceedAdjust contains them in the plot interior. */
++export const comparisonFlipToInteriorLabelTransform: G2BaseComponent<
++  ComparisonLabelTransform,
++  ComparisonLabelFlipOptions
++> =
++  (options = {}) =>
++  (labels, context) => {
++    for (const label of labels) {
++      flipLabel(label, context, options.transposed === true);
++    }
++    return labels;
++  };
+
+diff --git a/packages/editor/tests/export/comparison-chart-spec.test.ts b/packages/editor/tests/export/comparison-chart-spec.test.ts
+new file mode 100644
+index 0000000..4474b43
+--- /dev/null
++++ b/packages/editor/tests/export/comparison-chart-spec.test.ts
+@@ -0,0 +1,450 @@
++import type { G2Spec } from '@antv/g2';
++import { describe, expect, it } from 'vitest';
++
++import type {
++  CategoricalComparisonChartAppearance,
++  CategoricalComparisonProjection,
++  CategoricalComparisonSeries,
++} from '@tellplot/core';
++import {
++  COMPARISON_INTERVAL_MARK_KEY,
++  comparisonStructuralIdentity,
++  createComparisonChartSpec,
++  flattenComparisonProjection,
++  shouldShowComparisonValueLabels,
++} from '../../src/charts/categorical/comparisonSpec';
++
++const series = [
++  { id: 'actual', label: 'Actual <unsafe>' },
++  { id: 'budget', label: 'Budget' },
++] as const satisfies readonly CategoricalComparisonSeries[];
++
++const projection = [
++  {
++    nodeId: 'north:west',
++    label: 'North <West>',
++    values: [
++      { seriesId: 'actual', label: 'Actual <unsafe>', amount: 12 },
++      { seriesId: 'budget', label: 'Budget', amount: -8 },
++    ],
++    kind: 'category',
++    sourceIds: ['north:west'],
++    locked: false,
++    order: 0,
++  },
++  {
++    nodeId: 'zero',
++    label: 'Zero',
++    values: [
++      { seriesId: 'actual', label: 'Actual <unsafe>', amount: 0 },
++      { seriesId: 'budget', label: 'Budget', amount: 0 },
++    ],
++    kind: 'group',
++    sourceIds: ['zero-a', 'zero-b'],
++    locked: true,
++    order: 1,
++  },
++] as const satisfies CategoricalComparisonProjection;
++
++const appearance = {
++  colors: {
++    series: [
++      { seriesId: 'budget', color: '#112233' },
++      { seriesId: 'actual', color: '#445566' },
++    ],
++    group: '#778899',
++  },
++  legend: true,
++  labels: {
++    value: { display: 'always', placement: 'outside', offset: 6 },
++    group: 'auto',
++  },
++  tooltip: true,
++  animation: { enabled: false },
++} as const satisfies CategoricalComparisonChartAppearance;
++
++interface MarkView {
++  readonly key?: string;
++  readonly type?: string;
++  readonly data?: readonly Readonly<Record<string, unknown>>[];
++  readonly encode?: Readonly<Record<string, unknown>>;
++  readonly transform?: readonly Readonly<Record<string, unknown>>[];
++  readonly scale?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
++  readonly axis?: unknown;
++  readonly legend?: unknown;
++  readonly labels?: readonly Readonly<Record<string, unknown>>[];
++  readonly style?: Readonly<Record<string, unknown>>;
++  readonly tooltip?: unknown;
++  readonly animate?: unknown;
++  readonly coordinate?: unknown;
++}
++
++function children(spec: G2Spec): readonly MarkView[] {
++  return (spec as { readonly children?: readonly MarkView[] }).children ?? [];
++}
++
++function mark(spec: G2Spec, key: string): MarkView {
++  const result = children(spec).find(candidate => candidate.key === key);
++  if (result === undefined) {
++    throw new Error(`Expected comparison child mark ${key}`);
++  }
++  return result;
++}
++
++function labelPosition(markView: MarkView): (datum: { readonly amount: number }) => string {
++  const position = markView.labels?.[0]?.['position'];
++  if (typeof position !== 'function') {
++    throw new Error('Expected a comparison label position accessor');
++  }
++  return position as (datum: { readonly amount: number }) => string;
++}
++
++function repeatedProjection(categoryCount: number, seriesCount: 2 | 4) {
++  return Array.from({ length: categoryCount }, (_, categoryIndex) => ({
++    nodeId: `category-${categoryIndex}`,
++    label: `Category ${categoryIndex}`,
++    values: Array.from({ length: seriesCount }, (_, seriesIndex) => ({
++      seriesId: `series-${seriesIndex}`,
++      label: `Series ${seriesIndex}`,
++      amount: categoryIndex + seriesIndex,
++    })),
++    kind: 'category' as const,
++    sourceIds: [`category-${categoryIndex}`],
++    locked: false,
++    order: categoryIndex,
++  })) satisfies CategoricalComparisonProjection;
++}
++
++describe('comparison G2 screen spec', () => {
++  it('flattens category-major and series-minor with collision-safe element identities', () => {
++    expect(flattenComparisonProjection(projection)).toEqual([
++      expect.objectContaining({
++        nodeId: 'north:west',
++        seriesId: 'actual',
++        amount: 12,
++        categoryOrder: 0,
++        seriesOrder: 0,
++        elementKey: JSON.stringify(['comparison-element', 'north:west', 'actual']),
++      }),
++      expect.objectContaining({
++        nodeId: 'north:west',
++        seriesId: 'budget',
++        amount: -8,
++        categoryOrder: 0,
++        seriesOrder: 1,
++        elementKey: JSON.stringify(['comparison-element', 'north:west', 'budget']),
++      }),
++      expect.objectContaining({ nodeId: 'zero', seriesId: 'actual', categoryOrder: 1 }),
++      expect.objectContaining({ nodeId: 'zero', seriesId: 'budget', categoryOrder: 1 }),
++    ]);
++  });
++
++  it.each(['column', 'bar'] as const)(
++    'uses one interactive interval with explicit %s domains, padding, palette and read-only legend',
++    chartType => {
++      const spec = createComparisonChartSpec({
++        projection,
++        series,
++        chartType,
++        locale: 'en-US',
++        currency: 'USD',
++        reducedMotion: false,
++        showValueLabels: true,
++        annotations: { 'north:west': 'Watch', zero: 'At baseline' },
++        emphasis: {},
++        appearance,
++      });
++      const interval = mark(spec, COMPARISON_INTERVAL_MARK_KEY);
++      const interactiveIntervals = children(spec).filter(
++        child => child.type === 'interval' && child.tooltip !== false,
++      );
++
++      expect(interactiveIntervals).toEqual([interval]);
++      expect(interval).toMatchObject({
++        type: 'interval',
++        encode: {
++          x: 'nodeId',
++          y: 'amount',
++          series: 'seriesId',
++          color: 'seriesId',
++          key: 'elementKey',
++        },
++        transform: [{ type: 'dodgeX', groupBy: 'x', padding: 0.08 }],
++        scale: {
++          x: {
++            type: 'band',
++            domain: ['north:west', 'zero'],
++            padding: 0.24,
++            reverse: chartType === 'bar',
++          },
++          y: { type: 'linear', zero: true, domain: [-8, 12] },
++          series: {
++            type: 'band',
++            domain: ['actual', 'budget'],
++            paddingInner: 0.08,
++            paddingOuter: 0,
++          },
++          color: {
++            type: 'ordinal',
++            domain: ['actual', 'budget'],
++            range: ['#445566', '#112233'],
++          },
++        },
++      });
++      expect(interval.coordinate).toEqual(
++        chartType === 'bar' ? { transform: [{ type: 'transpose' }] } : undefined,
++      );
++      expect(interval.legend).toMatchObject({
++        color: { labelFormatter: expect.any(Function) },
++      });
++      const formatter = (interval.legend as { color: { labelFormatter: (id: unknown) => string } })
++        .color.labelFormatter;
++      expect(formatter('actual')).toBe('Actual <unsafe>');
++      expect((spec as { readonly interaction?: unknown }).interaction).toMatchObject({
++        legendFilter: false,
++        legendHighlight: false,
++        tooltip: { shared: true, sort: expect.any(Function) },
++      });
++      expect(interval.tooltip).toMatchObject({
++        title: expect.any(Function),
++        items: [expect.any(Function)],
++      });
++      const tooltip = interval.tooltip as {
++        title: (datum: NonNullable<typeof interval.data>[number]) => string;
++        items: [
++          (datum: NonNullable<typeof interval.data>[number]) => { name: string; value: string },
++        ];
++      };
++      const first = interval.data?.[0];
++      const second = interval.data?.[1];
++      if (first === undefined || second === undefined) {
++        throw new Error('Expected flattened interval data');
++      }
++      expect(tooltip.title(first)).toBe('North &lt;West&gt;');
++      expect(tooltip.items[0](first).name).toBe('Actual &lt;unsafe&gt;');
++      const sort = (
++        spec as { interaction: { tooltip: { sort: (item: { name?: string }) => number } } }
++      ).interaction.tooltip.sort;
++      expect(sort(tooltip.items[0](first))).toBe(0);
++      expect(sort(tooltip.items[0](second))).toBe(1);
++    },
++  );
++
++  it('uses point-attached value and annotation labels with isolated identities and transform order', () => {
++    const spec = createComparisonChartSpec({
++      projection,
++      series,
++      chartType: 'column',
++      locale: 'en-US',
++      currency: undefined,
++      reducedMotion: true,
++      showValueLabels: true,
++      annotations: { 'north:west': 'Watch', zero: 'At baseline' },
++      emphasis: {},
++      appearance,
++    });
++    const value = mark(spec, 'categorical-comparison-value-labels');
++    const endpoint = mark(spec, 'categorical-comparison-annotation-endpoint');
++    const baseline = mark(spec, 'categorical-comparison-annotation-baseline');
++
++    for (const helper of [value, endpoint, baseline]) {
++      expect(helper).toMatchObject({
++        type: 'point',
++        axis: false,
++        legend: false,
++        tooltip: false,
++        animate: false,
++        style: { opacity: 0, pointerEvents: 'none' },
++      });
++      expect(helper.labels?.[0]?.['transform']).toEqual([
++        { type: expect.any(Function), transposed: false },
++        { type: 'exceedAdjust', bounds: 'main' },
++      ]);
++    }
++    expect(value.encode).toMatchObject({ x: 'nodeId', y: 'amount', series: 'seriesId' });
++    expect(value.transform).toEqual([{ type: 'dodgeX', groupBy: 'x', padding: 0.08 }]);
++    expect(value.scale?.['x']).toEqual(mark(spec, COMPARISON_INTERVAL_MARK_KEY).scale?.['x']);
++    expect(value.scale?.['series']).toEqual(
++      mark(spec, COMPARISON_INTERVAL_MARK_KEY).scale?.['series'],
++    );
++    expect(value.data?.map(datum => datum['helperKey'])).toEqual([
++      JSON.stringify(['comparison-value-label', 'north:west', 'actual']),
++      JSON.stringify(['comparison-value-label', 'north:west', 'budget']),
++      JSON.stringify(['comparison-value-label', 'zero', 'actual']),
++      JSON.stringify(['comparison-value-label', 'zero', 'budget']),
++    ]);
++    expect(endpoint.data).toEqual([
++      expect.objectContaining({ nodeId: 'north:west', seriesId: 'actual', amount: 12 }),
++    ]);
++    expect(baseline.data).toEqual([expect.objectContaining({ nodeId: 'zero', amount: 0 })]);
++    expect(baseline.encode).not.toHaveProperty('series');
++  });
++
++  it('applies value placement without changing the annotation endpoint direction', () => {
++    const create = (
++      placement: 'auto' | 'inside' | 'outside',
++      chartType: 'bar' | 'column' = 'column',
++    ) =>
++      createComparisonChartSpec({
++        projection,
++        series,
++        chartType,
++        locale: 'en-US',
++        currency: undefined,
++        reducedMotion: true,
++        showValueLabels: true,
++        annotations: { 'north:west': 'Watch' },
++        emphasis: {},
++        appearance: {
++          ...appearance,
++          labels: { ...appearance.labels, value: { display: 'always', placement } },
++        },
++      });
++
++    for (const placement of ['auto', 'inside'] as const) {
++      const spec = create(placement);
++      const valuePosition = labelPosition(mark(spec, 'categorical-comparison-value-labels'));
++      expect(valuePosition({ amount: 12 })).toBe('bottom');
++      expect(valuePosition({ amount: -8 })).toBe('top');
++      expect(
++        labelPosition(mark(spec, 'categorical-comparison-annotation-endpoint'))({ amount: 12 }),
++      ).toBe('top');
++      const barSpec = create(placement, 'bar');
++      const barValuePosition = labelPosition(mark(barSpec, 'categorical-comparison-value-labels'));
++      expect(barValuePosition({ amount: 12 })).toBe('left');
++      expect(barValuePosition({ amount: -8 })).toBe('right');
++      expect(
++        labelPosition(mark(barSpec, 'categorical-comparison-annotation-endpoint'))({ amount: 12 }),
++      ).toBe('right');
++    }
++    const outsidePosition = labelPosition(
++      mark(create('outside'), 'categorical-comparison-value-labels'),
++    );
++    expect(outsidePosition({ amount: 12 })).toBe('top');
++    expect(outsidePosition({ amount: -8 })).toBe('bottom');
++    const outsideBarPosition = labelPosition(
++      mark(create('outside', 'bar'), 'categorical-comparison-value-labels'),
++    );
++    expect(outsideBarPosition({ amount: 12 })).toBe('right');
++    expect(outsideBarPosition({ amount: -8 })).toBe('left');
++  });
++
++  it.each([
++    ['inside', 'bottom', 'left'],
++    ['outside', 'top', 'right'],
++    ['auto', 'top', 'right'],
++  ] as const)(
++    'maps comparison group label %s placement in both orientations',
++    (placement, columnPosition, barPosition) => {
++      const create = (chartType: 'bar' | 'column') =>
++        createComparisonChartSpec({
++          projection,
++          series,
++          chartType,
++          locale: 'en-US',
++          currency: undefined,
++          reducedMotion: true,
++          showValueLabels: true,
++          annotations: {},
++          emphasis: {},
++          appearance: {
++            ...appearance,
++            labels: { ...appearance.labels, group: { display: 'auto', placement } },
++          },
++          groupRegions: [
++            {
++              regionId: 'group-region:comparison',
++              groupId: 'comparison',
++              label: 'Comparison',
++              depth: 1,
++              startNodeId: 'north:west',
++              endNodeId: 'zero',
++              valueStart: -8,
++              valueEnd: 12,
++              labelValue: 12,
++            },
++          ],
++        });
++      expect(
++        mark(create('column'), 'categorical-comparison-group-labels').labels?.[0]?.['position'],
++      ).toBe(columnPosition);
++      expect(
++        mark(create('bar'), 'categorical-comparison-group-labels').labels?.[0]?.['position'],
++      ).toBe(barPosition);
++    },
++  );
++
++  it('breaks equal-absolute annotation endpoint ties by source order', () => {
++    const tieProjection = [
++      {
++        ...projection[0],
++        values: [
++          { ...projection[0].values[0], amount: 12 },
++          { ...projection[0].values[1], amount: -12 },
++        ],
++      },
++    ] satisfies CategoricalComparisonProjection;
++    const spec = createComparisonChartSpec({
++      projection: tieProjection,
++      series,
++      chartType: 'column',
++      locale: 'en-US',
++      currency: undefined,
++      reducedMotion: true,
++      showValueLabels: false,
++      annotations: { 'north:west': 'Tie' },
++      emphasis: {},
++      appearance,
++    });
++    expect(mark(spec, 'categorical-comparison-annotation-endpoint').data).toEqual([
++      expect.objectContaining({ seriesId: 'actual', amount: 12 }),
++    ]);
++  });
++
++  it('uses visible comparison mark count for auto label density', () => {
++    expect(shouldShowComparisonValueLabels(repeatedProjection(20, 2))).toBe(true);
++    expect(shouldShowComparisonValueLabels(repeatedProjection(21, 2))).toBe(false);
++    expect(shouldShowComparisonValueLabels(repeatedProjection(10, 4))).toBe(true);
++    expect(shouldShowComparisonValueLabels(repeatedProjection(11, 4))).toBe(false);
++    expect(shouldShowComparisonValueLabels(repeatedProjection(10, 2), true)).toBe(false);
++  });
++
++  it('keeps empty data and a hidden legend explicit without fabricating a category', () => {
++    const spec = createComparisonChartSpec({
++      projection: [],
++      series,
++      chartType: 'column',
++      locale: 'en-US',
++      currency: undefined,
++      reducedMotion: true,
++      showValueLabels: true,
++      annotations: {},
++      emphasis: {},
++      appearance: { legend: false, tooltip: false },
++    });
++    const interval = mark(spec, COMPARISON_INTERVAL_MARK_KEY);
++    expect(interval.data).toEqual([]);
++    expect(interval.scale?.['color']?.['domain']).toEqual(['actual', 'budget']);
++    expect(interval.legend).toEqual({ color: false });
++    expect(interval.tooltip).toBe(false);
++    expect((spec as { interaction?: unknown }).interaction).toEqual({
++      legendFilter: false,
++      legendHighlight: false,
++    });
++  });
++
++  it('changes structural identity only for series registry ID/order/count changes', () => {
++    expect(comparisonStructuralIdentity(series)).toBe(
++      comparisonStructuralIdentity([
++        { id: 'actual', label: 'Actual renamed' },
++        { id: 'budget', label: 'Budget renamed' },
++      ]),
++    );
++    expect(comparisonStructuralIdentity([...series].reverse())).not.toBe(
++      comparisonStructuralIdentity(series),
++    );
++    expect(
++      comparisonStructuralIdentity([...series, { id: 'forecast', label: 'Forecast' }]),
++    ).not.toBe(comparisonStructuralIdentity(series));
++  });
++});
+
+diff --git a/packages/editor/tests/rendering/comparison-group-regions.test.ts b/packages/editor/tests/rendering/comparison-group-regions.test.ts
+new file mode 100644
+index 0000000..ea7463c
+--- /dev/null
++++ b/packages/editor/tests/rendering/comparison-group-regions.test.ts
+@@ -0,0 +1,110 @@
++import { describe, expect, it } from 'vitest';
++
++import type {
++  CategoricalComparisonProjection,
++  CategoricalComparisonViewSpec,
++} from '@tellplot/core';
++import { projectComparisonExpandedGroupRegions } from '../../src/charts/groupRegions';
++
++const view = {
++  schemaVersion: '3.0.0',
++  datasetId: 'comparison-regions',
++  chartType: 'column',
++  revision: 0,
++  rootOrder: ['outer'],
++  groups: {
++    inner: { id: 'inner', label: 'Inner', childIds: ['a', 'b'] },
++    outer: { id: 'outer', label: 'Outer', childIds: ['inner', 'c'] },
++  },
++  collapsedGroupIds: [],
++  pinnedItemIds: [],
++  annotations: {},
++  emphasis: {},
++} as const satisfies CategoricalComparisonViewSpec;
++
++const projection = [
++  {
++    nodeId: 'a',
++    label: 'A',
++    values: [
++      { seriesId: 'actual', label: 'Actual', amount: 4 },
++      { seriesId: 'budget', label: 'Budget', amount: -9 },
++    ],
++    kind: 'category',
++    sourceIds: ['a'],
++    locked: false,
++    order: 0,
++  },
++  {
++    nodeId: 'b',
++    label: 'B',
++    values: [
++      { seriesId: 'actual', label: 'Actual', amount: 12 },
++      { seriesId: 'budget', label: 'Budget', amount: 3 },
++    ],
++    kind: 'category',
++    sourceIds: ['b'],
++    locked: false,
++    order: 1,
++  },
++  {
++    nodeId: 'c',
++    label: 'C',
++    values: [
++      { seriesId: 'actual', label: 'Actual', amount: -2 },
++      { seriesId: 'budget', label: 'Budget', amount: 5 },
++    ],
++    kind: 'category',
++    sourceIds: ['c'],
++    locked: false,
++    order: 2,
++  },
++] as const satisfies CategoricalComparisonProjection;
++
++describe('comparison expanded group regions', () => {
++  it('uses every visible member times every series plus zero and anchors at the first cluster', () => {
++    expect(projectComparisonExpandedGroupRegions(view, projection)).toEqual([
++      {
++        regionId: 'group-region:outer',
++        groupId: 'outer',
++        label: 'Outer',
++        depth: 1,
++        startNodeId: 'a',
++        endNodeId: 'c',
++        valueStart: -9,
++        valueEnd: 12,
++        labelValue: 12,
++      },
++      {
++        regionId: 'group-region:inner',
++        groupId: 'inner',
++        label: 'Inner',
++        depth: 2,
++        startNodeId: 'a',
++        endNodeId: 'b',
++        valueStart: -9,
++        valueEnd: 12,
++        labelValue: 12,
++      },
++    ]);
++  });
++
++  it('omits collapsed groups and descendants hidden by a collapsed ancestor', () => {
++    expect(
++      projectComparisonExpandedGroupRegions({ ...view, collapsedGroupIds: ['outer'] }, [
++        {
++          nodeId: 'outer',
++          label: 'Outer',
++          values: [
++            { seriesId: 'actual', label: 'Actual', amount: 14 },
++            { seriesId: 'budget', label: 'Budget', amount: -1 },
++          ],
++          kind: 'group',
++          sourceIds: ['a', 'b', 'c'],
++          locked: false,
++          order: 0,
++        },
++      ]),
++    ).toEqual([]);
++  });
++});
+
+diff --git a/packages/editor/tests/rendering/g2/comparison-label-transform.test.ts b/packages/editor/tests/rendering/g2/comparison-label-transform.test.ts
+new file mode 100644
+index 0000000..ff79a5c
+--- /dev/null
++++ b/packages/editor/tests/rendering/g2/comparison-label-transform.test.ts
+@@ -0,0 +1,54 @@
++import { describe, expect, it } from 'vitest';
++
++import { comparisonFlipToInteriorLabelTransform } from '../../../src/rendering/g2/comparisonLabelTransform';
++
++function label(
++  bounds: { readonly min: readonly [number, number]; readonly max: readonly [number, number] },
++  point: readonly [number, number],
++) {
++  return {
++    style: { x: point[0], y: point[1] - 10 },
++    __data__: { points: [point] },
++    getRenderBounds: () => bounds,
++  };
++}
++
++const context = {
++  layout: {
++    x: 0,
++    y: 0,
++    width: 200,
++    height: 120,
++    marginLeft: 10,
++    marginRight: 10,
++    marginTop: 10,
++    marginBottom: 10,
++    paddingLeft: 5,
++    paddingRight: 5,
++    paddingTop: 5,
++    paddingBottom: 5,
++  },
++};
++
++describe('comparison label flip transform', () => {
++  it('keeps an interior column label and flips an overflowing label around its renderer point', () => {
++    const interior = label({ min: [80, 30], max: [120, 45] }, [100, 50]);
++    const overflow = label({ min: [80, 4], max: [120, 18] }, [100, 20]);
++    const transform = comparisonFlipToInteriorLabelTransform({ transposed: false });
++
++    expect(transform([interior, overflow], context)).toEqual([interior, overflow]);
++    expect(interior.style.y).toBe(40);
++    expect(overflow.style.y).toBe(30);
++  });
++
++  it('flips a transposed label on x and fails closed for unreadable renderer structure', () => {
++    const overflow = label({ min: [4, 30], max: [20, 50] }, [20, 40]);
++    overflow.style.x = 10;
++    const malformed = { style: { x: 1, y: 1 } };
++    const transform = comparisonFlipToInteriorLabelTransform({ transposed: true });
++
++    transform([overflow, malformed], context);
++    expect(overflow.style.x).toBe(30);
++    expect(malformed.style).toMatchObject({ visibility: 'hidden' });
++  });
++});
+
+diff --git a/packages/editor/tests/runtime/outline.test.ts b/packages/editor/tests/runtime/outline.test.ts
+new file mode 100644
+index 0000000..740d77c
+--- /dev/null
++++ b/packages/editor/tests/runtime/outline.test.ts
+@@ -0,0 +1,42 @@
++import { describe, expect, it } from 'vitest';
++
++import type {
++  CategoricalComparisonProjection,
++  CategoricalComparisonViewSpec,
++} from '@tellplot/core';
++import { outlineEntries } from '../../src/editor/outline';
++
++describe('comparison outline generation guard', () => {
++  it('keeps category rows and collapsed groups free of cross-series totals', () => {
++    const view = {
++      schemaVersion: '3.0.0',
++      datasetId: 'outline-comparison',
++      chartType: 'column',
++      revision: 0,
++      rootOrder: ['group'],
++      groups: { group: { id: 'group', label: 'Group', childIds: ['a', 'b'] } },
++      collapsedGroupIds: ['group'],
++      pinnedItemIds: [],
++      annotations: {},
++      emphasis: {},
++    } as const satisfies CategoricalComparisonViewSpec;
++    const projection = [
++      {
++        nodeId: 'group',
++        label: 'Group',
++        values: [
++          { seriesId: 'actual', label: 'Actual', amount: 30 },
++          { seriesId: 'budget', label: 'Budget', amount: 20 },
++        ],
++        kind: 'group',
++        sourceIds: ['a', 'b'],
++        locked: false,
++        order: 0,
++      },
++    ] as const satisfies CategoricalComparisonProjection;
++
++    expect(outlineEntries(view, projection, 'categorical', 'comparison')).toEqual([
++      expect.objectContaining({ nodeId: 'group', amount: null, kind: 'group', expanded: false }),
++    ]);
++  });
++});
+
+diff --git a/e2e/comparison-rendering.spec.ts b/e2e/comparison-rendering.spec.ts
+new file mode 100644
+index 0000000..3595d16
+--- /dev/null
++++ b/e2e/comparison-rendering.spec.ts
+@@ -0,0 +1,392 @@
++import { expect, test, type Locator, type Page } from '@playwright/test';
++
++const EDITOR = '[data-tellplot="editor"]';
++const PALETTE = ['#0072B2', '#D55E00', '#009E73', '#CC79A7'] as const;
++const LABEL_BACKGROUND = '#FF00FF';
++
++interface ColorComponent {
++  readonly color: string;
++  readonly area: number;
++  readonly minX: number;
++  readonly minY: number;
++  readonly maxX: number;
++  readonly maxY: number;
++  readonly centerX: number;
++  readonly centerY: number;
++}
++
++function comparisonConfig(
++  chartType: 'bar' | 'column',
++  seriesCount: 2 | 4,
++  mode: 'mixed' | 'all-zero' | 'zero-positive-domain' | 'zero-negative-domain',
++  order = Array.from({ length: seriesCount }, (_, index) => index),
++): Record<string, unknown> {
++  const allSeries = Array.from({ length: seriesCount }, (_, index) => ({
++    id: `series-${index + 1}`,
++    label: `Series ${index + 1}`,
++  }));
++  const sourceSeries = order.map(index => allSeries[index]);
++  const amounts = (categoryIndex: number): readonly number[] => {
++    if (mode === 'all-zero') {
++      return Array.from({ length: seriesCount }, () => 0);
++    }
++    if (mode === 'zero-positive-domain') {
++      return categoryIndex === 0
++        ? Array.from({ length: seriesCount }, () => 0)
++        : Array.from({ length: seriesCount }, (_, index) => 45 + index * 12);
++    }
++    if (mode === 'zero-negative-domain') {
++      return categoryIndex === 0
++        ? Array.from({ length: seriesCount }, () => 0)
++        : Array.from({ length: seriesCount }, (_, index) => -(45 + index * 12));
++    }
++    return Array.from({ length: seriesCount }, (_, index) =>
++      categoryIndex === 0 ? 90 - index * 12 : -(70 - index * 10),
++    );
++  };
++  return {
++    type: chartType,
++    data: {
++      schemaVersion: '3.0.0',
++      dataKind: 'categorical',
++      datasetId: `comparison-${chartType}-${seriesCount}-${mode}`,
++      currency: 'USD',
++      series: sourceSeries,
++      items: ['alpha', 'beta'].map((id, categoryIndex) => ({
++        id,
++        label: categoryIndex === 0 ? 'Alpha' : 'Beta',
++        values: order.map(index => ({
++          seriesId: `series-${index + 1}`,
++          amount: amounts(categoryIndex)[index],
++        })),
++      })),
++    },
++    appearance: {
++      title: 'Comparison characterization',
++      colors: {
++        series: allSeries.map((series, index) => ({
++          seriesId: series.id,
++          color: PALETTE[index],
++        })),
++      },
++      axes: { category: false, value: false },
++      labels: {
++        value: {
++          display: 'always',
++          placement: 'outside',
++          offset: 5,
++          color: '#111111',
++          fontSize: 11,
++          background: true,
++          backgroundColor: LABEL_BACKGROUND,
++          backgroundOpacity: 1,
++        },
++        group: 'never',
++      },
++      legend: true,
++      tooltip: true,
++      animation: { enabled: false },
++    },
++    editor: {
++      readOnly: false,
++      panels: { outline: true, inspector: true, toolbar: true },
++      outline: { placement: 'right' },
++      inspector: { mode: 'tabs' },
++    },
++    locale: 'en-US',
++    height: '100%',
++  };
++}
++
++async function openEditor(page: Page): Promise<void> {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto('/playground');
++  await expect(page.locator(`${EDITOR}[data-editor-state="ready"]`)).toBeVisible();
++}
++
++async function applyConfig(page: Page, config: Record<string, unknown>): Promise<Locator> {
++  const input = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
++  await input.fill(JSON.stringify(config, null, 2));
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++  const stage = page.getByTestId('tellplot-chart-stage');
++  await expect(stage).toHaveAttribute('data-chart-type', String(config['type']));
++  await expect(stage).toHaveAttribute('data-render-state', 'ready');
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await page.evaluate(
++    () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))),
++  );
++  return canvas;
++}
++
++async function paintedPixelCount(canvas: Locator): Promise<number> {
++  return canvas.evaluate(element => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return 0;
++    }
++    const context = element.getContext('2d');
++    if (context === null) {
++      return 0;
++    }
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    let painted = 0;
++    for (let offset = 0; offset < pixels.length; offset += 4) {
++      if (
++        (pixels[offset + 3] ?? 0) > 20 &&
++        ((pixels[offset] ?? 255) < 242 ||
++          (pixels[offset + 1] ?? 255) < 242 ||
++          (pixels[offset + 2] ?? 255) < 242)
++      ) {
++        painted += 1;
++      }
++    }
++    return painted;
++  });
++}
++
++async function colorComponents(
++  canvas: Locator,
++  colors: readonly string[],
++): Promise<readonly ColorComponent[]> {
++  const local = await canvas.evaluate((element, requestedColors) => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return [];
++    }
++    const context = element.getContext('2d');
++    if (context === null) {
++      return [];
++    }
++    const parsed = requestedColors.map(color => ({
++      color,
++      red: Number.parseInt(color.slice(1, 3), 16),
++      green: Number.parseInt(color.slice(3, 5), 16),
++      blue: Number.parseInt(color.slice(5, 7), 16),
++    }));
++    const { width, height } = element;
++    const pixels = context.getImageData(0, 0, width, height).data;
++    const result: ColorComponent[] = [];
++    for (const target of parsed) {
++      const matches = new Uint8Array(width * height);
++      for (let index = 0; index < width * height; index += 1) {
++        const offset = index * 4;
++        if (
++          (pixels[offset + 3] ?? 0) > 140 &&
++          Math.abs((pixels[offset] ?? 0) - target.red) <= 5 &&
++          Math.abs((pixels[offset + 1] ?? 0) - target.green) <= 5 &&
++          Math.abs((pixels[offset + 2] ?? 0) - target.blue) <= 5
++        ) {
++          matches[index] = 1;
++        }
++      }
++      const stack: number[] = [];
++      for (let start = 0; start < matches.length; start += 1) {
++        if (matches[start] !== 1) {
++          continue;
++        }
++        stack.push(start);
++        matches[start] = 2;
++        let area = 0;
++        let minX = width;
++        let minY = height;
++        let maxX = 0;
++        let maxY = 0;
++        while (stack.length > 0) {
++          const current = stack.pop();
++          if (current === undefined) {
++            break;
++          }
++          const x = current % width;
++          const y = Math.floor(current / width);
++          area += 1;
++          minX = Math.min(minX, x);
++          minY = Math.min(minY, y);
++          maxX = Math.max(maxX, x);
++          maxY = Math.max(maxY, y);
++          const neighbors = [
++            x > 0 ? current - 1 : -1,
++            x + 1 < width ? current + 1 : -1,
++            y > 0 ? current - width : -1,
++            y + 1 < height ? current + width : -1,
++          ];
++          for (const neighbor of neighbors) {
++            if (neighbor >= 0 && matches[neighbor] === 1) {
++              matches[neighbor] = 2;
++              stack.push(neighbor);
++            }
++          }
++        }
++        if (area >= 4) {
++          result.push({
++            color: target.color,
++            area,
++            minX,
++            minY,
++            maxX,
++            maxY,
++            centerX: (minX + maxX) / 2,
++            centerY: (minY + maxY) / 2,
++          });
++        }
++      }
++    }
++    return result;
++  }, colors);
++  const box = await canvas.boundingBox();
++  const size = await canvas.evaluate(element => ({
++    width: element instanceof HTMLCanvasElement ? element.width : 0,
++    height: element instanceof HTMLCanvasElement ? element.height : 0,
++  }));
++  if (box === null || size.width === 0 || size.height === 0) {
++    return [];
++  }
++  return local.map(component => ({
++    ...component,
++    minX: box.x + (component.minX / size.width) * box.width,
++    maxX: box.x + (component.maxX / size.width) * box.width,
++    minY: box.y + (component.minY / size.height) * box.height,
++    maxY: box.y + (component.maxY / size.height) * box.height,
++    centerX: box.x + (component.centerX / size.width) * box.width,
++    centerY: box.y + (component.centerY / size.height) * box.height,
++  }));
++}
++
++function legendOrder(
++  components: readonly ColorComponent[],
++  colors: readonly string[],
++): readonly string[] {
++  return colors
++    .map(
++      color =>
++        components
++          .filter(component => component.color === color)
++          .sort((left, right) => left.minY - right.minY || left.area - right.area)[0],
++    )
++    .filter((component): component is ColorComponent => component !== undefined)
++    .sort((left, right) => left.centerX - right.centerX)
++    .map(component => component.color);
++}
++
++test('renders the fixed bar/column by 2/4-series by mixed/all-zero Canvas matrix', async ({
++  page,
++}) => {
++  await openEditor(page);
++  for (const chartType of ['column', 'bar'] as const) {
++    for (const seriesCount of [2, 4] as const) {
++      for (const mode of ['mixed', 'all-zero'] as const) {
++        const canvas = await applyConfig(page, comparisonConfig(chartType, seriesCount, mode));
++        await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(400);
++        const components = await colorComponents(canvas, [
++          ...PALETTE.slice(0, seriesCount),
++          LABEL_BACKGROUND,
++        ]);
++        expect(legendOrder(components, PALETTE.slice(0, seriesCount))).toEqual(
++          PALETTE.slice(0, seriesCount),
++        );
++        const labels = components.filter(
++          component =>
++            component.color === LABEL_BACKGROUND &&
++            component.area >= 20 &&
++            component.maxX - component.minX >= 4 &&
++            component.maxY - component.minY >= 4,
++        );
++        expect(labels).toHaveLength(seriesCount * 2);
++
++        if (mode === 'mixed') {
++          const intervals = components.filter(
++            component =>
++              PALETTE.slice(0, seriesCount).includes(component.color as (typeof PALETTE)[number]) &&
++              component.area > 250,
++          );
++          expect(intervals).toHaveLength(seriesCount * 2);
++          const axis = chartType === 'column' ? 'centerX' : 'centerY';
++          const orderedLabels = [...labels].sort((left, right) => left[axis] - right[axis]);
++          const orderedIntervals = [...intervals].sort((left, right) => left[axis] - right[axis]);
++          for (let start = 0; start < orderedIntervals.length; start += seriesCount) {
++            const clusterIntervals = orderedIntervals.slice(start, start + seriesCount);
++            const clusterLabels = orderedLabels.slice(start, start + seriesCount);
++            expect(clusterIntervals.map(interval => interval.color)).toEqual(
++              PALETTE.slice(0, seriesCount),
++            );
++            expect(clusterLabels).toHaveLength(clusterIntervals.length);
++            for (let index = 0; index < clusterIntervals.length; index += 1) {
++              const interval = clusterIntervals[index];
++              const label = clusterLabels[index];
++              if (interval === undefined || label === undefined) {
++                throw new Error('Expected one comparison label for every interval');
++              }
++              expect(Math.abs(label[axis] - interval[axis])).toBeLessThanOrEqual(6);
++            }
++          }
++        }
++      }
++    }
++  }
++});
++
++test('keeps the source-ordered legend visible for an empty category set', async ({ page }) => {
++  await openEditor(page);
++  const config = comparisonConfig('column', 4, 'all-zero');
++  const data = config['data'];
++  if (typeof data !== 'object' || data === null) {
++    throw new Error('Expected comparison source data');
++  }
++  const canvas = await applyConfig(page, {
++    ...config,
++    data: { ...data, items: [] },
++  });
++  expect(legendOrder(await colorComponents(canvas, PALETTE), PALETTE)).toEqual(PALETTE);
++});
++
++test('keeps all-zero labels visible inside positive-only and negative-only value domains', async ({
++  page,
++}) => {
++  await openEditor(page);
++  for (const mode of ['zero-positive-domain', 'zero-negative-domain'] as const) {
++    const canvas = await applyConfig(page, comparisonConfig('column', 4, mode));
++    const labels = (await colorComponents(canvas, [LABEL_BACKGROUND])).filter(
++      component => component.color === LABEL_BACKGROUND,
++    );
++    expect(labels.length).toBeGreaterThanOrEqual(8);
++    const box = await canvas.boundingBox();
++    expect(box).not.toBeNull();
++    for (const label of labels) {
++      expect(label.minY).toBeGreaterThanOrEqual(box?.y ?? 0);
++      expect(label.maxY).toBeLessThanOrEqual((box?.y ?? 0) + (box?.height ?? 0));
++    }
++  }
++});
++
++test('recreates the Canvas and visibly reorders legend markers and shared Tooltip items', async ({
++  page,
++}) => {
++  await openEditor(page);
++  let canvas = await applyConfig(page, comparisonConfig('column', 4, 'mixed'));
++  const oldCanvas = canvas;
++  await oldCanvas.evaluate(element => element.setAttribute('data-comparison-old-canvas', 'true'));
++  expect(legendOrder(await colorComponents(canvas, PALETTE), PALETTE)).toEqual(PALETTE);
++
++  const reversedOrder = [3, 2, 1, 0];
++  canvas = await applyConfig(page, comparisonConfig('column', 4, 'mixed', reversedOrder));
++  await expect(page.locator('canvas[data-comparison-old-canvas="true"]')).toHaveCount(0);
++  expect(legendOrder(await colorComponents(canvas, PALETTE), PALETTE)).toEqual(
++    [...PALETTE].reverse(),
++  );
++
++  const intervalComponents = (await colorComponents(canvas, PALETTE)).filter(
++    component => component.area > 250,
++  );
++  const target = intervalComponents[0];
++  if (target === undefined) {
++    throw new Error('Expected a visible comparison interval');
++  }
++  await page.mouse.move(target.centerX, target.centerY);
++  const tooltip = page.locator('.g2-tooltip').filter({ visible: true });
++  await expect(tooltip).toBeVisible();
++  await expect
++    .poll(async () =>
++      (await tooltip.locator('.g2-tooltip-list-item-name').allTextContents()).map(text =>
++        text.trim(),
++      ),
++    )
++    .toEqual(['Series 4', 'Series 3', 'Series 2', 'Series 1']);
++});
+

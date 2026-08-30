@@ -1,0 +1,1067 @@
+{
+  "schemaVersion": 1,
+  "chartFamily": "categorical-comparison",
+  "fixtureShape": {
+    "categories": 200,
+    "series": 2,
+    "visibleMarks": 400,
+    "rasterDistinctColoredSlots": 350
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "runtime": "v22.20.0",
+  "project": "chromium-performance",
+  "warmupCommands": 1,
+  "formula": "sorted[ceil(.95*n)-1]",
+  "budgetMs": 150,
+  "preview": {
+    "rootCommitDelta": 0,
+    "raf": {
+      "requested": 48,
+      "cancelled": 47,
+      "callbacks": 1
+    }
+  },
+  "groups": [
+    {
+      "input": "keyboard",
+      "sampleCount": 30,
+      "samplesMs": [
+        55.5,
+        59.799999952316284,
+        57.200000047683716,
+        61.60000014305115,
+        60,
+        62.200000047683716,
+        61.09999990463257,
+        52,
+        56.59999990463257,
+        47.700000047683716,
+        48.60000014305115,
+        49.299999952316284,
+        46.69999980926514,
+        43.5,
+        45.700000047683716,
+        42.89999985694885,
+        52.200000047683716,
+        50.59999990463257,
+        56.299999952316284,
+        54.90000009536743,
+        55.799999952316284,
+        58.700000047683716,
+        56.60000014305115,
+        60,
+        52,
+        55,
+        55.69999980926514,
+        52.09999990463257,
+        52.5,
+        49.30000019073486
+      ],
+      "p95Ms": 61.60000014305115,
+      "paintedReceipts": [
+        {
+          "sampleIndex": 0,
+          "elapsedMs": 55.5,
+          "expectedRevision": 2,
+          "paintedRevision": 2,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 1,
+          "elapsedMs": 59.799999952316284,
+          "expectedRevision": 3,
+          "paintedRevision": 3,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 2,
+          "elapsedMs": 57.200000047683716,
+          "expectedRevision": 4,
+          "paintedRevision": 4,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 3,
+          "elapsedMs": 61.60000014305115,
+          "expectedRevision": 5,
+          "paintedRevision": 5,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 4,
+          "elapsedMs": 60,
+          "expectedRevision": 6,
+          "paintedRevision": 6,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 5,
+          "elapsedMs": 62.200000047683716,
+          "expectedRevision": 7,
+          "paintedRevision": 7,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 6,
+          "elapsedMs": 61.09999990463257,
+          "expectedRevision": 8,
+          "paintedRevision": 8,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 7,
+          "elapsedMs": 52,
+          "expectedRevision": 9,
+          "paintedRevision": 9,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 8,
+          "elapsedMs": 56.59999990463257,
+          "expectedRevision": 10,
+          "paintedRevision": 10,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 9,
+          "elapsedMs": 47.700000047683716,
+          "expectedRevision": 11,
+          "paintedRevision": 11,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 10,
+          "elapsedMs": 48.60000014305115,
+          "expectedRevision": 12,
+          "paintedRevision": 12,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 11,
+          "elapsedMs": 49.299999952316284,
+          "expectedRevision": 13,
+          "paintedRevision": 13,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 12,
+          "elapsedMs": 46.69999980926514,
+          "expectedRevision": 14,
+          "paintedRevision": 14,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 13,
+          "elapsedMs": 43.5,
+          "expectedRevision": 15,
+          "paintedRevision": 15,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 14,
+          "elapsedMs": 45.700000047683716,
+          "expectedRevision": 16,
+          "paintedRevision": 16,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 15,
+          "elapsedMs": 42.89999985694885,
+          "expectedRevision": 17,
+          "paintedRevision": 17,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 16,
+          "elapsedMs": 52.200000047683716,
+          "expectedRevision": 18,
+          "paintedRevision": 18,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 17,
+          "elapsedMs": 50.59999990463257,
+          "expectedRevision": 19,
+          "paintedRevision": 19,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 18,
+          "elapsedMs": 56.299999952316284,
+          "expectedRevision": 20,
+          "paintedRevision": 20,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 19,
+          "elapsedMs": 54.90000009536743,
+          "expectedRevision": 21,
+          "paintedRevision": 21,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 20,
+          "elapsedMs": 55.799999952316284,
+          "expectedRevision": 22,
+          "paintedRevision": 22,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 21,
+          "elapsedMs": 58.700000047683716,
+          "expectedRevision": 23,
+          "paintedRevision": 23,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 22,
+          "elapsedMs": 56.60000014305115,
+          "expectedRevision": 24,
+          "paintedRevision": 24,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 23,
+          "elapsedMs": 60,
+          "expectedRevision": 25,
+          "paintedRevision": 25,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 24,
+          "elapsedMs": 52,
+          "expectedRevision": 26,
+          "paintedRevision": 26,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 25,
+          "elapsedMs": 55,
+          "expectedRevision": 27,
+          "paintedRevision": 27,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 26,
+          "elapsedMs": 55.69999980926514,
+          "expectedRevision": 28,
+          "paintedRevision": 28,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 27,
+          "elapsedMs": 52.09999990463257,
+          "expectedRevision": 29,
+          "paintedRevision": 29,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 28,
+          "elapsedMs": 52.5,
+          "expectedRevision": 30,
+          "paintedRevision": 30,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 29,
+          "elapsedMs": 49.30000019073486,
+          "expectedRevision": 31,
+          "paintedRevision": 31,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "input": "direct-pointer",
+      "sampleCount": 30,
+      "samplesMs": [
+        45.40000009536743,
+        43,
+        44.5,
+        50.19999980926514,
+        49.299999952316284,
+        54.30000019073486,
+        45.89999985694885,
+        45.799999952316284,
+        44.5,
+        43.89999985694885,
+        48.30000019073486,
+        43.40000009536743,
+        37.5,
+        34.299999952316284,
+        38,
+        34.89999985694885,
+        36.5,
+        35.200000047683716,
+        35.39999985694885,
+        37.5,
+        37.69999980926514,
+        35.59999990463257,
+        35.299999952316284,
+        37.5,
+        40.69999980926514,
+        43.59999990463257,
+        40.200000047683716,
+        40.59999990463257,
+        39.5,
+        38.60000014305115
+      ],
+      "p95Ms": 50.19999980926514,
+      "paintedReceipts": [
+        {
+          "sampleIndex": 0,
+          "elapsedMs": 45.40000009536743,
+          "expectedRevision": 32,
+          "paintedRevision": 32,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 1,
+          "elapsedMs": 43,
+          "expectedRevision": 33,
+          "paintedRevision": 33,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 2,
+          "elapsedMs": 44.5,
+          "expectedRevision": 34,
+          "paintedRevision": 34,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 3,
+          "elapsedMs": 50.19999980926514,
+          "expectedRevision": 35,
+          "paintedRevision": 35,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 4,
+          "elapsedMs": 49.299999952316284,
+          "expectedRevision": 36,
+          "paintedRevision": 36,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 5,
+          "elapsedMs": 54.30000019073486,
+          "expectedRevision": 37,
+          "paintedRevision": 37,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 6,
+          "elapsedMs": 45.89999985694885,
+          "expectedRevision": 38,
+          "paintedRevision": 38,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 7,
+          "elapsedMs": 45.799999952316284,
+          "expectedRevision": 39,
+          "paintedRevision": 39,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 8,
+          "elapsedMs": 44.5,
+          "expectedRevision": 40,
+          "paintedRevision": 40,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 9,
+          "elapsedMs": 43.89999985694885,
+          "expectedRevision": 41,
+          "paintedRevision": 41,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 10,
+          "elapsedMs": 48.30000019073486,
+          "expectedRevision": 42,
+          "paintedRevision": 42,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 11,
+          "elapsedMs": 43.40000009536743,
+          "expectedRevision": 43,
+          "paintedRevision": 43,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 12,
+          "elapsedMs": 37.5,
+          "expectedRevision": 44,
+          "paintedRevision": 44,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 13,
+          "elapsedMs": 34.299999952316284,
+          "expectedRevision": 45,
+          "paintedRevision": 45,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 14,
+          "elapsedMs": 38,
+          "expectedRevision": 46,
+          "paintedRevision": 46,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 15,
+          "elapsedMs": 34.89999985694885,
+          "expectedRevision": 47,
+          "paintedRevision": 47,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 16,
+          "elapsedMs": 36.5,
+          "expectedRevision": 48,
+          "paintedRevision": 48,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 17,
+          "elapsedMs": 35.200000047683716,
+          "expectedRevision": 49,
+          "paintedRevision": 49,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 18,
+          "elapsedMs": 35.39999985694885,
+          "expectedRevision": 50,
+          "paintedRevision": 50,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 19,
+          "elapsedMs": 37.5,
+          "expectedRevision": 51,
+          "paintedRevision": 51,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 20,
+          "elapsedMs": 37.69999980926514,
+          "expectedRevision": 52,
+          "paintedRevision": 52,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 21,
+          "elapsedMs": 35.59999990463257,
+          "expectedRevision": 53,
+          "paintedRevision": 53,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 22,
+          "elapsedMs": 35.299999952316284,
+          "expectedRevision": 54,
+          "paintedRevision": 54,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 23,
+          "elapsedMs": 37.5,
+          "expectedRevision": 55,
+          "paintedRevision": 55,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 24,
+          "elapsedMs": 40.69999980926514,
+          "expectedRevision": 56,
+          "paintedRevision": 56,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 25,
+          "elapsedMs": 43.59999990463257,
+          "expectedRevision": 57,
+          "paintedRevision": 57,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 26,
+          "elapsedMs": 40.200000047683716,
+          "expectedRevision": 58,
+          "paintedRevision": 58,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 27,
+          "elapsedMs": 40.59999990463257,
+          "expectedRevision": 59,
+          "paintedRevision": 59,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 28,
+          "elapsedMs": 39.5,
+          "expectedRevision": 60,
+          "paintedRevision": 60,
+          "expectedOrderOrdinals": [
+            1,
+            2,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "sampleIndex": 29,
+          "elapsedMs": 38.60000014305115,
+          "expectedRevision": 61,
+          "paintedRevision": 61,
+          "expectedOrderOrdinals": [
+            2,
+            1,
+            3
+          ],
+          "paintedOrderOrdinals": [
+            2,
+            1,
+            3
+          ]
+        }
+      ]
+    }
+  ]
+}

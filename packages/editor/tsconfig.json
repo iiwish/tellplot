@@ -4,7 +4,8 @@
     "skipLibCheck": true,
     "types": ["node"],
     "paths": {
-      "@tellplot/core": ["../core/src/index.ts"]
+      "@tellplot/core": ["../core/src/index.ts"],
+      "@tellplot/editor": ["./src/index.ts"]
     }
   },
   "include": ["src", "tests/**/*.test.ts"]

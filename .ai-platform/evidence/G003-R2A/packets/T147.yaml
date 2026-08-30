@@ -1,0 +1,84 @@
+schema_version: 1
+packet_id: EP-G003-R2A-T147
+task_id: T147
+goal_id: G003-R2A
+packet_status: needs_review
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  authorization: .ai-platform/evidence/T145/release-authorization.md#approval-1-git-handoff
+  plan: .ai-platform/evidence/G003-R2A/plan.md
+  work_graph: .ai-platform/evidence/G003-R2A/tasks.md
+  analysis: .ai-platform/evidence/G003-R2A/analysis.md
+  predecessor_packet: .ai-platform/evidence/G003-R2A/packets/T146.yaml
+  predecessor_evidence: .ai-platform/evidence/T146
+
+work_unit:
+  title: Clean-Source Integration
+  goal: Rebuild the accepted G003/G003-R1 tree in a separate worktree rooted at fresh origin/main.
+  depends_on:
+    - T146 Needs_Review with no remote drift
+  blocks:
+    - T148
+  parallel: false
+
+codebase_context:
+  source_patch: .ai-platform/evidence/T143/diff.patch
+  source_patch_sha256: 19fd38c377c45dcc0af6a3df6848bad684d079e1332b2fc296ad307f5805459d
+  source_manifest: .ai-platform/evidence/T143/source-manifest.json
+  source_manifest_sha256: fc167c6800dd5474293fedf293e3448f29aeb0d865ed3e03a179d179a4e1958a
+  artifact_sha256: 44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca
+  descriptor_sha256: 729bf4a1e67d8249d1146ebf5e961f0376f059ff8aa14750127c99c565570182
+  workflow_sha256: d85da954fee1e5696ddfd6bd678f68ead50f2d4d815ecda45ca9e9d2ea53ac63
+
+execution_constraints:
+  clean_worktree_required: true
+  candidate_branch: codex/g003-r2a
+  include_evidence:
+    - .ai-platform/evidence/T135/**
+    - .ai-platform/evidence/T136/**
+    - .ai-platform/evidence/T137/**
+    - .ai-platform/evidence/T138/**
+    - .ai-platform/evidence/T139/**
+    - .ai-platform/evidence/T140/**
+    - .ai-platform/evidence/T141/**
+    - .ai-platform/evidence/T142/**
+    - .ai-platform/evidence/T143/**
+    - .ai-platform/evidence/T144/**
+    - .ai-platform/evidence/T145/**
+    - .ai-platform/evidence/G003-R2A/**
+    - .ai-platform/evidence/T146/**
+    - .ai-platform/evidence/T147/**
+    - .ai-platform/evidence/T148/**
+  forbidden_changes:
+    - shared dirty worktree or shared index
+    - T131 evidence
+    - dependency or lockfile drift
+    - public API/schema, test threshold or workflow trust boundary drift
+  no_subdelegation: true
+
+validation_loop:
+  expected_signals:
+    - T143 patch applies cleanly to fresh origin/main.
+    - Source paths represented by T143 manifest match path, type, mode, size and SHA-256.
+    - Artifact, descriptor and workflow hashes remain exact.
+    - Focused package/release checks and git diff --check pass.
+
+evidence_contract:
+  root: .ai-platform/evidence/T147
+  required_files:
+    - summary.md
+    - test-results.md
+    - review.md
+    - source-receipt.json
+
+handoff:
+  success_status: Needs_Review
+  next_task: T148
+  remote_writes_authorized: false
+
+stop_conditions:
+  - Patch, source manifest or release hashes diverge.
+  - Integration requires discarding accepted content or changing scope.
+  - Shared index or worktree would be used as the commit source.

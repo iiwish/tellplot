@@ -1,0 +1,78 @@
+schema_version: 1
+packet_id: EP-G003-R2A-T148
+task_id: T148
+goal_id: G003-R2A
+packet_status: needs_review
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  authorization: .ai-platform/evidence/T145/release-authorization.md#approval-1-git-handoff
+  plan: .ai-platform/evidence/G003-R2A/plan.md
+  work_graph: .ai-platform/evidence/G003-R2A/tasks.md
+  analysis: .ai-platform/evidence/G003-R2A/analysis.md
+  predecessor_packet: .ai-platform/evidence/G003-R2A/packets/T147.yaml
+  predecessor_evidence: .ai-platform/evidence/T147
+
+work_unit:
+  title: Local Commit Candidate
+  goal: Audit, stage and commit the isolated accepted tree as one local Conventional Commit candidate.
+  depends_on:
+    - T147 Needs_Review
+  blocks:
+    - Separately authorized push/PR/merge phase
+  parallel: false
+
+execution_constraints:
+  candidate_branch: codex/g003-r2a
+  expected_parent: 4d754cc9d635d097370b674633c972fb0ac199a1
+  commit_message: "feat!: add multi-series categorical comparisons"
+  allowed_git_actions:
+    - add in the isolated candidate worktree
+    - commit in the isolated candidate worktree
+  forbidden_git_actions:
+    - push
+    - pull
+    - merge
+    - rebase
+    - tag
+    - PR creation
+  forbidden_release_actions:
+    - workflow dispatch
+    - npm stage publish
+    - npm publish
+    - GitHub Release
+  no_subdelegation: true
+
+validation_loop:
+  expected_signals:
+    - Staged diff contains only approved G003/G003-R1 source and evidence plus G003-R2A evidence.
+    - No credentials, .env files, local metadata, generated reports or T131 changes are staged.
+    - Commit parent equals fresh origin/main and candidate worktree is clean after commit.
+    - Shared dirty worktree HEAD/index remain unchanged.
+
+evidence_contract:
+  root: .ai-platform/evidence/T148
+  required_files:
+    - summary.md
+    - test-results.md
+    - review.md
+    - commit-candidate.json
+
+review_contract:
+  lenses:
+    - spec_compliance
+    - bug_and_git_quality
+    - qa_acceptance
+  pass_condition: Critical 0, High 0, Medium 0 unresolved
+
+handoff:
+  success_status: Needs_Review
+  next_gate: Explicit push/PR/merge authorization
+  remote_writes_authorized: false
+  public_release_authorized: false
+
+stop_conditions:
+  - Staged diff contains an unapproved path or secret-like material.
+  - Parent, tree, source manifest or frozen release facts diverge.
+  - Any remote or public release action is required.

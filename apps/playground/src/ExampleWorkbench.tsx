@@ -12,7 +12,11 @@ import { ChartEditor, type ChartEditorHandle, type ExportError } from 'tellplot/
 import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from './demoPresentation';
+import {
+  DEMO_CATEGORICAL_COLORS,
+  DEMO_COMPARISON_PALETTE,
+  DEMO_WATERFALL_COLORS,
+} from './demoPresentation';
 import { getPlaygroundChartType, getPlaygroundFixture } from './fixtures';
 import { UsageGuide } from './UsageGuide';
 
@@ -36,6 +40,33 @@ function initialConfig(sourceData: SourceData, requestedChartType: 'bar' | undef
           group: 'never',
         },
         tooltip: true,
+      },
+      data: sourceData,
+      editor: DEFAULT_EDITOR,
+      locale: 'zh-CN',
+      height: '100%',
+    };
+  }
+  if (sourceData.schemaVersion === '3.0.0') {
+    const type = requestedChartType ?? 'column';
+    return {
+      type,
+      appearance: {
+        title: sourceData.series.length === 2 ? '实际与预算' : '业务线情景比较',
+        colors: {
+          series: sourceData.series.map((series, index) => ({
+            seriesId: series.id,
+            color: DEMO_COMPARISON_PALETTE[index] ?? DEMO_COMPARISON_PALETTE[0],
+          })),
+          group: '#7C5CFC',
+        },
+        legend: true,
+        labels: {
+          value: { display: 'auto', placement: 'outside', offset: 6 },
+          group: 'auto',
+        },
+        tooltip: true,
+        animation: { enabled: true, duration: 180 },
       },
       data: sourceData,
       editor: DEFAULT_EDITOR,
@@ -195,6 +226,7 @@ export function ExampleWorkbench(): React.JSX.Element {
       const result = await editorRef.current?.exportImage({
         format,
         filename: config.data.datasetId,
+        background: '#ffffff',
         ...(format === 'png' ? { pixelRatio: 2 } : {}),
       });
       if (result === undefined) {

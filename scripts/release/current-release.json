@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "packageName": "tellplot",
+  "version": "2.0.0",
+  "tag": "v2.0.0",
+  "evidenceTask": "T143",
+  "artifactRoot": ".ai-platform/evidence/T143/artifacts",
+  "manifestPath": ".ai-platform/evidence/T143/tarball-manifest.json",
+  "artifact": {
+    "filename": "tellplot-2.0.0.tgz",
+    "sizeBytes": 597508,
+    "sha256": "44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca"
+  },
+  "registry": "https://registry.npmjs.org/",
+  "workflow": "iiwish/tellplot/.github/workflows/publish-npm.yml",
+  "nodeVersion": "22.20.0",
+  "pnpmVersion": "11.1.3",
+  "npmVersion": "11.18.0"
+}

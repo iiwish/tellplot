@@ -1,12 +1,14 @@
 # TellPlot 入门与集成
 
 TellPlot 的领域层和包 import 支持 SSR；实际编辑器只在浏览器中调用 `createEditor` 时访问 DOM 和 G2。
-以下命令用于已经创建好的宿主项目；React 与 Vue 示例默认项目本身已安装对应 framework。`tellplot`
-内部使用经过兼容与安全复核的精确 G2 `5.4.8`。
+以下命令用于已经创建好的宿主项目，并安装本地 `tellplot@2.0.0` candidate artifact；React 与 Vue 示例默认
+项目本身已安装对应 framework。`tellplot` 内部使用经过兼容与安全复核的精确 G2 `5.4.8`。
 
 ```bash
-pnpm add tellplot
+pnpm add ./tellplot-2.0.0.tgz
 ```
+
+`2.0.0` 正式发布到 registry 后，宿主可以改用 `pnpm add tellplot@^2.0.0`。当前说明不表示 2.0 已发布。
 
 ## 公共配置
 
@@ -31,7 +33,57 @@ export const config = {
 } as const satisfies ChartConfig;
 ```
 
-`bar` 使用同一 categorical data，只需把 `type` 改为 `bar`。waterfall 使用带明确锚点语义的 current schema：
+`bar` 使用同一 categorical data，只需把 `type` 改为 `bar`。
+
+## 多序列业务比较
+
+schema `3.0.0` 使用 2 至 4 个有序 series。每个 category 必须按 series 顺序完整提供 dense values；缺失值
+不会被解释为零。
+
+```ts
+export const comparisonConfig = {
+  type: 'column',
+  data: {
+    schemaVersion: '3.0.0',
+    dataKind: 'categorical',
+    datasetId: 'actual-vs-budget',
+    currency: 'CNY',
+    series: [
+      { id: 'actual', label: '实际' },
+      { id: 'budget', label: '预算' },
+    ],
+    items: [
+      {
+        id: 'enterprise',
+        label: '企业业务',
+        values: [
+          { seriesId: 'actual', amount: 1680 },
+          { seriesId: 'budget', amount: 1540 },
+        ],
+      },
+      {
+        id: 'consumer',
+        label: '消费者业务',
+        values: [
+          { seriesId: 'actual', amount: 1120 },
+          { seriesId: 'budget', amount: 1260 },
+        ],
+      },
+    ],
+  },
+  appearance: {
+    legend: true,
+    tooltip: true,
+  },
+} as const satisfies ChartConfig;
+```
+
+series 是只读比较维度；完整 category 仍是排序、分组、折叠、固定、注释和历史操作的唯一编辑原子。
+`bar` 使用同一 source，只需把 `type` 改为 `bar`。完整 wire、不变量和错误合同见[数据合同](data-contract.md)。
+
+## 瀑布图
+
+waterfall 使用带明确锚点语义的 current schema：
 
 ```ts
 export const waterfallConfig = {

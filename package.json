@@ -27,6 +27,7 @@
     "test:coverage": "vitest run --coverage --maxWorkers=4",
     "test:package": "node scripts/release/test-packages.mjs",
     "test:framework-matrix": "pnpm --filter @tellplot/react test && pnpm --filter @tellplot/vue test && node packages/editor/tests/react-matrix/run-react-matrix.mjs",
+    "test:docs:typescript": "node scripts/release/test-doc-code.mjs",
     "test:browser-previous": "node packages/editor/tests/browser-matrix/run-previous-browsers.mjs",
     "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
     "test:a11y": "playwright test e2e/accessibility.spec.ts",
@@ -46,7 +47,10 @@
     "release:preflight": "node scripts/release/preflight-public.mjs",
     "release:preflight:ci": "node scripts/release/preflight-public.mjs --ci",
     "release:public:preflight": "pnpm release:preflight",
-    "release:rehearse": "node scripts/release/rehearse-source.mjs"
+    "release:rehearse": "node scripts/release/rehearse-source.mjs",
+    "release:candidate:audit": "node scripts/release/audit-candidate.mjs",
+    "release:candidate:artifact": "node scripts/release/package-candidate-artifact.mjs",
+    "release:candidate:rehearse": "node scripts/release/rehearse-candidate-source.mjs"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

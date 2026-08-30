@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  在不改写原始数据的前提下，对瀑布图、条形图和柱状图进行<br>
+  在不改写原始数据的前提下，对瀑布图、单序列或 2 至 4 序列的分类条形图和柱状图进行<br>
   排序、分组、注释与导出。
 </p>
 
@@ -44,21 +44,25 @@
 - **编辑叙事，不修改来源。** 排序、递归分组、折叠状态、注释和强调保存在独立的 `ViewSpec`
   中，宿主持有的 `SourceData` 始终不可变。
 - **一套编辑器，多种宿主。** imperative DOM、React 18/19 和 Vue 3 共用同一个框架无关 runtime。
+- **比较多序列，不牺牲可编辑性。** 分类条形图与柱状图支持 source-ordered 的 2 至 4 序列
+  dense values matrix，并与 scalar 数据共用同一套叙事编辑命令。
 - **每个动作都确定可重放。** 图表直接操作、结构大纲、键盘和宿主命令进入同一套类型化命令模型，
   并共享撤销与重做。
-- **所见即可交付。** SVG 与 PNG 导出保留当前顺序、分组、标签、注释和视觉语义。
+- **所见即可交付。** SVG 与 PNG 导出保留当前顺序、分组、序列、标签、注释和视觉语义。
 - **核心有意保持轻量。** TellPlot runtime 不发起网络请求，也不捆绑 Dashboard、AI 层、服务端工作流
   或通用插件系统。
 
 ## 快速开始
 
-安装唯一的公共包：
+当前文档对应本地 `tellplot@2.0.0` candidate。在已有宿主项目中安装经验证的候选制品：
 
 ```bash
-pnpm add tellplot
+pnpm add ./tellplot-2.0.0.tgz
 ```
 
-在任意浏览器应用中创建可编辑柱状图：
+`2.0.0` 正式发布到 registry 后，宿主可改用 `pnpm add tellplot@^2.0.0`。当前说明不表示 2.0 已发布。
+
+在任意浏览器应用中创建可编辑的多序列柱状图：
 
 ```ts
 import { createEditor } from 'tellplot';
@@ -71,13 +75,30 @@ const editor = createEditor(host, {
   config: {
     type: 'column',
     data: {
-      schemaVersion: '2.0.0',
+      schemaVersion: '3.0.0',
       dataKind: 'categorical',
-      datasetId: 'revenue-by-region',
+      datasetId: 'actual-versus-budget',
+      series: [
+        { id: 'actual', label: '实际' },
+        { id: 'budget', label: '预算' },
+      ],
       items: [
-        { id: 'east', label: '华东', amount: 128 },
-        { id: 'west', label: '华西', amount: 96 },
-        { id: 'north', label: '华北', amount: 74 },
+        {
+          id: 'north',
+          label: '华北',
+          values: [
+            { seriesId: 'actual', amount: 128 },
+            { seriesId: 'budget', amount: 135 },
+          ],
+        },
+        {
+          id: 'south',
+          label: '华南',
+          values: [
+            { seriesId: 'actual', amount: 116 },
+            { seriesId: 'budget', amount: 108 },
+          ],
+        },
       ],
     },
     locale: 'zh-CN',
@@ -103,15 +124,15 @@ window.addEventListener('pagehide', () => editor.destroy(), { once: true });
 
 ## 完整能力
 
-| 能力     | 已包含                                                             |
-| -------- | ------------------------------------------------------------------ |
-| 图表家族 | 瀑布图、分类条形图、分类柱状图                                     |
-| 叙事编辑 | 排序、递归分组、折叠、展开、固定、注释、强调                       |
-| 精确操作 | 图表直接操作、结构大纲、键盘访问、宿主命令                         |
-| 状态     | 不可变来源数据、版本化 `ViewSpec`、确定性历史、撤销与重做          |
-| 呈现     | 标题、语义颜色、坐标轴、标签、Tooltip、数字格式、动画              |
-| 输出     | SVG、PNG、可序列化的 `ViewSpec` JSON                               |
-| 质量     | TypeScript strict、ESM/CJS、可访问性、reduced motion、跨浏览器矩阵 |
+| 能力     | 已包含                                                                |
+| -------- | --------------------------------------------------------------------- |
+| 图表家族 | 瀑布图、scalar categorical 条形图/柱状图、2 至 4 序列 comparison categorical |
+| 叙事编辑 | 排序、递归分组、折叠、展开、固定、注释、强调                                  |
+| 精确操作 | 图表直接操作、结构大纲、键盘访问、宿主命令                                    |
+| 状态     | 不可变来源数据、版本化 `ViewSpec`、确定性历史、撤销与重做                       |
+| 呈现     | 标题、语义颜色、坐标轴、标签、Tooltip、数字格式、动画、序列图例                    |
+| 输出     | SVG、PNG、可序列化的 `ViewSpec` JSON                                  |
+| 质量     | TypeScript strict、ESM/CJS、可访问性、reduced motion、跨浏览器矩阵             |
 
 ## 核心模型
 
@@ -119,7 +140,7 @@ TellPlot 有意把宿主数据、呈现意图和用户编辑拆分为不同合�
 
 | 合同          | 所有者      | 用途                                             |
 | ------------- | ----------- | ------------------------------------------------ |
-| `SourceData`  | 宿主        | 不可变数值、维度、稳定 ID 与来源引用             |
+| `SourceData`  | 宿主        | 不可变数值、维度、稳定 ID、序列与来源引用     |
 | `ChartConfig` | 宿主        | 图表家族、外观、编辑能力、locale 与尺寸          |
 | `ViewSpec`    | 宿主/编辑器 | 顺序、层级、折叠、固定、注释与强调               |
 | Commands      | 共享核心    | 在视图状态之间执行经过校验、可重放、可撤销的转换 |
@@ -133,10 +154,11 @@ AntV G2 始终是唯一的图表渲染和图形动画引擎。TellPlot 负责类
 | ------------------------------------- | -------------------------------------- |
 | [入门与集成](docs/getting-started.md) | DOM、React、Vue、受控状态、导出        |
 | [公共 API](docs/api.md)               | runtime 入口、类型、事件、instance API |
+| [数据合同](docs/data-contract.md)        | schema 3.0、scalar 与 comparison 数据 |
 | [配置边界](docs/configuration.md)     | 安全外观配置与编辑器选项               |
 | [错误处理](docs/errors.md)            | 校验与可恢复 runtime 失败              |
 | [架构概览](docs/architecture.md)      | 包边界与 G2 ownership                  |
-| [迁移与兼容](docs/migration.md)       | 包入口选择与状态迁移                   |
+| [迁移与兼容](docs/migration.md)       | 1.x 到 2.x breaking 数据与状态迁移          |
 | [版本政策](docs/versioning.md)        | 兼容、支持与弃用政策                   |
 
 产品、路线图与交付文档入口见[文档索引](docs/README.md)。
@@ -179,3 +201,6 @@ pnpm test:framework-matrix
 ## 许可证
 
 TellPlot 基于 [MIT License](LICENSE) 开源。
+
+本仓库当前生成本地 `tellplot@2.0.0` candidate；这不表示 npm、Git tag、GitHub Release 或 Production 已发布。
+已发布的 `tellplot@1.0.0` lineage 保持独立且不可改写。

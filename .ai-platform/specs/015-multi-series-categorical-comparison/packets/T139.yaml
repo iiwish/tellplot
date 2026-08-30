@@ -1,0 +1,475 @@
+schema_version: 1
+packet_id: EP-015-T139
+task_id: T139
+feature_id: 015-multi-series-categorical-comparison
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/015-multi-series-categorical-comparison/spec.md
+  requirements_checklists:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/checklists/requirements.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/checklists/public-contract.md
+  data_model: .ai-platform/specs/015-multi-series-categorical-comparison/data-model.md
+  public_contracts:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/public-api.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/validation.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/migration.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md#tdr-025-多序列分类比较与-g2-几何合同
+  feature_plan: .ai-platform/specs/015-multi-series-categorical-comparison/plan.md
+  work_graph: .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+  analysis: .ai-platform/specs/015-multi-series-categorical-comparison/analysis.md
+  predecessor_packet: .ai-platform/specs/015-multi-series-categorical-comparison/packets/T138.yaml
+  predecessor_evidence:
+    summary: .ai-platform/evidence/T138/summary.md
+    test_results: .ai-platform/evidence/T138/test-results.md
+    diff: .ai-platform/evidence/T138/diff.patch
+  approval_gates:
+    constitution: Confirmed
+    product_or_spec: Confirmed by user on 2026-08-12
+    exact_breaking_public_contract: Confirmed by user on 2026-08-12
+    requirements_checklists: Completed with no unresolved Critical/High/Medium findings
+    technical_plan_tdr_and_work_graph: Confirmed by user on 2026-08-12
+    analysis: Critical 0 / High 0 / Medium 0; Clear_For_T139
+    predecessor: >-
+      T138 is Needs_Review. Its A001-A010 evidence preserves every RED/GREEN, diagnostic and stop record; all final validation
+      commands passed and the spec-compliance, bug/code-quality and QA-acceptance reviews each reported Critical 0 / High 0 /
+      Medium 0. T138 is not user Accepted.
+    predecessor_baseline_exception: >-
+      The unchanged private @tellplot/editor@0.0.0 manifest conflicts with its stale internal 1.0.0 pack assertion. This is a
+      pre-T135 baseline exception and not a T138 or T139 failure. It does not authorize a package-version, assertion,
+      dependency, release or published-lineage edit in T139.
+
+work_unit:
+  title: 完成 Workbench、Accessibility 与 Host Parity
+  goal: >-
+    让 Outline、Inspector、summary、focus、update/readOnly/panel semantics 在 imperative DOM、React 与 Vue 中完整
+    表达 category-only comparison，并让三个宿主继续共用唯一 runtime、session 与 public types。
+  epic: E015
+  stories:
+    - US-MSC-002
+    - US-MSC-003
+    - US-MSC-004
+  requirements:
+    - MSC-FR-006
+    - MSC-FR-007
+    - MSC-FR-009
+    - MSC-FR-010
+    - MSC-FR-011
+    - MSC-NFR-003
+    - MSC-NFR-004
+    - MSC-NFR-005
+    - MSC-NFR-006
+  priority: P0
+  depends_on:
+    - T138 Needs_Review
+    - T138 spec-compliance review passed
+  blocks:
+    - T140
+    - T141
+  parallel: false
+  conflicts_with:
+    - T138
+    - T140
+    - DOM editor
+    - host update fixtures
+    - focus and E2E selectors
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - packages/editor/src/editor/domEditor.ts
+    - packages/editor/src/editor/dom.ts
+    - packages/editor/src/editor/outline.ts
+    - packages/editor/src/editor/layout.ts
+    - packages/editor/src/editor/messages.ts
+    - packages/editor/src/editor/modalFocus.ts
+    - packages/editor/src/editor/types.ts
+    - packages/editor/src/editor/chartSurface.ts
+    - packages/editor/src/editor/formatAmount.ts
+    - packages/editor/src/styles/editor.css
+    - packages/editor/tests/runtime/editor.test.ts
+    - packages/editor/tests/runtime/outline.test.ts
+    - packages/editor/tests/runtime/chart-surface.test.ts
+    - packages/react/src
+    - packages/react/tests
+    - packages/vue/src
+    - packages/vue/tests
+    - packages/editor/tests/react-matrix
+    - e2e/accessibility.spec.ts
+    - e2e/categorical-editor.spec.ts
+    - e2e/comparison-interaction.spec.ts
+    - e2e/container-responsive.spec.ts
+    - e2e/editorPanels.ts
+    - e2e/interaction-cancel.spec.ts
+  existing_patterns:
+    - >-
+      The imperative editor and EditorStore own source/config/view validation, controlled/uncontrolled transitions, session,
+      history, selection, callback counts and stable invalid state. React and Vue are thin lifecycle adapters and cannot own a
+      second projection, session or G2 lifecycle.
+    - >-
+      T136 established the comparison projection and deterministic source/view update invariants. T137 established one
+      generation-aware comparison interval, legend, Tooltip, labels and rendering. T138 established the private authoritative
+      receipt and category-only direct manipulation. T139 consumes those seams without changing their projection, rendering or
+      geometry contracts.
+    - >-
+      Outline, Inspector, summary, focus keys, modal/panel behavior and aria-live messages already support v1 waterfall and v2
+      scalar categorical. Extend these established renderer-independent surfaces by narrowing the private projection generation;
+      never inspect Canvas scene elements for text or accessible semantics.
+    - >-
+      Existing adapter props, emits, handles and public EditorOptions are exact public contracts. T139 proves v3 parity through
+      existing signatures and host lifecycle tests; it adds no comparison-specific field, event, ref method or component state.
+    - >-
+      Existing framework matrix retains a legacy v1 scenario. T139 adds a real tarball/G2 v3 controlled pair and lifecycle
+      parity but leaves v3 SVG evidence to T140, where comparison export is implemented.
+  interfaces_or_contracts:
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md#host-api
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md#outline-and-inspector
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md#tooltip-summary-and-accessibility
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/editor-api.md#editor-update-matrix
+    - .ai-platform/specs/015-multi-series-categorical-comparison/contracts/migration.md#session-and-controlled-host
+    - .ai-platform/specs/015-multi-series-categorical-comparison/plan.md#editor-accessibility-and-host-integration
+    - .ai-platform/docs/technology-decision-record.md#tdr-025-多序列分类比较与-g2-几何合同
+  workbench_contract:
+    - Outline has exactly one treeitem per visible category or group. A comparison row shows the localized series count and no fabricated total; series are never treeitems.
+    - >-
+      A single category Inspector lists every series label and formatted value in source order plus its annotation, emphasis,
+      pinned/locked and editable state. A collapsed group lists per-series aggregates, collapsed state and source-category count.
+    - >-
+      An expanded group lists expanded state and source-category count but no unprojected aggregate. A multi-selection lists only
+      selected-node count, source-category union count and legal group actions; it has no primary node, per-series values or
+      cross-category amount aggregation. Only a single selection exposes annotation editing.
+    - >-
+      Category pin, category/group annotation and host emphasis apply to the complete node and all its series marks. No group
+      pin, interactive emphasis command, series/cell selection or series/cell editing state is introduced.
+    - >-
+      Summary first announces visible cluster count and series count, then always reads the complete source-ordered series
+      registry, including an empty items source with legend hidden. It then reads structural entries in narrative DFS order,
+      preserving expanded/collapsed, source count, annotation, emphasis and locked semantics.
+    - >-
+      Summary and Inspector values use the comparison projection formatter and join structural ViewSpec state by node ID. They
+      never derive content from Canvas or scene data. Full labels remain available even if compact visible text is truncated.
+  focus_and_accessibility_contract:
+    - >-
+      Keep a stable focus-key target only while it remains connected, visible, enabled and focusable. Otherwise fall back in
+      order to the first visible Outline treeitem, first available toolbar control, programmatically focusable chart-stage
+      heading and editor root, skipping hidden panels, inactive modal content, disabled controls and Canvas-only marks.
+    - >-
+      A panel/mode/readOnly/source update that invalidates the focused target applies the fallback even when selection remains.
+      Invalid state and selection removal use the same deterministic fallback and do not focus detached nodes.
+    - >-
+      Category ordering, grouping, collapse and pin retain equivalent Outline/keyboard paths, visible focus and aria-live
+      feedback. Color is never the only identification of series, sign, lock, annotation or emphasis. Reduced motion remains
+      respected.
+  update_and_host_contract:
+    - >-
+      Presentation changes preserve view, session, history and selection and emit no command/view/selection callback; callback
+      identity alone performs no render/layout. Geometry-affecting presentation changes cancel active interaction, preview and
+      Tooltip before rendering.
+    - >-
+      Series registry order or other semantic source changes create the required fresh fingerprint/session, clear history and
+      processed IDs, preserve only valid selection, immediately reorder every comparison surface, and emit no fabricated
+      command or view callback. A real selection change emits exactly one selection callback.
+    - >-
+      Category ID, dataset, schema and chart-type boundaries follow the approved controlled/uncontrolled compatibility matrix.
+      Invalid ordinary config/view enters the stable invalid state; hostile option or callback inspection atomically retains the
+      prior valid state and uses the existing rejection path.
+    - >-
+      readOnly false-to-true cancels drag, marquee and Tooltip without command/history; true-to-false enables only currently
+      legal controls and never restores an old interaction or emits a synthetic event.
+    - >-
+      React supplies a compatible controlled source/config and view in one render; Vue supplies them in one reactive flush.
+      Standalone view/defaultView, controlled/uncontrolled transitions, panel/Inspector mode, readOnly and complete presentation
+      updates must produce the same state, callbacks, series order, resolved palette and focus result as the imperative editor.
+  forbidden_changes:
+    - Adding or changing a public EditorOptions field, callback, EditorInstance method, React prop/ref method, Vue prop/emit/expose or v-model.
+    - Introducing a comparison-only component API, framework-specific session/projection/G2 lifecycle or second state owner.
+    - Adding series/cell treeitems, selection, commands, pin, annotation, emphasis, history or persistence state.
+    - Showing a fabricated comparison total or cross-category amount aggregation in Outline, Inspector or summary.
+    - Deriving Inspector/summary/a11y semantics from Canvas, scene receipt or visual color alone.
+    - Changing T138 receipt, renderer geometry, all-zero target, pointer or lifecycle contracts beyond consuming its private API.
+    - Implementing T140 SVG/PNG comparison export, public playground examples, docs, migration fixtures or local package 2.0 candidate work.
+    - Changing v1/v2 public, wire, persistence, workbench, focus, adapter, interaction or export behavior.
+    - Adding a dependency, changing a lockfile, package manifest/version, public export surface, release workflow or published 1.0 lineage.
+    - Editing files outside execution_constraints.allowed_files.
+
+execution_constraints:
+  branch_or_worktree: current main worktree with approved uncommitted G003 governance and reviewed T135-T138 predecessor baselines
+  known_preexisting_worktree_baseline:
+    governance:
+      - .ai-platform/docs/product-design.md
+      - .ai-platform/docs/tasks.md
+      - .ai-platform/docs/technology-decision-record.md
+      - .ai-platform/specs/015-multi-series-categorical-comparison/**
+      - .ai-platform/evidence/T135/**
+      - .ai-platform/evidence/T136/**
+      - .ai-platform/evidence/T137/**
+      - .ai-platform/evidence/T138/**
+      - AGENTS.md
+      - docs/roadmap.md
+    t135_runtime_and_tests:
+      - apps/playground/src/ExampleWorkbench.tsx
+      - apps/playground/src/ShowcaseChart.tsx
+      - apps/playground/tests/schemaV3Guards.test.ts
+      - packages/core/src/charts/categorical/comparisonTypes.ts
+      - packages/core/src/charts/categorical/projection.ts
+      - packages/core/src/charts/waterfall/projection.ts
+      - packages/core/src/config/chartConfig.ts
+      - packages/core/src/domain/createInitialViewSpec.ts
+      - packages/core/src/domain/errors.ts
+      - packages/core/src/domain/history.ts
+      - packages/core/src/domain/ids.ts
+      - packages/core/src/domain/model.ts
+      - packages/core/src/domain/session.ts
+      - packages/core/src/domain/validation.ts
+      - packages/core/src/index.ts
+      - packages/core/src/interactions/groupSelection.ts
+      - packages/core/tests/config/comparison-chart-config.test.ts
+      - packages/core/tests/domain/persistence.test.ts
+      - packages/core/tests/domain/schema-v3.test.ts
+      - packages/core/tests/domain/validation.test.ts
+      - packages/core/tests/public-api.mjs
+      - packages/editor/tests/package/types-consumer.ts
+      - packages/tellplot/tests/package/consumer.tsx
+      - scripts/release/package-contracts.json
+      - scripts/release/validate-package-surface.mjs
+    t136_runtime_and_tests:
+      - packages/core/src/charts/categorical/comparisonProjection.ts
+      - packages/core/src/store/editorStore.ts
+      - packages/core/src/index.ts
+      - packages/core/tests/categorical/comparison-invariants.test.ts
+      - packages/core/tests/categorical/comparison-property-sequences.test.ts
+      - packages/core/tests/categorical/projectCategoricalComparison.test.ts
+      - packages/core/tests/editorStore.test.ts
+      - packages/core/tests/public-api.mjs
+      - scripts/release/package-contracts.json
+    t137_runtime_and_tests:
+      - e2e/comparison-rendering.spec.ts
+      - packages/editor/src/charts/categorical/comparisonAppearance.ts
+      - packages/editor/src/charts/categorical/comparisonLabels.ts
+      - packages/editor/src/charts/categorical/comparisonSpec.ts
+      - packages/editor/src/charts/groupRegions.ts
+      - packages/editor/src/charts/safeTooltip.ts
+      - packages/editor/src/editor/chartSurface.ts
+      - packages/editor/src/editor/domEditor.ts
+      - packages/editor/src/editor/outline.ts
+      - packages/editor/src/editor/projection.ts
+      - packages/editor/src/rendering/g2/chartRuntime.ts
+      - packages/editor/src/rendering/g2/comparisonLabelTransform.ts
+      - packages/editor/tests/export/comparison-chart-spec.test.ts
+      - packages/editor/tests/package/architecture-boundary.test.ts
+      - packages/editor/tests/rendering/comparison-group-regions.test.ts
+      - packages/editor/tests/rendering/g2/chart-runtime.test.ts
+      - packages/editor/tests/rendering/g2/comparison-label-transform.test.ts
+      - packages/editor/tests/runtime/chart-surface.test.ts
+      - packages/editor/tests/runtime/editor.test.ts
+      - packages/editor/tests/runtime/outline.test.ts
+      - scripts/release/check-architecture.mjs
+    t138_runtime_and_tests:
+      - e2e/comparison-interaction.spec.ts
+      - packages/core/tests/interactions/categoryAxis.test.ts
+      - packages/editor/src/editor/chartSurface.ts
+      - packages/editor/src/rendering/g2/chartPointer.ts
+      - packages/editor/src/rendering/g2/chartRuntime.ts
+      - packages/editor/src/rendering/g2/comparisonSceneReceipt.ts
+      - packages/editor/tests/rendering/g2/chart-pointer.test.ts
+      - packages/editor/tests/rendering/g2/chart-runtime.test.ts
+      - packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts
+      - packages/editor/tests/runtime/chart-surface.test.ts
+    baseline_evidence:
+      - .ai-platform/evidence/T135/diff.patch
+      - .ai-platform/evidence/T136/diff.patch
+      - .ai-platform/evidence/T137/diff.patch
+      - .ai-platform/evidence/T138/diff.patch
+    rule: >-
+      Treat every listed path as the reviewed serial predecessor or governance baseline. Extend only overlapping T139-owned
+      seams without reverting T135-T138 or governance changes. Stop if any other pre-existing change overlaps an allowed T139
+      file. Capture pre-edit status and a task-local baseline before RED so T139 evidence does not claim predecessor or
+      governance changes as its own delta.
+  allowed_files:
+    - packages/editor/src/editor/domEditor.ts
+    - packages/editor/src/editor/dom.ts
+    - packages/editor/src/editor/outline.ts
+    - packages/editor/src/editor/layout.ts
+    - packages/editor/src/editor/messages.ts
+    - packages/editor/src/editor/modalFocus.ts
+    - packages/editor/src/editor/types.ts
+    - packages/editor/src/editor/chartSurface.ts
+    - packages/editor/src/editor/formatAmount.ts
+    - packages/editor/src/styles/editor.css
+    - "packages/editor/tests/runtime/**"
+    - "packages/editor/tests/fixtures/**"
+    - "packages/react/src/**"
+    - "packages/react/tests/**"
+    - "packages/vue/src/**"
+    - "packages/vue/tests/**"
+    - "packages/editor/tests/react-matrix/**"
+    - e2e/accessibility.spec.ts
+    - e2e/categorical-editor.spec.ts
+    - e2e/comparison-interaction.spec.ts
+    - e2e/container-responsive.spec.ts
+    - e2e/editorPanels.ts
+    - e2e/interaction-cancel.spec.ts
+    - ".ai-platform/evidence/T139/**"
+    - .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md
+  allowed_file_qualifiers:
+    packages/editor/src/editor/domEditor.ts: own all comparison Workbench, update, selection, callback, summary and focus semantics through the existing imperative runtime; add no public option or instance method
+    packages/editor/src/editor/dom.ts: create only semantic existing-surface DOM needed by T139; no Canvas overlay or new public control contract
+    packages/editor/src/editor/outline.ts: one node per category/group, source-order series count and existing keyboard/group actions only; never create series treeitems or totals
+    packages/editor/src/editor/layout.ts: existing panel placement, visibility and focus-key integration only; no new public layout mode
+    packages/editor/src/editor/messages.ts: localized Workbench, Inspector, summary and aria-live messages only; preserve technical identifiers and existing v1/v2 strings
+    packages/editor/src/editor/modalFocus.ts: connected/visible/enabled/focusable and panel-aware fallback only; preserve existing modal trap semantics
+    packages/editor/src/editor/types.ts: private narrowing and DOM model types only; no public EditorOptions, callback, instance or adapter signature change
+    packages/editor/src/editor/chartSurface.ts: consume T138 receipt/interaction state for focus, selection and cleanup only; do not change receipt, geometry or pointer contracts
+    packages/editor/src/editor/formatAmount.ts: reuse the approved comparison projection number formatting semantics; no arbitrary formatter or callback execution
+    packages/editor/src/styles/editor.css: style existing semantic Workbench surfaces and stable focus states only; no chart data overlay or color-only state
+    packages/editor/tests/runtime/**: T139 Workbench/update/focus/summary/invalid-state regression and the required comparison-editor focused suite only
+    packages/editor/tests/fixtures/**: private deterministic host/workbench fixtures only; no public test hook or T140 export fixture
+    packages/react/src/**: forward existing props, events and handles to the imperative runtime; no local comparison state or public API addition
+    packages/react/tests/**: existing API lifecycle, same-render controlled pair, view/defaultView, mode/readOnly and callback parity only
+    packages/vue/src/**: forward existing props, emits and exposes to the imperative runtime; no local comparison state or public API addition
+    packages/vue/tests/**: existing API lifecycle, same-flush controlled pair, view/defaultView, mode/readOnly and callback parity only
+    packages/editor/tests/react-matrix/**: retain the legacy v1 scenario and add real tarball/G2 v3 host parity without claiming T140 v3 SVG export
+    e2e/accessibility.spec.ts: category/group keyboard, focus fallback, aria-live, complete summary, color-independent semantics and axe coverage only
+    e2e/categorical-editor.spec.ts: preserve v2 scalar workbench and add only v3 comparison Outline/Inspector/update behavior
+    e2e/comparison-interaction.spec.ts: reuse T138 direct interaction and add only selection/workbench/focus/host-visible assertions; do not alter geometry expectations
+    e2e/container-responsive.spec.ts: panel-aware focus and usable semantic layout under existing responsive modes only; performance/visual matrix remains T141
+    e2e/editorPanels.ts: shared stable selectors/helpers for the approved panel semantics only
+    e2e/interaction-cancel.spec.ts: preserve T138 geometry cancellation and add only readOnly/update/workbench cleanup assertions
+    .ai-platform/specs/015-multi-series-categorical-comparison/tasks.md: T139 status field only
+  test_targets:
+    - packages/editor/tests/runtime/comparison-editor.test.ts
+    - packages/editor/tests/runtime/editor.test.ts
+    - packages/react/tests
+    - packages/vue/tests
+    - packages/editor/tests/react-matrix
+    - e2e/accessibility.spec.ts
+    - e2e/categorical-editor.spec.ts
+    - e2e/comparison-interaction.spec.ts
+    - e2e/container-responsive.spec.ts
+    - e2e/interaction-cancel.spec.ts
+  ownership_notes:
+    - Preserve every approved T135-T138 change and every unrelated user change; never reset, restore or overwrite the worktree.
+    - The imperative editor remains the only state/update/focus/callback owner; React and Vue remain thin adapters.
+    - Consume T138 private receipt and lifecycle seams without changing geometry behavior or exporting them.
+    - Keep all public component fields, events, methods and package exports exact; T139 is implementation parity only.
+    - T140-T141 remain Draft and must not receive packets, evidence or implementation edits during T139.
+    - The T135 editor package baseline exception is read-only predecessor context and not a T139 repair target.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    steps: exact Inspector、summary、focus、update、adapter与a11y contracts。
+    command: pnpm exec vitest run packages/editor/tests/runtime/comparison-editor.test.ts packages/editor/tests/runtime/editor.test.ts packages/react/tests packages/vue/tests
+    expected_failure: >-
+      Focused tests fail because comparison Outline/Inspector/summary/focus/update or same-render/same-flush host parity is
+      absent or still follows scalar-total semantics. RED must not come from a fixture, package-version baseline, timeout,
+      environment error or a changed predecessor assertion.
+  green:
+    steps: 最小generation-aware presentation与existing adapter forwarding。
+    command: pnpm exec vitest run packages/editor/tests/runtime/comparison-editor.test.ts packages/editor/tests/runtime/editor.test.ts packages/react/tests packages/vue/tests
+    expected_signal: >-
+      The imperative editor provides exact comparison Workbench, summary, focus, update and callback behavior; React and Vue
+      forward the same behavior without comparison-owned state or a public API change.
+  refactor:
+    steps: 合并重复presentation formatting，不把comparison state复制到framework layers。
+    command: pnpm --filter @tellplot/editor test && pnpm --filter @tellplot/react test && pnpm --filter @tellplot/vue test && pnpm typecheck
+    expected_signal: >-
+      Shared formatting and host forwarding stay green across v1/v2/v3 after only proven private extraction; adapter and
+      imperative contracts remain one implementation surface.
+
+validation_loop:
+  commands:
+    - pnpm exec vitest run packages/editor/tests/runtime/comparison-editor.test.ts packages/editor/tests/runtime/editor.test.ts packages/react/tests packages/vue/tests
+    - pnpm --filter @tellplot/editor test
+    - pnpm --filter @tellplot/react test
+    - pnpm --filter @tellplot/vue test
+    - pnpm test:framework-matrix
+    - pnpm typecheck
+    - pnpm build
+    - pnpm exec playwright test e2e/comparison-interaction.spec.ts e2e/accessibility.spec.ts e2e/container-responsive.spec.ts --project=chromium
+    - pnpm lint
+    - git diff --check
+  expected_signals:
+    - Outline contains one treeitem per category/group, source-order series count and no total or series child.
+    - Inspector exactly distinguishes category, collapsed group, expanded group and multi-selection without fabricated primary or cross-category values.
+    - Empty and nonempty comparison summaries announce the complete source-ordered series registry and narrative DFS structural state.
+    - Focus is retained only for connected, visible, enabled and focusable targets and otherwise follows the approved panel-aware fallback order.
+    - Presentation, callback-only, source, category-set, generation, invalid-state, mode, panel, readOnly and history-limit updates follow the exact matrix and callback counts.
+    - React same-render and Vue same-flush controlled pairs match imperative state; standalone view/defaultView and both controlled-mode transitions remain deterministic.
+    - Framework matrix retains legacy v1 and adds real tarball/G2 v3 move/undo, registry reorder, palette, legend, summary and four-series update coverage without claiming v3 SVG export.
+    - Keyboard, aria-live, reduced motion, focus visibility and color-independent semantics pass unit, browser and axe assertions.
+    - T138 receipt/direct manipulation and v1/v2 workbench/focus/adapter behavior remain green; no public component field or event is added.
+  retry_budget: 2
+  failure_policy:
+    first_failure: Diagnose and fix only a T139-scoped Workbench, summary, focus, update, callback, adapter, fixture, selector or accessibility issue.
+    second_failure: Classify a scope, approved-contract, T138 predecessor, public-host parity, user-change, toolchain or environment blocker before any further edit.
+    beyond_budget: Stop, keep tests truthful and record blocked evidence; never delete tests, weaken semantic/focus/callback assertions, move state into an adapter or skip a required command.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T139/summary.md
+  test_results: .ai-platform/evidence/T139/test-results.md
+  diff: .ai-platform/evidence/T139/diff.patch
+  required:
+    - changed files and task-local baseline/diff method separated from T135-T138 predecessors
+    - pre-edit worktree status and baseline-diff receipt
+    - RED failure command, output and matching expected reason
+    - GREEN and REFACTOR results
+    - every validation command and result
+    - category, collapsed group, expanded group and multi-selection Inspector receipts
+    - Outline one-node-per-category/group, source-order series-count and no-total receipts
+    - empty/nonempty source registry and narrative DFS summary receipts
+    - connected/visible/enabled/focusable retention and every panel-aware fallback receipt
+    - complete update/readOnly/mode/panel/invalid/hostile branch state and exact callback-count receipts
+    - imperative, React 18/19 and Vue 3 controlled/uncontrolled, view/defaultView and same-render/same-flush parity receipts
+    - keyboard, aria-live, reduced-motion, color-independent state and axe receipts
+    - framework matrix legacy v1 and real G2 v3 host receipts, with v3 SVG explicitly deferred to T140
+    - diff summary and residual UI/focus/adapter risks without raw business values
+    - explicit confirmation of no T138 geometry change, T140 work, dependency/lockfile, package version, public surface, T131, remote or release change
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  review_focus:
+    - Exact category-only Outline and selection semantics with no series treeitem, cell state or fabricated total.
+    - Exact four-way Inspector and complete source-registry/narrative-DFS summary semantics for empty and nonempty data.
+    - Focus retention and fallback across hidden/detached/disabled targets, panels, modes, readOnly, invalid state and responsive layout.
+    - Update matrix, stable invalid versus hostile atomic-retain paths and exact callback/history/session behavior.
+    - Imperative ownership and React/Vue thin-adapter parity, including same-render/same-flush compatible pairs and transitions.
+    - Keyboard, aria-live, axe, reduced motion, color-independent meaning and full-label availability.
+    - Exact T138 geometry, v1/v2 behavior, public host signatures and absence of T140/dependency/release drift.
+  acceptance_rule: >-
+    T139 may enter Needs_Review only after validation and all three review passes report no unresolved
+    Critical/High/Medium finding. It is not Accepted until user review, and G003 enters goal review only after T141.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - Integrate T139 evidence and review, then make T140 Ready and generate only the T140 packet.
+    - Keep the current worktree for the approved serial G003 sequence.
+  prohibited_handoff:
+    - stage, commit, push, pull request, tag, publish, release or production promotion without separate authorization
+
+stop_conditions:
+  - A confirmed governance input, approval gate, T138 review/evidence, dependency or this packet is missing or stale.
+  - The pre-edit worktree differs from the recorded governance and reviewed T135-T138 baseline in a file that overlaps T139 ownership.
+  - An unrelated user change overlaps an allowed source, test, e2e or fixture file and cannot be preserved without ambiguity.
+  - Execution requires a file outside the exact allowed-files list or broader use than its qualifier.
+  - Execution requires changing an approved public, validation, editor, migration, data-model, plan, TDR or work-graph contract.
+  - A RED test cannot be made to fail for the expected missing Workbench, summary, focus, update, adapter or a11y reason.
+  - Passing T139 requires a series/cell treeitem, selection, command, state, fabricated total or cross-category amount aggregation.
+  - Passing T139 requires reading Canvas/scene geometry for semantic text, making color the only signal or weakening focus/axe assertions.
+  - Passing T139 requires moving runtime/session/projection/G2 ownership into React or Vue or adding a public host API.
+  - Passing T139 requires changing T138 receipt/geometry/pointer lifecycle or v1/v2 behavior.
+  - Passing T139 requires T140 export/docs/playground/package work or T141 performance/full-matrix work.
+  - Passing T139 requires a dependency, lockfile, package manifest/version, stale editor assertion, published 1.0 lineage, T131 evidence, workflow, remote Git, tag, publish, release or production change.
+  - A validation command is unavailable or the retry budget is exhausted.
+  - Analysis gains an unresolved Critical or High finding.

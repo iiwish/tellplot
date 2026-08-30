@@ -142,6 +142,7 @@ function collectImports(sourcePath) {
     if (matchesAnyPackageSpecifier(specifier, ['@antv/g2', '@antv/g-svg'])) {
       const allowed =
         sourceNameValue === 'packages/editor/src/charts/groupRegions.ts' ||
+        sourceNameValue === 'packages/editor/src/charts/categorical/comparisonSpec.ts' ||
         /^packages\/editor\/src\/charts\/(waterfall|categorical)\/spec\.ts$/u.test(
           sourceNameValue,
         ) ||

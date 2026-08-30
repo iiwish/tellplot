@@ -1,0 +1,2597 @@
+diff --git a/.prettierignore b/.prettierignore
+index 65f9510..0b90ae3 100644
+--- a/.prettierignore
++++ b/.prettierignore
+@@ -10,3 +10,5 @@ node_modules/
+ playwright-report/
+ pnpm-lock.yaml
+ test-results/
++apps/video/out/
++apps/video/public/captures/
+diff --git a/apps/playground/src/fixtures.ts b/apps/playground/src/fixtures.ts
+index 0d76b85..3652e50 100644
+--- a/apps/playground/src/fixtures.ts
++++ b/apps/playground/src/fixtures.ts
+@@ -99,6 +99,66 @@ const categoricalPerformanceFixture = {
+   })),
+ } satisfies SourceData;
+ 
++const comparisonPerformanceFixture = {
++  schemaVersion: '3.0.0',
++  dataKind: 'categorical',
++  datasetId: 'comparison-performance-200x2',
++  currency: 'CNY',
++  series: [
++    { id: 'comparison-perf-series-1', label: '基准序列甲' },
++    { id: 'comparison-perf-series-2', label: '基准序列乙' },
++  ],
++  items: Array.from({ length: 200 }, (_, index) => ({
++    id: `comparison-perf-${String(index + 1).padStart(3, '0')}`,
++    label: `性能分类 ${String(index + 1).padStart(3, '0')}`,
++    values: [
++      {
++        seriesId: 'comparison-perf-series-1',
++        amount: 450 + (index % 17) * 37,
++      },
++      {
++        seriesId: 'comparison-perf-series-2',
++        amount: 360 + (index % 13) * 29,
++      },
++    ],
++  })),
++} satisfies SourceData;
++
++const responsiveSeriesIds = [
++  'responsive-series-1',
++  'responsive-series-2',
++  'responsive-series-3',
++  'responsive-series-4',
++] as const;
++
++function createResponsiveComparisonFixture(locale: 'zh-CN' | 'en-US'): SourceData {
++  const labels =
++    locale === 'zh-CN'
++      ? ['方案甲', '方案乙', '方案丙', '方案丁']
++      : ['Scenario A', 'Scenario B', 'Scenario C', 'Scenario D'];
++  return {
++    schemaVersion: '3.0.0',
++    dataKind: 'categorical',
++    datasetId: `comparison-responsive-50x4-${locale}`,
++    currency: 'CNY',
++    series: responsiveSeriesIds.map((id, index) => ({ id, label: labels[index] ?? id })),
++    items: Array.from({ length: 50 }, (_, index) => ({
++      id: `responsive-category-${String(index + 1).padStart(3, '0')}`,
++      label:
++        locale === 'zh-CN'
++          ? `分类项目第${String(index + 1).padStart(3, '0')}号样本项`
++          : `Comparison category ${String(index + 1).padStart(3, '0')}${index === 0 ? 'x' : ''}`,
++      values: responsiveSeriesIds.map((seriesId, seriesIndex) => ({
++        seriesId,
++        amount: 320 + seriesIndex * 85 + (index % 9) * 24,
++      })),
++    })),
++  };
++}
++
++const comparisonResponsiveZhFixture = createResponsiveComparisonFixture('zh-CN');
++const comparisonResponsiveEnFixture = createResponsiveComparisonFixture('en-US');
++
+ const actualVersusBudgetFixture = {
+   schemaVersion: '3.0.0',
+   dataKind: 'categorical',
+@@ -211,6 +271,15 @@ export function getPlaygroundFixture(search: string): SourceData {
+   if (fixture === 'categorical-performance') {
+     return categoricalPerformanceFixture;
+   }
++  if (fixture === 'comparison-performance') {
++    return comparisonPerformanceFixture;
++  }
++  if (fixture === 'comparison-responsive-zh') {
++    return comparisonResponsiveZhFixture;
++  }
++  if (fixture === 'comparison-responsive-en') {
++    return comparisonResponsiveEnFixture;
++  }
+   if (fixture === 'comparison-actual-budget' || fixture === 'comparison-actual-budget-bar') {
+     return actualVersusBudgetFixture;
+   }
+diff --git a/e2e/accessibility.spec.ts b/e2e/accessibility.spec.ts
+index d1ddf23..f08c8c3 100644
+--- a/e2e/accessibility.spec.ts
++++ b/e2e/accessibility.spec.ts
+@@ -459,8 +459,9 @@ test('comparison Workbench exposes source-ordered Inspector and complete narrati
+     ...comparisonConfig,
+     data: { ...comparisonConfig.data, datasetId: 'comparison-accessibility-empty', items: [] },
+   };
++  await page.getByRole('button', { name: 'Inspector backdrop' }).click();
+   await configInput.fill(JSON.stringify(emptyConfig, null, 2));
+-  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
++  await expect(page.getByRole('status', { name: '文件状态' })).toContainText('CONFIG_APPLIED');
+   summary = page.getByRole('region', { name: 'Chart summary' });
+   await expect(summary.locator('[data-summary-kind="intro"]')).toContainText(
+     '0 visible clusters and 2 series',
+diff --git a/e2e/comparison-interaction.spec.ts b/e2e/comparison-interaction.spec.ts
+index 4897dd8..f1a94af 100644
+--- a/e2e/comparison-interaction.spec.ts
++++ b/e2e/comparison-interaction.spec.ts
+@@ -304,6 +304,17 @@ async function paintedComponents(canvas: Locator): Promise<readonly PaintedCompo
+   });
+ }
+ 
++function substantialIntervals(
++  components: readonly PaintedComponent[],
++): readonly PaintedComponent[] {
++  return components.filter(
++    component =>
++      component.area > 100 &&
++      component.maxX - component.minX > 2 &&
++      component.maxY - component.minY > 2,
++  );
++}
++
+ async function rootOrder(page: Page): Promise<readonly string[]> {
+   let tree = page.locator('[role="tree"]:visible').first();
+   if ((await tree.count()) === 0) {
+@@ -396,10 +407,10 @@ for (const chartType of ['column', 'bar'] as const) {
+         page,
+         config(chartType, 'positive', { datasetSuffix: `-series-${seriesIndex}` }),
+       );
+-      await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
+-      const components = (await paintedComponents(canvas)).filter(
+-        component => component.area > 100,
+-      );
++      await expect
++        .poll(async () => substantialIntervals(await paintedComponents(canvas)))
++        .toHaveLength(4);
++      const components = substantialIntervals(await paintedComponents(canvas));
+       const ordered = [...components].sort((left, right) =>
+         chartType === 'column' ? left.centerX - right.centerX : left.centerY - right.centerY,
+       );
+@@ -433,7 +444,10 @@ test('comparison drag survives valid to invalid to valid preview and commits onc
+   page,
+ }) => {
+   await openEditor(page);
+-  const canvas = await applyConfig(page, config('column', 'positive', { datasetSuffix: '-reentry' }));
++  const canvas = await applyConfig(
++    page,
++    config('column', 'positive', { datasetSuffix: '-reentry' }),
++  );
+   await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
+   const components = [...(await paintedComponents(canvas))]
+     .filter(component => component.area > 100)
+@@ -559,10 +573,10 @@ for (const chartType of ['column', 'bar'] as const) {
+         page,
+         config(chartType, domain === 'negative' ? 'zero-negative' : 'zero-positive'),
+       );
+-      await expect.poll(() => paintedComponents(canvas)).toHaveLength(4);
+-      const components = (await paintedComponents(canvas)).filter(
+-        component => component.area > 100,
+-      );
++      await expect
++        .poll(async () => substantialIntervals(await paintedComponents(canvas)))
++        .toHaveLength(4);
++      const components = substantialIntervals(await paintedComponents(canvas));
+       const clusters = sourceOrderedCategoryClusters(categoryClusters(components, chartType));
+       expect(clusters).toHaveLength(2);
+       const beta = clusters[0];
+@@ -618,8 +632,10 @@ for (const chartType of ['column', 'bar'] as const) {
+   }) => {
+     await openEditor(page);
+     let canvas = await applyConfig(page, config(chartType, 'positive-three'));
+-    await expect.poll(() => paintedComponents(canvas)).toHaveLength(6);
+-    const components = (await paintedComponents(canvas)).filter(component => component.area > 100);
++    await expect
++      .poll(async () => substantialIntervals(await paintedComponents(canvas)))
++      .toHaveLength(6);
++    const components = substantialIntervals(await paintedComponents(canvas));
+     const clusters = sourceOrderedCategoryClusters(categoryClusters(components, chartType));
+     expect(clusters).toHaveLength(3);
+     const alphaCluster = clusters[0];
+@@ -633,7 +649,9 @@ for (const chartType of ['column', 'bar'] as const) {
+     const direction: 1 | -1 = chartType === 'column' ? -1 : 1;
+ 
+     canvas = await applyConfig(page, config(chartType, 'global-zero'));
+-    await expect.poll(() => paintedComponents(canvas)).toHaveLength(0);
++    await expect
++      .poll(async () => substantialIntervals(await paintedComponents(canvas)))
++      .toHaveLength(0);
+     const stripCenterDistance = 16;
+     for (const distance of [stripCenterDistance - 15, stripCenterDistance + 15]) {
+       await probeComparisonHit(
+diff --git a/e2e/comparison-rendering.spec.ts b/e2e/comparison-rendering.spec.ts
+index 3595d16..1c201fe 100644
+--- a/e2e/comparison-rendering.spec.ts
++++ b/e2e/comparison-rendering.spec.ts
+@@ -266,6 +266,14 @@ function legendOrder(
+     .map(component => component.color);
+ }
+ 
++function isVisibleInterval(component: ColorComponent, colors: readonly string[]): boolean {
++  return (
++    colors.includes(component.color) &&
++    component.maxX - component.minX > 12 &&
++    component.maxY - component.minY > 12
++  );
++}
++
+ test('renders the fixed bar/column by 2/4-series by mixed/all-zero Canvas matrix', async ({
+   page,
+ }) => {
+@@ -292,10 +300,8 @@ test('renders the fixed bar/column by 2/4-series by mixed/all-zero Canvas matrix
+         expect(labels).toHaveLength(seriesCount * 2);
+ 
+         if (mode === 'mixed') {
+-          const intervals = components.filter(
+-            component =>
+-              PALETTE.slice(0, seriesCount).includes(component.color as (typeof PALETTE)[number]) &&
+-              component.area > 250,
++          const intervals = components.filter(component =>
++            isVisibleInterval(component, PALETTE.slice(0, seriesCount)),
+           );
+           expect(intervals).toHaveLength(seriesCount * 2);
+           const axis = chartType === 'column' ? 'centerX' : 'centerY';
+@@ -372,9 +378,9 @@ test('recreates the Canvas and visibly reorders legend markers and shared Toolti
+     [...PALETTE].reverse(),
+   );
+ 
+-  const intervalComponents = (await colorComponents(canvas, PALETTE)).filter(
+-    component => component.area > 250,
+-  );
++  const intervalComponents = (await colorComponents(canvas, PALETTE))
++    .filter(component => isVisibleInterval(component, PALETTE))
++    .sort((left, right) => right.area - left.area);
+   const target = intervalComponents[0];
+   if (target === undefined) {
+     throw new Error('Expected a visible comparison interval');
+diff --git a/e2e/comparison-responsive.spec.ts b/e2e/comparison-responsive.spec.ts
+new file mode 100644
+index 0000000..574ee7e
+--- /dev/null
++++ b/e2e/comparison-responsive.spec.ts
+@@ -0,0 +1,826 @@
++import { mkdir, readFile, writeFile } from 'node:fs/promises';
++import { resolve } from 'node:path';
++
++import {
++  expect,
++  test,
++  type Download,
++  type Locator,
++  type Page,
++  type TestInfo,
++} from '@playwright/test';
++
++import { activateInspectorPanel } from './editorPanels';
++
++const EDITOR = '[data-tellplot="editor"]';
++const PALETTE = ['#0072B2', '#D55E00', '#009E73', '#CC79A7'] as const;
++const SERIES_IDS = [
++  'responsive-series-1',
++  'responsive-series-2',
++  'responsive-series-3',
++  'responsive-series-4',
++] as const;
++
++interface Rectangle {
++  readonly x: number;
++  readonly y: number;
++  readonly width: number;
++  readonly height: number;
++}
++
++interface PaintedComponent extends Rectangle {
++  readonly color: string;
++  readonly area: number;
++  readonly centerX: number;
++  readonly centerY: number;
++}
++
++interface MatrixCellReceipt {
++  readonly id: string;
++  readonly viewport: { readonly width: number; readonly height: number };
++  readonly locale: 'zh-CN' | 'en-US';
++  readonly state: 'idle' | 'hover' | 'active-drag';
++  readonly canvas: {
++    readonly width: number;
++    readonly height: number;
++    readonly paintedPixels: number;
++    readonly expectedVisibleMarks: 200;
++    readonly rasterDistinctColoredComponents: number;
++  };
++  readonly screen: {
++    readonly pageHorizontalOverflow: number;
++    readonly plotRect: Rectangle;
++    readonly legendRect: Rectangle;
++    readonly toolbarRect: Rectangle;
++    readonly layoutIntersections: number;
++    readonly requiredTextIntersections: number;
++    readonly transientKind: 'none' | 'tooltip' | 'drag-overlay';
++    readonly transientRect: Rectangle | null;
++    readonly transientOcclusions: number;
++    readonly transientTargetIntersection: boolean;
++    readonly dropIndicator: boolean;
++  };
++  readonly svg: {
++    readonly localBBox: Rectangle;
++    readonly clientRect: Rectangle;
++    readonly visibleTextCount: number;
++    readonly textIntersections: number;
++    readonly textIntersectionKinds: readonly string[];
++    readonly intervalCount: number;
++    readonly automaticValueLabelCount: number;
++    readonly annotationLabelCount: number;
++    readonly unsafeElementCount: number;
++    readonly externalReferenceCount: number;
++    readonly transientElementCount: number;
++  };
++  readonly accessible: {
++    readonly outlineCategoryCount: number;
++    readonly outlineSourceOrderMatched: boolean;
++    readonly tooltipSeriesCount: number;
++    readonly tooltipSourceOrderMatched: boolean;
++    readonly inspectorSeriesCount: number;
++    readonly inspectorSourceOrderMatched: boolean;
++    readonly categoryEditCommitted: boolean;
++  };
++  readonly screenshot: string;
++}
++
++function zhCategoryLabel(index: number): string {
++  return `分类项目第${String(index + 1).padStart(3, '0')}号样本项`;
++}
++
++function enCategoryLabel(index: number): string {
++  const label = `Comparison category ${String(index + 1).padStart(3, '0')}`;
++  return index === 0 ? `${label}x` : label;
++}
++
++const families = [
++  {
++    id: 'zh-CN',
++    fixture: 'comparison-responsive-zh',
++    categoryLabels: Array.from({ length: 50 }, (_, index) => zhCategoryLabel(index)),
++    seriesLabels: ['方案甲', '方案乙', '方案丙', '方案丁'],
++  },
++  {
++    id: 'en-US',
++    fixture: 'comparison-responsive-en',
++    categoryLabels: Array.from({ length: 50 }, (_, index) => enCategoryLabel(index)),
++    seriesLabels: ['Scenario A', 'Scenario B', 'Scenario C', 'Scenario D'],
++  },
++] as const;
++
++const viewports = [
++  { id: 'wide', width: 1280, height: 720 },
++  { id: 'compact', width: 640, height: 480 },
++] as const;
++
++const states = ['idle', 'hover', 'active-drag'] as const;
++
++function intersects(left: Rectangle, right: Rectangle, tolerance = 0.5): boolean {
++  return (
++    left.x + tolerance < right.x + right.width &&
++    right.x + tolerance < left.x + left.width &&
++    left.y + tolerance < right.y + right.height &&
++    right.y + tolerance < left.y + left.height
++  );
++}
++
++function unionRectangles(rectangles: readonly Rectangle[]): Rectangle | null {
++  if (rectangles.length === 0) {
++    return null;
++  }
++  const minX = Math.min(...rectangles.map(rectangle => rectangle.x));
++  const minY = Math.min(...rectangles.map(rectangle => rectangle.y));
++  const maxX = Math.max(...rectangles.map(rectangle => rectangle.x + rectangle.width));
++  const maxY = Math.max(...rectangles.map(rectangle => rectangle.y + rectangle.height));
++  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
++}
++
++async function chooseSvgExport(page: Page): Promise<Download> {
++  await page.getByRole('button', { name: '导出' }).click();
++  const download = page.waitForEvent('download');
++  await page.getByRole('menuitem', { name: 'SVG 图像' }).click();
++  return download;
++}
++
++async function readDownload(download: Download): Promise<string> {
++  const path = await download.path();
++  if (path === null) {
++    throw new Error('Responsive SVG download has no local path');
++  }
++  return (await readFile(path)).toString('utf8');
++}
++
++async function paintedComponents(canvas: Locator): Promise<readonly PaintedComponent[]> {
++  const local = await canvas.evaluate((element, colors) => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return [];
++    }
++    const context = element.getContext('2d');
++    if (context === null) {
++      return [];
++    }
++    const targets = colors.map(color => ({
++      color,
++      red: Number.parseInt(color.slice(1, 3), 16),
++      green: Number.parseInt(color.slice(3, 5), 16),
++      blue: Number.parseInt(color.slice(5, 7), 16),
++    }));
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    const result: {
++      color: string;
++      area: number;
++      minX: number;
++      minY: number;
++      maxX: number;
++      maxY: number;
++    }[] = [];
++    for (const target of targets) {
++      const matching = new Uint8Array(element.width * element.height);
++      for (let index = 0; index < matching.length; index += 1) {
++        const offset = index * 4;
++        if (
++          (pixels[offset + 3] ?? 0) > 120 &&
++          Math.abs((pixels[offset] ?? 0) - target.red) <= 8 &&
++          Math.abs((pixels[offset + 1] ?? 0) - target.green) <= 8 &&
++          Math.abs((pixels[offset + 2] ?? 0) - target.blue) <= 8
++        ) {
++          matching[index] = 1;
++        }
++      }
++      const visited = new Uint8Array(matching.length);
++      for (let start = 0; start < matching.length; start += 1) {
++        if (matching[start] !== 1 || visited[start] === 1) {
++          continue;
++        }
++        visited[start] = 1;
++        const queue = [start];
++        let area = 0;
++        let minX = element.width;
++        let minY = element.height;
++        let maxX = 0;
++        let maxY = 0;
++        while (queue.length > 0) {
++          const index = queue.pop();
++          if (index === undefined) {
++            break;
++          }
++          const x = index % element.width;
++          const y = Math.floor(index / element.width);
++          area += 1;
++          minX = Math.min(minX, x);
++          minY = Math.min(minY, y);
++          maxX = Math.max(maxX, x);
++          maxY = Math.max(maxY, y);
++          for (const neighbor of [
++            index - 1,
++            index + 1,
++            index - element.width,
++            index + element.width,
++          ]) {
++            if (
++              neighbor >= 0 &&
++              neighbor < matching.length &&
++              matching[neighbor] === 1 &&
++              visited[neighbor] === 0 &&
++              Math.abs((neighbor % element.width) - x) <= 1
++            ) {
++              visited[neighbor] = 1;
++              queue.push(neighbor);
++            }
++          }
++        }
++        if (area >= 3) {
++          result.push({ color: target.color, area, minX, minY, maxX, maxY });
++        }
++      }
++    }
++    return {
++      components: result,
++      width: element.width,
++      height: element.height,
++    };
++  }, PALETTE);
++  const box = await canvas.boundingBox();
++  if (box === null || Array.isArray(local) || local.width <= 0 || local.height <= 0) {
++    return [];
++  }
++  const scaleX = box.width / local.width;
++  const scaleY = box.height / local.height;
++  return local.components.map(component => {
++    const x = box.x + component.minX * scaleX;
++    const y = box.y + component.minY * scaleY;
++    const width = (component.maxX - component.minX + 1) * scaleX;
++    const height = (component.maxY - component.minY + 1) * scaleY;
++    return {
++      color: component.color,
++      area: component.area,
++      x,
++      y,
++      width,
++      height,
++      centerX: x + width / 2,
++      centerY: y + height / 2,
++    };
++  });
++}
++
++async function paintedPixelCount(canvas: Locator): Promise<number> {
++  return canvas.evaluate(element => {
++    if (!(element instanceof HTMLCanvasElement)) return 0;
++    const context = element.getContext('2d');
++    if (context === null) return 0;
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    let count = 0;
++    for (let offset = 0; offset < pixels.length; offset += 4) {
++      if (
++        (pixels[offset + 3] ?? 0) > 20 &&
++        ((pixels[offset] ?? 255) < 242 ||
++          (pixels[offset + 1] ?? 255) < 242 ||
++          (pixels[offset + 2] ?? 255) < 242)
++      ) {
++        count += 1;
++      }
++    }
++    return count;
++  });
++}
++
++async function hoverPaintedTooltip(
++  page: Page,
++  components: readonly PaintedComponent[],
++): Promise<{
++  readonly component: PaintedComponent;
++  readonly point: { readonly x: number; readonly y: number };
++  readonly tooltip: Locator;
++}> {
++  const tooltip = page.locator('.g2-tooltip').filter({ visible: true });
++  for (const component of [...components].sort((left, right) => right.area - left.area)) {
++    await page.mouse.move(component.centerX, component.centerY);
++    await page.evaluate(
++      () => new Promise<void>(resolveFrame => requestAnimationFrame(() => resolveFrame())),
++    );
++    if (await tooltip.isVisible()) {
++      return { component, point: { x: component.centerX, y: component.centerY }, tooltip };
++    }
++  }
++  throw new Error('No exact G2 comparison tooltip hit was found in the painted intervals');
++}
++
++async function openFamily(
++  page: Page,
++  viewport: (typeof viewports)[number],
++  family: (typeof families)[number],
++): Promise<Locator> {
++  await page.setViewportSize({ width: viewport.width, height: viewport.height });
++  await page.goto(`/playground?fixture=${family.fixture}`);
++  const editor = page.locator(EDITOR);
++  await expect(editor).toHaveAttribute('data-editor-state', 'ready');
++  await expect(editor).toHaveAttribute('data-chart-type', 'column');
++  let input = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
++  if (!(await input.isVisible())) {
++    await page.getByRole('button', { name: '显示使用代码' }).click();
++    input = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
++    await expect(input).toBeVisible();
++  }
++  const config = JSON.parse(await input.inputValue()) as {
++    locale?: string;
++    appearance?: Record<string, unknown>;
++  };
++  config.locale = family.id;
++  config.appearance = {
++    ...config.appearance,
++    animation: { enabled: false },
++    legend: true,
++    labels: { value: { display: 'auto', placement: 'outside', offset: 6 }, group: 'auto' },
++    tooltip: true,
++  };
++  await input.fill(JSON.stringify(config, null, 2));
++  await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('LIVE_SYNCED');
++  const closeUsage = page.getByRole('button', { name: '关闭使用说明' });
++  if (await closeUsage.isVisible()) {
++    await closeUsage.click();
++  } else {
++    const usageToggle = page.getByRole('button', { name: '隐藏使用代码' });
++    if (await usageToggle.isVisible()) {
++      await usageToggle.click();
++    }
++  }
++  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
++    'data-render-state',
++    'ready',
++  );
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
++  await page.evaluate(
++    () =>
++      new Promise<void>(resolveFrame =>
++        requestAnimationFrame(() => requestAnimationFrame(resolveFrame)),
++      ),
++  );
++  return canvas;
++}
++
++async function ensureOutline(page: Page): Promise<Locator> {
++  let tree = page.locator('[role="tree"]:visible').first();
++  if ((await tree.count()) > 0) {
++    return tree;
++  }
++  const tab = page
++    .locator('[role="tab"]:visible')
++    .filter({ hasText: /^(结构大纲|Structure outline)$/u })
++    .first();
++  if ((await tab.count()) > 0) {
++    await tab.click();
++  } else {
++    await page.getByRole('button', { name: /打开结构大纲|Open structure outline/ }).click();
++  }
++  tree = page.locator('[role="tree"]:visible').first();
++  await expect(tree).toBeVisible();
++  return tree;
++}
++
++async function dismissOverlayPanels(page: Page): Promise<void> {
++  const close = page
++    .getByRole('button', {
++      name: /关闭结构大纲|Close structure outline|关闭检查器|Close inspector/,
++    })
++    .filter({ visible: true })
++    .first();
++  if ((await close.count()) > 0) {
++    await close.click();
++  }
++}
++
++async function verifyAccessiblePaths(
++  page: Page,
++  canvas: Locator,
++  family: (typeof families)[number],
++): Promise<MatrixCellReceipt['accessible']> {
++  const tree = await ensureOutline(page);
++  const rows = tree.locator('[role="treeitem"][aria-level="1"][data-node-id]');
++  await expect(rows).toHaveCount(50);
++  const outlineLabels = await rows.locator('.tp-row-label').allTextContents();
++  const outlineSourceOrderMatched = outlineLabels.every(
++    (label, index) => label.trim() === family.categoryLabels[index],
++  );
++  expect(outlineSourceOrderMatched).toBe(true);
++  await rows.first().click();
++  await dismissOverlayPanels(page);
++
++  const inspector = await activateInspectorPanel(page);
++  const inspectorValues = inspector.locator('[data-series-id]');
++  await expect(inspectorValues).toHaveCount(4);
++  const inspectorOrder = await inspectorValues.evaluateAll(values =>
++    values.map(value => value.getAttribute('data-series-id')),
++  );
++  expect(inspectorOrder).toEqual(SERIES_IDS);
++  const revisionBefore = Number.parseInt(
++    (await page.locator(EDITOR).getAttribute('data-view-revision')) ?? '-1',
++    10,
++  );
++  const annotation = inspector.getByRole('textbox', { name: /注释|Annotation/ });
++  await annotation.fill(`responsive-${family.id}`);
++  await inspector.getByRole('button', { name: /保存注释|Save annotation/ }).click();
++  await expect(page.locator(EDITOR)).toHaveAttribute(
++    'data-view-revision',
++    String(revisionBefore + 1),
++  );
++  await dismissOverlayPanels(page);
++
++  const components = (await paintedComponents(canvas)).filter(component => component.height > 8);
++  if (components.length === 0) {
++    throw new Error('Responsive accessible path has no painted interval');
++  }
++  const { tooltip } = await hoverPaintedTooltip(page, components);
++  await expect(tooltip).toBeVisible();
++  const tooltipOrder = (await tooltip.locator('.g2-tooltip-list-item-name').allTextContents()).map(
++    text => text.trim(),
++  );
++  expect(tooltipOrder).toEqual(family.seriesLabels);
++  await page.mouse.move(1, 1);
++  await expect(tooltip).toHaveCount(0);
++
++  return {
++    outlineCategoryCount: outlineLabels.length,
++    outlineSourceOrderMatched,
++    tooltipSeriesCount: tooltipOrder.length,
++    tooltipSourceOrderMatched: true,
++    inspectorSeriesCount: inspectorOrder.length,
++    inspectorSourceOrderMatched: true,
++    categoryEditCommitted: true,
++  };
++}
++
++async function inspectMountedSvg(
++  page: Page,
++  svgSource: string,
++  annotationText: string,
++): Promise<MatrixCellReceipt['svg']> {
++  const receipt = await page.evaluate(
++    ({ source, colors, annotation }) => {
++      const host = document.createElement('div');
++      host.style.position = 'fixed';
++      host.style.inset = '0 auto auto 0';
++      host.style.zIndex = '2147483647';
++      host.style.background = '#ffffff';
++      host.innerHTML = source;
++      document.body.append(host);
++      try {
++        const svg = host.querySelector('svg');
++        if (!(svg instanceof SVGSVGElement)) {
++          return null;
++        }
++        const local = svg.getBBox();
++        const client = svg.getBoundingClientRect();
++        const all = Array.from(svg.querySelectorAll('*'));
++        const visibleTexts = Array.from(svg.querySelectorAll('text')).flatMap(textNode => {
++          if (!(textNode instanceof SVGGraphicsElement)) return [];
++          const style = getComputedStyle(textNode);
++          const localBox = textNode.getBBox();
++          const clientBox = textNode.getBoundingClientRect();
++          if (
++            style.display === 'none' ||
++            style.visibility === 'hidden' ||
++            Number.parseFloat(style.opacity || '1') <= 0 ||
++            localBox.width <= 0 ||
++            localBox.height <= 0 ||
++            clientBox.width <= 0 ||
++            clientBox.height <= 0
++          ) {
++            return [];
++          }
++          return [
++            {
++              x: clientBox.x,
++              y: clientBox.y,
++              width: clientBox.width,
++              height: clientBox.height,
++              kind: `${textNode.getAttribute('class') ?? 'text'}|${textNode.parentElement?.getAttribute('class') ?? 'parent'}`,
++            },
++          ];
++        });
++        let textIntersections = 0;
++        const textIntersectionKinds: string[] = [];
++        for (let left = 0; left < visibleTexts.length; left += 1) {
++          for (let right = left + 1; right < visibleTexts.length; right += 1) {
++            const a = visibleTexts[left];
++            const b = visibleTexts[right];
++            if (
++              a !== undefined &&
++              b !== undefined &&
++              a.x + 0.5 < b.x + b.width &&
++              b.x + 0.5 < a.x + a.width &&
++              a.y + 0.5 < b.y + b.height &&
++              b.y + 0.5 < a.y + a.height
++            ) {
++              textIntersections += 1;
++              textIntersectionKinds.push(
++                `${a.kind}@${String(a.x)},${String(a.y)},${String(a.width)},${String(a.height)} <> ${b.kind}@${String(b.x)},${String(b.y)},${String(b.width)},${String(b.height)} overlap=${String(
++                  Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x),
++                )}x${String(Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))}`,
++              );
++            }
++          }
++        }
++        const intervals = all.filter(element => {
++          if (!(element instanceof SVGGraphicsElement)) return false;
++          return (
++            element.classList.contains('element') &&
++            element.closest('g.main-layer') !== null &&
++            colors.includes(getComputedStyle(element).fill)
++          );
++        });
++        const automaticValueLabels = Array.from(svg.querySelectorAll('text')).filter(text => {
++          return (
++            text.closest('g.label') !== null &&
++            !text.classList.contains('g2-axis-label-item') &&
++            !text.classList.contains('g2-legend-label') &&
++            text.textContent?.trim() !== annotation
++          );
++        });
++        const annotationLabels = Array.from(svg.querySelectorAll('text')).filter(
++          text => text.closest('g.label') !== null && text.textContent?.trim() === annotation,
++        );
++        return {
++          localBBox: { x: local.x, y: local.y, width: local.width, height: local.height },
++          clientRect: { x: client.x, y: client.y, width: client.width, height: client.height },
++          visibleTextCount: visibleTexts.length,
++          textIntersections,
++          textIntersectionKinds,
++          intervalCount: intervals.length,
++          automaticValueLabelCount: automaticValueLabels.length,
++          annotationLabelCount: annotationLabels.length,
++          unsafeElementCount: svg.querySelectorAll(
++            'script,foreignObject,iframe,object,embed,image,use,animate,animateMotion,animateTransform,set',
++          ).length,
++          externalReferenceCount: all.filter(element =>
++            Array.from(element.attributes).some(attribute =>
++              /(?:https?:|javascript:|data:|file:|ftp:)/iu.test(attribute.value),
++            ),
++          ).length,
++          transientElementCount: svg.querySelectorAll(
++            '.g2-tooltip,[data-testid="chart-drag-overlay"],[data-drop-indicator]',
++          ).length,
++        };
++      } finally {
++        host.remove();
++      }
++    },
++    {
++      source: svgSource,
++      annotation: annotationText,
++      colors: PALETTE.map(color => {
++        const red = Number.parseInt(color.slice(1, 3), 16);
++        const green = Number.parseInt(color.slice(3, 5), 16);
++        const blue = Number.parseInt(color.slice(5, 7), 16);
++        return `rgb(${red}, ${green}, ${blue})`;
++      }),
++    },
++  );
++  expect(receipt).not.toBeNull();
++  if (receipt === null) {
++    throw new Error('Responsive public SVG did not mount');
++  }
++  expect(receipt.localBBox.width).toBeGreaterThan(0);
++  expect(receipt.localBBox.height).toBeGreaterThan(0);
++  expect(receipt.clientRect.width).toBeGreaterThan(0);
++  expect(receipt.clientRect.height).toBeGreaterThan(0);
++  expect(receipt.visibleTextCount).toBeGreaterThan(0);
++  expect(receipt.textIntersections, JSON.stringify(receipt.textIntersectionKinds)).toBe(0);
++  expect(receipt.intervalCount).toBe(200);
++  expect(receipt.automaticValueLabelCount).toBe(0);
++  expect(receipt.annotationLabelCount).toBe(1);
++  expect(receipt.unsafeElementCount).toBe(0);
++  expect(receipt.externalReferenceCount).toBe(0);
++  expect(receipt.transientElementCount).toBe(0);
++  return receipt;
++}
++
++async function screenshotCell(page: Page, testInfo: TestInfo, cellId: string): Promise<string> {
++  const filename = `${cellId}.png`;
++  const evidenceDirectory = process.env['TELLPLOT_T141_RESPONSIVE_EVIDENCE_DIR'];
++  const path =
++    evidenceDirectory === undefined
++      ? testInfo.outputPath(filename)
++      : resolve(process.cwd(), evidenceDirectory, filename);
++  if (evidenceDirectory !== undefined) {
++    await mkdir(resolve(process.cwd(), evidenceDirectory), { recursive: true });
++  }
++  await page.screenshot({ path });
++  await testInfo.attach(filename, { path, contentType: 'image/png' });
++  return `responsive-screenshots/${filename}`;
++}
++
++async function screenReceipt(
++  page: Page,
++  canvas: Locator,
++  state: (typeof states)[number],
++  components: readonly PaintedComponent[],
++  currentTarget: PaintedComponent | undefined,
++): Promise<MatrixCellReceipt['screen']> {
++  const canvasBox = await canvas.boundingBox();
++  const toolbarBox = await page.getByRole('toolbar').boundingBox();
++  expect(canvasBox).not.toBeNull();
++  expect(toolbarBox).not.toBeNull();
++  const intervalComponents = components.filter(component => component.height > 16);
++  const legendComponents = components.filter(
++    component =>
++      canvasBox !== null &&
++      component.centerY < canvasBox.y + canvasBox.height * 0.18 &&
++      component.height <= 16,
++  );
++  const plotRect = unionRectangles(intervalComponents);
++  const legendRect = unionRectangles(legendComponents);
++  expect(plotRect).not.toBeNull();
++  expect(legendRect).not.toBeNull();
++  if (plotRect === null || legendRect === null || toolbarBox === null) {
++    throw new Error('Responsive layout rectangles are incomplete');
++  }
++  const layoutIntersections = [
++    intersects(plotRect, legendRect),
++    intersects(plotRect, toolbarBox),
++    intersects(legendRect, toolbarBox),
++  ].filter(Boolean).length;
++  expect(layoutIntersections).toBe(0);
++  const requiredTextRects = await page.locator('.tp-toolbar button:visible').evaluateAll(elements =>
++    elements.map(element => {
++      const box = element.getBoundingClientRect();
++      return { x: box.x, y: box.y, width: box.width, height: box.height };
++    }),
++  );
++  let requiredTextIntersections = 0;
++  for (let left = 0; left < requiredTextRects.length; left += 1) {
++    for (let right = left + 1; right < requiredTextRects.length; right += 1) {
++      const a = requiredTextRects[left];
++      const b = requiredTextRects[right];
++      if (a !== undefined && b !== undefined && intersects(a, b)) {
++        requiredTextIntersections += 1;
++      }
++    }
++  }
++  expect(requiredTextIntersections).toBe(0);
++  const transient =
++    state === 'hover'
++      ? page.locator('.g2-tooltip').filter({ visible: true })
++      : state === 'active-drag'
++        ? page.getByTestId('chart-drag-overlay')
++        : null;
++  const transientRect = transient === null ? null : await transient.boundingBox();
++  if (state === 'idle') {
++    expect(transientRect).toBeNull();
++  } else {
++    expect(transientRect).not.toBeNull();
++  }
++  const transientTargetIntersection =
++    transientRect !== null &&
++    currentTarget !== undefined &&
++    intersects(transientRect, currentTarget);
++  const transientOcclusions =
++    transientRect === null
++      ? 0
++      : [legendRect, toolbarBox, ...requiredTextRects].filter(rectangle =>
++          intersects(transientRect, rectangle),
++        ).length;
++  if (state !== 'idle') {
++    expect(transientOcclusions).toBe(0);
++  }
++  if (state === 'active-drag') {
++    expect(transientTargetIntersection).toBe(false);
++  }
++  const pageHorizontalOverflow = await page.evaluate(
++    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
++  );
++  expect(pageHorizontalOverflow).toBeLessThanOrEqual(1);
++  return {
++    pageHorizontalOverflow,
++    plotRect,
++    legendRect,
++    toolbarRect: toolbarBox,
++    layoutIntersections,
++    requiredTextIntersections,
++    transientKind: state === 'idle' ? 'none' : state === 'hover' ? 'tooltip' : 'drag-overlay',
++    transientRect,
++    transientOcclusions,
++    transientTargetIntersection,
++    dropIndicator:
++      state === 'active-drag' &&
++      ((await page.getByTestId('tellplot-chart').getAttribute('data-drop-indicator')) !== null ||
++        (await page.getByTestId('tellplot-chart').getAttribute('data-drop-inside')) !== null),
++  };
++}
++
++for (const viewport of viewports) {
++  for (const family of families) {
++    test(`50x4 responsive matrix ${viewport.id} ${family.id}`, async ({ page }, testInfo) => {
++      test.setTimeout(120_000);
++      const canvas = await openFamily(page, viewport, family);
++      const accessible = await verifyAccessiblePaths(page, canvas, family);
++      const receipts: MatrixCellReceipt[] = [];
++
++      for (const state of states) {
++        await page.mouse.move(1, 1);
++        await expect(page.locator(`${EDITOR}[data-interaction-state="idle"]`)).toBeVisible();
++        const components = (await paintedComponents(canvas)).sort(
++          (left, right) => left.centerX - right.centerX,
++        );
++        const intervals = components.filter(component => component.height > 16);
++        expect(intervals.length).toBeGreaterThanOrEqual(200);
++        const activeViewport = page.viewportSize();
++        const interactiveIntervals = intervals.filter(
++          component =>
++            activeViewport !== null &&
++            component.centerX >= 0 &&
++            component.centerX <= activeViewport.width &&
++            component.centerY >= 0 &&
++            component.centerY <= activeViewport.height,
++        );
++        expect(interactiveIntervals.length).toBeGreaterThanOrEqual(2);
++        let currentTarget: PaintedComponent | undefined;
++        if (state === 'hover') {
++          ({ component: currentTarget } = await hoverPaintedTooltip(page, interactiveIntervals));
++        } else if (state === 'active-drag') {
++          const { component: sourceComponent, point: source } = await hoverPaintedTooltip(
++            page,
++            interactiveIntervals,
++          );
++          const target = [...interactiveIntervals].sort(
++            (left, right) => Math.abs(right.centerX - source.x) - Math.abs(left.centerX - source.x),
++          )[0];
++          if (target === undefined) {
++            throw new Error('Responsive interaction intervals are incomplete');
++          }
++          currentTarget = sourceComponent;
++          await page.mouse.move(1, 1);
++          await expect(page.locator('.g2-tooltip').filter({ visible: true })).toHaveCount(0);
++          await page.mouse.move(source.x, source.y);
++          await page.mouse.down();
++          await page.mouse.move(target.centerX, target.centerY, { steps: 6 });
++          await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++          await expect(page.getByTestId('chart-drag-overlay')).toBeVisible();
++        }
++
++        const cellId = `${viewport.id}-${family.id}-${state}`;
++        const screen = await screenReceipt(
++          page,
++          canvas,
++          state,
++          await paintedComponents(canvas),
++          currentTarget,
++        );
++        if (state === 'active-drag') {
++          expect(screen.dropIndicator).toBe(true);
++        }
++        const screenshot = await screenshotCell(page, testInfo, cellId);
++        if (state === 'active-drag') {
++          await page.keyboard.press('Escape');
++          await page.mouse.up();
++          await expect(page.locator(`${EDITOR}[data-interaction-state="idle"]`)).toBeVisible();
++        } else if (state === 'hover') {
++          await page.mouse.move(1, 1);
++        }
++        const svg = await inspectMountedSvg(
++          page,
++          await readDownload(await chooseSvgExport(page)),
++          `responsive-${family.id}`,
++        );
++        receipts.push({
++          id: cellId,
++          viewport: { width: viewport.width, height: viewport.height },
++          locale: family.id,
++          state,
++          canvas: {
++            width: (await canvas.boundingBox())?.width ?? 0,
++            height: (await canvas.boundingBox())?.height ?? 0,
++            paintedPixels: await paintedPixelCount(canvas),
++            expectedVisibleMarks: 200,
++            rasterDistinctColoredComponents: intervals.length,
++          },
++          screen,
++          svg,
++          accessible,
++          screenshot,
++        });
++      }
++
++      expect(receipts).toHaveLength(3);
++      await testInfo.attach(`responsive-${viewport.id}-${family.id}.json`, {
++        body: Buffer.from(JSON.stringify(receipts, null, 2)),
++        contentType: 'application/json',
++      });
++      const receiptDirectory = process.env['TELLPLOT_T141_RESPONSIVE_RECEIPT_DIR'];
++      if (receiptDirectory !== undefined) {
++        const directory = resolve(process.cwd(), receiptDirectory);
++        await mkdir(directory, { recursive: true });
++        await writeFile(
++          resolve(directory, `${viewport.id}-${family.id}.json`),
++          `${JSON.stringify(receipts, null, 2)}\n`,
++        );
++      }
++      console.log(
++        `[responsive] viewport=${viewport.width}x${viewport.height} locale=${family.id} cells=${receipts.length} canvas=real svg=getBBox labels=0`,
++      );
++    });
++  }
++}
+diff --git a/e2e/container-responsive.spec.ts b/e2e/container-responsive.spec.ts
+index aa20d0b..9d54f75 100644
+--- a/e2e/container-responsive.spec.ts
++++ b/e2e/container-responsive.spec.ts
+@@ -263,15 +263,19 @@ test('comparison focus fallback follows visible responsive surfaces only', async
+   );
+   const emptyHeading = editor.getByRole('heading', { name: 'Category column chart' });
+   await expect(emptyHeading).toBeFocused();
+-  await applyConfigWithoutMovingFocus(configInput, {
+-    ...comparisonConfig,
+-    data: { ...comparisonConfig.data, datasetId: 'comparison-responsive-empty', items: [] },
+-    editor: {
+-      ...comparisonConfig.editor,
+-      panels: { outline: false, inspector: false, toolbar: false },
++  await applyConfigWithoutMovingFocus(
++    configInput,
++    {
++      ...comparisonConfig,
++      data: { ...comparisonConfig.data, datasetId: 'comparison-responsive-empty', items: [] },
++      editor: {
++        ...comparisonConfig.editor,
++        panels: { outline: false, inspector: false, toolbar: false },
++      },
++      height: 721,
+     },
+-    height: 721,
+-  }, true);
++    true,
++  );
+   await expect(page.getByRole('status', { name: '图表配置状态' })).toContainText('已同步');
+   await expect(editor).toBeFocused();
+ });
+diff --git a/e2e/performance.spec.ts b/e2e/performance.spec.ts
+index 4653ddd..b0a0283 100644
+--- a/e2e/performance.spec.ts
++++ b/e2e/performance.spec.ts
+@@ -1,3 +1,6 @@
++import { writeFile } from 'node:fs/promises';
++import { resolve } from 'node:path';
++
+ import { expect, test, type Locator, type Page } from '@playwright/test';
+ 
+ import { resolvePerformanceP95BudgetMs } from './performanceBudget';
+@@ -25,6 +28,15 @@ interface ExpectedEditorState {
+   readonly expectedKey: 'ArrowDown' | 'ArrowUp';
+ }
+ 
++interface ComparisonPaintSample {
++  readonly sampleIndex: number;
++  readonly elapsedMs: number;
++  readonly expectedRevision: number;
++  readonly paintedRevision: number;
++  readonly expectedOrderOrdinals: readonly number[];
++  readonly paintedOrderOrdinals: readonly number[];
++}
++
+ interface PerformanceWindow extends Window {
+   __tellplotAnimationFrames?: number;
+   __tellplotRootCommits?: number;
+@@ -34,6 +46,15 @@ interface PerformanceWindow extends Window {
+     pending: Promise<number> | null;
+   };
+   __tellplotPointerLifecycle?: string[];
++  __tellplotComparisonPerf?: {
++    samples: ComparisonPaintSample[];
++    pending: Promise<ComparisonPaintSample> | null;
++  };
++  __tellplotRafCoalescing?: {
++    requested: number;
++    cancelled: number;
++    callbacks: number;
++  };
+ }
+ 
+ async function installReactCommitProbe(page: Page): Promise<void> {
+@@ -495,6 +516,300 @@ async function rootContributionPrefix(page: Page): Promise<readonly string[]> {
+     );
+ }
+ 
++async function comparisonIntervalSlots(canvas: Locator): Promise<readonly BarSlot[]> {
++  const localSlots = await canvas.evaluate(element => {
++    if (!(element instanceof HTMLCanvasElement)) {
++      return [];
++    }
++    const context = element.getContext('2d');
++    if (context === null) {
++      return [];
++    }
++    const colors = [
++      [0, 114, 178],
++      [213, 94, 0],
++    ];
++    const pixels = context.getImageData(0, 0, element.width, element.height).data;
++    const startY = Math.floor(element.height * 0.18);
++    const populated: { readonly colorIndex: number; readonly x: number }[] = [];
++    for (let x = 0; x < element.width; x += 1) {
++      const matches = colors.map(() => 0);
++      for (let y = startY; y < element.height; y += 1) {
++        const offset = (y * element.width + x) * 4;
++        const red = pixels[offset] ?? 0;
++        const green = pixels[offset + 1] ?? 0;
++        const blue = pixels[offset + 2] ?? 0;
++        const alpha = pixels[offset + 3] ?? 0;
++        if (alpha <= 120) {
++          continue;
++        }
++        const colorIndex = colors.findIndex(
++          ([r, g, b]) =>
++            Math.abs(red - r) <= 8 && Math.abs(green - g) <= 8 && Math.abs(blue - b) <= 8,
++        );
++        if (colorIndex >= 0) {
++          matches[colorIndex] = (matches[colorIndex] ?? 0) + 1;
++        }
++      }
++      const strongestMatch = Math.max(...matches);
++      if (strongestMatch >= 4) {
++        populated.push({ colorIndex: matches.indexOf(strongestMatch), x });
++      }
++    }
++    const clusters: { colorIndex: number; minX: number; maxX: number }[] = [];
++    for (const point of populated) {
++      const current = clusters.at(-1);
++      if (
++        current === undefined ||
++        point.x > current.maxX + 1 ||
++        point.colorIndex !== current.colorIndex
++      ) {
++        clusters.push({ colorIndex: point.colorIndex, minX: point.x, maxX: point.x });
++      } else {
++        current.maxX = point.x;
++      }
++    }
++    return clusters.map(cluster => ({
++      x: (cluster.minX + cluster.maxX) / 2,
++      minX: cluster.minX,
++      maxX: cluster.maxX,
++    }));
++  });
++  const box = await canvas.boundingBox();
++  const width = await canvas.evaluate(element =>
++    element instanceof HTMLCanvasElement ? element.width : 0,
++  );
++  if (box === null || width === 0) {
++    return [];
++  }
++  return localSlots.map(slot => ({
++    x: box.x + (slot.x / width) * box.width,
++    minX: box.x + (slot.minX / width) * box.width,
++    maxX: box.x + (slot.maxX / width) * box.width,
++  }));
++}
++
++async function comparisonCategoryPrefix(page: Page): Promise<readonly string[]> {
++  return page
++    .locator('[role="tree"]:visible')
++    .first()
++    .locator('[role="treeitem"][aria-level="1"][data-node-id]')
++    .evaluateAll(rows =>
++      rows.slice(0, 3).map(row => row.getAttribute('data-node-id') ?? 'missing-node-id'),
++    );
++}
++
++async function yInsideComparisonInterval(canvas: Locator, cssX: number): Promise<number> {
++  const box = await canvas.boundingBox();
++  expect(box).not.toBeNull();
++  if (box === null) {
++    return 0;
++  }
++  const localY = await canvas.evaluate(
++    (element, ratioX) => {
++      if (!(element instanceof HTMLCanvasElement)) return -1;
++      const context = element.getContext('2d');
++      if (context === null) return -1;
++      const x = Math.max(0, Math.min(element.width - 1, Math.round(ratioX * element.width)));
++      const pixels = context.getImageData(x, 0, 1, element.height).data;
++      const colors = [
++        [0, 114, 178],
++        [213, 94, 0],
++      ];
++      const matches: number[] = [];
++      for (let y = 0; y < element.height; y += 1) {
++        const offset = y * 4;
++        if (
++          (pixels[offset + 3] ?? 0) > 120 &&
++          colors.some(
++            ([red, green, blue]) =>
++              Math.abs((pixels[offset] ?? 0) - red) <= 8 &&
++              Math.abs((pixels[offset + 1] ?? 0) - green) <= 8 &&
++              Math.abs((pixels[offset + 2] ?? 0) - blue) <= 8,
++          )
++        ) {
++          matches.push(y);
++        }
++      }
++      return matches[Math.floor(matches.length / 2)] ?? -1;
++    },
++    (cssX - box.x) / box.width,
++  );
++  expect(localY).toBeGreaterThanOrEqual(0);
++  const height = await canvas.evaluate(element =>
++    element instanceof HTMLCanvasElement ? element.height : 0,
++  );
++  return box.y + (localY / height) * box.height;
++}
++
++async function findComparisonDirectHit(
++  page: Page,
++  slotX: number,
++  slotY: number,
++  probeTargetX: number,
++): Promise<{ readonly x: number; readonly y: number }> {
++  for (const xOffset of [-1.5, -1, -0.5, 0, 0.5, 1, 1.5]) {
++    for (const yOffset of [-6, -3, 0, 3, 6]) {
++      const point = { x: slotX + xOffset, y: slotY + yOffset };
++      await page.mouse.move(point.x, point.y);
++      await page.mouse.down();
++      await page.mouse.move(probeTargetX, point.y, { steps: 2 });
++      const state = await page.locator(EDITOR).getAttribute('data-interaction-state');
++      await page.keyboard.press('Escape');
++      await page.mouse.up();
++      await expect(page.locator(EDITOR)).toHaveAttribute('data-interaction-state', 'idle');
++      if (state === 'dragging') {
++        return point;
++      }
++    }
++  }
++  throw new Error('No exact G2 comparison interval hit was found near the painted slot');
++}
++
++async function installComparisonLatencyProbe(page: Page): Promise<void> {
++  await page.evaluate(() => {
++    (window as PerformanceWindow).__tellplotComparisonPerf = { samples: [], pending: null };
++  });
++}
++
++async function armComparisonPaintUpdate(
++  canvas: Locator,
++  previousSignature: number,
++  region: CanvasSignatureRegion,
++  input: {
++    readonly sampleIndex: number;
++    readonly expectedRevision: number;
++    readonly expectedPrefix: readonly string[];
++  },
++): Promise<void> {
++  await canvas.evaluate(
++    (element, target) => {
++      if (!(element instanceof HTMLCanvasElement)) {
++        throw new Error('Comparison performance target is not a canvas');
++      }
++      const context = element.getContext('2d');
++      const metric = (window as PerformanceWindow).__tellplotComparisonPerf;
++      const editor = document.querySelector(target.editorSelector);
++      if (
++        context === null ||
++        metric === undefined ||
++        metric.pending !== null ||
++        !(editor instanceof HTMLElement)
++      ) {
++        throw new Error('Comparison painted-frame probe is not initialized');
++      }
++      const minX = Math.max(0, Math.floor(target.region.minXRatio * element.width));
++      const maxX = Math.min(element.width - 1, Math.ceil(target.region.maxXRatio * element.width));
++      const signature = (): number => {
++        const pixels = context.getImageData(
++          minX,
++          0,
++          Math.max(1, maxX - minX + 1),
++          element.height,
++        ).data;
++        let hash = 2166136261;
++        for (let offset = 0; offset < pixels.length; offset += 4) {
++          hash ^= pixels[offset] ?? 0;
++          hash = Math.imul(hash, 16777619);
++          hash ^= pixels[offset + 1] ?? 0;
++          hash = Math.imul(hash, 16777619);
++          hash ^= pixels[offset + 2] ?? 0;
++          hash = Math.imul(hash, 16777619);
++          hash ^= pixels[offset + 3] ?? 0;
++          hash = Math.imul(hash, 16777619);
++        }
++        return hash >>> 0;
++      };
++      const prefix = (): readonly string[] =>
++        [...editor.querySelectorAll('[role="treeitem"][aria-level="1"][data-node-id]')]
++          .slice(0, target.expectedPrefix.length)
++          .map(row => row.getAttribute('data-node-id') ?? 'missing-node-id');
++      const ordinal = (nodeId: string): number => {
++        const suffix = /([0-9]+)$/u.exec(nodeId)?.[1];
++        return suffix === undefined ? -1 : Number.parseInt(suffix, 10);
++      };
++      const pending = new Promise<ComparisonPaintSample>((resolve, reject) => {
++        const armedAt = performance.now();
++        let startedAt: number | undefined;
++        const rejectTimer = window.setTimeout(() => {
++          observer.disconnect();
++          reject(new Error('Comparison command was not committed and painted within 1500ms'));
++        }, 1_500);
++        const inspect = (): void => {
++          if (startedAt === undefined) {
++            return;
++          }
++          const paintedPrefix = prefix();
++          const revision = Number.parseInt(editor.dataset['viewRevision'] ?? '-1', 10);
++          if (
++            revision === target.expectedRevision &&
++            signature() !== target.previousSignature &&
++            target.expectedPrefix.every((nodeId, index) => paintedPrefix[index] === nodeId)
++          ) {
++            window.clearTimeout(rejectTimer);
++            const receipt: ComparisonPaintSample = {
++              sampleIndex: target.sampleIndex,
++              elapsedMs: performance.now() - startedAt,
++              expectedRevision: target.expectedRevision,
++              paintedRevision: revision,
++              expectedOrderOrdinals: target.expectedPrefix.map(ordinal),
++              paintedOrderOrdinals: paintedPrefix.map(ordinal),
++            };
++            metric.samples.push(receipt);
++            resolve(receipt);
++            return;
++          }
++          requestAnimationFrame(inspect);
++        };
++        const beginAtAcceptedCommit = (): void => {
++          if (
++            startedAt !== undefined ||
++            editor.dataset['viewRevision'] !== String(target.expectedRevision)
++          ) {
++            return;
++          }
++          observer.disconnect();
++          startedAt = performance.now();
++          requestAnimationFrame(inspect);
++        };
++        const observer = new MutationObserver(beginAtAcceptedCommit);
++        observer.observe(editor, { attributes: true, attributeFilter: ['data-view-revision'] });
++        beginAtAcceptedCommit();
++        if (performance.now() - armedAt >= 1_500) {
++          window.clearTimeout(rejectTimer);
++          observer.disconnect();
++          reject(new Error('Comparison painted-frame probe could not be armed'));
++        }
++      });
++      void pending.catch(() => undefined);
++      metric.pending = pending;
++    },
++    {
++      editorSelector: EDITOR,
++      expectedPrefix: input.expectedPrefix,
++      expectedRevision: input.expectedRevision,
++      previousSignature,
++      region,
++      sampleIndex: input.sampleIndex,
++    },
++  );
++}
++
++async function waitForComparisonPaintUpdate(page: Page): Promise<ComparisonPaintSample> {
++  return page.evaluate(async () => {
++    const metric = (window as PerformanceWindow).__tellplotComparisonPerf;
++    if (metric === undefined || metric.pending === null) {
++      throw new Error('Comparison painted-frame probe is not armed');
++    }
++    const pending = metric.pending;
++    try {
++      return await pending;
++    } finally {
++      metric.pending = null;
++    }
++  });
++}
++
+ test('latency probe waits for an unfinished prior canvas animation to settle', async ({ page }) => {
+   await page.setContent('<canvas width="48" height="24"></canvas>');
+   const canvas = page.locator('canvas');
+@@ -836,3 +1151,258 @@ test('200-item categorical G2 chart keeps direct feedback outside React and meet
+   );
+   expect(p95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
+ });
++
++test('200x2 comparison records keyboard and direct commit-to-painted-frame p95', async ({
++  page,
++}) => {
++  test.setTimeout(150_000);
++  await installReactCommitProbe(page);
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.goto('/playground?fixture=comparison-performance');
++  await expect(
++    page.locator(`${EDITOR}[data-editor-state="ready"][data-chart-type="column"]`),
++  ).toBeVisible();
++  await page.getByRole('button', { name: '隐藏使用代码' }).click();
++
++  const handles = page.locator('[role="treeitem"][aria-level="1"] button[aria-label^="拖动 "]');
++  await expect(handles).toHaveCount(200);
++  const canvas = page.getByTestId('tellplot-chart').locator('canvas').first();
++  await expect(canvas).toBeVisible();
++  await expect.poll(() => paintedPixelCount(canvas)).toBeGreaterThan(500);
++  await expect
++    .poll(async () => (await comparisonIntervalSlots(canvas)).length)
++    .toBeGreaterThanOrEqual(6);
++  await page.waitForTimeout(200); // Keep the required initial G2 animation outside samples.
++
++  const initialSlots = await comparisonIntervalSlots(canvas);
++  const first = initialSlots[0];
++  const secondCategory = initialSlots[2];
++  const thirdCategory = initialSlots[4];
++  expect(first).toBeDefined();
++  expect(secondCategory).toBeDefined();
++  expect(thirdCategory).toBeDefined();
++  const canvasBox = await canvas.boundingBox();
++  expect(canvasBox).not.toBeNull();
++  if (
++    first === undefined ||
++    secondCategory === undefined ||
++    thirdCategory === undefined ||
++    canvasBox === null ||
++    canvasBox.width <= 0
++  ) {
++    return;
++  }
++  const signatureRegion: CanvasSignatureRegion = {
++    minXRatio: Math.max(0, (first.minX - canvasBox.x - 2) / canvasBox.width),
++    maxXRatio: Math.min(1, (thirdCategory.maxX - canvasBox.x + 2) / canvasBox.width),
++  };
++  await waitForStableCanvas(canvas, signatureRegion);
++
++  const mover = page.locator(
++    '[role="treeitem"][aria-level="1"][data-node-id="comparison-perf-001"]',
++  );
++  await mover.focus();
++  await page.keyboard.press('Alt+ArrowDown'); // Required warm-up before collection.
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '1');
++  await expect
++    .poll(() => comparisonCategoryPrefix(page))
++    .toEqual(['comparison-perf-002', 'comparison-perf-001', 'comparison-perf-003']);
++  await waitForStableCanvas(canvas, signatureRegion);
++
++  await installComparisonLatencyProbe(page);
++  const keyboardReceipts: ComparisonPaintSample[] = [];
++  for (let sampleIndex = 0; sampleIndex < SAMPLE_COUNT; sampleIndex += 1) {
++    const restoreSourceOrder = sampleIndex % 2 === 0;
++    const expectedPrefix = restoreSourceOrder
++      ? ['comparison-perf-001', 'comparison-perf-002', 'comparison-perf-003']
++      : ['comparison-perf-002', 'comparison-perf-001', 'comparison-perf-003'];
++    const expectedRevision = sampleIndex + 2;
++    await mover.focus();
++    const comparisonPreviousSignature = await waitForStableCanvas(canvas, signatureRegion);
++    await armComparisonPaintUpdate(canvas, comparisonPreviousSignature, signatureRegion, {
++      sampleIndex,
++      expectedRevision,
++      expectedPrefix,
++    });
++    await page.keyboard.press(restoreSourceOrder ? 'Alt+ArrowUp' : 'Alt+ArrowDown');
++    keyboardReceipts.push(await waitForComparisonPaintUpdate(page));
++    await expect(page.locator(EDITOR)).toHaveAttribute(
++      'data-view-revision',
++      String(expectedRevision),
++    );
++  }
++
++  const slots = await comparisonIntervalSlots(canvas);
++  const firstPosition = slots[0];
++  const secondPosition = slots[2];
++  const farPosition = slots[20];
++  expect(firstPosition).toBeDefined();
++  expect(secondPosition).toBeDefined();
++  expect(farPosition).toBeDefined();
++  if (firstPosition === undefined || secondPosition === undefined || farPosition === undefined) {
++    return;
++  }
++  const sourceY = await yInsideComparisonInterval(canvas, secondPosition.x);
++  const sourceHit = await findComparisonDirectHit(page, secondPosition.x, sourceY, farPosition.x);
++  const categorySpacing = secondPosition.x - firstPosition.x;
++  await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
++    'data-render-state',
++    'ready',
++  );
++  await waitForStableCanvas(canvas, signatureRegion);
++  await page.mouse.move(sourceHit.x, sourceHit.y);
++  await page.mouse.down();
++  await page.mouse.move(farPosition.x, sourceHit.y, { steps: 3 });
++  await page.mouse.move(firstPosition.x, sourceHit.y, { steps: 3 });
++  await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++  await waitForStableCanvas(canvas, signatureRegion);
++  const rootCommitsBeforePreview = await page.evaluate(
++    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
++  );
++  expect(rootCommitsBeforePreview).toBeGreaterThan(0);
++  await page.evaluate(() => {
++    const performanceWindow = window as PerformanceWindow;
++    const nativeRequest = window.requestAnimationFrame.bind(window);
++    const nativeCancel = window.cancelAnimationFrame.bind(window);
++    performanceWindow.__tellplotRafCoalescing = { requested: 0, cancelled: 0, callbacks: 0 };
++    window.requestAnimationFrame = callback => {
++      const receipt = performanceWindow.__tellplotRafCoalescing;
++      if (receipt !== undefined) receipt.requested += 1;
++      return nativeRequest(timestamp => {
++        if (receipt !== undefined) receipt.callbacks += 1;
++        callback(timestamp);
++      });
++    };
++    window.cancelAnimationFrame = handle => {
++      const receipt = performanceWindow.__tellplotRafCoalescing;
++      if (receipt !== undefined) receipt.cancelled += 1;
++      nativeCancel(handle);
++    };
++  });
++  await page.evaluate(
++    ({ x, y }) => {
++      for (let index = 0; index < 48; index += 1) {
++        document.dispatchEvent(
++          new PointerEvent('pointermove', {
++            bubbles: true,
++            buttons: 1,
++            clientX: x + ((index % 3) - 1) * 0.2,
++            clientY: y,
++            pointerId: 1,
++            pointerType: 'mouse',
++          }),
++        );
++      }
++    },
++    { x: firstPosition.x, y: sourceHit.y },
++  );
++  await page.waitForTimeout(50);
++  const rootCommitsAfterPreview = await page.evaluate(
++    () => (window as PerformanceWindow).__tellplotRootCommits ?? -1,
++  );
++  const rafCoalescing = await page.evaluate(
++    () => (window as PerformanceWindow).__tellplotRafCoalescing,
++  );
++  expect(rootCommitsAfterPreview - rootCommitsBeforePreview).toBe(0);
++  expect(rafCoalescing?.requested ?? 0).toBeGreaterThanOrEqual(48);
++  expect(rafCoalescing?.cancelled ?? 0).toBeGreaterThan(0);
++  expect(rafCoalescing?.callbacks ?? Number.POSITIVE_INFINITY).toBeLessThan(
++    rafCoalescing?.requested ?? 0,
++  );
++  await page.keyboard.press('Escape');
++  await page.mouse.up();
++  await expect(page.locator(EDITOR)).toHaveAttribute('data-view-revision', '31');
++  await waitForStableCanvas(canvas, signatureRegion);
++
++  await installComparisonLatencyProbe(page);
++  const directReceipts: ComparisonPaintSample[] = [];
++  for (let sampleIndex = 0; sampleIndex < SAMPLE_COUNT; sampleIndex += 1) {
++    const restoreSourceOrder = sampleIndex % 2 === 0;
++    const sourceX = restoreSourceOrder ? sourceHit.x : sourceHit.x - categorySpacing;
++    const target = restoreSourceOrder ? firstPosition : secondPosition;
++    const expectedPrefix = restoreSourceOrder
++      ? ['comparison-perf-001', 'comparison-perf-002', 'comparison-perf-003']
++      : ['comparison-perf-002', 'comparison-perf-001', 'comparison-perf-003'];
++    const expectedRevision = sampleIndex + 32;
++    await expect(page.getByTestId('tellplot-chart-stage')).toHaveAttribute(
++      'data-render-state',
++      'ready',
++    );
++    const comparisonPreviousSignature = await waitForStableCanvas(canvas, signatureRegion);
++    await armComparisonPaintUpdate(canvas, comparisonPreviousSignature, signatureRegion, {
++      sampleIndex,
++      expectedRevision,
++      expectedPrefix,
++    });
++    await page.mouse.move(sourceX, sourceHit.y);
++    await page.mouse.down();
++    await page.mouse.move(farPosition.x, sourceHit.y, { steps: 2 });
++    await page.mouse.move(target.x, sourceHit.y, { steps: 2 });
++    await expect(page.locator(`${EDITOR}[data-interaction-state="dragging"]`)).toBeVisible();
++    await page.mouse.up();
++    directReceipts.push(await waitForComparisonPaintUpdate(page));
++    await expect(page.locator(EDITOR)).toHaveAttribute(
++      'data-view-revision',
++      String(expectedRevision),
++    );
++  }
++
++  const keyboardSamples = keyboardReceipts.map(receipt => receipt.elapsedMs);
++  const directSamples = directReceipts.map(receipt => receipt.elapsedMs);
++  const p95 = (samples: readonly number[]): number | undefined =>
++    [...samples].sort((left, right) => left - right)[Math.ceil(0.95 * samples.length) - 1];
++  const keyboardP95 = p95(keyboardSamples);
++  const directP95 = p95(directSamples);
++  expect(keyboardSamples).toHaveLength(SAMPLE_COUNT);
++  expect(directSamples).toHaveLength(SAMPLE_COUNT);
++  expect(keyboardP95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
++  expect(directP95 ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(PERFORMANCE_P95_BUDGET_MS);
++
++  const evidence = {
++    schemaVersion: 1,
++    chartFamily: 'categorical-comparison',
++    fixtureShape: {
++      categories: 200,
++      series: 2,
++      visibleMarks: 400,
++      rasterDistinctColoredSlots: (await comparisonIntervalSlots(canvas)).length,
++    },
++    viewport: { width: 1440, height: 900 },
++    runtime: process.version,
++    project: test.info().project.name,
++    warmupCommands: 1,
++    formula: 'sorted[ceil(.95*n)-1]',
++    budgetMs: PERFORMANCE_P95_BUDGET_MS,
++    preview: {
++      rootCommitDelta: rootCommitsAfterPreview - rootCommitsBeforePreview,
++      raf: rafCoalescing,
++    },
++    groups: [
++      {
++        input: 'keyboard',
++        sampleCount: keyboardSamples.length,
++        samplesMs: keyboardSamples,
++        p95Ms: keyboardP95,
++        paintedReceipts: keyboardReceipts,
++      },
++      {
++        input: 'direct-pointer',
++        sampleCount: directSamples.length,
++        samplesMs: directSamples,
++        p95Ms: directP95,
++        paintedReceipts: directReceipts,
++      },
++    ],
++  };
++  const evidencePath = process.env['TELLPLOT_T141_PERFORMANCE_EVIDENCE_PATH'];
++  if (evidencePath !== undefined) {
++    await writeFile(resolve(process.cwd(), evidencePath), `${JSON.stringify(evidence, null, 2)}\n`);
++  }
++  await test.info().attach('comparison-performance-samples.json', {
++    body: Buffer.from(JSON.stringify(evidence, null, 2)),
++    contentType: 'application/json',
++  });
++  console.log(
++    `[performance] comparison keyboard-p95=${String(keyboardP95)}ms direct-p95=${String(directP95)}ms budget=${String(PERFORMANCE_P95_BUDGET_MS)}ms samples=${SAMPLE_COUNT}+${SAMPLE_COUNT} preview-root-commit-delta=${rootCommitsAfterPreview - rootCommitsBeforePreview}`,
++  );
++});
+diff --git a/packages/core/src/charts/categorical/projection.ts b/packages/core/src/charts/categorical/projection.ts
+index 38e7fc7..8e6a426 100644
+--- a/packages/core/src/charts/categorical/projection.ts
++++ b/packages/core/src/charts/categorical/projection.ts
+@@ -147,11 +147,7 @@ export function projectCategorical(
+   }
+   if (sourceData.schemaVersion === '3.0.0') {
+     return validationFailure([
+-      validationIssue(
+-        'SOURCE_CONFLICT',
+-        'INCOMPATIBLE_PROJECTOR_GENERATION',
+-        '/schemaVersion',
+-      ),
++      validationIssue('SOURCE_CONFLICT', 'INCOMPATIBLE_PROJECTOR_GENERATION', '/schemaVersion'),
+     ]);
+   }
+   if (sourceData.schemaVersion !== '2.0.0' || sourceData.dataKind !== 'categorical') {
+diff --git a/packages/core/src/domain/model.ts b/packages/core/src/domain/model.ts
+index e8c192a..c32d07b 100644
+--- a/packages/core/src/domain/model.ts
++++ b/packages/core/src/domain/model.ts
+@@ -4,10 +4,7 @@ export type LegacySchemaVersion = '1.0.0';
+ export type CurrentSchemaVersion = '2.0.0';
+ export type ComparisonSchemaVersion = '3.0.0';
+ /** Supported persisted schema generations. */
+-export type SchemaVersion =
+-  | LegacySchemaVersion
+-  | CurrentSchemaVersion
+-  | ComparisonSchemaVersion;
++export type SchemaVersion = LegacySchemaVersion | CurrentSchemaVersion | ComparisonSchemaVersion;
+ /** Chart layouts understood by the editor data contract. */
+ export type ChartType = 'waterfall' | 'bar' | 'column';
+ /** Source families with distinct validation and narrative policies. */
+@@ -56,9 +53,7 @@ export interface CategoricalComparisonSourceItem {
+ /** Backward-compatible alias retaining the existing waterfall item contract. */
+ export type SourceItem = WaterfallSourceItem;
+ export type SourceDataItem =
+-  | WaterfallSourceItem
+-  | CategoricalSourceItem
+-  | CategoricalComparisonSourceItem;
++  WaterfallSourceItem | CategoricalSourceItem | CategoricalComparisonSourceItem;
+ 
+ export interface LegacyWaterfallSourceData {
+   readonly schemaVersion: LegacySchemaVersion;
+@@ -138,7 +133,4 @@ export interface CategoricalComparisonViewSpec extends NarrativeViewFields {
+ }
+ 
+ /** Persisted narrative view state paired with a compatible source generation and family. */
+-export type ViewSpec =
+-  | LegacyWaterfallViewSpec
+-  | CurrentViewSpec
+-  | CategoricalComparisonViewSpec;
++export type ViewSpec = LegacyWaterfallViewSpec | CurrentViewSpec | CategoricalComparisonViewSpec;
+diff --git a/packages/core/src/domain/validation.ts b/packages/core/src/domain/validation.ts
+index 76aeeb2..35c67d9 100644
+--- a/packages/core/src/domain/validation.ts
++++ b/packages/core/src/domain/validation.ts
+@@ -221,11 +221,7 @@ function validateSchemaVersion(
+   return value;
+ }
+ 
+-function validateMetadata(
+-  value: unknown,
+-  path: string,
+-  errors: ValidationIssue[],
+-): void {
++function validateMetadata(value: unknown, path: string, errors: ValidationIssue[]): void {
+   if (value === undefined) {
+     return;
+   }
+@@ -359,13 +355,7 @@ function validateComparisonSeries(
+       reliable = false;
+       continue;
+     }
+-    inspectRecord(
+-      entry,
+-      entryPath,
+-      'INVALID_SOURCE_DATA',
+-      errors,
+-      COMPARISON_SERIES_FIELDS,
+-    );
++    inspectRecord(entry, entryPath, 'INVALID_SOURCE_DATA', errors, COMPARISON_SERIES_FIELDS);
+ 
+     const id = ownDataValue(entry, 'id');
+     if (typeof id !== 'string') {
+@@ -378,12 +368,10 @@ function validateComparisonSeries(
+       const firstIndex = indexById.get(id);
+       if (firstIndex !== undefined) {
+         errors.push(
+-          validationIssue(
+-            'INVALID_SOURCE_DATA',
+-            'DUPLICATE_SERIES_ID',
+-            pointer(entryPath, 'id'),
+-            { index, firstIndex },
+-          ),
++          validationIssue('INVALID_SOURCE_DATA', 'DUPLICATE_SERIES_ID', pointer(entryPath, 'id'), {
++            index,
++            firstIndex,
++          }),
+         );
+         reliable = false;
+       } else {
+@@ -398,7 +386,9 @@ function validateComparisonSeries(
+         validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(entryPath, 'label')),
+       );
+     } else if (label.trim().length === 0) {
+-      errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_LABEL', pointer(entryPath, 'label')));
++      errors.push(
++        validationIssue('INVALID_SOURCE_DATA', 'EMPTY_LABEL', pointer(entryPath, 'label')),
++      );
+     } else {
+       const normalizedLabel = label.trim().normalize('NFC');
+       const firstIndex = firstIndexByLabel.get(normalizedLabel);
+@@ -416,11 +406,7 @@ function validateComparisonSeries(
+       }
+     }
+ 
+-    validateMetadata(
+-      ownDataValue(entry, 'metadata'),
+-      pointer(entryPath, 'metadata'),
+-      errors,
+-    );
++    validateMetadata(ownDataValue(entry, 'metadata'), pointer(entryPath, 'metadata'), errors);
+   }
+ 
+   return reliable ? { ids, indexById } : undefined;
+@@ -437,13 +423,7 @@ function validateComparisonValue(
+     errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', valuePath));
+     return undefined;
+   }
+-  inspectRecord(
+-    value,
+-    valuePath,
+-    'INVALID_SOURCE_DATA',
+-    errors,
+-    COMPARISON_VALUE_FIELDS,
+-  );
++  inspectRecord(value, valuePath, 'INVALID_SOURCE_DATA', errors, COMPARISON_VALUE_FIELDS);
+ 
+   const seriesId = ownDataValue(value, 'seriesId');
+   let validSeriesId: string | undefined;
+@@ -459,13 +439,17 @@ function validateComparisonValue(
+ 
+   const amount = ownDataValue(value, 'amount');
+   if (typeof amount !== 'number') {
+-    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'amount')));
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'amount')),
++    );
+   } else if (!Number.isFinite(amount)) {
+     errors.push(
+       validationIssue('INVALID_SOURCE_DATA', 'NON_FINITE_AMOUNT', pointer(valuePath, 'amount')),
+     );
+   } else if (Math.abs(amount) > Number.MAX_SAFE_INTEGER) {
+-    errors.push(validationIssue('INVALID_SOURCE_DATA', 'UNSAFE_AMOUNT', pointer(valuePath, 'amount')));
++    errors.push(
++      validationIssue('INVALID_SOURCE_DATA', 'UNSAFE_AMOUNT', pointer(valuePath, 'amount')),
++    );
+   }
+ 
+   const sourceRef = ownDataValue(value, 'sourceRef');
+@@ -490,13 +474,7 @@ function validateComparisonSourceItem(
+     errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', itemPath));
+     return;
+   }
+-  inspectRecord(
+-    value,
+-    itemPath,
+-    'INVALID_SOURCE_DATA',
+-    errors,
+-    COMPARISON_SOURCE_ITEM_FIELDS,
+-  );
++  inspectRecord(value, itemPath, 'INVALID_SOURCE_DATA', errors, COMPARISON_SOURCE_ITEM_FIELDS);
+ 
+   const id = ownDataValue(value, 'id');
+   if (typeof id !== 'string') {
+@@ -718,13 +696,7 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
+     const seenIds = new Set<string>();
+     if (schemaVersion === '3.0.0') {
+       for (let index = 0; index < items.length; index += 1) {
+-        validateComparisonSourceItem(
+-          items[index],
+-          index,
+-          seenIds,
+-          comparisonRegistry,
+-          errors,
+-        );
++        validateComparisonSourceItem(items[index], index, seenIds, comparisonRegistry, errors);
+       }
+     } else {
+       const waterfall = schemaVersion !== '2.0.0' || dataKind === 'waterfall';
+diff --git a/packages/editor/src/charts/categorical/comparisonSpec.ts b/packages/editor/src/charts/categorical/comparisonSpec.ts
+index eeb5a6f..0078bcb 100644
+--- a/packages/editor/src/charts/categorical/comparisonSpec.ts
++++ b/packages/editor/src/charts/categorical/comparisonSpec.ts
+@@ -110,6 +110,7 @@ function componentGuides(
+                   labelFill: '#5F6B65',
+                   labelAutoHide: true,
+                   labelAutoRotate: false,
++                  labelSpacing: 6,
+                   labelFormatter: (nodeId: unknown) =>
+                     options.projection.find(datum => datum.nodeId === String(nodeId))?.label ??
+                     String(nodeId),
+@@ -136,6 +137,7 @@ function componentGuides(
+                   labelFill: '#5F6B65',
+                   labelAutoHide: true,
+                   labelAutoRotate: false,
++                  labelSpacing: 6,
+                   labelFormatter: (nodeId: unknown) =>
+                     options.projection.find(datum => datum.nodeId === String(nodeId))?.label ??
+                     String(nodeId),
+diff --git a/packages/editor/src/editor/chartSurface.ts b/packages/editor/src/editor/chartSurface.ts
+index 6a35d6c..ba35d70 100644
+--- a/packages/editor/src/editor/chartSurface.ts
++++ b/packages/editor/src/editor/chartSurface.ts
+@@ -905,7 +905,9 @@ export function createChartSurface(
+               : readComparisonChartCategoryElementPointer(event, comparisonReceipt)
+             : readChartCategoryElementPointer(event, axisFor(current.chart));
+           if (pointer?.ok === true) {
+-            runtime.dismissTooltip();
++            if (isComparison()) {
++              runtime.dismissTooltip();
++            }
+             renderActions(pointer.value.nodeId);
+           }
+         },
+@@ -1184,7 +1186,9 @@ export function createChartSurface(
+               point.y <= bounds.maxY,
+           );
+       if (hit !== undefined) {
+-        runtime.dismissTooltip();
++        if (isComparison()) {
++          runtime.dismissTooltip();
++        }
+         renderActions(hit.nodeId);
+       }
+     }
+diff --git a/packages/editor/src/rendering/g2/chartPointer.ts b/packages/editor/src/rendering/g2/chartPointer.ts
+index 24c4f55..97afd47 100644
+--- a/packages/editor/src/rendering/g2/chartPointer.ts
++++ b/packages/editor/src/rendering/g2/chartPointer.ts
+@@ -195,8 +195,7 @@ export function readComparisonChartCategoryElementPointer(
+   if (coordinate === undefined) {
+     return { ok: false, reason: 'INVALID_BOUNDS' };
+   }
+-  const edge: MoveTargetEdge =
+-    coordinate < category.axisBounds.center ? 'before' : 'after';
++  const edge: MoveTargetEdge = coordinate < category.axisBounds.center ? 'before' : 'after';
+   return {
+     ok: true,
+     value: {
+diff --git a/packages/editor/src/rendering/g2/comparisonSceneReceipt.ts b/packages/editor/src/rendering/g2/comparisonSceneReceipt.ts
+index f2c9898..32eba0f 100644
+--- a/packages/editor/src/rendering/g2/comparisonSceneReceipt.ts
++++ b/packages/editor/src/rendering/g2/comparisonSceneReceipt.ts
+@@ -362,7 +362,9 @@ function exactAllZeroBounds(
+   nodeId: ViewNodeId,
+   projectionOrder: readonly ViewNodeId[],
+   axis: CategoryAxis,
+-): { readonly axisBounds: ChartCategoryBounds; readonly pointerBounds: ChartSceneRectangle } | undefined {
++):
++  | { readonly axisBounds: ChartCategoryBounds; readonly pointerBounds: ChartSceneRectangle }
++  | undefined {
+   const contextRecord = asRecord(context);
+   const views = arrayFromCollection(valueOf(contextRecord, 'views'));
+   if (views === undefined) {
+@@ -437,11 +439,7 @@ function exactAllZeroBounds(
+   }
+   const categoryCenter = categoryStart + categoryWidth / 2;
+   const bandStartPoint = mapCoordinate(coordinate, [categoryStart, zero], offset);
+-  const bandEndPoint = mapCoordinate(
+-    coordinate,
+-    [categoryStart + categoryWidth, zero],
+-    offset,
+-  );
++  const bandEndPoint = mapCoordinate(coordinate, [categoryStart + categoryWidth, zero], offset);
+   const baselinePoint = mapCoordinate(coordinate, [categoryCenter, zero], offset);
+   const negativePoint = mapCoordinate(
+     coordinate,
+@@ -593,8 +591,7 @@ export function createComparisonSceneReceipt(
+     categories.push({
+       nodeId: datum.nodeId,
+       rectangles,
+-      axisBounds:
+-        allZeroBounds?.axisBounds ?? toAxisBounds(datum.nodeId, ghostBounds, input.axis),
++      axisBounds: allZeroBounds?.axisBounds ?? toAxisBounds(datum.nodeId, ghostBounds, input.axis),
+       ghostBounds,
+       pointerBounds: allZeroBounds?.pointerBounds,
+       allZero,
+diff --git a/packages/editor/tests/export/comparison-chart-spec.test.ts b/packages/editor/tests/export/comparison-chart-spec.test.ts
+index a53ccf7..9304536 100644
+--- a/packages/editor/tests/export/comparison-chart-spec.test.ts
++++ b/packages/editor/tests/export/comparison-chart-spec.test.ts
+@@ -194,6 +194,13 @@ describe('comparison G2 screen spec', () => {
+       expect(interval.coordinate).toEqual(
+         chartType === 'bar' ? { transform: [{ type: 'transpose' }] } : undefined,
+       );
++      expect(
++        (
++          interval.axis as {
++            readonly x?: { readonly labelAutoHide?: unknown; readonly labelSpacing?: unknown };
++          }
++        ).x,
++      ).toMatchObject({ labelAutoHide: true, labelSpacing: 6 });
+       expect(interval.legend).toMatchObject({
+         color: { labelFormatter: expect.any(Function) },
+       });
+diff --git a/packages/editor/tests/package/candidate-tools.test.ts b/packages/editor/tests/package/candidate-tools.test.ts
+index 85ceb28..df1b03d 100644
+--- a/packages/editor/tests/package/candidate-tools.test.ts
++++ b/packages/editor/tests/package/candidate-tools.test.ts
+@@ -1,4 +1,5 @@
+ import {
++  chmodSync,
+   copyFileSync,
+   existsSync,
+   mkdirSync,
+@@ -10,8 +11,9 @@ import {
+   writeFileSync,
+ } from 'node:fs';
+ import { tmpdir } from 'node:os';
+-import { resolve } from 'node:path';
++import { delimiter, resolve } from 'node:path';
+ import { spawnSync } from 'node:child_process';
++import { pathToFileURL } from 'node:url';
+ 
+ import { describe, expect, it } from 'vitest';
+ 
+@@ -21,6 +23,21 @@ const scripts = [
+   'scripts/release/package-candidate-artifact.mjs',
+   'scripts/release/rehearse-candidate-source.mjs',
+ ] as const;
++const invalidArguments = [
++  [],
++  ['--candidate-version', '2.0.0'],
++  ['--evidence-task', 'T140'],
++  ['--candidate-version', '1.0.0', '--evidence-task', 'T140'],
++  ['--candidate-version', '2.0.0', '--evidence-task', 'T139'],
++  ['--candidate-version', '2.0.0', '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
++  ['--candidate-version', '2.0.0', '--evidence-task', 'T140', '--evidence-task', 'T140'],
++  ['--candidate-version=2.0.0', '--evidence-task', 'T140'],
++  ['--candidate-version', '2.0.0', '--evidence-task', '../T140'],
++  ['--candidate-version', '2.0.0', '--evidence-task', 'T140/T141'],
++  ['--candidate-version', '2.0.0', '--evidence-task', 'T140%2f..%2fT131'],
++  ['--candidate-version', '2.0.0', '--evidence-task', '.'],
++  ['--candidate-version', '2.0.0', '--evidence-task', resolve(root, '.ai-platform/evidence/T140')],
++] as const;
+ 
+ function run(
+   script: (typeof scripts)[number],
+@@ -42,35 +59,92 @@ describe('local 2.0 candidate tooling', () => {
+     }
+   });
+ 
+-  it.each(scripts)('%s fails closed for missing, duplicate and unsupported arguments', script => {
+-    const invalidArguments = [
+-      [],
+-      ['--candidate-version', '2.0.0'],
+-      ['--evidence-task', 'T140'],
+-      ['--candidate-version', '1.0.0', '--evidence-task', 'T140'],
+-      ['--candidate-version', '2.0.0', '--evidence-task', 'T139'],
+-      ['--candidate-version', '2.0.0', '--candidate-version', '2.0.0', '--evidence-task', 'T140'],
+-      ['--candidate-version', '2.0.0', '--evidence-task', 'T140', '--evidence-task', 'T140'],
+-      ['--candidate-version=2.0.0', '--evidence-task', 'T140'],
+-      ['--candidate-version', '2.0.0', '--evidence-task', '../T140'],
+-      ['--candidate-version', '2.0.0', '--evidence-task', 'T140/T141'],
+-      ['--candidate-version', '2.0.0', '--evidence-task', 'T140%2f..%2fT131'],
+-      ['--candidate-version', '2.0.0', '--evidence-task', '.'],
+-      [
+-        '--candidate-version',
+-        '2.0.0',
+-        '--evidence-task',
+-        resolve(root, '.ai-platform/evidence/T140'),
+-      ],
+-    ];
++  it('keeps host-local video outputs out of isolated candidate source', () => {
++    const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-generated-video-'));
++    const fakeRoot = resolve(realpathSync(temporaryRoot), 'repository');
++    const fakeScripts = resolve(fakeRoot, 'scripts/release');
++    const evidenceRoot = resolve(fakeRoot, '.ai-platform/evidence/T141');
++    const fakeBin = resolve(fakeRoot, 'test-bin');
++    try {
++      mkdirSync(fakeScripts, { recursive: true });
++      mkdirSync(evidenceRoot, { recursive: true });
++      mkdirSync(resolve(fakeRoot, 'apps/video/src'), { recursive: true });
++      mkdirSync(resolve(fakeRoot, 'apps/video/out'), { recursive: true });
++      mkdirSync(resolve(fakeRoot, 'apps/video/public/captures'), { recursive: true });
++      mkdirSync(fakeBin, { recursive: true });
++      symlinkSync(resolve(root, 'node_modules'), resolve(fakeRoot, 'node_modules'), 'dir');
++      writeFileSync(resolve(fakeRoot, '.nvmrc'), `${process.versions.node}\n`);
++      writeFileSync(resolve(fakeRoot, 'apps/video/src/keep.txt'), 'source');
++      writeFileSync(resolve(fakeRoot, 'apps/video/out/local-render.json'), 'generated');
++      writeFileSync(
++        resolve(fakeRoot, 'apps/video/public/captures/local-capture.json'),
++        'generated',
++      );
++      for (const filename of [
++        'audit-candidate.mjs',
++        'canonical-gzip.mjs',
++        'package-candidate-artifact.mjs',
++        'package-contracts.json',
++        'package-contracts.mjs',
++        'rehearse-candidate-source.mjs',
++        'release-utils.mjs',
++      ]) {
++        copyFileSync(resolve(root, 'scripts/release', filename), resolve(fakeScripts, filename));
++      }
++      const fakePnpm = resolve(fakeBin, 'pnpm');
++      writeFileSync(
++        fakePnpm,
++        `#!/usr/bin/env node
++const { existsSync } = require('node:fs');
++if (!existsSync('apps/video/src/keep.txt')) process.exit(2);
++if (existsSync('apps/video/out/local-render.json')) process.exit(3);
++if (existsSync('apps/video/public/captures/local-capture.json')) process.exit(4);
++`,
++      );
++      chmodSync(fakePnpm, 0o755);
++
++      const result = spawnSync(
++        process.execPath,
++        [resolve(fakeRoot, scripts[2]), '--candidate-version', '2.0.0', '--evidence-task', 'T141'],
++        {
++          cwd: fakeRoot,
++          encoding: 'utf8',
++          env: { ...process.env, PATH: `${fakeBin}${delimiter}${process.env['PATH'] ?? ''}` },
++        },
++      );
++      expect(result.status, `${result.stdout}${result.stderr}`).toBe(0);
++      expect(readFileSync(resolve(evidenceRoot, 'isolated-source-receipt.md'), 'utf8')).toContain(
++        'Candidate build/package/audit gates: passed',
++      );
++    } finally {
++      rmSync(temporaryRoot, { recursive: true, force: true });
++    }
++  });
+ 
++  it('rejects the complete missing, duplicate and unsupported argument matrix', async () => {
++    const candidateModule = (await import(
++      pathToFileURL(resolve(root, scripts[0])).href
++    )) as Readonly<{
++      parseCandidateArguments?: (args: readonly string[]) => unknown;
++    }>;
++    const parseCandidateArguments = candidateModule.parseCandidateArguments;
++    expect(parseCandidateArguments).toBeTypeOf('function');
++    if (parseCandidateArguments === undefined) {
++      throw new Error('Candidate argument parser is unavailable');
++    }
+     for (const args of invalidArguments) {
+-      const result = run(script, args);
+-      expect(result.status, `${script} ${args.join(' ')}\n${result.output}`).not.toBe(0);
+-      expect(result.output).toContain('Candidate arguments rejected.');
++      expect(() => parseCandidateArguments(args), args.join(' ')).toThrow(
++        'Candidate arguments rejected.',
++      );
+     }
+   });
+ 
++  it.each(scripts)('%s wires missing arguments through the fail-closed parser', script => {
++    const result = run(script, []);
++    expect(result.status, `${script}\n${result.output}`).not.toBe(0);
++    expect(result.output).toContain('Candidate arguments rejected.');
++  });
++
+   it('fails closed before every candidate command can follow a symlinked evidence root', () => {
+     const temporaryRoot = mkdtempSync(resolve(tmpdir(), 'tellplot-candidate-symlink-'));
+     const fakeRoot = resolve(realpathSync(temporaryRoot), 'repository');
+diff --git a/packages/editor/tests/rendering/g2/chart-pointer.test.ts b/packages/editor/tests/rendering/g2/chart-pointer.test.ts
+index 58e5330..7c4546b 100644
+--- a/packages/editor/tests/rendering/g2/chart-pointer.test.ts
++++ b/packages/editor/tests/rendering/g2/chart-pointer.test.ts
+@@ -148,9 +148,7 @@ describe('internal G2 chart pointer adapter', () => {
+         },
+       },
+     };
+-    expect(
+-      readComparisonChartCategoryElementPointer(comparisonEvent, comparisonReceipt),
+-    ).toEqual({
++    expect(readComparisonChartCategoryElementPointer(comparisonEvent, comparisonReceipt)).toEqual({
+       ok: true,
+       value: {
+         pointerId: 4,
+@@ -164,6 +162,32 @@ describe('internal G2 chart pointer adapter', () => {
+         target: 10,
+       },
+     });
++    expect(
++      readComparisonChartCategoryElementPointer(
++        { ...comparisonEvent, canvas: { x: 25, y: 40 } },
++        comparisonReceipt,
++      ),
++    ).toEqual({
++      ok: true,
++      value: expect.objectContaining({ edge: 'after', target: 30 }),
++    });
++    const allZeroReceipt: ComparisonSceneReceipt = {
++      ...comparisonReceipt,
++      categories: comparisonReceipt.categories.map(category => ({
++        ...category,
++        allZero: true,
++        pointerBounds: { nodeId: 'node', minX: 5, minY: 10, maxX: 35, maxY: 90 },
++      })),
++    };
++    expect(
++      readComparisonChartCategoryElementPointer(
++        { ...comparisonEvent, canvas: { x: 6, y: 15 } },
++        allZeroReceipt,
++      ),
++    ).toEqual({
++      ok: true,
++      value: expect.objectContaining({ edge: 'before', target: 10 }),
++    });
+     expect(
+       readComparisonChartCategoryElementPointer(
+         {
+diff --git a/packages/editor/tests/rendering/g2/comparison-label-transform.test.ts b/packages/editor/tests/rendering/g2/comparison-label-transform.test.ts
+index ff79a5c..2233c02 100644
+--- a/packages/editor/tests/rendering/g2/comparison-label-transform.test.ts
++++ b/packages/editor/tests/rendering/g2/comparison-label-transform.test.ts
+@@ -51,4 +51,54 @@ describe('comparison label flip transform', () => {
+     expect(overflow.style.x).toBe(30);
+     expect(malformed.style).toMatchObject({ visibility: 'hidden' });
+   });
++
++  it('fails closed for malformed anchors, bounds, layout, positions and renderer errors', () => {
++    const transform = comparisonFlipToInteriorLabelTransform();
++    const malformedAnchor = {
++      style: { x: 1, y: 1 },
++      __data__: { points: [[1]] },
++      getRenderBounds: () => ({ min: [0, 0], max: [1, 1] }),
++    };
++    const malformedBounds = {
++      style: { x: 1, y: 1 },
++      __data__: { points: [[1, 1]] },
++      getRenderBounds: () => ({ min: [Number.NaN, 0], max: [1, 1] }),
++    };
++    const missingPosition = {
++      style: { x: 'invalid', y: 1 },
++      __data__: { points: [[1, 1]] },
++      getRenderBounds: () => ({ min: [0, -2], max: [2, 1] }),
++    };
++    const throwing = {
++      style: { x: 1, y: 1 },
++      __data__: { points: [[1, 1]] },
++      getRenderBounds: () => {
++        throw new Error('renderer bounds unavailable');
++      },
++    };
++
++    transform([malformedAnchor], context);
++    transform([malformedBounds], context);
++    transform([missingPosition], context);
++    transform([throwing], context);
++    transform([label({ min: [0, 0], max: [1, 1] }, [1, 1])], { layout: { width: 0 } });
++
++    expect(malformedAnchor.style).toMatchObject({ visibility: 'hidden' });
++    expect(malformedBounds.style).toMatchObject({ visibility: 'hidden' });
++    expect(missingPosition.style).toMatchObject({ visibility: 'hidden' });
++    expect(throwing.style).toMatchObject({ visibility: 'hidden' });
++  });
++
++  it('uses zero layout insets and flips on both far plot edges', () => {
++    const column = label({ min: [1, 100], max: [2, 130] }, [2, 90]);
++    const bar = label({ min: [190, 1], max: [220, 2] }, [180, 2]);
++    bar.style.x = 170;
++    const minimalLayout = { layout: { width: 200, height: 120 } };
++
++    comparisonFlipToInteriorLabelTransform()([column], minimalLayout);
++    comparisonFlipToInteriorLabelTransform({ transposed: true })([bar], minimalLayout);
++
++    expect(column.style.y).toBe(100);
++    expect(bar.style.x).toBe(190);
++  });
+ });
+diff --git a/packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts b/packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts
+index 5592d49..81dfe2f 100644
+--- a/packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts
++++ b/packages/editor/tests/rendering/g2/comparison-scene-receipt.test.ts
+@@ -1,9 +1,6 @@
+ import { describe, expect, it } from 'vitest';
+ 
+-import type {
+-  CategoricalComparisonProjection,
+-  CategoricalComparisonSeries,
+-} from '@tellplot/core';
++import type { CategoricalComparisonProjection, CategoricalComparisonSeries } from '@tellplot/core';
+ import {
+   createComparisonSceneReceipt,
+   hitComparisonSceneReceipt,
+@@ -60,11 +57,7 @@ function element(
+   };
+ }
+ 
+-function context(
+-  elements: readonly unknown[],
+-  allNegative = false,
+-  transposed = false,
+-): unknown {
++function context(elements: readonly unknown[], allNegative = false, transposed = false): unknown {
+   const xPositions = new Map([
+     ['alpha', 0.1],
+     ['beta', 0.5],
+@@ -242,6 +235,35 @@ describe('comparison authoritative scene receipt', () => {
+     expect(build(valid, { currentGeneration: 8 })).toBeUndefined();
+   });
+ 
++  it('accepts center and half-extents bounds and rejects their malformed variants atomically', () => {
++    const centered = {
++      ...alphaActual,
++      getBounds: () => ({ center: [33, 35], halfExtents: [9, 15] }),
++    };
++    expect(build([centered, alphaBudget, betaActual, betaBudget])?.elements[0]).toMatchObject({
++      minX: 24,
++      minY: 20,
++      maxX: 42,
++      maxY: 50,
++    });
++    expect(
++      build([
++        { ...alphaActual, getBounds: () => ({ center: [33, 35], halfExtents: [-1, 15] }) },
++        alphaBudget,
++        betaActual,
++        betaBudget,
++      ]),
++    ).toBeUndefined();
++    expect(
++      build([
++        { ...alphaActual, getBounds: () => ({ center: [33], halfExtents: [9, 15] }) },
++        alphaBudget,
++        betaActual,
++        betaBudget,
++      ]),
++    ).toBeUndefined();
++  });
++
+   it('fails closed for throwing getters, proxies, sparse collections and unreadable all-zero scales', () => {
+     const valid = [alphaActual, alphaBudget, betaActual, betaBudget];
+     expect(
+@@ -258,7 +280,9 @@ describe('comparison authoritative scene receipt', () => {
+       ),
+     ).toBeUndefined();
+ 
+-    const sparse = Array.from({ length: 5 }, (_, index) => (index === 1 ? undefined : valid[index]));
++    const sparse = Array.from({ length: 5 }, (_, index) =>
++      index === 1 ? undefined : valid[index],
++    );
+     expect(build(sparse)).toBeUndefined();
+ 
+     const hostileContext = context(valid) as {
+@@ -286,6 +310,185 @@ describe('comparison authoritative scene receipt', () => {
+     ).toBeUndefined();
+   });
+ 
++  it('fails closed for hostile scene identities, lifecycle numbers and collections', () => {
++    const valid = [alphaActual, alphaBudget, betaActual, betaBudget];
++    const hostileSceneData = new Proxy(
++      {},
++      {
++        get() {
++          throw new Error('private scene data failure');
++        },
++      },
++    );
++    expect(build([null, ...valid])).toBeDefined();
++    expect(
++      build([{ ...alphaActual, __data__: hostileSceneData }, ...valid.slice(1)]),
++    ).toBeUndefined();
++    expect(
++      createComparisonSceneReceipt({
++        context: context(valid),
++        projection,
++        series: [series[0], series[0]],
++        axis: 'x',
++        renderSignature: 'same',
++        currentRenderSignature: 'same',
++        renderRevision: 0,
++        currentRenderRevision: 0,
++        generation: 0,
++        currentGeneration: 0,
++      }),
++    ).toBeUndefined();
++    expect(
++      createComparisonSceneReceipt({
++        context: undefined,
++        projection,
++        series,
++        axis: 'x',
++        renderSignature: 'same',
++        currentRenderSignature: 'same',
++        renderRevision: -1,
++        currentRenderRevision: -1,
++        generation: 0,
++        currentGeneration: 0,
++      }),
++    ).toBeUndefined();
++    expect(
++      createComparisonSceneReceipt({
++        context: {
++          canvas: {
++            document: { getElementsByClassName: () => ({ length: -1 }) },
++          },
++        },
++        projection,
++        series,
++        axis: 'x',
++        renderSignature: 'same',
++        currentRenderSignature: 'same',
++        renderRevision: 0,
++        currentRenderRevision: 0,
++        generation: 0,
++        currentGeneration: 0,
++      }),
++    ).toBeUndefined();
++  });
++
++  it('rejects invalid public hit and marquee coordinates without consulting geometry', () => {
++    const receipt = build([alphaActual, alphaBudget, betaActual, betaBudget]);
++    expect(receipt).toBeDefined();
++    if (receipt === undefined) return;
++
++    expect(hitComparisonSceneReceipt(receipt, { x: Number.NaN, y: 0 })).toBeUndefined();
++    expect(marqueeComparisonSceneReceipt(receipt, { minX: 2, minY: 0, maxX: 1, maxY: 1 })).toEqual(
++      [],
++    );
++    expect(
++      marqueeComparisonSceneReceipt(receipt, {
++        minX: 0,
++        minY: 0,
++        maxX: 1,
++        maxY: Number.POSITIVE_INFINITY,
++      }),
++    ).toEqual([]);
++  });
++
++  it('rejects malformed all-zero renderer scale and coordinate contracts', () => {
++    const valid = [alphaActual, alphaBudget, betaActual, betaBudget];
++    const buildFromContext = (candidateContext: unknown) =>
++      createComparisonSceneReceipt({
++        context: candidateContext,
++        projection,
++        series,
++        axis: 'x',
++        renderSignature: 'same',
++        currentRenderSignature: 'same',
++        renderRevision: 0,
++        currentRenderRevision: 0,
++        generation: 0,
++        currentGeneration: 0,
++      });
++    const mutateView = (
++      mutate: (view: Record<string, unknown>) => void,
++    ): Record<string, unknown> => {
++      const candidate = context(valid) as Record<string, unknown>;
++      const views = candidate['views'];
++      if (!Array.isArray(views) || views.length === 0) {
++        throw new Error('Expected a comparison view fixture');
++      }
++      const view = views[0];
++      if (typeof view !== 'object' || view === null) {
++        throw new Error('Expected a comparison view record');
++      }
++      mutate(view as Record<string, unknown>);
++      return candidate;
++    };
++    const nested = (view: Record<string, unknown>, key: string): Record<string, unknown> => {
++      const value = view[key];
++      if (typeof value !== 'object' || value === null) {
++        throw new Error(`Expected ${key} fixture record`);
++      }
++      return value as Record<string, unknown>;
++    };
++
++    const missingViews = context(valid) as Record<string, unknown>;
++    missingViews['views'] = undefined;
++    expect(buildFromContext(missingViews)).toBeUndefined();
++
++    const duplicateViews = context(valid) as Record<string, unknown>;
++    const originalViews = duplicateViews['views'];
++    if (!Array.isArray(originalViews) || originalViews[0] === undefined) {
++      throw new Error('Expected comparison view fixtures');
++    }
++    duplicateViews['views'] = [originalViews[0], originalViews[0]];
++    expect(buildFromContext(duplicateViews)).toBeUndefined();
++
++    expect(
++      buildFromContext(
++        mutateView(view => {
++          nested(view, 'layout')['width'] = 0;
++        }),
++      ),
++    ).toBeUndefined();
++    expect(
++      buildFromContext(
++        mutateView(view => {
++          nested(view, 'coordinate')['getOptions'] = () => ({ innerWidth: 0, innerHeight: 100 });
++        }),
++      ),
++    ).toBeUndefined();
++    expect(
++      buildFromContext(
++        mutateView(view => {
++          delete nested(view, 'layout')['marginLeft'];
++        }),
++      ),
++    ).toBeUndefined();
++    expect(
++      buildFromContext(
++        mutateView(view => {
++          const x = nested(nested(view, 'scale'), 'x');
++          x['getDomain'] = () => ['beta', 'alpha'];
++        }),
++      ),
++    ).toBeUndefined();
++    expect(
++      buildFromContext(
++        mutateView(view => {
++          const y = nested(nested(view, 'scale'), 'y');
++          y['getOptions'] = () => ({ range: [0, 0] });
++        }),
++      ),
++    ).toBeUndefined();
++    expect(
++      buildFromContext(
++        mutateView(view => {
++          nested(view, 'coordinate')['map'] = () => {
++            throw new Error('coordinate unavailable');
++          };
++        }),
++      ),
++    ).toBeUndefined();
++  });
++
+   it('uses actual rectangles for exact hit and marquee but the category union for drop', () => {
+     const receipt = build([alphaActual, alphaBudget, betaActual, betaBudget]);
+     expect(receipt).toBeDefined();
+diff --git a/packages/editor/tests/runtime/comparison-editor.test.ts b/packages/editor/tests/runtime/comparison-editor.test.ts
+index 7d07683..80216e4 100644
+--- a/packages/editor/tests/runtime/comparison-editor.test.ts
++++ b/packages/editor/tests/runtime/comparison-editor.test.ts
+@@ -426,9 +426,7 @@ describe('comparison workbench contract', () => {
+   it('retains comparison focus across consecutive pure v3 presentation updates', async () => {
+     mockEditorBounds();
+     const editor = createEditor(host, { config, view: view(false) });
+-    const west = editorRoot().querySelector<HTMLElement>(
+-      '[role="treeitem"][data-node-id="west"]',
+-    );
++    const west = editorRoot().querySelector<HTMLElement>('[role="treeitem"][data-node-id="west"]');
+     expect(west).not.toBeNull();
+     west?.focus();
+ 
+@@ -590,9 +588,7 @@ describe('comparison workbench contract', () => {
+   it('keeps a pending comparison restore through hostile atomic rejection', async () => {
+     mockEditorBounds();
+     const editor = createEditor(host, { config, view: view(false) });
+-    const west = editorRoot().querySelector<HTMLElement>(
+-      '[role="treeitem"][data-node-id="west"]',
+-    );
++    const west = editorRoot().querySelector<HTMLElement>('[role="treeitem"][data-node-id="west"]');
+     expect(west).not.toBeNull();
+     west?.focus();
+ 
+diff --git a/scripts/release/rehearse-candidate-source.mjs b/scripts/release/rehearse-candidate-source.mjs
+index 0338ad3..373aef5 100644
+--- a/scripts/release/rehearse-candidate-source.mjs
++++ b/scripts/release/rehearse-candidate-source.mjs
+@@ -21,12 +21,19 @@ const excluded = new Set([
+   'blob-report',
+   'tmp',
+ ]);
++const excludedGeneratedRoots = [
++  ['apps', 'video', 'out'].join(sep),
++  ['apps', 'video', 'public', 'captures'].join(sep),
++];
+ 
+ function includeSource(source) {
+   const relativePath = relative(repositoryRoot, source);
+   const segments = relativePath.split(sep);
+   return (
+     !segments.some(segment => excluded.has(segment)) &&
++    !excludedGeneratedRoots.some(
++      root => relativePath === root || relativePath.startsWith(`${root}${sep}`),
++    ) &&
+     !(segments[0] === '.ai-platform' && segments[1] === 'evidence')
+   );
+ }

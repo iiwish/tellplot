@@ -29,6 +29,10 @@ const CURRENT_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
   ...LEGACY_SOURCE_DATA_FIELDS,
   'dataKind',
 ]);
+const COMPARISON_SOURCE_DATA_FIELDS: ReadonlySet<string> = new Set([
+  ...CURRENT_SOURCE_DATA_FIELDS,
+  'series',
+]);
 const SOURCE_ITEM_BASE_FIELDS: ReadonlySet<string> = new Set([
   'id',
   'label',
@@ -39,6 +43,20 @@ const SOURCE_ITEM_BASE_FIELDS: ReadonlySet<string> = new Set([
 const WATERFALL_SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
   ...SOURCE_ITEM_BASE_FIELDS,
   'kind',
+]);
+const COMPARISON_SERIES_FIELDS: ReadonlySet<string> = new Set(['id', 'label', 'metadata']);
+const COMPARISON_SOURCE_ITEM_FIELDS: ReadonlySet<string> = new Set([
+  'id',
+  'label',
+  'sourceRef',
+  'metadata',
+  'values',
+]);
+const COMPARISON_VALUE_FIELDS: ReadonlySet<string> = new Set([
+  'seriesId',
+  'amount',
+  'sourceRef',
+  'metadata',
 ]);
 const VIEW_SPEC_FIELDS: ReadonlySet<string> = new Set([
   'schemaVersion',
@@ -194,13 +212,37 @@ function validateSchemaVersion(
     errors.push(validationIssue(code, 'INVALID_TYPE', '/schemaVersion'));
     return undefined;
   }
-  if (value !== '1.0.0' && value !== '2.0.0') {
+  if (value !== '1.0.0' && value !== '2.0.0' && value !== '3.0.0') {
     errors.push(
       validationIssue('UNSUPPORTED_SCHEMA_VERSION', 'UNSUPPORTED_SCHEMA_VERSION', '/schemaVersion'),
     );
     return undefined;
   }
   return value;
+}
+
+function validateMetadata(value: unknown, path: string, errors: ValidationIssue[]): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!isPlainRecord(value)) {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', path));
+    return;
+  }
+  const metadataKeys = inspectRecord(value, path, 'INVALID_SOURCE_DATA', errors);
+  for (const key of metadataKeys) {
+    const metadataValue = ownDataValue(value, key);
+    const primitive =
+      metadataValue === null ||
+      typeof metadataValue === 'string' ||
+      typeof metadataValue === 'boolean' ||
+      (typeof metadataValue === 'number' && Number.isFinite(metadataValue));
+    if (!primitive) {
+      errors.push(
+        validationIssue('INVALID_SOURCE_DATA', 'INVALID_METADATA_VALUE', pointer(path, key)),
+      );
+    }
+  }
 }
 
 function validateSourceItem(
@@ -274,29 +316,281 @@ function validateSourceItem(
     );
   }
 
-  const metadata = ownDataValue(value, 'metadata');
-  if (metadata === undefined) {
+  validateMetadata(ownDataValue(value, 'metadata'), pointer(itemPath, 'metadata'), errors);
+}
+
+interface ComparisonSeriesRegistry {
+  readonly ids: readonly string[];
+  readonly indexById: ReadonlyMap<string, number>;
+}
+
+function validateComparisonSeries(
+  value: unknown,
+  errors: ValidationIssue[],
+): ComparisonSeriesRegistry | undefined {
+  const series = readArray(value, '/series', 'INVALID_SOURCE_DATA', errors);
+  if (series === undefined) {
+    return undefined;
+  }
+  if (series.length < 2 || series.length > 4) {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'INVALID_SERIES_COUNT', '/series', {
+        minimum: 2,
+        maximum: 4,
+        actualCount: series.length,
+      }),
+    );
+  }
+
+  const indexById = new Map<string, number>();
+  const firstIndexByLabel = new Map<string, number>();
+  const ids: string[] = [];
+  let reliable = true;
+
+  for (let index = 0; index < series.length; index += 1) {
+    const entryPath = pointer('/series', index);
+    const entry = series[index];
+    if (!isPlainRecord(entry)) {
+      errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', entryPath));
+      reliable = false;
+      continue;
+    }
+    inspectRecord(entry, entryPath, 'INVALID_SOURCE_DATA', errors, COMPARISON_SERIES_FIELDS);
+
+    const id = ownDataValue(entry, 'id');
+    if (typeof id !== 'string') {
+      errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(entryPath, 'id')));
+      reliable = false;
+    } else if (id.trim().length === 0) {
+      errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_ID', pointer(entryPath, 'id')));
+      reliable = false;
+    } else {
+      const firstIndex = indexById.get(id);
+      if (firstIndex !== undefined) {
+        errors.push(
+          validationIssue('INVALID_SOURCE_DATA', 'DUPLICATE_SERIES_ID', pointer(entryPath, 'id'), {
+            index,
+            firstIndex,
+          }),
+        );
+        reliable = false;
+      } else {
+        indexById.set(id, index);
+        ids.push(id);
+      }
+    }
+
+    const label = ownDataValue(entry, 'label');
+    if (typeof label !== 'string') {
+      errors.push(
+        validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(entryPath, 'label')),
+      );
+    } else if (label.trim().length === 0) {
+      errors.push(
+        validationIssue('INVALID_SOURCE_DATA', 'EMPTY_LABEL', pointer(entryPath, 'label')),
+      );
+    } else {
+      const normalizedLabel = label.trim().normalize('NFC');
+      const firstIndex = firstIndexByLabel.get(normalizedLabel);
+      if (firstIndex !== undefined) {
+        errors.push(
+          validationIssue(
+            'INVALID_SOURCE_DATA',
+            'DUPLICATE_SERIES_LABEL',
+            pointer(entryPath, 'label'),
+            { index, firstIndex },
+          ),
+        );
+      } else {
+        firstIndexByLabel.set(normalizedLabel, index);
+      }
+    }
+
+    validateMetadata(ownDataValue(entry, 'metadata'), pointer(entryPath, 'metadata'), errors);
+  }
+
+  return reliable ? { ids, indexById } : undefined;
+}
+
+function validateComparisonValue(
+  value: unknown,
+  itemIndex: number,
+  valueIndex: number,
+  errors: ValidationIssue[],
+): string | undefined {
+  const valuePath = pointer(pointer(pointer('/items', itemIndex), 'values'), valueIndex);
+  if (!isPlainRecord(value)) {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', valuePath));
+    return undefined;
+  }
+  inspectRecord(value, valuePath, 'INVALID_SOURCE_DATA', errors, COMPARISON_VALUE_FIELDS);
+
+  const seriesId = ownDataValue(value, 'seriesId');
+  let validSeriesId: string | undefined;
+  if (typeof seriesId !== 'string') {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'seriesId')),
+    );
+  } else if (seriesId.trim().length === 0) {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_ID', pointer(valuePath, 'seriesId')));
+  } else {
+    validSeriesId = seriesId;
+  }
+
+  const amount = ownDataValue(value, 'amount');
+  if (typeof amount !== 'number') {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'amount')),
+    );
+  } else if (!Number.isFinite(amount)) {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'NON_FINITE_AMOUNT', pointer(valuePath, 'amount')),
+    );
+  } else if (Math.abs(amount) > Number.MAX_SAFE_INTEGER) {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'UNSAFE_AMOUNT', pointer(valuePath, 'amount')),
+    );
+  }
+
+  const sourceRef = ownDataValue(value, 'sourceRef');
+  if (sourceRef !== undefined && typeof sourceRef !== 'string') {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(valuePath, 'sourceRef')),
+    );
+  }
+  validateMetadata(ownDataValue(value, 'metadata'), pointer(valuePath, 'metadata'), errors);
+  return validSeriesId;
+}
+
+function validateComparisonSourceItem(
+  value: unknown,
+  index: number,
+  seenIds: Set<string>,
+  registry: ComparisonSeriesRegistry | undefined,
+  errors: ValidationIssue[],
+): void {
+  const itemPath = pointer('/items', index);
+  if (!isPlainRecord(value)) {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', itemPath));
     return;
   }
-  const metadataPath = pointer(itemPath, 'metadata');
-  if (!isPlainRecord(metadata)) {
-    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EXPECTED_OBJECT', metadataPath));
+  inspectRecord(value, itemPath, 'INVALID_SOURCE_DATA', errors, COMPARISON_SOURCE_ITEM_FIELDS);
+
+  const id = ownDataValue(value, 'id');
+  if (typeof id !== 'string') {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(itemPath, 'id')));
+  } else if (id.trim().length === 0) {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_ID', pointer(itemPath, 'id')));
+  } else if (seenIds.has(id)) {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'DUPLICATE_SOURCE_ITEM_ID', pointer(itemPath, 'id'), {
+        index,
+      }),
+    );
+  } else {
+    seenIds.add(id);
+  }
+
+  const label = ownDataValue(value, 'label');
+  if (typeof label !== 'string') {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(itemPath, 'label')));
+  } else if (label.trim().length === 0) {
+    errors.push(validationIssue('INVALID_SOURCE_DATA', 'EMPTY_LABEL', pointer(itemPath, 'label')));
+  }
+
+  const sourceRef = ownDataValue(value, 'sourceRef');
+  if (sourceRef !== undefined && typeof sourceRef !== 'string') {
+    errors.push(
+      validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', pointer(itemPath, 'sourceRef')),
+    );
+  }
+  validateMetadata(ownDataValue(value, 'metadata'), pointer(itemPath, 'metadata'), errors);
+
+  const valuesPath = pointer(itemPath, 'values');
+  const values = readArray(
+    ownDataValue(value, 'values'),
+    valuesPath,
+    'INVALID_SOURCE_DATA',
+    errors,
+  );
+  if (values === undefined) {
     return;
   }
-  const metadataKeys = inspectRecord(metadata, metadataPath, 'INVALID_SOURCE_DATA', errors);
-  for (const key of metadataKeys) {
-    const metadataValue = ownDataValue(metadata, key);
-    const primitive =
-      metadataValue === null ||
-      typeof metadataValue === 'string' ||
-      typeof metadataValue === 'boolean' ||
-      (typeof metadataValue === 'number' && Number.isFinite(metadataValue));
-    if (!primitive) {
+
+  const seriesIds = values.map((entry, valueIndex) =>
+    validateComparisonValue(entry, index, valueIndex, errors),
+  );
+  if (registry === undefined) {
+    return;
+  }
+
+  const firstValueIndexById = new Map<string, number>();
+  const coveredSeries = new Set<string>();
+  let exactUniqueCoverage = values.length === registry.ids.length;
+  for (let valueIndex = 0; valueIndex < seriesIds.length; valueIndex += 1) {
+    const seriesId = seriesIds[valueIndex];
+    if (seriesId === undefined) {
+      exactUniqueCoverage = false;
+      continue;
+    }
+    const path = pointer(pointer(valuesPath, valueIndex), 'seriesId');
+    const declaredIndex = registry.indexById.get(seriesId);
+    if (declaredIndex === undefined) {
+      errors.push(
+        validationIssue('INVALID_SOURCE_DATA', 'UNKNOWN_SERIES_REFERENCE', path, {
+          itemIndex: index,
+          valueIndex,
+        }),
+      );
+      exactUniqueCoverage = false;
+      continue;
+    }
+
+    const firstValueIndex = firstValueIndexById.get(seriesId);
+    if (firstValueIndex !== undefined) {
+      errors.push(
+        validationIssue('INVALID_SOURCE_DATA', 'DUPLICATE_SERIES_VALUE', path, {
+          itemIndex: index,
+          valueIndex,
+          firstValueIndex,
+        }),
+      );
+      exactUniqueCoverage = false;
+    } else {
+      firstValueIndexById.set(seriesId, valueIndex);
+      coveredSeries.add(seriesId);
+    }
+  }
+
+  registry.ids.forEach((seriesId, seriesIndex) => {
+    if (!coveredSeries.has(seriesId)) {
+      errors.push(
+        validationIssue('INVALID_SOURCE_DATA', 'MISSING_SERIES_VALUE', valuesPath, {
+          itemIndex: index,
+          seriesIndex,
+        }),
+      );
+      exactUniqueCoverage = false;
+    }
+  });
+
+  if (exactUniqueCoverage) {
+    const mismatchIndex = seriesIds.findIndex(
+      (seriesId, valueIndex) => seriesId !== registry.ids[valueIndex],
+    );
+    if (mismatchIndex >= 0) {
+      const actualSeriesId = seriesIds[mismatchIndex] as string;
       errors.push(
         validationIssue(
           'INVALID_SOURCE_DATA',
-          'INVALID_METADATA_VALUE',
-          pointer(metadataPath, key),
+          'SERIES_VALUE_ORDER_MISMATCH',
+          pointer(pointer(valuesPath, mismatchIndex), 'seriesId'),
+          {
+            itemIndex: index,
+            valueIndex: mismatchIndex,
+            expectedSeriesIndex: mismatchIndex,
+            actualSeriesIndex: registry.indexById.get(actualSeriesId) as number,
+          },
         ),
       );
     }
@@ -365,12 +659,19 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
     '',
     'INVALID_SOURCE_DATA',
     errors,
-    schemaValue === '2.0.0' ? CURRENT_SOURCE_DATA_FIELDS : LEGACY_SOURCE_DATA_FIELDS,
+    schemaValue === '3.0.0'
+      ? COMPARISON_SOURCE_DATA_FIELDS
+      : schemaValue === '2.0.0'
+        ? CURRENT_SOURCE_DATA_FIELDS
+        : LEGACY_SOURCE_DATA_FIELDS,
   );
   const schemaVersion = validateSchemaVersion(input, 'INVALID_SOURCE_DATA', errors);
 
   const dataKind = ownDataValue(input, 'dataKind');
-  if (schemaVersion === '2.0.0' && dataKind !== 'waterfall' && dataKind !== 'categorical') {
+  if (
+    (schemaVersion === '2.0.0' && dataKind !== 'waterfall' && dataKind !== 'categorical') ||
+    (schemaVersion === '3.0.0' && dataKind !== 'categorical')
+  ) {
     errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_DATA_KIND', '/dataKind'));
   }
 
@@ -386,15 +687,25 @@ function validateSourceDataInternal(input: unknown): ValidationResult<SourceData
     errors.push(validationIssue('INVALID_SOURCE_DATA', 'INVALID_TYPE', '/currency'));
   }
 
+  const comparisonRegistry =
+    schemaVersion === '3.0.0'
+      ? validateComparisonSeries(ownDataValue(input, 'series'), errors)
+      : undefined;
   const items = readArray(ownDataValue(input, 'items'), '/items', 'INVALID_SOURCE_DATA', errors);
   if (items !== undefined) {
-    const waterfall = schemaVersion !== '2.0.0' || dataKind === 'waterfall';
     const seenIds = new Set<string>();
-    for (let index = 0; index < items.length; index += 1) {
-      validateSourceItem(items[index], index, seenIds, errors, waterfall);
-    }
-    if (waterfall) {
-      validateAnchors(items, errors);
+    if (schemaVersion === '3.0.0') {
+      for (let index = 0; index < items.length; index += 1) {
+        validateComparisonSourceItem(items[index], index, seenIds, comparisonRegistry, errors);
+      }
+    } else {
+      const waterfall = schemaVersion !== '2.0.0' || dataKind === 'waterfall';
+      for (let index = 0; index < items.length; index += 1) {
+        validateSourceItem(items[index], index, seenIds, errors, waterfall);
+      }
+      if (waterfall) {
+        validateAnchors(items, errors);
+      }
     }
   }
 

@@ -5,6 +5,16 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或�
 
 ## Unreleased
 
+### 2.0.0 Local Candidate
+
+- 增加 schema `3.0.0` 的 2 至 4 序列 categorical comparison source/view、16 个 public types 与唯一 runtime
+  projector `projectCategoricalComparison`。
+- bar/column 的 screen、SVG 与 PNG 共享 source-ordered series registry、palette、legend、labels、group regions、
+  annotations 和 emphasis。
+- public unions 加入 v3 variant；exhaustive TypeScript consumer 必须按 migration guide 增加 schema 3 分支。
+- legacy v1 waterfall、current v2 waterfall 与 scalar v2 categorical wire/runtime/persistence 保持兼容。
+- 本节描述本地 candidate，不表示 registry、tag、GitHub Release 或 Production 发布。
+
 ### Fixed
 
 - 图表框选拖到绘图区外松开时仍会完成当前选区并打开分组命名弹窗；元素拖拽在图外松开仍保持取消语义。

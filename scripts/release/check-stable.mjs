@@ -1,4 +1,5 @@
 import { run } from './release-utils.mjs';
+import { currentRelease } from './current-release.mjs';
 
 const gates = [
   ['pnpm', ['security:lock']],
@@ -27,4 +28,4 @@ for (const [command, args] of gates) {
   run(command, args, { inherit: true });
 }
 
-process.stdout.write('\nTellPlot 1.0.0 stable release checks passed.\n');
+process.stdout.write(`\nTellPlot ${currentRelease.version} stable release checks passed.\n`);

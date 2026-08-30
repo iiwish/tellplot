@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEMO_CATEGORICAL_COLORS, DEMO_WATERFALL_COLORS } from '../src/demoPresentation';
+import {
+  DEMO_CATEGORICAL_COLORS,
+  DEMO_COMPARISON_PALETTE,
+  DEMO_WATERFALL_COLORS,
+} from '../src/demoPresentation';
 import { getPlaygroundFixture } from '../src/fixtures';
 
 describe('showcase presentation', () => {
@@ -20,6 +24,7 @@ describe('showcase presentation', () => {
     });
     expect(DEMO_WATERFALL_COLORS.start).toBe(DEMO_WATERFALL_COLORS.subtotal);
     expect(DEMO_WATERFALL_COLORS.subtotal).toBe(DEMO_WATERFALL_COLORS.end);
+    expect(DEMO_COMPARISON_PALETTE).toEqual(['#0072B2', '#D55E00', '#009E73', '#CC79A7']);
   });
 
   it('keeps the waterfall anchors while giving the bridge a deliberate visual rhythm', () => {

@@ -49,8 +49,59 @@ function runModuleSource(source: string): {
   };
 }
 
-describe('1.0 stable release contract', () => {
+describe('2.0 current release contract', () => {
+  it('uses one closed descriptor for every current release fact', () => {
+    const descriptor = json('scripts/release/current-release.json');
+
+    expect(descriptor).toEqual({
+      schemaVersion: 1,
+      packageName: 'tellplot',
+      version: '2.0.0',
+      tag: 'v2.0.0',
+      evidenceTask: 'T143',
+      artifactRoot: '.ai-platform/evidence/T143/artifacts',
+      manifestPath: '.ai-platform/evidence/T143/tarball-manifest.json',
+      artifact: {
+        filename: 'tellplot-2.0.0.tgz',
+        sizeBytes: 597508,
+        sha256: '44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca',
+      },
+      registry: 'https://registry.npmjs.org/',
+      workflow: 'iiwish/tellplot/.github/workflows/publish-npm.yml',
+      nodeVersion: '22.20.0',
+      pnpmVersion: '11.1.3',
+      npmVersion: '11.18.0',
+    });
+
+    const validation = runModuleSource(`
+      import assert from 'node:assert/strict';
+      import {
+        currentRelease,
+        validateCurrentRelease,
+      } from './scripts/release/current-release.mjs';
+
+      assert.equal(currentRelease.version, '2.0.0');
+      assert.equal(currentRelease.tag, 'v2.0.0');
+      assert.deepEqual(validateCurrentRelease(currentRelease), []);
+      for (const invalid of [
+        { ...currentRelease, tag: 'v2.0.1' },
+        { ...currentRelease, evidenceTask: '../T131' },
+        { ...currentRelease, artifactRoot: '.ai-platform/evidence/T131/artifacts' },
+        { ...currentRelease, manifestPath: '/tmp/tarball-manifest.json' },
+        { ...currentRelease, registry: 'https://registry.example.invalid/' },
+        { ...currentRelease, artifact: { ...currentRelease.artifact, filename: '../tellplot.tgz' } },
+        { ...currentRelease, artifact: { ...currentRelease.artifact, sha256: '0'.repeat(63) } },
+        { ...currentRelease, unexpected: true },
+      ]) {
+        assert.ok(validateCurrentRelease(invalid).length > 0);
+      }
+    `);
+
+    expect(validation.status, validation.output).toBe(0);
+  });
+
   it('uses stable package metadata and release commands', () => {
+    const descriptor = json('scripts/release/current-release.json');
     const internalPackageManifests = [
       json('packages/core/package.json'),
       json('packages/editor/package.json'),
@@ -67,11 +118,12 @@ describe('1.0 stable release contract', () => {
       expect(packageManifest['publishConfig']).toBeUndefined();
     }
     expect(publicPackageManifest['name']).toBe('tellplot');
-    expect(publicPackageManifest['version']).toBe('1.0.0');
+    expect(publicPackageManifest['version']).toBe('2.0.0');
     expect(publicPackageManifest['publishConfig']).toEqual({
       access: 'public',
       registry: 'https://registry.npmjs.org/',
     });
+    expect(workspaceManifest['packageManager']).toBe(`pnpm@${descriptor['pnpmVersion']}`);
     expect(scripts['release:architecture']).toBe('node scripts/release/check-architecture.mjs');
     expect(scripts['release:audit']).toBe('node scripts/release/audit-release.mjs');
     expect(scripts['security:lock']).toBe(
@@ -111,8 +163,9 @@ describe('1.0 stable release contract', () => {
     expect(productionAudit).not.toContain('--ignore-registry-errors');
     expect(artifactScript).toContain("resolve(repositoryRoot, '.nvmrc')");
     expect(artifactScript).toContain('process.versions.node');
-    expect(artifactScript).toContain("const packageDirectories = ['tellplot']");
-    expect(artifactScript).toContain("'.ai-platform/evidence/T131'");
+    expect(artifactScript).toContain('const packageDirectories = [currentRelease.packageName]');
+    expect(artifactScript).toContain('currentRelease.artifactRoot');
+    expect(artifactScript).toContain('currentRelease.manifestPath');
   });
 
   it('normalizes npm tarball compression without changing package contents', () => {
@@ -177,6 +230,7 @@ describe('1.0 stable release contract', () => {
     const processLifecycle = text('packages/editor/tests/helpers/processLifecycle.mjs');
     const releaseAudit = text('scripts/release/audit-release.mjs');
     const sourceRehearsal = text('scripts/release/rehearse-source.mjs');
+    const candidateSourceRehearsal = text('scripts/release/rehearse-candidate-source.mjs');
     const packageTestRunner = text('scripts/release/test-packages.mjs');
     const requiredGates = [
       'security:lock',
@@ -310,8 +364,17 @@ describe('1.0 stable release contract', () => {
     expect(releaseAudit).toContain("resolve(repositoryRoot, '.ai-platform')");
     expect(sourceRehearsal).toContain("'.copyright-application'");
     expect(sourceRehearsal).toContain("'tmp'");
+    for (const rehearsal of [sourceRehearsal, candidateSourceRehearsal]) {
+      expect(rehearsal).toContain("'.vercel'");
+      expect(rehearsal).toContain("segment === '.env'");
+      expect(rehearsal).toContain("segment === '.env.local'");
+      expect(rehearsal).toContain('/^\\.env\\..+\\.local$/u.test(segment)');
+    }
     expect(sourceRehearsal.indexOf("['pnpm', ['security:lock']]")).toBeLessThan(
       sourceRehearsal.indexOf("['pnpm', ['install', '--frozen-lockfile']]"),
+    );
+    expect(sourceRehearsal.indexOf("['pnpm', ['build']]")).toBeLessThan(
+      sourceRehearsal.indexOf("['pnpm', ['typecheck']]"),
     );
     expect(packageTestRunner).toContain('NPM_CONFIG_CACHE');
     expect(packageTestRunner).toContain("const packageNames = ['tellplot']");
@@ -334,7 +397,7 @@ describe('1.0 stable release contract', () => {
     expect(workflow).toContain('id-token: write');
     expect(workflow).not.toMatch(/^\s+cache:/mu);
     expect(workflow).toContain('npm@11.18.0');
-    expect(workflow).toContain('stage 1.0.0 stage-only-trusted-publishers-verified');
+    expect(workflow).toContain('stage 2.0.0 stage-only-trusted-publishers-verified');
     expect(workflow).toContain('pnpm release:preflight:ci');
     expect(workflow).toContain('pnpm release:trust-readiness:ci');
     expect(workflow).not.toContain(' -- --ci');
@@ -351,7 +414,7 @@ describe('1.0 stable release contract', () => {
     expect(stageJob).toContain('ref: ${{ github.sha }}');
     expect(stageJob).toContain('persist-credentials: false');
     expect([...workflow.matchAll(/persist-credentials: false/gu)]).toHaveLength(2);
-    expect(stageJob).toContain('sparse-checkout: .ai-platform/evidence/T131/artifacts');
+    expect(stageJob).toContain('sparse-checkout: .ai-platform/evidence/T143/artifacts');
     expect(stageJob).toContain('node-version: 22.20.0');
     expect(stageJob).toContain('npm_config="$RUNNER_TEMP/tellplot-stage.npmrc"');
     expect(stageJob).toContain('NPM_CONFIG_USERCONFIG=%s');
@@ -372,7 +435,7 @@ describe('1.0 stable release contract', () => {
     expect([...stageJob.matchAll(/remote_git ls-remote/gu)]).toHaveLength(2);
     expect(stageJob).not.toMatch(/^\s+git ls-remote/gmu);
     expect(stageJob).toContain('refs/heads/main');
-    expect(stageJob).toContain('refs/tags/v1.0.0^{}');
+    expect(stageJob).toContain('refs/tags/v2.0.0^{}');
     expect(stageJob).toContain('test "$(git rev-parse --verify HEAD)" = "$GITHUB_SHA"');
     expect(stageJob).toContain('test "$remote_main_commit" = "$GITHUB_SHA"');
     expect(stageJob).toContain('test -n "$remote_tag_object"');
@@ -381,22 +444,22 @@ describe('1.0 stable release contract', () => {
     expect(stageJob).toContain('test "$remote_tag_commit" = "$GITHUB_SHA"');
     expect(stageJob).not.toContain('remote_tag_commit="$remote_tag_object"');
     expect(stageJob).toContain('https://registry.npmjs.org/tellplot');
-    expect(stageJob).toContain('https://registry.npmjs.org/tellplot/1.0.0');
+    expect(stageJob).toContain('https://registry.npmjs.org/tellplot/2.0.0');
     expect(preflight).toContain(
       "gitCommand(['status', '--porcelain=v1', '--untracked-files=all'])",
     );
     expect(preflight).toContain("commandRunner('npm', ['config', 'get', 'registry'])");
     expect(preflight).toContain("gitCommand(['cat-file', '-t', `refs/tags/${tag}`])");
     expect(preflight).toContain("'refs/heads/main'");
-    expect(preflight).toContain("'.ai-platform/evidence/T131/tarball-manifest.json'");
+    expect(preflight).toContain('release.manifestPath');
     expect(preflight).toContain(
       "const CANONICAL_REMOTE_QUERY_URL = 'https://github.com/iiwish/tellplot.git';",
     );
     expect(preflight).toContain("GIT_CONFIG_NOSYSTEM: '1'");
     expect(preflight).not.toMatch(/'ls-remote'[\s\S]{0,160}'origin'/u);
 
-    expect(stageJob).toContain('tellplot-1.0.0.tgz');
-    expect(stageJob).not.toMatch(/tellplot-(?:core|editor|react|vue)-1\.0\.0\.tgz/u);
+    expect(stageJob).toContain('tellplot-2.0.0.tgz');
+    expect(stageJob).not.toMatch(/tellplot-(?:core|editor|react|vue)-2\.0\.0\.tgz/u);
     const stageCommands = [
       ...stageJob.matchAll(
         /^\s+npm stage publish [^\n]+\n\s+--ignore-scripts [^\n]+\n\s+--registry=[^\n]+$/gmu,
@@ -424,13 +487,12 @@ describe('1.0 stable release contract', () => {
     );
 
     expect(stageJob).toMatch(
-      /^\s+[0-9a-f]{64}\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
+      /^\s+44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca\s+\.ai-platform\/evidence\/T143\/artifacts\/tellplot-2\.0\.0\.tgz$/mu,
     );
   });
 
   it('keeps the canonical post-release evidence immutable and status-aligned', () => {
     const report = text('.ai-platform/docs/release-report.md');
-    const workflow = text('.github/workflows/publish-npm.yml');
     const tasks = text('.ai-platform/docs/tasks.md');
     const roadmap = text('docs/roadmap.md');
     const agentGuide = text('AGENTS.md');
@@ -464,11 +526,7 @@ describe('1.0 stable release contract', () => {
     expect(report).toContain('没有已知发布阻塞');
     expect(report).not.toContain('TELLPLOT_FINAL_COMMIT_SHA');
     expect(report).not.toContain('- Status: Not_Released');
-    const workflowSha = workflow.match(
-      /^\s+([0-9a-f]{64})\s+\.ai-platform\/evidence\/T131\/artifacts\/tellplot-1\.0\.0\.tgz$/mu,
-    )?.[1];
-    expect(workflowSha).toMatch(/^[0-9a-f]{64}$/u);
-    expect(report).toContain(String(workflowSha));
+    expect(report).toContain('e476d4f631a0583aa1a8126691e85f510f502d671c1943fe80499640e5c7d10e');
   });
 
   it('separates clean public-release source checks from the dirty-capable local RC gate', () => {
@@ -480,9 +538,9 @@ describe('1.0 stable release contract', () => {
       } from './scripts/release/preflight-public.mjs';
 
       const head = 'a'.repeat(40);
-      const packageVersions = [['tellplot', '1.0.0']];
-      const artifactSha = 'c'.repeat(64);
-      const filenames = ['tellplot-1.0.0.tgz'];
+      const packageVersions = [['tellplot', '2.0.0']];
+      const artifactSha = '44177ce56c1839748ee1558aba8e6e5660dc882cb7387193ff28f585bc263fca';
+      const filenames = ['tellplot-2.0.0.tgz'];
       const packageManifests = packageVersions.map(([name, version]) => ({
         name,
         version,
@@ -492,18 +550,20 @@ describe('1.0 stable release contract', () => {
         },
       }));
       const artifactManifest = {
-        version: '1.0.0',
+        version: '2.0.0',
+        evidenceTask: 'T143',
+        nodeVersion: '22.20.0',
         packages: packageVersions.map(([name, version], index) => ({
           name,
           version,
           filename: filenames[index],
-          sizeBytes: 100 + index,
+          sizeBytes: 597508,
           sha256: artifactSha,
         })),
       };
       const artifactFiles = filenames.map((filename, index) => ({
         filename,
-        sizeBytes: 100 + index,
+        sizeBytes: 597508,
         sha256: artifactSha,
       }));
       const remoteEnvironment = createRemoteQueryEnvironment({
@@ -531,7 +591,7 @@ describe('1.0 stable release contract', () => {
         artifactFiles,
         status: '',
         head,
-        tag: 'v1.0.0',
+        tag: 'v2.0.0',
         tagObject: 'd'.repeat(40),
         tagObjectType: 'tag',
         tagCommit: head,
@@ -564,12 +624,12 @@ describe('1.0 stable release contract', () => {
       );
       assert.ok(
         validatePublicReleaseState({ ...local, nodeVersion: undefined }).some(finding =>
-          finding.includes('Node 22.14.0'),
+          finding.includes('exact Node 22.20.0'),
         ),
       );
       assert.ok(
         validatePublicReleaseState({ ...local, npmVersion: '11.14.9' }).some(finding =>
-          finding.includes('npm 11.15.0'),
+          finding.includes('exact npm 11.18.0'),
         ),
       );
       assert.ok(
@@ -631,7 +691,7 @@ describe('1.0 stable release contract', () => {
         artifactFiles,
         status: '',
         head,
-        tag: 'v1.0.0',
+        tag: 'v2.0.0',
         tagObject: 'd'.repeat(40),
         tagObjectType: 'tag',
         tagCommit: head,
@@ -643,7 +703,7 @@ describe('1.0 stable release contract', () => {
         runnerEnvironment: 'github-hosted',
         eventName: 'workflow_dispatch',
         refType: 'tag',
-        refName: 'v1.0.0',
+        refName: 'v2.0.0',
         sha: head,
         repository: 'iiwish/tellplot',
         visibility: 'public',
@@ -651,8 +711,8 @@ describe('1.0 stable release contract', () => {
         remoteTagObject: 'd'.repeat(40),
         remoteTagCommit: head,
         workflowRef:
-          'iiwish/tellplot/.github/workflows/publish-npm.yml@refs/tags/v1.0.0',
-        confirmation: 'stage 1.0.0 stage-only-trusted-publishers-verified',
+          'iiwish/tellplot/.github/workflows/publish-npm.yml@refs/tags/v2.0.0',
+        confirmation: 'stage 2.0.0 stage-only-trusted-publishers-verified',
       };
       assert.deepEqual(validatePublicReleaseState(ci), []);
       assert.ok(
@@ -725,7 +785,7 @@ describe('1.0 stable release contract', () => {
 
         const artifactsRoot = resolve(
           repository,
-          '.ai-platform/evidence/T131/artifacts',
+          '.ai-platform/evidence/T143/artifacts',
         );
         mkdirSync(artifactsRoot, { recursive: true });
         const artifactEntries = packages.map(directory => {
@@ -735,19 +795,19 @@ describe('1.0 stable release contract', () => {
             resolve(packageRoot, 'package.json'),
             JSON.stringify({
               name: directory,
-              version: '1.0.0',
+              version: '2.0.0',
               publishConfig: {
                 access: 'public',
                 registry: 'https://registry.npmjs.org/',
               },
             }),
           );
-          const filename = 'tellplot-1.0.0.tgz';
+          const filename = 'tellplot-2.0.0.tgz';
           const artifactPath = resolve(artifactsRoot, filename);
           writeFileSync(artifactPath, \`artifact:\${directory}\`);
           return {
             name: directory,
-            version: '1.0.0',
+            version: '2.0.0',
             filename,
             sizeBytes: statSync(artifactPath).size,
             sha256: createHash('sha256')
@@ -756,16 +816,41 @@ describe('1.0 stable release contract', () => {
           };
         });
         writeFileSync(
-          resolve(repository, '.ai-platform/evidence/T131/tarball-manifest.json'),
-          JSON.stringify({ version: '1.0.0', packages: artifactEntries }),
+          resolve(repository, '.ai-platform/evidence/T143/tarball-manifest.json'),
+          JSON.stringify({
+            version: '2.0.0',
+            evidenceTask: 'T143',
+            nodeVersion: process.versions.node,
+            packages: artifactEntries,
+          }),
         );
+
+        const releaseDescriptor = {
+          schemaVersion: 1,
+          packageName: 'tellplot',
+          version: '2.0.0',
+          tag: 'v2.0.0',
+          evidenceTask: 'T143',
+          artifactRoot: '.ai-platform/evidence/T143/artifacts',
+          manifestPath: '.ai-platform/evidence/T143/tarball-manifest.json',
+          artifact: {
+            filename: artifactEntries[0].filename,
+            sizeBytes: artifactEntries[0].sizeBytes,
+            sha256: artifactEntries[0].sha256,
+          },
+          registry: 'https://registry.npmjs.org/',
+          workflow: 'iiwish/tellplot/.github/workflows/publish-npm.yml',
+          nodeVersion: process.versions.node,
+          pnpmVersion: '11.1.3',
+          npmVersion: '11.18.0',
+        };
 
         git(repository, ['add', '.']);
         git(repository, ['commit', '-m', 'test: clean release source']);
-        git(repository, ['tag', '-a', 'v1.0.0', '-m', 'v1.0.0']);
+        git(repository, ['tag', '-a', 'v2.0.0', '-m', 'v2.0.0']);
         git(repository, ['remote', 'add', 'origin', remoteQueryUrl]);
         git(repository, ['push', '--set-upstream', 'origin', 'main']);
-        git(repository, ['push', 'origin', 'v1.0.0']);
+        git(repository, ['push', 'origin', 'v2.0.0']);
         git(repository, ['remote', 'set-url', 'origin', canonicalRemote]);
 
         writeFileSync(
@@ -793,6 +878,7 @@ describe('1.0 stable release contract', () => {
           npmRegistry: 'https://registry.npmjs.org/',
           remoteQueryUrl,
           env: hostileEnvironment,
+          releaseDescriptor,
         });
         assert.equal(state.status, '');
         assert.equal(state.branch, 'main');
@@ -815,30 +901,32 @@ describe('1.0 stable release contract', () => {
             RUNNER_ENVIRONMENT: 'github-hosted',
             GITHUB_EVENT_NAME: 'workflow_dispatch',
             GITHUB_REF_TYPE: 'tag',
-            GITHUB_REF_NAME: 'v1.0.0',
+            GITHUB_REF_NAME: 'v2.0.0',
             GITHUB_SHA: state.head,
             GITHUB_REPOSITORY: 'iiwish/tellplot',
             GITHUB_WORKFLOW_REF:
-              'iiwish/tellplot/.github/workflows/publish-npm.yml@refs/tags/v1.0.0',
+              'iiwish/tellplot/.github/workflows/publish-npm.yml@refs/tags/v2.0.0',
             TELLPLOT_REPOSITORY_VISIBILITY: 'public',
             TELLPLOT_RELEASE_CONFIRMATION:
-              'stage 1.0.0 stage-only-trusted-publishers-verified',
+              'stage 2.0.0 stage-only-trusted-publishers-verified',
           },
+          releaseDescriptor,
         });
         assert.equal(ciState.tagObjectType, 'tag');
         assert.equal(ciState.remoteTagObject, ciState.tagObject);
         assert.equal(ciState.remoteTagCommit, ciState.head);
         assert.deepEqual(validatePublicReleaseState(ciState), []);
 
-        git(repository, ['tag', '--delete', 'v1.0.0']);
-        git(repository, ['tag', 'v1.0.0']);
-        git(repository, ['push', '--force', remoteQueryUrl, 'refs/tags/v1.0.0']);
+        git(repository, ['tag', '--delete', 'v2.0.0']);
+        git(repository, ['tag', 'v2.0.0']);
+        git(repository, ['push', '--force', remoteQueryUrl, 'refs/tags/v2.0.0']);
         const lightweightState = collectPublicReleaseState('local', {
           repositoryRoot: repository,
           npmVersion: '11.18.0',
           npmRegistry: 'https://registry.npmjs.org/',
           remoteQueryUrl,
           env: hostileEnvironment,
+          releaseDescriptor,
         });
         assert.equal(lightweightState.tagObjectType, 'commit');
         assert.equal(lightweightState.remoteTagObject, lightweightState.head);
@@ -865,22 +953,22 @@ describe('1.0 stable release contract', () => {
         validateTrustReadiness,
       } from './scripts/release/check-package-availability.mjs';
 
-      const packages = [{ name: 'tellplot', version: '1.0.0' }];
+      const packages = [{ name: 'tellplot', version: '2.0.0' }];
       const ready = packages.map(({ name, version }) => ({
         name,
         version,
         rootStatus: 'exists',
         versionStatus: 'available',
       }));
-      const confirmation = 'stage 1.0.0 stage-only-trusted-publishers-verified';
+      const confirmation = 'stage 2.0.0 stage-only-trusted-publishers-verified';
       assert.deepEqual(validateTrustReadiness(packages, ready, confirmation), []);
       assert.equal(
         packageRootUrl('tellplot'),
         'https://registry.npmjs.org/tellplot',
       );
       assert.equal(
-        packageVersionUrl('tellplot', '1.0.0'),
-        'https://registry.npmjs.org/tellplot/1.0.0',
+        packageVersionUrl('tellplot', '2.0.0'),
+        'https://registry.npmjs.org/tellplot/2.0.0',
       );
       const bootstrapFindings = validateTrustReadiness(
         packages,
@@ -905,13 +993,13 @@ describe('1.0 stable release contract', () => {
         ).some(finding => finding.includes('package root query failed')),
       );
       assert.ok(
-        validateTrustReadiness(packages, ready, 'stage 1.0.0').some(finding =>
+        validateTrustReadiness(packages, ready, 'stage 2.0.0').some(finding =>
           finding.includes('trusted publishers'),
         ),
       );
       assert.ok(
         validateTrustReadiness(packages, [], confirmation).some(finding =>
-          finding.includes('tellplot@1.0.0'),
+          finding.includes('tellplot@2.0.0'),
         ),
       );
     `);
@@ -959,7 +1047,7 @@ describe('1.0 stable release contract', () => {
     expect(errors).toContain('销毁后的精确行为');
   });
 
-  it('passes the executable architecture and public release audits', () => {
+  it('passes architecture gates while keeping the current 2.0 audit strict', () => {
     const lock = runScript('scripts/release/audit-dependencies.mjs', ['--lock-only']);
     const dependencies = runScript('scripts/release/audit-dependencies.mjs');
     const architecture = runScript('scripts/release/check-architecture.mjs');
@@ -970,6 +1058,7 @@ describe('1.0 stable release contract', () => {
     expect(dependencies, dependencies.output).toMatchObject({ status: 0 });
     expect(architecture, architecture.output).toMatchObject({ status: 0 });
     expect(release, release.output).toMatchObject({ status: 0 });
+    expect(release.output).toContain('"version": "2.0.0"');
   });
 
   it('rejects unreviewed AntV versions and install-time compromise indicators', () => {

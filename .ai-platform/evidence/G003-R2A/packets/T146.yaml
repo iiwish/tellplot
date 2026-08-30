@@ -1,0 +1,77 @@
+schema_version: 1
+packet_id: EP-G003-R2A-T146
+task_id: T146
+goal_id: G003-R2A
+packet_status: needs_review
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  technical_decision: .ai-platform/docs/technology-decision-record.md#tdr-026-tellplot-20-current-release-lineage
+  authorization: .ai-platform/evidence/T145/release-authorization.md#approval-1-git-handoff
+  plan: .ai-platform/evidence/G003-R2A/plan.md
+  checklist: .ai-platform/evidence/G003-R2A/checklist.md
+  work_graph: .ai-platform/evidence/G003-R2A/tasks.md
+  analysis: .ai-platform/evidence/G003-R2A/analysis.md
+
+work_unit:
+  title: Fresh Remote Reconciliation
+  goal: Fetch origin/main without remote writes and prove whether it matches the exact T145 observed commit.
+  depends_on:
+    - G003-R1 Accepted
+    - Explicit user authorization on 2026-08-28
+  blocks:
+    - T147
+    - T148
+  parallel: false
+
+codebase_context:
+  expected_origin_main: 4d754cc9d635d097370b674633c972fb0ac199a1
+  shared_head: cd90ddf3d27bb323c994b5ba01735a4972c46f48
+  shared_index_sha256: 3f83dab964030f0816078e1ff7312e063fd8920167c0fa3c610d972b7cc69fd8
+
+execution_constraints:
+  allowed_state:
+    - refs/remotes/origin/main
+    - local fetch metadata
+    - .ai-platform/evidence/T146/**
+  forbidden_actions:
+    - pull
+    - merge
+    - rebase
+    - push
+    - tag
+    - workflow dispatch
+    - publish
+  no_subdelegation: true
+
+validation_loop:
+  expected_signals:
+    - Fresh origin/main equals 4d754cc9d635d097370b674633c972fb0ac199a1.
+    - Shared HEAD, index and tags are unchanged.
+    - Fetch reports no remote write.
+
+evidence_contract:
+  root: .ai-platform/evidence/T146
+  required_files:
+    - summary.md
+    - test-results.md
+    - review.md
+
+review_contract:
+  lenses:
+    - spec_compliance
+    - git_safety
+    - qa_acceptance
+  pass_condition: Critical 0, High 0, Medium 0 unresolved
+
+handoff:
+  success_status: Needs_Review
+  next_task: T147
+  remote_writes_authorized: false
+
+stop_conditions:
+  - Fresh origin/main differs from the exact expected commit.
+  - Shared HEAD, index or tags change.
+  - Reconciliation requires any remote write or history integration.
