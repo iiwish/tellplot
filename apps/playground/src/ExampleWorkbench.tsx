@@ -9,7 +9,15 @@ import {
   type ViewSpec,
 } from 'tellplot';
 import { ChartEditor, type ChartEditorHandle, type ExportError } from 'tellplot/react';
-import { Code2, Download, FileDown, FileUp, Image, LoaderCircle } from 'lucide-react';
+import {
+  ChartNoAxesCombined,
+  Code2,
+  Download,
+  FileDown,
+  FileUp,
+  Image,
+  LoaderCircle,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -17,6 +25,7 @@ import {
   DEMO_COMPARISON_PALETTE,
   DEMO_WATERFALL_COLORS,
 } from './demoPresentation';
+import { EXAMPLE_CATALOG, exampleForWorkbenchSearch } from './exampleCatalog';
 import { getPlaygroundChartType, getPlaygroundFixture } from './fixtures';
 import { UsageGuide } from './UsageGuide';
 
@@ -109,9 +118,14 @@ function useCompactUsageLayout(): boolean {
   return compact;
 }
 
-export function ExampleWorkbench(): React.JSX.Element {
+export interface ExampleWorkbenchProps {
+  readonly onNavigate: (href: string) => void;
+}
+
+export function ExampleWorkbench({ onNavigate }: ExampleWorkbenchProps): React.JSX.Element {
   const fixtureSourceData = useMemo(() => getPlaygroundFixture(window.location.search), []);
   const initialChartType = useMemo(() => getPlaygroundChartType(window.location.search), []);
+  const activeExample = useMemo(() => exampleForWorkbenchSearch(window.location.search), []);
   const [config, setConfig] = useState<ChartConfig>(() =>
     initialConfig(fixtureSourceData, initialChartType),
   );
@@ -122,6 +136,8 @@ export function ExampleWorkbench(): React.JSX.Element {
   const [viewSpec, setViewSpec] = useState<ViewSpec | undefined>(() =>
     initialView.ok ? initialView.value : undefined,
   );
+  const initialConfigSnapshot = useRef(JSON.stringify(config));
+  const initialViewSnapshot = useRef(viewSpec === undefined ? '' : serializeViewSpec(viewSpec));
   const compactUsage = useCompactUsageLayout();
   const [usageOpen, setUsageOpen] = useState(() => !compactUsageViewport());
   const [exportOpen, setExportOpen] = useState(false);
@@ -320,10 +336,42 @@ export function ExampleWorkbench(): React.JSX.Element {
     });
   };
 
+  const switchExample = (event: React.ChangeEvent<HTMLSelectElement>): void => {
+    const nextExample = EXAMPLE_CATALOG.find(example => example.id === event.currentTarget.value);
+    if (nextExample === undefined || nextExample.id === activeExample?.id) {
+      return;
+    }
+    const currentViewSnapshot = viewSpec === undefined ? '' : serializeViewSpec(viewSpec);
+    const hasEdits =
+      JSON.stringify(config) !== initialConfigSnapshot.current ||
+      currentViewSnapshot !== initialViewSnapshot.current;
+    if (hasEdits && !window.confirm('切换示例会重置当前配置和视图，是否继续？')) {
+      event.currentTarget.value = activeExample?.id ?? 'custom';
+      return;
+    }
+    onNavigate(nextExample.workbenchHref);
+  };
+
   return (
     <main className="playground" aria-label="TellPlot 参考编辑器">
-      <header className="playground-filebar" aria-label="使用、文件与导出">
+      <header className="playground-filebar" aria-label="示例、使用、文件与导出">
         <div className="playground-filebar__actions">
+          <label className="playground-example-switcher">
+            <ChartNoAxesCombined size={17} aria-hidden="true" />
+            <span>示例</span>
+            <select
+              aria-label="切换工作台示例"
+              value={activeExample?.id ?? 'custom'}
+              onChange={switchExample}
+            >
+              {activeExample === undefined ? <option value="custom">当前测试数据</option> : null}
+              {EXAMPLE_CATALOG.map(example => (
+                <option key={example.id} value={example.id}>
+                  {example.ordinal} {example.shortTitle}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             ref={usageButtonRef}
             className="playground-tool-button"

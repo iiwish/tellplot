@@ -19,6 +19,8 @@ export interface ShowcaseExample {
   readonly accent: 'emerald' | 'blue' | 'coral';
 }
 
+export const DEFAULT_SHOWCASE_EXAMPLE_ID = 'waterfall' as const satisfies ShowcaseExampleId;
+
 /** Website-only content catalog. It is intentionally not a chart runtime registry. */
 export const EXAMPLE_CATALOG: readonly ShowcaseExample[] = [
   {
@@ -104,4 +106,10 @@ export function exampleById(id: ShowcaseExampleId): ShowcaseExample {
     throw new Error(`Unknown showcase example: ${id}`);
   }
   return example;
+}
+
+export function exampleForWorkbenchSearch(search: string): ShowcaseExample | undefined {
+  const fixture = new URLSearchParams(search).get('fixture');
+  const normalizedSearch = fixture === null ? '' : `?fixture=${fixture}`;
+  return EXAMPLE_CATALOG.find(example => example.fixtureSearch === normalizedSearch);
 }

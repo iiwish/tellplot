@@ -2855,6 +2855,37 @@ a {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+.playground-example-switcher {
+  display: inline-flex;
+  min-width: 0;
+  height: 32px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 7px 0 9px;
+  border: 1px solid #cbd2ce;
+  border-radius: 5px;
+  color: #53615a;
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.playground-example-switcher select {
+  width: 158px;
+  min-width: 0;
+  border: 0;
+  color: #23302a;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.playground-example-switcher select:focus-visible {
+  outline: 2px solid #236b8e;
+  outline-offset: 3px;
 }
 
 .playground-tool-button,
@@ -3404,6 +3435,26 @@ a {
 
   .playground-filebar {
     padding: 0 8px;
+  }
+
+  .playground-example-switcher {
+    gap: 5px;
+    padding-right: 5px;
+    padding-left: 7px;
+  }
+
+  .playground-example-switcher > span {
+    display: none;
+  }
+
+  .playground-example-switcher select {
+    width: 126px;
+    font-size: 12px;
+  }
+
+  .playground-export-menu {
+    right: 0;
+    left: auto;
   }
 
   .playground-tool-button span,
@@ -4370,6 +4421,15 @@ a {
   color: #344054;
 }
 
+.playground-example-switcher {
+  border-color: #d5deea;
+  color: #526071;
+}
+
+.playground-example-switcher select {
+  color: #344054;
+}
+
 .playground-tool-button:hover:not(:disabled),
 .playground-export-menu button:hover,
 .playground-icon-button:hover {
@@ -4585,6 +4645,10 @@ a {
 
   .playground-filebar {
     padding: 0 10px;
+  }
+
+  .playground-file-status {
+    display: none;
   }
 
   .playground-workspace {
