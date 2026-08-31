@@ -1,11 +1,22 @@
 # Changelog
 
-TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或错误码变化只进入新的 major；
+TellPlot 使用 Semantic Versioning。稳定版本的 breaking public API、schema 或错误码变化只进入新的 major；
 弃用遵循 [版本与兼容政策](docs/versioning.md)。
 
 ## Unreleased
 
-### 2.0.0 Local Candidate
+### Fixed
+
+- 图表框选拖到绘图区外松开时仍会完成当前选区并打开分组命名弹窗；元素拖拽在图外松开仍保持取消语义。
+- Firefox 中指针移出浏览器视口后释放会可靠取消图表与大纲交互；图表不再响应右键或中键拖拽，
+  大纲拖拽也不会被其他指针覆盖或取消。
+
+## 2.0.0 - 2026-08-31
+
+`tellplot@2.0.0` 已发布到 npm；受保护的 `v2.0.0` tag、GitHub Release、发布 artifact 与 SLSA
+provenance 保持一致。
+
+### Added
 
 - 增加 schema `3.0.0` 的 2 至 4 序列 categorical comparison source/view、16 个 public types 与唯一 runtime
   projector `projectCategoricalComparison`。
@@ -13,13 +24,6 @@ TellPlot 使用 Semantic Versioning。1.x 的 breaking public API、schema 或�
   annotations 和 emphasis。
 - public unions 加入 v3 variant；exhaustive TypeScript consumer 必须按 migration guide 增加 schema 3 分支。
 - legacy v1 waterfall、current v2 waterfall 与 scalar v2 categorical wire/runtime/persistence 保持兼容。
-- 本节描述本地 candidate，不表示 registry、tag、GitHub Release 或 Production 发布。
-
-### Fixed
-
-- 图表框选拖到绘图区外松开时仍会完成当前选区并打开分组命名弹窗；元素拖拽在图外松开仍保持取消语义。
-- Firefox 中指针移出浏览器视口后释放会可靠取消图表与大纲交互；图表不再响应右键或中键拖拽，
-  大纲拖拽也不会被其他指针覆盖或取消。
 
 ## 1.0.0
 

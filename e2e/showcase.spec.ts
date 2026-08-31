@@ -17,9 +17,9 @@ test.describe('TellPlot 开源官网', () => {
     const showcase = page.getByTestId('showcase-chart');
     const editor = showcase.locator('[data-tellplot="editor"]');
     await expect(showcase).toHaveAttribute('data-interactive', 'true');
-    await expect(showcase).toHaveAttribute('data-example-id', 'comparison-column');
+    await expect(showcase).toHaveAttribute('data-example-id', 'waterfall');
     await expect(showcase).not.toHaveAttribute('inert', '');
-    await expect(editor).toHaveAttribute('data-chart-type', 'column');
+    await expect(editor).toHaveAttribute('data-chart-type', 'waterfall');
     await expect(editor).toHaveAttribute('data-read-only', 'false');
     await expect(editor).toHaveAttribute('data-view-revision', '0');
     await expect(showcase.locator('.tp-toolbar')).toBeHidden();
@@ -45,6 +45,53 @@ test.describe('TellPlot 开源官网', () => {
       page.getByTestId('showcase-chart').locator('[data-tellplot="editor"]'),
     ).toHaveAttribute('data-read-only', 'false');
     await expect(page.getByText('横向扫描业务项目的正负规模，长标签依然清晰。')).toBeVisible();
+  });
+
+  test('工作台可切换公开示例并将选择保存在 URL', async ({ page }) => {
+    await page.goto('/playground');
+
+    const switcher = page.getByRole('combobox', { name: '切换工作台示例' });
+    await expect(switcher).toHaveValue('waterfall');
+    await expect(switcher.locator('option')).toHaveCount(5);
+
+    await switcher.selectOption('comparison-column');
+    await expect(page).toHaveURL(/\/playground\?fixture=comparison-actual-budget$/);
+    await expect(page.getByRole('combobox', { name: '切换工作台示例' })).toHaveValue(
+      'comparison-column',
+    );
+    await expect(page.locator('[data-tellplot="editor"]')).toHaveAttribute(
+      'data-chart-type',
+      'column',
+    );
+
+    await page.reload();
+    await expect(page.getByRole('combobox', { name: '切换工作台示例' })).toHaveValue(
+      'comparison-column',
+    );
+  });
+
+  test('工作台切换示例前保护尚未保存的编辑', async ({ page }) => {
+    await page.goto('/playground');
+
+    const configInput = page.getByRole('textbox', { name: 'TellPlot 图表配置' });
+    const config = JSON.parse(await configInput.inputValue()) as {
+      appearance: { title: string };
+    };
+    config.appearance.title = '尚未保存的经营图';
+    await configInput.fill(JSON.stringify(config, null, 2));
+    await expect(page.getByRole('heading', { name: '尚未保存的经营图' })).toBeVisible();
+
+    let prompt = '';
+    page.once('dialog', async dialog => {
+      prompt = dialog.message();
+      await dialog.dismiss();
+    });
+    await page.getByRole('combobox', { name: '切换工作台示例' }).selectOption('comparison-column');
+
+    expect(prompt).toContain('切换示例会重置当前配置和视图');
+    await expect(page).toHaveURL(/\/playground$/);
+    await expect(page.getByRole('combobox', { name: '切换工作台示例' })).toHaveValue('waterfall');
+    await expect(page.getByRole('heading', { name: '尚未保存的经营图' })).toBeVisible();
   });
 
   test('示例中心将每个真实示例带入对应工作台', async ({ page }) => {

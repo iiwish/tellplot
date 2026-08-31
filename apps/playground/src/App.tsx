@@ -82,7 +82,9 @@ export function App(): React.JSX.Element {
       {route.page === 'home' ? <HomePage /> : null}
       {route.page === 'examples' ? <ExamplesPage onNavigate={navigate} /> : null}
       {route.page === 'docs' ? <DocsPage onNavigate={navigate} /> : null}
-      {route.page === 'playground' ? <ExampleWorkbench key={locationKey} /> : null}
+      {route.page === 'playground' ? (
+        <ExampleWorkbench key={locationKey} onNavigate={navigate} />
+      ) : null}
       {route.page === 'not-found' ? <NotFoundPage onNavigate={navigate} /> : null}
     </div>
   );

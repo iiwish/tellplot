@@ -3,7 +3,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { DocsPage } from '../src/DocsPage';
-import { EXAMPLE_CATALOG, exampleById } from '../src/exampleCatalog';
+import {
+  DEFAULT_SHOWCASE_EXAMPLE_ID,
+  EXAMPLE_CATALOG,
+  exampleById,
+  exampleForWorkbenchSearch,
+} from '../src/exampleCatalog';
 import { getPlaygroundFixture } from '../src/fixtures';
 import { createShowcaseConfig } from '../src/showcaseConfig';
 import { SiteHeader } from '../src/SiteHeader';
@@ -24,10 +29,22 @@ describe('playground website header', () => {
     expect(markup).toContain('target="_blank"');
     expect(markup).toContain('rel="noopener noreferrer"');
   });
+
+  it('identifies the published 2.0 website version', () => {
+    const markup = renderToStaticMarkup(
+      createElement(SiteHeader, {
+        page: 'home',
+        onNavigate: () => undefined,
+      }),
+    );
+
+    expect(markup).toContain('site-brand__version">2.0</span>');
+  });
 });
 
 describe('playground website content', () => {
   it('keeps the example catalog explicit, unique, and limited to validated chart types', () => {
+    expect(DEFAULT_SHOWCASE_EXAMPLE_ID).toBe('waterfall');
     expect(EXAMPLE_CATALOG.map(example => example.id)).toEqual([
       'waterfall',
       'column',
@@ -43,6 +60,15 @@ describe('playground website content', () => {
       'column',
       'bar',
     ]);
+  });
+
+  it('derives the public workbench example from the canonical fixture query', () => {
+    expect(exampleForWorkbenchSearch('')?.id).toBe('waterfall');
+    expect(exampleForWorkbenchSearch('?fixture=categorical-column')?.id).toBe('column');
+    expect(exampleForWorkbenchSearch('?fixture=comparison-actual-budget-bar')?.id).toBe(
+      'comparison-bar',
+    );
+    expect(exampleForWorkbenchSearch('?fixture=comparison-four-series')).toBeUndefined();
   });
 
   it('maps examples to deterministic workbench fixtures', () => {

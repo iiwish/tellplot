@@ -60,7 +60,7 @@ export function SiteHeader({ page, onNavigate }: SiteHeaderProps): React.JSX.Ele
             <span />
           </span>
           <strong>TellPlot</strong>
-          <span className="site-brand__version">1.0</span>
+          <span className="site-brand__version">2.0</span>
         </SiteLink>
 
         <nav className="site-desktop-nav" aria-label="主导航">

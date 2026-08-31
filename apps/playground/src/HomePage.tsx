@@ -11,7 +11,12 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { EXAMPLE_CATALOG, exampleById, type ShowcaseExampleId } from './exampleCatalog';
+import {
+  DEFAULT_SHOWCASE_EXAMPLE_ID,
+  EXAMPLE_CATALOG,
+  exampleById,
+  type ShowcaseExampleId,
+} from './exampleCatalog';
 import { writeClipboard } from './clipboard';
 import { ShowcaseChart } from './ShowcaseChart';
 import { SiteFooter } from './SiteFooter';
@@ -61,7 +66,7 @@ export function RevenueChart() {
 const CONFIG_LINES = CONFIG_EXAMPLE.split('\n');
 
 export function HomePage(): React.JSX.Element {
-  const [selectedId, setSelectedId] = useState<ShowcaseExampleId>('comparison-column');
+  const [selectedId, setSelectedId] = useState<ShowcaseExampleId>(DEFAULT_SHOWCASE_EXAMPLE_ID);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [compactChart, setCompactChart] = useState(
     () =>
