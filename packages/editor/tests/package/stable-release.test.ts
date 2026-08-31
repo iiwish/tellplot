@@ -250,6 +250,23 @@ describe('2.0 current release contract', () => {
     for (const gate of requiredGates) {
       expect(stableCheck).toContain(gate);
     }
+    const performanceGateIndex = stableCheck.indexOf("['pnpm', ['test:performance']]");
+    expect(performanceGateIndex).toBeGreaterThan(stableCheck.indexOf("['pnpm', ['typecheck']]"));
+    expect(stableCheck).toContain('const PERFORMANCE_COOLDOWN_MS = 60_000');
+    expect(stableCheck.indexOf('await coolDownHost()')).toBeLessThan(
+      stableCheck.indexOf('run(command, args, { inherit: true })'),
+    );
+    for (const loadGeneratingGate of [
+      'test:coverage',
+      'build',
+      'release:artifact',
+      'test:package',
+      'test:framework-matrix',
+    ]) {
+      expect(performanceGateIndex).toBeLessThan(
+        stableCheck.indexOf(`['pnpm', ['${loadGeneratingGate}']]`),
+      );
+    }
     expect(stableCheck).not.toContain('release:preflight');
     const lockGateIndexes = [...ciWorkflow.matchAll(/pnpm security:lock/gu)].map(
       match => match.index ?? -1,
