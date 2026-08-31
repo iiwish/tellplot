@@ -14,6 +14,28 @@ async function applyConfigWithoutMovingFocus(
       if (!(element instanceof HTMLTextAreaElement)) {
         throw new Error('Playground config input is unavailable.');
       }
+      if (update.hideFocusedHeading) {
+        const focusedHeading = element.ownerDocument.activeElement;
+        const editor = focusedHeading?.closest<HTMLElement>('[data-tellplot="editor"]');
+        if (
+          !(focusedHeading instanceof HTMLElement) ||
+          focusedHeading.dataset['focusKey'] !== 'chart-heading' ||
+          editor === null ||
+          editor === undefined
+        ) {
+          throw new Error('Focused comparison heading is unavailable.');
+        }
+        Object.defineProperty(editor.style, 'height', {
+          configurable: true,
+          get: () => editor.style.getPropertyValue('height'),
+          set: value => {
+            Reflect.deleteProperty(editor.style, 'height');
+            editor.style.setProperty('height', value);
+            focusedHeading.blur();
+            focusedHeading.hidden = true;
+          },
+        });
+      }
       const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
       setter?.call(element, update.serialized);
       element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -23,30 +45,6 @@ async function applyConfigWithoutMovingFocus(
       );
       if (apply === null) {
         throw new Error('Playground config apply control is unavailable.');
-      }
-      if (update.hideFocusedHeading) {
-        const focusedHeading = element.ownerDocument.activeElement;
-        const editor = focusedHeading?.closest<HTMLElement>('[data-tellplot="editor"]');
-        const ownerWindow = element.ownerDocument.defaultView;
-        if (
-          !(focusedHeading instanceof HTMLElement) ||
-          focusedHeading.dataset['focusKey'] !== 'chart-heading' ||
-          editor === null ||
-          editor === undefined ||
-          ownerWindow === null
-        ) {
-          throw new Error('Focused comparison heading is unavailable.');
-        }
-        const originalQueueMicrotask = ownerWindow.queueMicrotask;
-        ownerWindow.queueMicrotask = callback => {
-          originalQueueMicrotask.call(ownerWindow, () => {
-            if (editor.style.height === '721px') {
-              ownerWindow.queueMicrotask = originalQueueMicrotask;
-              focusedHeading.hidden = true;
-            }
-            callback();
-          });
-        };
       }
       apply.click();
     },
